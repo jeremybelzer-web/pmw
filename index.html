@@ -387,7 +387,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30p</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30q</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -4257,6 +4257,31 @@ const STRIP_DEF=14,STRIP_MIN=8,GRIDVIEW_MAX=620,MAIN_MIN=4*CELLH,LATTICE_MAX=60;
 /* 2.1b-e LANE LAW v3 (client Q1): tracks NEVER collapse — the resize floor is the
    name-box text bounds. Hide Selected Tracks replaces collapse entirely. */
 const TRACK_MIN_H=14;
+/* ==== July 30 client fix round (build 30q, fix 2): the resize floor is the WHOLE
+   colored name box now — a lane never shrinks below its own box (the old 14px floor
+   left a sliver strip floating in a 49px row). The box height is MEASURED once from a
+   hidden probe head (font-safe), memoized; harness-safe fallback = TRACK_MIN_H. The
+   strip→Grid boundary rises with the floor: a minimized lane IS box height; past the
+   boundary it transforms to a Grid (a chord lane grown taller than the box still
+   governs, as before — the boundary is the max of the two). ==== */
+var __nboxH=null,__nboxProbing=false;
+function nboxNaturalH(){
+ if(__nboxH)return __nboxH;
+ if(__nboxProbing||typeof document==='undefined'||typeof trackHead!=='function'||!document.body)return TRACK_MIN_H;
+ __nboxProbing=true;
+ try{
+  const probe=trackHead('bass',true);
+  probe.style.position='absolute';probe.style.visibility='hidden';
+  probe.style.left='-9999px';probe.style.top='0';probe.style.height='auto';
+  document.body.appendChild(probe);
+  const h=probe.offsetHeight;probe.remove();
+  if(h>=TRACK_MIN_H)__nboxH=h;
+ }catch(e){}
+ __nboxProbing=false;
+ return __nboxH||TRACK_MIN_H;
+}
+/* the strip→Grid boundary every lane-kind decision measures against */
+function stripBoundaryH(){return Math.max(chordLaneH(),nboxNaturalH());}
 /* v3 pure: the ▸/corner expand target — the remembered user size when one exists,
    otherwise ≈6× the minimized track height (the client's "about 6 times" default),
    never below the strip→Grid threshold (+8 so it lands clearly in Grid territory).
@@ -4281,7 +4306,7 @@ function stripKindForHeight(h,chordH){return h>chordH?'grid':'strip';}
 /* July 24 r2 (client): ALL LANES ARE EQUAL — the main Grid minimizes like any strip; at
    chord-lane height or below it renders as a lane of chord/MIDI-clip cells (the bar lane
    stays above it — it's the timeline, not the lattice). */
-function mainIsStrip(){return stripKindForHeight(GRID_VIEWS.main.px,chordLaneH())==='strip';}
+function mainIsStrip(){return stripKindForHeight(GRID_VIEWS.main.px,stripBoundaryH())==='strip';}
 /* ==== RELOCATABLE BAR LANE (July 24 r3, client) ==== the black Bars+Beats bar docks to
    the TOP OF EACH CONTIGUOUS RUN of open Grids in the lane stack (main included — it's
    an equal lane); when every lane is small (clip view) ONE bar sits above all tracks.
@@ -4574,7 +4599,12 @@ function validViewH(o){
   &&o.hidden.every(x=>typeof x==='string'&&x.length<=24)))return false;
  return true;}
 let stripH={};   /* per-track strip/grid-view heights in px (#12c: rides project file + autosave; reset on loadSong) */
-function stripHeightOf(t){return stripH[t]!=null?stripH[t]:STRIP_DEF;}
+function stripHeightOf(t){
+ /* July 30 fix 2: render floor = the name-box height (old stored/default values below
+    it simply read as the floor — files never rewrite, the view just honors the law) */
+ const h=stripH[t]!=null?stripH[t]:STRIP_DEF;
+ return Math.max((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H,h);
+}
 function chordLaneH(){
  const el=document.getElementById('chordlane');
  const h=el&&el.style.display!=='none'?el.offsetHeight:0;
@@ -5301,7 +5331,7 @@ function actingChordTrack(){
  for(const r of rank){
   const isActive=r.t===activeTrack;
   const kind=isActive?(mainIsStrip()?'strip':'grid')
-   :stripKindForHeight(stripHeightOf(r.t),chordLaneH());
+   :stripKindForHeight(stripHeightOf(r.t),stripBoundaryH());
   if(kind==='strip'){v=r.t;break;}
  }
  actingMemo={k,v};
@@ -13463,7 +13493,7 @@ function trackHead(t,inLane){
   const cn=document.createElement('span');cn.className='tcorner';
   cn.title='One-click big/small — toggles '+trackLabel(t)+' between its large and small size';
   cn.onmousedown=e=>{e.preventDefault();e.stopPropagation();};
-  cn.onclick=e=>{e.stopPropagation();toggleTrackBig(t);};
+  cn.onclick=e=>{e.stopPropagation();cornerPin={id:t,x:e.clientX,y:e.clientY};toggleTrackBig(t);};   /* fix 4: pin under the cursor */
   h.appendChild(cn);
   /* Q3: the resize lines live ONLY here — the name box's top and bottom edges.
      Zones lean INTO the box (the 27a chordRzT lesson: adjacent lanes' -4px zones
@@ -13775,6 +13805,35 @@ function drawTrackSel(){
    if(e.target.closest&&(e.target.closest('.tname')||e.target.closest('.tctl')))return;
    selectWholeTrack(activeTrack);
   };
+  /* July 30 fix 3: the Grid block is the BOTTOM lane at default order and its box had
+     NONE of the lane chrome — it resizes and toggles exactly like every other track
+     now: rzhN lines on the box (wired to the main-grid resize path), ▸ expand arrow,
+     corner triangle. The full-width #mainRz/#mainRzT handles stay (two affordances,
+     one law). */
+  if(!paperView){
+   const topRow=gh.firstChild;
+   const ex=document.createElement('span');ex.className='texp';
+   ex.textContent=mainIsStrip()?'▸':'▾';
+   ex.title=mainIsStrip()
+    ?'Expand the Grid back to a full lattice (your last-set size)'
+    :'Collapse the Grid to a clip lane (remembered size — click again to reopen)';
+   ex.onclick=e=>{e.stopPropagation();toggleMainBig();};
+   if(topRow&&topRow.insertBefore)topRow.insertBefore(ex,topRow.firstChild);
+   const cn=document.createElement('span');cn.className='tcorner';
+   cn.title='One-click big/small — toggles the Grid between its large and clip-lane size';
+   cn.onmousedown=e=>{e.preventDefault();e.stopPropagation();};
+   cn.onclick=e=>{e.stopPropagation();cornerPin={id:'__main',x:e.clientX,y:e.clientY};toggleMainBig();};
+   gh.appendChild(cn);
+   const mkRzM=edge=>{
+    const z=document.createElement('div');z.className='rzhN';
+    z.style[edge==='top'?'top':'bottom']='0px';z.style.height='6px';
+    z.title='Drag to resize the Grid — shrink it to a clip lane, grow it for more rows. Same law as every track.';
+    z.innerHTML='<div class="rzline"></div>';
+    z.onmousedown=ev=>startStripRz(ev,'__main',edge);
+    gh.appendChild(z);
+   };
+   mkRzM('top');mkRzM('bottom');
+  }
  }
  /* strips: every track EXCEPT the one in the grid */
  const host=document.getElementById('trackStrips');
@@ -13810,7 +13869,7 @@ function drawTrackSel(){
   const ov=GRID_VIEWS[selOwner];
   const ot=ov&&ov.track;
   const stillGrid=ot&&ot!=='drums'&&ot!==activeTrack&&!hiddenTracks.has(ot)
-   &&stripKindForHeight(stripHeightOf(ot),chordLaneH())==='grid';
+   &&stripKindForHeight(stripHeightOf(ot),stripBoundaryH())==='grid';
   if(!stillGrid){selOwner='main';selNotes.clear();activeGridView=GRID_VIEWS.main;}
  }
  /* July 27a: the stack renders in the client's chosen ORDER, '__grid' marking where the
@@ -13835,7 +13894,7 @@ function drawTrackSel(){
     BUILT-IN lane only when it starts its own run (top=BARH); otherwise its svg starts
     at y=0 (top=0) and the run's docked lane above carries the timeline. ---- */
  const kinds=order.map(t2=>t2==='__grid'?(mainIsStrip()?'strip':'grid')
-  :(t2==='drums'||closedSet.has(t2))?'strip':stripKindForHeight(stripHeightOf(t2),chordH));   /* v3: collapse retired · ⌘G: a closed group is one strip lane */
+  :(t2==='drums'||closedSet.has(t2))?'strip':stripKindForHeight(stripHeightOf(t2),stripBoundaryH()));   /* v3: collapse retired · ⌘G: a closed group is one strip lane */
  const mainIdx=order.indexOf('__grid');
  const lanePlan=barLanePlan(kinds,mainIdx);
  const wantTop=lanePlan.mainOwnLane?undefined:0;
@@ -13883,7 +13942,7 @@ function drawTrackSel(){
   row.appendChild(trackHead(t,true));   /* v3: lane headers carry the name-box chrome (resize lines, ▸, corner, drag) */
   addTrackGrips(row,t);   /* July 27a: far-left + far-right dot grips — drag ↕ to re-order */
   const hpx=stripHeightOf(t);
-  const kind=(t==='drums')?'strip':stripKindForHeight(hpx,chordH);
+  const kind=(t==='drums')?'strip':stripKindForHeight(hpx,stripBoundaryH());
   const sw=document.createElement('div');sw.className='gvwrap';
   if(kind==='grid'){
    /* 2.1b: past chord-lane height the strip TRANSFORMS into a second full Grid view —
@@ -13915,6 +13974,7 @@ function drawTrackSel(){
   cur.appendChild(row);
  }
  LANE_VIEWS.length=laneIdx;   /* July 24 r3: drop lane views whose position vanished */
+ applyCornerPin();   /* July 30 fix 4: a just-toggled corner triangle stays under the cursor */
  window.__stripSig=stripSig();
 }
 function hexA(hex,a){
@@ -14146,9 +14206,11 @@ function buildStripContent(strip,t){
     visible gap, not a chord-colored cell that pretends MIDI is there. Drums (style-
     rendered kit) and the acting chord lane (chords ARE its content) keep their tints. */
  const nsGap=(acting||t==='drums')?null:stripNotes(t);
+ const gapIdx=[];   /* July 30 fix round 2 (30q): layer 3 must skip these — a gap is BLACK, no chord name */
  spans.forEach((sp,ci)=>{
   const cell=document.createElement('div');
   const isGap=!!(nsGap&&!cellNoteIndices(nsGap,sp.a,sp.a+sp.d).length);
+  gapIdx[ci]=isGap;
   cell.className='scell'+(isGap?' gap':'')+((acting?(ci===selChord||selChordSet.has(ci)):cellIsSelected(t,ci))?' sel':'');
   cell.style.flex=String(sp.d);
   const tint=document.createElement('div');tint.className='stint';
@@ -14192,9 +14254,11 @@ function buildStripContent(strip,t){
     and the Chord Lane always keep theirs, and the ACTING chord lane is exempt too) */
  if(acting||!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.clipChordNames===false)){
   const labs=document.createElement('div');labs.className='sclabs';
-  spans.forEach(sp=>{
+  spans.forEach((sp,ci)=>{
    const lb=document.createElement('div');lb.className='sclab';lb.style.flex=String(sp.d);
-   lb.textContent=clipChordLabel(project.chords,sp.a,sp.a+sp.d,SETTINGS.laneLabel,dispLbl);
+   /* July 30 client fix (30q): a deleted/empty clip is ONLY black — no harmony symbol
+      rides a gap (the empty flex div keeps its neighbors aligned) */
+   lb.textContent=gapIdx[ci]?'':clipChordLabel(project.chords,sp.a,sp.a+sp.d,SETTINGS.laneLabel,dispLbl);
    labs.appendChild(lb);
   });
   strip.appendChild(labs);
@@ -14236,7 +14300,7 @@ function drawMainStrip(){
   wrap.insertBefore(el,rzEl||null);
  }
  el.dataset.trk=activeTrack;
- el.style.height=Math.max(STRIP_MIN,Math.round(GRID_VIEWS.main.px))+'px';
+ el.style.height=Math.max(nboxNaturalH(),Math.round(GRID_VIEWS.main.px))+'px';   /* July 30 fix 2: box floor */
  el.style.marginLeft=GUT+'px';el.style.width=(LOOP*PPB)+'px';
  buildStripContent(el,activeTrack);
 }
@@ -14438,30 +14502,33 @@ document.addEventListener('mousemove',ev=>{
  if(!rz)return;
  const d=(rz.edge==='top')?(rz.y0-ev.clientY):(ev.clientY-rz.y0);
  if(rz.t==='__main'){
-  /* July 24 r2: all lanes are equal — the main Grid minimizes right down to a clip lane */
+  /* July 24 r2: all lanes are equal — the main Grid minimizes right down to a clip lane
+     (July 30 fix 2: …but never below its own name box, like every other lane) */
   const m=GRID_VIEWS.main;
-  const px=Math.max(STRIP_MIN,Math.min(1200,rz.h0+d));
+  const px=Math.max(nboxNaturalH(),Math.min(1200,rz.h0+d));
   if(px!==m.px){m.userPx=true;setViewPx(m,px);
    if(!rz.raf){rz.raf=true;requestAnimationFrame(()=>{if(rz)rz.raf=false;if(!paperView){drawTrackSel();drawGrid();drawMainStrip();positionMainRz();}});}}
   return;
  }
- /* 2.1b-e LANE LAW v3 (client Q1): tracks NEVER collapse — the resize floor is the
-    name-box text bounds (TRACK_MIN_H). To make a track vanish, HIDE it instead
-    (ctrl+click menu → Hide track; the Show Hidden Tracks window brings it back). */
+ /* 2.1b-e LANE LAW v3 (client Q1): tracks NEVER collapse — July 30 fix 2: the resize
+    floor is the WHOLE colored name box now (nboxNaturalH), not just its text bounds.
+    To make a track vanish, HIDE it instead (ctrl+click menu → Hide track; the Show
+    Hidden Tracks window brings it back). */
  const chordH=chordLaneH();
- const maxH=(rz.t==='drums')?chordH:GRIDVIEW_MAX;
- const h=Math.round(Math.max(TRACK_MIN_H,Math.min(maxH,rz.h0+d)));
- if(rz.h0+d<TRACK_MIN_H-4&&!rz.floorHint){
+ const boxH=nboxNaturalH();
+ const maxH=(rz.t==='drums')?Math.max(chordH,boxH):GRIDVIEW_MAX;
+ const h=Math.round(Math.max(boxH,Math.min(maxH,rz.h0+d)));
+ if(rz.h0+d<boxH-4&&!rz.floorHint){
   rz.floorHint=true;
-  flashHint('Tracks don’t collapse any more — to tuck '+trackLabel(rz.t)+' away, ctrl+click its name box and choose “Hide track”.');
+  flashHint('Tracks never shrink below their name box — to tuck '+trackLabel(rz.t)+' away, ctrl+click its name box and choose “Hide track”.');
  }
- if(rz.t==='drums'&&rz.h0+d>chordH+10&&!rz.warned){
+ if(rz.t==='drums'&&rz.h0+d>Math.max(chordH,boxH)+10&&!rz.warned){
   rz.warned=true;
   flashHint('Drums stay a strip — the Grid is pitched (kit MIDI mapping coming).');
  }
  if(h!==stripHeightOf(rz.t)){
   stripH[rz.t]=h;
-  if(rz.t!=='drums'&&h>chordH)setViewPx(stripGridViewFor(rz.t),h);
+  if(rz.t!=='drums'&&h>Math.max(chordH,boxH))setViewPx(stripGridViewFor(rz.t),h);
   if(!rz.raf){rz.raf=true;requestAnimationFrame(()=>{if(rz)rz.raf=false;drawTrackSel();});}
  }
 });
@@ -14471,7 +14538,7 @@ document.addEventListener('mouseup',()=>{
     Grid-sized result refreshes the track's "big", a strip-sized one its "small" */
  if(rz.t!=='__main'){
   const h=stripHeightOf(rz.t);
-  if(rz.t!=='drums'&&h>chordLaneH())trackBigH[rz.t]=h;else trackSmallH[rz.t]=h;
+  if(rz.t!=='drums'&&h>stripBoundaryH())trackBigH[rz.t]=h;else trackSmallH[rz.t]=h;   /* fix 2: the boundary includes the box floor */
  }
  rz=null;
  autosaveSoon();   /* heights are project state (#12c) — dirty + autosave, no undo entry */
@@ -14481,24 +14548,73 @@ document.addEventListener('mouseup',()=>{
    ≈6× the minimized height (client: "about 6 times"); minimize→expand returns to the
    last user-set size, remembered per track. Drums honestly cap at strip height. */
 function trackIsBig(t){
- return t!=='drums'&&stripKindForHeight(stripHeightOf(t),chordLaneH())==='grid';
+ return t!=='drums'&&stripKindForHeight(stripHeightOf(t),stripBoundaryH())==='grid';
 }
 function toggleTrackBig(t){
- const chordH=chordLaneH();
+ const bnd=stripBoundaryH();   /* July 30 fix 2: the strip→Grid boundary includes the box floor */
  const h=stripHeightOf(t);
  if(trackIsBig(t)){
   trackBigH[t]=h;
-  stripH[t]=Math.min(chordH,Math.max(TRACK_MIN_H,Math.round(trackSmallH[t]||STRIP_DEF)));
+  stripH[t]=Math.min(bnd,Math.max(nboxNaturalH(),Math.round(trackSmallH[t]||STRIP_DEF)));
  }else{
   trackSmallH[t]=h;
-  const maxH=(t==='drums')?chordH:GRIDVIEW_MAX;
-  const big=trackExpandHeight(trackBigH[t],h,chordH,maxH);
+  const maxH=(t==='drums')?bnd:GRIDVIEW_MAX;
+  const big=trackExpandHeight(trackBigH[t],h,bnd,maxH);
   stripH[t]=big;
-  if(t!=='drums'&&big>chordH)setViewPx(stripGridViewFor(t),big);
+  if(t!=='drums'&&big>bnd)setViewPx(stripGridViewFor(t),big);
   if(t==='drums')flashHint('Drums stay a strip — the Grid is pitched (kit MIDI mapping coming).');
  }
  autosaveSoon();   /* heights are project state (#12c) */
  drawTrackSel();drawMainStrip();positionMainRz();
+}
+/* ==== July 30 fix 3: the Grid block's name box works EXACTLY like every other
+   track's — the same ▸/corner big↔small toggle, wired to the main view's px. The
+   remembered sizes ride the same trackBigH/trackSmallH maps under the '__main' key. */
+function toggleMainBig(){
+ const m=GRID_VIEWS.main;
+ const bnd=stripBoundaryH();
+ if(mainIsStrip()){
+  trackSmallH['__main']=m.px;
+  const big=trackExpandHeight(trackBigH['__main'],m.px,bnd,1200);
+  m.userPx=true;setViewPx(m,Math.max(MAIN_MIN,big));
+ }else{
+  trackBigH['__main']=m.px;
+  m.userPx=true;setViewPx(m,Math.min(bnd,Math.max(nboxNaturalH(),Math.round(trackSmallH['__main']||bnd))));
+ }
+ autosaveSoon();
+ drawTrackSel();if(!paperView)drawGrid();drawMainStrip();positionMainRz();
+}
+/* ==== July 30 fix 4: the corner triangle STAYS UNDER THE CURSOR through a big↔small
+   toggle — the bars header docking + the box growing used to carry it away, so open →
+   close needed a cursor hunt. The clicked position is pinned; the rebuilt triangle is
+   re-placed there (it may float off its corner — that is the point); moving the mouse
+   away releases the pin and the triangle snaps home on the next redraw. */
+var cornerPin=null,cornerPinWatch=false;
+function applyCornerPin(){
+ if(!cornerPin||typeof document==='undefined')return;
+ let hd=null;
+ if(cornerPin.id==='__main')hd=document.getElementById('gridHead');
+ else{
+  const row=document.querySelector('.trow[data-stack-id="'+cornerPin.id+'"]');
+  hd=row&&row.querySelector('.thead');
+ }
+ const cn=hd&&hd.querySelector('.tcorner');
+ if(!cn){cornerPin=null;return;}
+ const r=hd.getBoundingClientRect();
+ cn.style.bottom='auto';
+ cn.style.top=Math.round(cornerPin.y-r.top-6)+'px';
+ if(!cornerPinWatch){
+  cornerPinWatch=true;
+  const watch=ev=>{
+   if(!cornerPin){document.removeEventListener('mousemove',watch);cornerPinWatch=false;return;}
+   const dx=ev.clientX-cornerPin.x,dy=ev.clientY-cornerPin.y;
+   if(dx*dx+dy*dy>26*26){
+    cornerPin=null;document.removeEventListener('mousemove',watch);cornerPinWatch=false;
+    document.querySelectorAll('.tcorner').forEach(c=>{c.style.top='';c.style.bottom='';});
+   }
+  };
+  document.addEventListener('mousemove',watch);
+ }
 }
 /* ==== July 27a: LANE RE-ORDER GRIPS ==== the dot-textured zones at the far left and
    far right of every lane row (and the Grid block) — drag ↕ to re-order the stack; the
