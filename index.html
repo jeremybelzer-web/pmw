@@ -387,7 +387,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30q</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30r</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -465,9 +465,9 @@
        planet/wheel, pivot chords are the escape routes. Travels land on the next
        quantize boundary and are RECORDED as real section-key events (6.7 v1). -->
   <div class="gridwrap" id="orbPanel" style="margin:12px 0;">
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Interplanetary Orbits — break a planet's gravity and walk on the surface of a new world</div>
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Interplanetary Orbits — the planet is the key you are in; break its gravity and walk on the surface of a new world</div>
     <div id="orbBody"></div>
-    <div id="orbStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Click a wheel while the song plays — the chord changes on the next bar. The treasure is what the journey sounds like.</div>
+    <div id="orbStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Click any chord on the circle while the song plays — the landing waits for the next boundary. Pick a Ghost Song and its pivot chords open dotted roads to new planets. The treasure is what the journey sounds like.</div>
   </div>
 
   <!-- 4.4: the Import & cross-pollination sources window — a TOP pop-up from the ⇪ icon
@@ -2047,8 +2047,10 @@ function contourToSamples(contour){
    data: contour = the symbol string · dna = midis · rhythm = [[rel,d]…]. Rides undo,
    project files and autosave like groups. */
 function validShelf(a){
+ /* 30r: 'chords' joined the strand kinds — an Orbits journey keeps its whole
+    re-harmonization (chords + sections) as ONE shelf object */
  return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
-  &&['contour','dna','rhythm'].includes(x.strand)&&typeof x.name==='string'&&x.data!==undefined);}
+  &&['contour','dna','rhythm','chords'].includes(x.strand)&&typeof x.name==='string'&&x.data!==undefined);}
 function shelfNextId(shelf){
  let n=1;
  const ids=new Set((shelf||[]).map(x=>x.id));
@@ -8454,7 +8456,16 @@ function przThumb(strand,data){
  /* tiny SVG per strand — contour polyline · DNA dots · one-tone rhythm bars */
  const W=180,H=40;
  let inner='';
- if(strand==='contour'){
+ if(strand==='chords'){
+  /* 30r: an Orbits-journey keep — one tinted block per chord, hue from the root */
+  const chs=(data&&data.chords)||[];
+  const end=chs.reduce((a,c)=>a+c.d,0)||1;
+  let t=0;
+  for(const c of chs){
+   inner+='<rect x="'+((t/end)*W).toFixed(1)+'" y="6" width="'+Math.max(2,(c.d/end)*W-1).toFixed(1)+'" height="28" rx="3" fill="hsl('+(((c.r||0)*30)%360)+',45%,52%)" opacity=".85"/>';
+   t+=c.d;
+  }
+ }else if(strand==='contour'){
   const s=contourToSamples(data)||[[0,.5],[1,.5]];
   const pts=s.map(([x,y])=>(x*W).toFixed(1)+','+((1-y)*(H-8)+4).toFixed(1)).join(' ');
   inner='<polyline points="'+pts+'" fill="none" stroke="#e8a33d" stroke-width="1.6"/>';
@@ -8476,7 +8487,16 @@ function przAudition(strand,data,startMidi,atBeat){
  const go=()=>{try{
   if(!audioReady||!inst)return;
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
-  if(strand==='rhythm'){
+  if(strand==='chords'){
+   /* 30r: an Orbits journey plays back through the comping voice, 16-beat cap */
+   let acc=0;
+   for(const c of ((data&&data.chords)||[])){
+    if(acc>=16)break;
+    const d=Math.min(c.d,16-acc);
+    inst.note('comping',voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
+    acc+=c.d;
+   }
+  }else if(strand==='rhythm'){
    const base=(typeof gridBase==='function')?project.base:60;
    data.forEach(([t,d])=>inst.note('comping',base,Math.max(.1,d*spb*.9),t0+t*spb,.55));
   }else if(strand==='dna'){
@@ -8498,6 +8518,20 @@ function przSelRows(){
  return {idxs,rows:idxs.map(i=>{const n=project.melody[i];return [n[0],n[1],n[2]];})};
 }
 function przApply(strand,data){
+ /* 30r: a 'chords' keep needs no note selection — ✓ writes the whole journey back
+    (chord lane + its key sections, one undo) */
+ if(strand==='chords'){
+  if(!data||!Array.isArray(data.chords)||!data.chords.length){setPrzStatus('That journey is empty — nothing to apply.');return false;}
+  if(effectiveChords()!==project.chords){setPrzStatus('Toggle ⚡ off first — the lane is read-only while a psych-out is armed.');return false;}
+  snapshot();
+  noteEngine('orbit-recall',{n:data.chords.length});
+  project.chords=JSON.parse(JSON.stringify(data.chords));
+  if(Array.isArray(data.sections)&&data.sections.length)project.sections=JSON.parse(JSON.stringify(data.sections));
+  selChord=null;selChordSet.clear();
+  refresh(true);
+  setPrzStatus('The journey is back on the lane — chords AND its key map, one undo returns what was there.');
+  return true;
+ }
  const sel=przSelRows();
  if(!sel){setPrzStatus('Select notes in the grid first — ✓ re-shapes a selection through the strand.');return false;}
  if(strand==='contour'&&sel.rows.length<2){setPrzStatus('A contour needs at least 2 selected notes to re-shape.');return false;}
@@ -11808,9 +11842,112 @@ function buildWanPanel(){
    EXPANSION: run the whole progression starting on any scale degree, or on the
    parallel / 4.6-relative mode ("any good piece of music has its own logic which can
    always be expanded on"). Pure layer unit-tested. ==== */
-var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true};
+/* ==== 4.7 ORBITS REWORK (build 2026-07-30r, client round) ==== the planet IS the key
+   we are in: its diatonic chords ring the circle CLOCKWISE (degree 1 at 12 o'clock),
+   a 🚀 rides the chord the multi-track grid is playing, the song's own chords glow.
+   PIVOT CHORDS slot into the ring in degree order (a III lands right after the iii, a
+   ♭III right before it) and open dotted roads to destination planets — new key centers
+   with their own rings. The GHOST SONG MODULATOR picks where pivots come from: import
+   a song through time and space, the app analyzes it and lists its modulations AND its
+   psych-outs ("A Psych-Out Modulation is when a piece of music departs the key only
+   for a moment and immediately returns" — those planets wear Psych!). "Expanded" finds
+   every other pivot available; "User created" takes any chord, even far outside the
+   key, and sketches its grey road. Weber neighbors are the DEFAULT modulating mode.
+   ⏺ Record captures the whole re-harmonization as ONE chords object on the Essence
+   Shelf. 🚀 Pilot view flies the map. Pure layer unit-tested. ==== */
+var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
+ ghost:'weber',expandedOn:false,userPivots:[],pilot:false,rec:false,recN:0,clicks:[]};
 var orbJourney={active:false,log:[]};
 var orbBot={next:0};
+function orbCircleSlots(pcs){
+ /* the planet's clockwise chord ring: degree 1 at 12 o'clock, the rest evenly
+    clockwise (the client call: 1 at 12 · 4 near 6 o'clock) — pure */
+ const n=(pcs||[]).length;if(!n)return [];
+ return pcs.map((pc,k)=>({deg:k,pc,angle:-Math.PI/2+(k/n)*Math.PI*2}));
+}
+function orbPivotAngle(pcs,rootRel){
+ /* where an inserted pivot chord sits on the ring: same root as a diatonic degree →
+    just AFTER it clockwise (the client's "III comes after iii"); a root between two
+    degrees → past the lower neighbor, short of the next ("a ♭III before the iii").
+    Pure. */
+ const n=(pcs||[]).length;if(!n)return -Math.PI/2;
+ const r=((rootRel%12)+12)%12;
+ const step=Math.PI*2/n;
+ const di=pcs.indexOf(r);
+ if(di>=0)return -Math.PI/2+(di/n)*Math.PI*2+step*.42;
+ let prev=-1;
+ for(let k=0;k<n;k++)if(pcs[k]<r)prev=k;
+ if(prev<0)return -Math.PI/2-step*.5;
+ return -Math.PI/2+(prev/n)*Math.PI*2+step*.62;
+}
+function ghostSongsFrom(db){
+ /* the Ghost Song shelf: curated modulation moments grouped by source recording — pure */
+ const out=[];
+ for(const t of (db||[])){
+  let g=out.find(x=>x.src===t.source);
+  if(!g){g={src:t.source,moments:[]};out.push(g);}
+  g.moments.push(t);
+ }
+ return out;
+}
+function ghostPivotFor(tpl,tonic){
+ /* one ghost moment landed on the CURRENT planet: the pivot chord = the bridge's
+    first chord resolved from this tonic; the destination = the landing key. A
+    psych-out stays home and wears the Psych! badge. Pure. */
+ if(!tpl||!Array.isArray(tpl.bridge)||!tpl.bridge.length)return null;
+ const r=resolveBridge(tpl,tonic);
+ const p=r.chords[0];
+ const psych=!tpl.interval;
+ return {r:p.r,iv:p.iv.slice(),lbl:p.lbl,tplId:tpl.id,kind:'ghost',
+  dest:{tonic:psych?((tonic%12)+12)%12:r.tgtTonic,minor:tpl.tgtMode==='aeolian',psych}};
+}
+function orbExpandedPivots(tonic,pcs){
+ /* the "Expanded" ring — every other pivot available: quality-flip each non-dim
+    diatonic degree, plus the flat-side borrowables the scale lacks. Each pivot leads
+    where it FUNCTIONS: a major pivot as V of the key a fourth up, a minor pivot as
+    ii of the key a whole step down. Pure. */
+ const T=t=>((t%12)+12)%12;
+ const out=[];
+ const n=(pcs||[]).length;
+ for(let k=0;k<n;k++){
+  const tri=scaleDegreeTriad(pcs,k);if(!tri)continue;
+  if(tri.iv[2]===6)continue;
+  const wasMinor=tri.iv[1]===3;
+  const root=T(tonic+tri.off);
+  if(wasMinor){
+   const dT=T(root+5),dRel=T(dT-tonic),dDi=pcs.indexOf(dRel);
+   const dMinor=dDi>=0&&(scaleDegreeTriad(pcs,dDi)||{iv:[0,4,7]}).iv[1]===3;
+   out.push({r:root,iv:[0,4,7],lbl:null,kind:'expanded',dest:{tonic:dT,minor:dMinor,psych:false}});
+  }else{
+   out.push({r:root,iv:[0,3,7],lbl:null,kind:'expanded',dest:{tonic:T(root+10),minor:false,psych:false}});
+  }
+ }
+ for(const b of [3,8,10]){
+  if(pcs.indexOf(b)>=0)continue;
+  const root=T(tonic+b);
+  out.push({r:root,iv:[0,4,7],lbl:null,kind:'expanded',dest:{tonic:T(root+5),minor:false,psych:false}});
+ }
+ return out;
+}
+function psychFromChords(chords,tonic,pcs){
+ /* ghost-song analysis: maximal runs of outside-the-key chords that RETURN to the key
+    (a run that never returns is a modulation, not a psych-out — it stays out of this
+    list). Returns [{idx,len,lbls,roots}] — pure. */
+ const T=t=>((t%12)+12)%12;
+ const inKey=c=>{
+  const rel=T((c.r||0)-tonic);
+  const di=(pcs||[]).indexOf(rel);
+  if(di<0)return false;
+  const tri=scaleDegreeTriad(pcs,di);
+  return !!tri&&tri.iv[1]===((c.iv||[0,4,7])[1]);
+ };
+ const out=[];let run=null;
+ (chords||[]).forEach((c,i)=>{
+  if(!inKey(c)){if(!run)run={idx:i,len:0,lbls:[],roots:[]};run.len++;run.lbls.push(c.lbl||PCN[T(c.r||0)]);run.roots.push({r:T(c.r||0),iv:(c.iv||[0,4,7]).slice()});}
+  else if(run){out.push(run);run=null;}
+ });
+ return out;
+}
 function orbMinor(mode){
  const sc=SCALE_DB[mode];
  return !!(sc&&sc.pcs&&sc.pcs.indexOf(3)>=0&&sc.pcs.indexOf(4)<0);
@@ -11863,17 +12000,180 @@ function progressionOnDegree(chords,tonic,pcs,k){
 }
 function setOrbStatus(m){const el=document.getElementById('orbStatus');if(el)el.textContent=m||'';}
 function orbQ(){return orbState.q>0?orbState.q:4;}
-function orbCandidates(){
- /* the travel targets, in one keyed list: the song's own planets first, then the
-    departure wheels of the CURRENT key */
- const regs=keyRegions(project.sections,LOOP);
- const planets=orbPlanets(regs).map(p=>({tonic:p.tonic,minor:orbMinor(p.mode),from:'song'}));
- const b=(playing&&typeof transportBeat==='function')?transportBeat():((typeof playheadBeat==='number')?playheadBeat:0);
- const st=keyFor(b);
- const sc=SCALE_DB[st.mode]||SCALE_DB.ionian;
- const deps=orbDepartures(st.tonic||0,sc.pcs).filter(d=>!planets.some(p=>p.tonic===d.tonic&&p.minor===d.minor))
-  .map(d=>({tonic:d.tonic,minor:d.minor,from:'dep'}));
- return planets.concat(deps);
+function orbBeatNow(){
+ return (playing&&typeof transportBeat==='function')?transportBeat():((typeof playheadBeat==='number')?playheadBeat:0);
+}
+function orbPcsNow(){
+ const cur=orbCurrentKey();
+ const sc=SCALE_DB[cur.mode]||SCALE_DB[cur.minor?'aeolian':'ionian']||SCALE_DB.ionian;
+ return sc.pcs;
+}
+function orbUsedDegrees(chords,tonic,pcs){
+ /* which ring chords the multi-track grid actually plays right now — they glow */
+ const T=t=>((t%12)+12)%12;
+ const used=new Set();
+ for(const c of (chords||[])){
+  const di=(pcs||[]).indexOf(T((c.r||0)-tonic));
+  if(di>=0){
+   const tri=scaleDegreeTriad(pcs,di);
+   if(tri&&tri.iv[1]===((c.iv||[0,4,7])[1]))used.add(di);
+  }
+ }
+ return used;
+}
+function orbGhostSources(){
+ /* the Ghost Song Modulator's shelf: Weber default · this piece · every embedded song
+    · every curated recording through time and space */
+ const out=[{id:'weber',label:'Weber neighbors (default — no ghost song)'},
+  {id:'this',label:'This piece of music'}];
+ if(typeof SONGS!=='undefined')for(const s of SONGS)out.push({id:'song:'+s.id,label:s.name});
+ for(const g of ghostSongsFrom(typeof MODULATION_DB!=='undefined'?MODULATION_DB:[]))
+  out.push({id:'db:'+g.src,label:g.src});
+ return out;
+}
+function orbGhostAnalysis(){
+ /* what the selected ghost song teaches THIS planet: pivot chords for the ring, the
+    destination planets, and the human-readable modulation / psych-out lists */
+ const T=t=>((t%12)+12)%12;
+ const cur=orbCurrentKey();
+ const pcs=orbPcsNow();
+ const g=orbState.ghost||'weber';
+ const res={pivots:[],planets:[],mods:[],psychs:[],note:null};
+ if(g==='weber'){
+  res.planets=weberNeighbors(cur.tonic,cur.minor).map(w=>({tonic:w.tonic,minor:w.minor,psych:false,tag:w.tag,kind:'weber'}));
+  res.note='Weber default mode — the four classic neighbor keys orbit as planets. Pick a ghost song above and its pivot chords join the ring.';
+ }else if(g==='this'){
+  const regs=keyRegions(project.sections,LOOP);
+  for(let i=1;i<regs.length;i++){
+   const r=regs[i];
+   const bc=chordAt(project.chords,r.start).c;
+   res.mods.push({name:'beat '+Math.round(r.start)+' → '+PCN[r.tonic]+(orbMinor(r.mode)?' minor':' major'),desc:'a written modulation in this piece'});
+   res.pivots.push({r:T(cur.tonic+T((bc.r||0)-regs[i-1].tonic)),iv:(bc.iv||[0,4,7]).slice(),lbl:bc.lbl||null,kind:'ghost',
+    dest:{tonic:r.tonic,minor:orbMinor(r.mode),psych:false}});
+  }
+  const ps=psychFromChords(flatChords(project.chords),cur.tonic,pcs);
+  for(const p of ps){
+   res.psychs.push({name:p.lbls.join(' → '),len:p.len});
+   const first=p.roots[0];
+   res.pivots.push({r:first.r,iv:first.iv,lbl:p.lbls[0],kind:'ghost',
+    dest:{tonic:cur.tonic,minor:cur.minor,psych:true}});
+  }
+  if(!res.mods.length&&!res.psychs.length)res.note='This piece stays in one key so far — no modulations or psych-outs to extract. Travel somewhere and it will have some.';
+ }else if(g.slice(0,5)==='song:'){
+  const s=(typeof SONGS!=='undefined')&&SONGS.find(x=>'song:'+x.id===g);
+  if(s){
+   const spcs=(SCALE_DB[s.mode==='minor'?'aeolian':'ionian']||SCALE_DB.ionian).pcs;
+   const ps=psychFromChords(s.chords,s.tonic,spcs);
+   for(const p of ps){
+    res.psychs.push({name:p.lbls.join(' → '),len:p.len});
+    const first=p.roots[0];
+    res.pivots.push({r:T(cur.tonic+T(first.r-s.tonic)),iv:first.iv,lbl:p.lbls[0],kind:'ghost',
+     dest:{tonic:cur.tonic,minor:cur.minor,psych:true}});
+   }
+   res.note=ps.length
+    ?'This song modulates for a moment only — '+ps.length+' psych-out'+(ps.length>1?'s':'')+' found, no full key changes in the excerpt.'
+    :'Analyzed: this excerpt does not modulate — no pivot chords to extract. Pick a modulating ghost song.';
+  }
+ }else if(g.slice(0,3)==='db:'){
+  const src=g.slice(3);
+  const grp=ghostSongsFrom(typeof MODULATION_DB!=='undefined'?MODULATION_DB:[]).find(x=>x.src===src);
+  if(grp)for(const tpl of grp.moments){
+   const pv=ghostPivotFor(tpl,cur.tonic);
+   if(!pv)continue;
+   res.pivots.push(pv);
+   if(tpl.interval)res.mods.push({name:tpl.name,desc:tpl.desc,tplId:tpl.id});
+   else res.psychs.push({name:tpl.name,desc:tpl.desc,tplId:tpl.id});
+  }
+ }
+ if(orbState.expandedOn){
+  const have=new Set(res.pivots.map(p=>T(p.r)+':'+((p.iv||[0,4,7])[1]===3?1:0)));
+  for(const x of orbExpandedPivots(cur.tonic,pcs)){
+   const k=T(x.r)+':'+(x.iv[1]===3?1:0);
+   if(have.has(k))continue;
+   const di=pcs.indexOf(T(x.r-cur.tonic));
+   const tri=di>=0?scaleDegreeTriad(pcs,di):null;
+   if(tri&&tri.iv[1]===x.iv[1])continue;   /* already a diatonic ring chord */
+   have.add(k);res.pivots.push(x);
+  }
+ }
+ for(const u of (orbState.userPivots||[]))res.pivots.push(u);
+ /* destination planets: one per distinct target key the pivots open (+ the weber set) */
+ for(const p of res.pivots){
+  if(!p.dest)continue;
+  if(!res.planets.some(pl=>pl.tonic===p.dest.tonic&&pl.minor===p.dest.minor&&!!pl.psych===!!p.dest.psych))
+   res.planets.push({tonic:p.dest.tonic,minor:p.dest.minor,psych:!!p.dest.psych,kind:p.kind});
+ }
+ return res;
+}
+function orbJourneyStart(){
+ if(!orbJourney.active){snapshot();orbJourney={active:true,log:[]};}
+}
+function orbLandBeat(){
+ const at=orbNextBoundary(orbBeatNow(),orbQ(),LOOP);
+ if(at==null)setOrbStatus('No room — the next landing falls past the song’s end. Pull the speed in or rewind.');
+ return at;
+}
+function orbReplaceChordAt(at,spec){
+ /* the click landing: the chord under the landing beat is REPLACED (duration kept) —
+    with 🔁 loop on you hear the new chord every time the change comes around */
+ if(effectiveChords()!==project.chords){setOrbStatus('Toggle ⚡ off first — the lane is read-only while a psych-out is armed.');return false;}
+ const hit=chordAt(project.chords,at);
+ if(!hit||!hit.c)return false;
+ orbJourneyStart();
+ hit.c.r=((spec.r%12)+12)%12;hit.c.iv=spec.iv.slice();hit.c.lbl=spec.lbl||PCN[((spec.r%12)+12)%12]+(spec.iv[1]===3?(spec.iv[2]===6?'dim':'m'):'');
+ hit.c.bass=0;
+ orbJourney.log.push({beat:at,chord:hit.c.lbl});
+ noteEngine('orbit-chord',{lbl:hit.c.lbl,beat:at});
+ refresh(true);renderOrb();
+ return true;
+}
+function orbPivotGo(pv){
+ /* a pivot chord fires its road: ghost templates run their true bridge (psych bursts
+    included); expanded/user pivots write the pivot ON the boundary and re-key from the
+    chord after it (2.2b: notes never move on a re-key) */
+ if(effectiveChords()!==project.chords){setOrbStatus('Toggle ⚡ off first — the lane is read-only while a psych-out is armed.');return false;}
+ const at=orbLandBeat();if(at==null)return false;
+ const cur=orbCurrentKey();
+ const tpl=pv.tplId&&(typeof MODULATION_DB!=='undefined')&&MODULATION_DB.find(t=>t.id===pv.tplId);
+ orbJourneyStart();
+ if(tpl&&!tpl.interval){
+  const idx=chordIdxAtBeat(project.chords,at);
+  project.chords=applyPsychOut(project.chords,idx,tpl,cur.tonic);
+  orbJourney.log.push({beat:at,psych:tpl.id});
+  noteEngine('orbit-psych',{tpl:tpl.id,beat:at});
+ }else if(tpl){
+  const idx=chordIdxAtBeat(project.chords,at);
+  const res=injectModulation(project.chords,idx,tpl,cur.tonic);
+  for(const tname of Object.keys(project.tracks)){
+   const arr=project.tracks[tname];if(!arr)continue;
+   for(const n of arr)if(n[0]>=res.tailStart-1e-6)n[2]+=tpl.interval;
+  }
+  project.sections=modulationSections(project.sections,res.tailStart,tpl.interval,LOOP);
+  if(tpl.tgtMode)project.sections=modulationSectionsMode(project.sections,res.tailStart,tpl.tgtMode);
+  project.chords=res.chords;
+  orbJourney.log.push({beat:at,tonic:res.tgtTonic,minor:tpl.tgtMode==='aeolian'});
+  noteEngine('orbit-travel',{tpl:tpl.id,beat:at});
+ }else{
+  const hit=chordAt(project.chords,at);
+  if(!hit||!hit.c)return false;
+  hit.c.r=((pv.r%12)+12)%12;hit.c.iv=pv.iv.slice();
+  hit.c.lbl=pv.lbl||PCN[hit.c.r]+(pv.iv[1]===3?'m':'');
+  hit.c.bass=0;
+  if(pv.dest&&!pv.dest.psych){
+   const after=+(hit.start+hit.c.d).toFixed(6);
+   if(after<LOOP-1e-6){
+    project.sections=splitSectionAt(project.sections,after,LOOP);
+    for(const s of project.sections)if(s.start>=after-1e-6){s.tonic=pv.dest.tonic;s.mode=pv.dest.minor?'aeolian':'ionian';}
+   }
+   orbJourney.log.push({beat:at,tonic:pv.dest.tonic,minor:pv.dest.minor});
+  }else orbJourney.log.push({beat:at,psych:'user'});
+  noteEngine('orbit-pivot',{lbl:hit.c.lbl,beat:at});
+ }
+ refresh(true);renderOrb();
+ setOrbStatus((pv.dest&&!pv.dest.psych)
+  ?'Pivot fires at beat '+at+' → '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major')+' — the journey is being recorded (↩ one undo returns the whole voyage).'
+  :'Psych! The feint lands at beat '+at+' and the song walks straight back home.');
+ return true;
 }
 function orbCurrentKey(){
  const b=(playing&&typeof transportBeat==='function')?transportBeat():((typeof playheadBeat==='number')?playheadBeat:0);
@@ -11901,16 +12201,25 @@ function orbEndJourney(){
  renderOrb();
  setOrbStatus('Journey closed — the next travel starts a fresh one (its own undo).');
 }
+function orbActivate(item){
+ /* one activation path for click, Enter, MIDI pads and the bot */
+ if(!item)return false;
+ if(item.k==='chord'){
+  const at=orbLandBeat();if(at==null)return false;
+  return orbReplaceChordAt(at,item);
+ }
+ if(item.k==='pivot')return orbPivotGo(item.pv);
+ if(item.k==='planet')return orbTravelTo(item.tonic,item.minor);
+ return false;
+}
 function orbMidiTravel(note){
- /* §9: travel by MIDI-controller grid — pads index the candidate wheels. Recording
-    always wins (the caller checks); only the open window listens. */
+ /* travel by MIDI-controller grid — pads index the clickable map (ring chords, pivots,
+    planets, in draw order). Recording always wins (the caller checks). */
  if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel'||!orbState.midi)return false;
- const cands=orbCandidates();
- if(!cands.length)return false;
- const c=cands[note%cands.length];
- orbState.sel=note%cands.length;
- orbTravelTo(c.tonic,c.minor);
- return true;
+ const list=orbState.clicks||[];
+ if(!list.length)return false;
+ orbState.sel=note%list.length;
+ return orbActivate(list[orbState.sel]);
 }
 function orbBotPick(cands,cur){
  /* the autonomous modulators' three maze shapes — pure-ish (random only in drunkard) */
@@ -11927,13 +12236,26 @@ function orbBotTick(){
  if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
  const b=transportBeat();
  if(b+1e-6<orbBot.next)return;
- const cands=orbCandidates();
+ const cands=(orbState.clicks||[]).filter(c=>c.k==='planet'||c.k==='pivot')
+  .map(c=>c.k==='planet'?c:{tonic:((c.pv.dest&&c.pv.dest.tonic)||0),minor:!!(c.pv.dest&&c.pv.dest.minor),k:'pivot',pv:c.pv});
  const pick=orbBotPick(cands,orbCurrentKey());
- if(pick){
-  orbState.sel=Math.max(0,cands.indexOf(pick));
-  orbTravelTo(pick.tonic,pick.minor);
- }
+ if(pick)orbActivate(pick.k==='pivot'?pick:{k:'planet',tonic:pick.tonic,minor:pick.minor});
  orbBot.next=Math.floor(b/orbQ()+1e-9)*orbQ()+orbQ()*2;   /* wander every OTHER landing — room to hear the world */
+}
+function orbShipTick(){
+ /* the 🚀 rides the chord the grid is playing — cheap positional update, no re-render */
+ if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ const ship=document.getElementById('orbShip');if(!ship)return;
+ const geo=orbState.geo;if(!geo)return;
+ const cur=orbCurrentKey();
+ const pcs=orbPcsNow();
+ const c=chordAt(effectiveChords(),orbBeatNow()).c;if(!c)return;
+ const rel=(((c.r||0)-cur.tonic)%12+12)%12;
+ const di=pcs.indexOf(rel);
+ const a=di>=0?(-Math.PI/2+(di/pcs.length)*Math.PI*2):orbPivotAngle(pcs,rel);
+ const x=geo.cx+Math.cos(a)*(geo.r-30),y=geo.cy+Math.sin(a)*(geo.r-30);
+ ship.style.left=(x-11)+'px';ship.style.top=(y-13)+'px';
+ ship.style.transform='rotate('+Math.round((a+Math.PI/2)*180/Math.PI)+'deg)';
 }
 function orbWheelSVG(tonic,minor,size,opts){
  /* a key as a planet/wheel: the ring, its scale tones as surface dots, the label */
@@ -11952,82 +12274,180 @@ function orbWheelSVG(tonic,minor,size,opts){
 }
 function renderOrb(){
  const B=document.getElementById('orbBody');if(!B)return;
- const regs=keyRegions(project.sections,LOOP);
- const planets=orbPlanets(regs);
+ const T=t=>((t%12)+12)%12;
  const cur=orbCurrentKey();
- const cands=orbCandidates();
- const home=planets[0]||{tonic:0,mode:'ionian'};
- /* the ORBIT MAP: the song's planets with its written route, then the departure ring */
- const wheels=cands.map((cd,i)=>{
-  const isCur=cd.tonic===cur.tonic&&cd.minor===cur.minor;
-  const sel=i===orbState.sel;
-  return '<div class="orbWheel" data-i="'+i+'" title="'+PCN[cd.tonic]+' '+(cd.minor?'Minor':'Major')+(cd.from==='song'?' — one of this song\'s own worlds':' — a departure option: the song\'s modulation habit applied to this diatonic degree')+'. Click (or Enter on the highlighted wheel) = break gravity and land there on the next boundary." style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:5px;border-radius:9px;'+(sel?'background:rgba(232,163,61,.13);outline:1px solid var(--accent);':'')+'">'
-   +orbWheelSVG(cd.tonic,cd.minor,cd.from==='song'?74:56,{cur:isCur,dashed:cd.from==='dep'})
-   +'<span style="font-size:9px;color:var(--dim);">'+(cd.from==='song'?(isCur?'you are here':'this song'):'could go')+'</span></div>';
- }).join('');
+ const pcs=orbPcsNow();
+ const n=pcs.length;
+ const regs=keyRegions(project.sections,LOOP);
+ const home=orbPlanets(regs)[0]||{tonic:0,mode:'ionian'};
+ const ana=orbGhostAnalysis();
+ const used=orbUsedDegrees(flatChords(project.chords),cur.tonic,pcs);
+ const slots=orbCircleSlots(pcs);
+ /* ---- the map geometry: ONE big planet (the key we are in), destinations around it ---- */
+ const W=840,H=520,cx=280,cy=262,R=152;
+ orbState.geo={cx,cy,r:R};
+ const clicks=[];let lines='',nodes='';
+ const chipLbl=(root,iv)=>PCN[T(root)]+(iv[1]===3?(iv[2]===6?'°':'m'):(iv[2]===8?'+':''));
+ /* the planet body */
+ nodes+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="rgba(232,163,61,.045)" stroke="var(--accent)" stroke-width="2.2"/>'
+  +'<circle cx="'+cx+'" cy="'+cy+'" r="'+(R-34)+'" fill="none" stroke="rgba(255,255,255,.05)"/>'
+  +'<text x="'+cx+'" y="'+(cy-6)+'" text-anchor="middle" font-size="26" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>'
+  +'<text x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle" font-size="10" fill="#8b93a7">'+(cur.minor?'minor':'major')+' — you are here</text>';
+ /* the clockwise chord ring — degree 1 at 12 o'clock */
+ slots.forEach((s,k)=>{
+  const tri=scaleDegreeTriad(pcs,k);if(!tri)return;
+  const root=T(cur.tonic+s.pc);
+  const roman=degRomanW(k,tri.iv,n);
+  const x=cx+Math.cos(s.angle)*R,y=cy+Math.sin(s.angle)*R;
+  const idx=clicks.length;
+  clicks.push({k:'chord',r:root,iv:tri.iv.slice(),lbl:roman,deg:k});
+  const isUsed=used.has(k),sel=orbState.sel===idx;
+  nodes+='<g class="orbNode" data-orb="'+idx+'"><title>'+PCN[root]+' ('+roman+')'+(isUsed?' — the grid plays this chord':' — in this key, unused so far')+'. Click = the chord under the next landing is replaced with this one (loop on = you hear it every round).</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="18" fill="'+(isUsed?'rgba(232,163,61,.22)':'rgba(20,22,28,.92)')+'" stroke="'+(sel?'var(--accent)':isUsed?'var(--accent)':'#59607a')+'" stroke-width="'+(sel?2.6:isUsed?1.8:1.1)+'"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="12" font-weight="700" fill="'+(isUsed?'var(--accent)':'#c8cde0')+'">'+roman+'</text>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+12).toFixed(1)+'" text-anchor="middle" font-size="8" fill="#8b93a7">'+chipLbl(root,tri.iv)+'</text></g>';
+ });
+ /* pivot chords slot into the ring in degree order */
+ const pivotPts=[];
+ ana.pivots.forEach(pv=>{
+  const rel=T(pv.r-cur.tonic);
+  const a=orbPivotAngle(pcs,rel);
+  const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'pivot',pv});
+  const col=pv.kind==='user'?'#7b8194':pv.kind==='expanded'?'#5bb98c':'#e8a33d';
+  const sel=orbState.sel===idx;
+  const lbl=pv.lbl||chipLbl(pv.r,pv.iv);
+  nodes+='<g class="orbNode" data-orb="'+idx+'"><title>Pivot chord '+lbl+(pv.dest&&!pv.dest.psych?' — opens the road to '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major'):' — a psych-out feint: out for a moment, straight back home')+(pv.kind==='user'?' (yours)':pv.kind==='expanded'?' (Expanded)':' (from the ghost song)')+'. Click = fire it on the next landing.</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="14" fill="rgba(20,22,28,.94)" stroke="'+col+'" stroke-width="'+(sel?2.6:1.5)+'" stroke-dasharray="4 3"'+(pv.kind==='user'?' opacity=".75"':'')+'/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="'+col+'">'+lbl.slice(0,6)+'</text></g>';
+  pivotPts.push({pv,x,y,col});
+ });
+ /* destination planets + their dotted roads */
+ const placed=[];
+ ana.planets.forEach((pl,i)=>{
+  const pvp=pivotPts.find(p=>p.pv.dest&&p.pv.dest.tonic===pl.tonic&&p.pv.dest.minor===pl.minor&&!!p.pv.dest.psych===!!pl.psych);
+  let a=pvp?Math.atan2(pvp.y-cy,pvp.x-cx):(-Math.PI/2+((i+0.5)/Math.max(4,ana.planets.length))*Math.PI*2);
+  let px=0,py=0,tries=0;
+  for(;;){
+   px=cx+Math.cos(a)*(R+140);py=cy+Math.sin(a)*(R+140);
+   px=Math.max(76,Math.min(W-80,px));py=Math.max(62,Math.min(H-70,py));
+   if(!placed.some(q=>(q.x-px)*(q.x-px)+(q.y-py)*(q.y-py)<95*95)||++tries>16)break;
+   a+=0.42;
+  }
+  placed.push({x:px,y:py});
+  const pr=pl.psych?38:50;
+  const grey=pl.kind==='user';
+  const col=grey?'#5a6070':pl.psych?'#c77dff':'#8b93a7';
+  const idx=clicks.length;
+  clicks.push({k:'planet',tonic:pl.tonic,minor:pl.minor});
+  const sel=orbState.sel===idx;
+  const sx=pvp?pvp.x:cx+Math.cos(a)*R,sy=pvp?pvp.y:cy+Math.sin(a)*R;
+  const ex=px-Math.cos(a)*pr,ey=py-Math.sin(a)*pr;
+  lines+='<line x1="'+sx.toFixed(1)+'" y1="'+sy.toFixed(1)+'" x2="'+ex.toFixed(1)+'" y2="'+ey.toFixed(1)+'" stroke="'+col+'" stroke-width="1.4" stroke-dasharray="5 5"'+(grey?' opacity=".55"':'')+'/>';
+  const dpcs=(SCALE_DB[pl.minor?'aeolian':'ionian']||SCALE_DB.ionian).pcs;
+  let dots='';
+  for(const p of dpcs){
+   const da=(p/12)*Math.PI*2-Math.PI/2;
+   dots+='<circle cx="'+(px+Math.cos(da)*pr*.74).toFixed(1)+'" cy="'+(py+Math.sin(da)*pr*.74).toFixed(1)+'" r="'+(p===0?2.6:1.5)+'" fill="'+(p===0?col:'#6b7186')+'"/>';
+  }
+  nodes+='<g class="orbNode" data-orb="'+idx+'"'+(grey?' opacity=".62"':'')+'><title>'+PCN[pl.tonic]+' '+(pl.minor?'Minor':'Major')+(pl.psych?' — a Psych-out world: the song only visits for a moment':' — a destination planet with its own diatonic ring')+(pl.tag?' · Weber: '+pl.tag:'')+'. Click = break gravity and land there on the next boundary.</title>'
+   +'<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="'+pr+'" fill="rgba(20,22,28,.55)" stroke="'+(sel?'var(--accent)':col)+'" stroke-width="'+(sel?2.4:1.5)+'" stroke-dasharray="6 4"/>'
+   +dots
+   +'<text x="'+px.toFixed(1)+'" y="'+(py+4).toFixed(1)+'" text-anchor="middle" font-size="14" font-weight="700" fill="'+(sel?'var(--accent)':'#e9eaef')+'">'+PCN[pl.tonic]+(pl.minor?'m':'')+'</text>'
+   +(pl.psych?'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#c77dff">Psych!</text>':'')
+   +(pl.tag?'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+pl.tag+'</text>':'')
+   +'</g>';
+ });
+ orbState.clicks=clicks;
  const route=regs.map((r,i)=>romanKeyLabel(r.tonic,orbMinor(r.mode),home.tonic)+(i<regs.length-1?' ⟶ ':'')).join('');
- /* the WEBER GRID: fifths rows × (relative | MAJOR | parallel), home-centered; visited lit */
- const visited=t=>planets.some(p=>p.tonic===((t%12)+12)%12&&!orbMinor(p.mode));
- const visitedMin=t=>planets.some(p=>p.tonic===((t%12)+12)%12&&orbMinor(p.mode));
- let weber='<table style="border-collapse:collapse;font-size:11px;">';
- for(let k=2;k>=-2;k--){
-  const T=((home.tonic+7*k)%12+12)%12;
-  const rel=((T+9)%12+12)%12;
-  const cell=(t,minor,vis)=>{
-   const isC=cur.tonic===t&&cur.minor===minor;
-   return '<td class="orbWb" data-t="'+t+'" data-m="'+(minor?1:0)+'" title="'+PCN[t]+' '+(minor?'Minor':'Major')+' — click to travel (Weber\'s table: fifths run vertically, relative left, parallel right)" style="padding:4px 9px;border:1px solid var(--line);cursor:pointer;text-align:center;'+(isC?'background:rgba(232,163,61,.2);color:var(--accent);font-weight:700;':vis?'color:var(--text);font-weight:600;':'color:var(--dim);')+'">'+(minor?PCN[t].toLowerCase():PCN[t])+'</td>';
-  };
-  weber+='<tr>'+cell(rel,true,visitedMin(rel))+cell(T,false,visited(T))+cell(T,true,visitedMin(T))+'</tr>';
- }
- weber+='</table>';
  const speedOpts=[[16,'4 bars'],[8,'2 bars'],[4,'1 bar'],[3,'dotted half'],[2,'half note'],[1.5,'dotted quarter'],[1,'quarter'],[0.75,'dotted 8th'],[0.5,'8th'],[0.3333,'triplet 8th']]
   .map(o=>'<option value="'+o[0]+'"'+(Math.abs(orbState.q-o[0])<1e-3?' selected':'')+'>'+o[1]+'</option>').join('');
  const jl=orbJourney.log.length
-  ?orbJourney.log.map(e=>'b'+e.beat+' → '+PCN[e.tonic]+(e.minor?'m':'')).join(' · ')
-  :'(no travels yet — click a wheel while the song plays)';
+  ?orbJourney.log.map(e=>'b'+e.beat+' → '+(e.psych?'Psych!':e.chord?e.chord:PCN[e.tonic]+(e.minor?'m':''))).join(' · ')
+  :'(no travels yet — click any chord or planet while the song plays)';
+ const ghostOpts=orbGhostSources().map(s=>'<option value="'+s.id+'"'+(orbState.ghost===s.id?' selected':'')+'>'+s.label+'</option>').join('');
+ const modRows=ana.mods.length?ana.mods.map(m=>'<div style="font-size:11px;color:var(--text);padding:2px 0;" title="'+(m.desc||'')+'">🛰 '+m.name+'</div>').join(''):'<div style="font-size:10.5px;color:var(--dim);">none found</div>';
+ const psyRows=ana.psychs.length?ana.psychs.map(m=>'<div style="font-size:11px;color:var(--text);padding:2px 0;" title="'+(m.desc||'')+'"><span style="color:#c77dff;font-weight:800;">Psych!</span> '+m.name+'</div>').join(''):'<div style="font-size:10.5px;color:var(--dim);">none found</div>';
  const degs=(()=>{
-  const st=keyFor((typeof playheadBeat==='number')?playheadBeat:0);
-  const sc=SCALE_DB[st.mode]||SCALE_DB.ionian;
   let h='';
-  for(let k=0;k<sc.pcs.length;k++)h+='<span class="orbDeg part" data-k="'+k+'" title="Run the WHOLE progression starting on this scale degree — ▶ auditions the new world, ✓ replaces the lane (one undo)" style="padding:3px 8px;font-size:11px;">'+degRomanW(k,scaleDegreeTriad(sc.pcs,k).iv,sc.pcs.length)+'</span>';
+  for(let k=0;k<n;k++)h+='<span class="orbDeg part" data-k="'+k+'" title="Run the WHOLE progression starting on this scale degree — ▶ auditions the new world, ✓ replaces the lane (one undo)" style="padding:3px 8px;font-size:11px;">'+degRomanW(k,scaleDegreeTriad(pcs,k).iv,n)+'</span>';
   return h;
  })();
  B.innerHTML='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
-  +'<div style="flex:0 0 230px;display:flex;flex-direction:column;gap:8px;">'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="The Performance speed: how soon a click lands — the chord changes on the NEXT boundary of this size (audio never stops)">⏱ Performance speed</label>'
+  +'<div style="flex:0 0 252px;display:flex;flex-direction:column;gap:7px;">'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="Import any song you want through time and space which has modulations in it — the app analyzes it and lists its modulations and its psych-outs, then builds their planets and pivot roads onto the map.">👻 Ghost Song Modulator</label>'
+  +'<select id="orbGhost">'+ghostOpts+'</select>'
+  +(ana.note?'<div style="font-size:10.5px;color:var(--dim);line-height:1.45;">'+ana.note+'</div>':'')
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;">Modulations</div><div>'+modRows+'</div>'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;" title="A Psych-Out Modulation is when a piece of music departs the key only for a moment and immediately returns.">Psych-out modulations</div><div>'+psyRows+'</div>'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;" title="The Performance speed: how soon a click lands — the change waits for the NEXT boundary of this size (audio never stops)">⏱ Performance speed</label>'
   +'<select id="orbSpeed">'+speedOpts+'</select>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Autonomous modulators wander the maze while the song plays — the treasure is what the journey sounds like"><input type="checkbox" id="orbAuto"'+(orbState.auto?' checked':'')+' style="accent-color:var(--accent);">🤖 Modulator wanders the maze</label>'
   +'<select id="orbShape" '+(orbState.auto?'':'disabled')+'><option value="drunkard"'+(orbState.shape==='drunkard'?' selected':'')+'>Drunkard walk</option><option value="loop"'+(orbState.shape==='loop'?' selected':'')+'>Orbit loop</option><option value="pendulum"'+(orbState.shape==='pendulum'?' selected':'')+'>Pendulum (home ↔ away)</option></select>'
-  +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="A MIDI-controller grid travels too — pads index the wheels (recording always wins)"><input type="checkbox" id="orbMidi"'+(orbState.midi?' checked':'')+' style="accent-color:var(--accent);">🎹 MIDI pads travel</label>'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">The journey</label>'
+  +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="A MIDI-controller grid travels too — pads index the map (recording always wins)"><input type="checkbox" id="orbMidi"'+(orbState.midi?' checked':'')+' style="accent-color:var(--accent);">🎹 MIDI pads travel</label>'
+  +'<button id="orbRec" style="padding:4px 10px;font-size:11.5px;'+(orbState.rec?'background:#8a2f3a;color:#fff;':'background:#3a3e4d;color:#e9eaef;')+'" title="Record your performance of this game — stopping drops the whole multi-track re-harmonization as ONE chords object on the Essence Shelf (△ Prism window)">'+(orbState.rec?'⏺ Recording… press to keep':'⏺ Record journey → Shelf')+'</button>'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:2px;">The journey</label>'
   +'<div style="font-size:11px;color:var(--text);line-height:1.5;">'+jl+'</div>'
   +'<button id="orbEnd" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;"'+(orbJourney.active?'':' disabled')+'>⏹ End the journey</button>'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Weber grid — this song</label>'
-  +weber
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:2px;">Weber grid — this song</label>'
+  +(function(){
+   const visited=t=>orbPlanets(regs).some(p=>p.tonic===T(t)&&!orbMinor(p.mode));
+   const visitedMin=t=>orbPlanets(regs).some(p=>p.tonic===T(t)&&orbMinor(p.mode));
+   let weber='<table style="border-collapse:collapse;font-size:11px;">';
+   for(let k=2;k>=-2;k--){
+    const Tt=T(home.tonic+7*k);
+    const rel=T(Tt+9);
+    const cell=(t,minor,vis)=>{
+     const isC=cur.tonic===t&&cur.minor===minor;
+     return '<td class="orbWb" data-t="'+t+'" data-m="'+(minor?1:0)+'" title="'+PCN[t]+' '+(minor?'Minor':'Major')+' — click to travel (Weber&#8217;s table: fifths run vertically, relative left, parallel right)" style="padding:4px 9px;border:1px solid var(--line);cursor:pointer;text-align:center;'+(isC?'background:rgba(232,163,61,.2);color:var(--accent);font-weight:700;':vis?'color:var(--text);font-weight:600;':'color:var(--dim);')+'">'+(minor?PCN[t].toLowerCase():PCN[t])+'</td>';
+    };
+    weber+='<tr>'+cell(rel,true,visitedMin(rel))+cell(Tt,false,visited(Tt))+cell(Tt,true,visitedMin(Tt))+'</tr>';
+   }
+   return weber+'</table>';
+  })()
   +'</div>'
-  +'<div style="flex:1;min-width:340px;">'
-  +'<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Solid wheels = this song\'s own worlds · dashed = where it COULD go (its modulation habit on every diatonic degree) · ← → picks a wheel, <b style="color:var(--text);">Enter breaks gravity</b> — the landing waits for the next boundary.</div>'
-  +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">Written route: <span style="color:var(--text);">'+route+'</span></div>'
-  +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;">'+wheels+'</div>'
-  +'<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px;">'
-  +'<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;" title="Any good piece of music has its own logic which can always be expanded on">🌌 Ecosystem expansion — run the whole progression starting on…</div>'
-  +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">'+degs
-  +'<select id="orbEcoSrc" style="margin-left:6px;"><option value="own">this scale</option><option value="parMaj">parallel major</option><option value="parMin">parallel minor</option><option value="rel46">the 4.6 relative</option></select>'
+  +'<div style="flex:1;min-width:520px;">'
+  +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
+  +'<span class="cpchip" id="orbExpand" style="'+(orbState.expandedOn?'background:rgba(91,185,140,.18);border-color:#5bb98c;':'')+'" title="Find every OTHER pivot chord available from this planet and slot each into its right clockwise spot (a &#9837;III lands before the iii, a III right after it)">🔭 Expanded</span>'
+  +'<span class="cpchip" id="orbUser" title="Type your own pivot chord — even one far outside the key. It joins the ring greyed out, with a grey dotted road to the planet it opens.">＋ User created</span>'
+  +'<span class="cpchip" id="orbPilot" style="'+(orbState.pilot?'background:rgba(232,163,61,.16);border-color:var(--accent);':'')+'" title="Pilot view — fly the map like a space game: the camera rides your planet and travels zoom to each new world">🚀 Pilot view</span>'
+  +'<span style="font-size:10.5px;color:var(--dim);">Written route: <span style="color:var(--text);">'+route+'</span></span>'
+  +'</div>'
+  +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">The big planet is the key you are in — its diatonic chords ring it clockwise from 12 o&#8217;clock, the glowing ones are what the grid plays, and the 🚀 rides the chord sounding now. Dashed chords are pivots; dotted roads lead to their planets. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the next boundary.</div>'
+  +'<div id="orbMapWrap" style="position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 30% 25%,#131722 0%,#0a0c12 70%);">'
+  +'<div id="orbMapIn" style="transition:transform .9s ease;transform-origin:'+cx+'px '+cy+'px;position:relative;">'
+  +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;max-width:'+W+'px;">'+lines+nodes+'</svg>'
+  +'<div id="orbShip" style="position:absolute;left:'+(cx-11)+'px;top:'+(cy-R+18)+'px;font-size:20px;pointer-events:none;transition:left .35s,top .35s;text-shadow:0 0 8px rgba(232,163,61,.8);">🚀</div>'
+  +'</div></div>'
+  +'<details style="margin-top:10px;border-top:1px solid var(--line);padding-top:6px;">'
+  +'<summary style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);cursor:pointer;" title="Any good piece of music has its own logic which can always be expanded on — an advanced toy, tucked away: the main circle always just starts in the key the grid is in.">🌌 Ecosystem expansion (advanced)</summary>'
+  +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px;">'+degs
+  +'<select id="orbEcoSrc" style="margin-left:6px;"><option value="own">this scale</option><option value="parMaj">parallel major</option><option value="parMin">parallel minor</option><option value="rel46">same-root relative (🧭 4.6: C major ↔ C Aeolian)</option></select>'
   +'<button id="orbEcoPlay" style="padding:4px 10px;font-size:11.5px;">▶ Hear it</button>'
   +'<button id="orbEcoUse" style="padding:4px 10px;font-size:11.5px;">✓ Replace the lane</button>'
   +'<span id="orbEcoSel" style="font-size:10.5px;color:var(--dim);"></span></div>'
-  +'</div></div></div>';
+  +'</details></div></div>';
+ /* pilot camera */
+ const mi=document.getElementById('orbMapIn');
+ if(mi&&orbState.pilot){requestAnimationFrame(()=>{mi.style.transform='scale(1.9)';});}
  /* wiring */
- B.querySelectorAll('.orbWheel').forEach(el=>{
-  el.onclick=()=>{
-   const c=cands[+el.dataset.i];if(!c)return;
-   orbState.sel=+el.dataset.i;
-   orbTravelTo(c.tonic,c.minor);
-  };
+ B.querySelectorAll('.orbNode').forEach(el=>{
+  el.style.cursor='pointer';
+  el.addEventListener('click',()=>{
+   const i=+el.getAttribute('data-orb');
+   orbState.sel=i;
+   orbActivate(clicks[i]);
+  });
  });
  B.querySelectorAll('.orbWb').forEach(el=>{
   el.onclick=()=>orbTravelTo(+el.dataset.t,el.dataset.m==='1');
  });
+ document.getElementById('orbGhost').onchange=e=>{orbState.ghost=e.target.value;orbState.sel=0;renderOrb();};
+ document.getElementById('orbExpand').onclick=()=>{orbState.expandedOn=!orbState.expandedOn;renderOrb();};
+ document.getElementById('orbUser').onclick=orbUserPrompt;
+ document.getElementById('orbPilot').onclick=()=>{orbState.pilot=!orbState.pilot;renderOrb();};
+ document.getElementById('orbRec').onclick=orbRecToggle;
  document.getElementById('orbSpeed').onchange=e=>{orbState.q=+e.target.value||4;};
  document.getElementById('orbAuto').onchange=e=>{orbState.auto=!!e.target.checked;orbBot.next=0;renderOrb();};
  const sh=document.getElementById('orbShape');if(sh)sh.onchange=e=>{orbState.shape=e.target.value;};
@@ -12042,6 +12462,56 @@ function renderOrb(){
  });
  document.getElementById('orbEcoPlay').onclick=()=>orbEcoRun(false);
  document.getElementById('orbEcoUse').onclick=()=>orbEcoRun(true);
+ orbShipTick();
+}
+function orbUserPrompt(){
+ /* the User-created pivot dialog — the avatar speaks (a fuller animated avatar +
+    click-a-blank-spot placement ride a later round; recorded in ROADMAP 4.7) */
+ const old=document.getElementById('orbUserPop');if(old)old.remove();
+ const d=document.createElement('div');d.id='orbUserPop';
+ d.style.cssText='position:fixed;z-index:150;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel2,#1a1d26);border:1px solid var(--accent);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.6);display:flex;gap:10px;align-items:center;max-width:420px;';
+ d.innerHTML='<span style="font-size:30px;">🧑‍🚀</span><div style="display:flex;flex-direction:column;gap:7px;">'
+  +'<div style="font-size:12px;color:var(--text);line-height:1.45;">“Type your own pivot chord — even one from far outside this key. I&#8217;ll sketch the grey road it opens, and you choose whether to fly it.”</div>'
+  +'<div style="display:flex;gap:7px;"><input id="orbUserInp" placeholder="e.g. Ab7 · F#m · Bsus4" style="flex:1;font-size:12px;padding:4px 8px;">'
+  +'<button id="orbUserOk" style="padding:4px 12px;font-size:12px;">Add</button><button id="orbUserNo" style="padding:4px 10px;font-size:12px;background:#3a3e4d;color:#e9eaef;">✕</button></div></div>';
+ document.body.appendChild(d);
+ const inp=document.getElementById('orbUserInp');inp.focus();
+ const go=()=>{
+  const txt=(inp.value||'').trim();
+  if(!txt){d.remove();return;}
+  const p=(typeof parseChordText==='function')&&parseChordText(txt);
+  if(!p||p.r==null||!Array.isArray(p.iv)){setOrbStatus('Could not read “'+txt+'” as a chord — letters like Ab7, F#m, Bsus4 work.');return;}
+  const T=t=>((t%12)+12)%12;
+  const cur=orbCurrentKey();
+  const minor=p.iv[1]===3;
+  const dest=minor?{tonic:T(p.r+10),minor:false,psych:false}:{tonic:T(p.r+5),minor:false,psych:false};
+  orbState.userPivots.push({r:T(p.r),iv:p.iv.slice(),lbl:p.lbl||txt.slice(0,6),kind:'user',dest});
+  d.remove();
+  renderOrb();
+  setOrbStatus('Your pivot joined the ring (grey) — its dotted road opens '+PCN[dest.tonic]+' major. Click it to fly; it greys out of the map when you change ghost songs or keys only if you remove it (✕ rides a later round).');
+ };
+ document.getElementById('orbUserOk').onclick=go;
+ document.getElementById('orbUserNo').onclick=()=>d.remove();
+ inp.onkeydown=e=>{if(e.key==='Enter')go();if(e.key==='Escape')d.remove();};
+}
+function orbRecToggle(){
+ if(!orbState.rec){
+  orbState.rec=true;
+  setOrbStatus('⏺ Recording — play the game; press ⏺ again and the whole re-harmonization lands as ONE chords object on the Essence Shelf.');
+ }else{
+  orbState.rec=false;
+  if(!Array.isArray(project.shelf))project.shelf=[];
+  snapshot();
+  const cur=orbCurrentKey();
+  const nm=('Orbits journey · '+PCN[cur.tonic]+(cur.minor?'m':'')+' · '+project.chords.length+' chords').slice(0,60);
+  project.shelf.push({id:shelfNextId(project.shelf),strand:'chords',name:nm,level:'L2',
+   data:{chords:JSON.parse(JSON.stringify(project.chords)),sections:JSON.parse(JSON.stringify(project.sections))},
+   fp:prismHash(project.chords.map(c=>c.r+':'+c.d).join(','))});
+  autosaveSoon();
+  noteEngine('orbit-keep',{n:project.chords.length});
+  setOrbStatus('Journey captured — one chords object on the Essence Shelf (open the △ Prism window to see it). ⌘Z undoes the keep.');
+ }
+ renderOrb();
 }
 function orbEcoScale(){
  const st=keyFor((typeof playheadBeat==='number')?playheadBeat:0);
@@ -12086,14 +12556,13 @@ function orbKeydown(e){
  if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return false;
  const t=e.target;
  if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'||t.isContentEditable))return false;
- const cands=orbCandidates();
- if(!cands.length)return false;
- if(e.key==='ArrowLeft'||e.key==='ArrowUp')orbState.sel=((orbState.sel-1)%cands.length+cands.length)%cands.length;
- else if(e.key==='ArrowRight'||e.key==='ArrowDown')orbState.sel=(orbState.sel+1)%cands.length;
+ const list=orbState.clicks||[];
+ if(!list.length)return false;
+ if(e.key==='ArrowLeft'||e.key==='ArrowUp')orbState.sel=((orbState.sel-1)%list.length+list.length)%list.length;
+ else if(e.key==='ArrowRight'||e.key==='ArrowDown')orbState.sel=(orbState.sel+1)%list.length;
  else if(e.key==='Enter'){
   e.preventDefault();
-  const c=cands[orbState.sel];
-  if(c)orbTravelTo(c.tonic,c.minor);
+  orbActivate(list[orbState.sel]);
   return true;
  }
  else return false;
@@ -12107,7 +12576,7 @@ function buildOrbPanel(){
  B.dataset.built='1';
  renderOrb();
  document.addEventListener('keydown',orbKeydown);
- setInterval(()=>{try{orbBotTick();}catch(e){}},150);
+ setInterval(()=>{try{orbBotTick();orbShipTick();}catch(e){}},150);
 }
 /* ==== /4.7 INTERPLANETARY ORBITS ==== */
 
@@ -15270,7 +15739,7 @@ const WINDOW_DEFS=[
  {id:'melPanel',   name:'Melisma', icon:'➿', tip:'Melody Melisma Machine — the universal vocal-ornament engine: runs, turns, scoops, gamakas — organized by tradition and era, never by artist'},
  {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'CHOOSE YOUR OWN ADVENTURE',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
  {id:'wanPanel',   name:'Wanderer',icon:'🧭',tip:'Chord Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers on Weber\'s table (4.6): arrow keys walk the chords of your scale and its parallel relative, every landing plays, ✓ writes it to the lane'},
- {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits — every key is a planet (4.7): travel by click, arrows or MIDI pads, the change lands on the next bar, the journey is recorded. Per-song orbit map + Weber grid, autonomous maze modulators, ecosystem expansion'},
+ {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
  {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Lives between the Chord Palette and the Multi-Track Grid.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & Web MIDI (the sample-directory and DAW-routing guides moved behind the ⇪ Import window)'}];
@@ -15284,7 +15753,7 @@ const RAIL_DEFS=[
  {icon:'➿', win:'melPanel',tip:'Open the Melody Melisma Machine — vocal ornaments by tradition and era'},
  {icon:'⌕', win:'ragaPanel',tip:'Open the Scale/Raga Browser — CHOOSE YOUR OWN ADVENTURE'},
  {icon:'🧭', win:'wanPanel',tip:'Open the Chord Wanderer — wander related key centers on Weber\'s table (4.6)'},
- {icon:'🪐', win:'orbPanel',tip:'Open Interplanetary Orbits — every key is a planet, travel on the next bar (4.7)'},
+ {icon:'🪐', win:'orbPanel',tip:'Open Interplanetary Orbits — the planet is the key you are in, pivot chords open roads to new worlds (4.7 rework)'},
  {icon:'△', win:'prismPanel',tip:'Open THE SONG PRISM — split any track into contour · Note DNA · rhythm, letter the phrases, keep essences on the Shelf (5.1)'},
  {icon:'𝄂', win:'cadPanel',tip:'Open the Cadence Window — the chords at the end of a musical phrase. Nothing more or less. (5.3)'},
  {icon:'⤢', ui:'expandAll',tip:'Expand every collapsed window (v3 §3 — collapsed windows rest as quiet grey strips)'}];
