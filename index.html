@@ -387,7 +387,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30p</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -476,6 +476,18 @@
        instrument-track table, every track selectable/draggable); the local-backend import
        machinery below; the Local-Sample-Directory and DAW-routing info boxes tucked
        BEHIND it at the bottom (moved here from Setup, per the spec). -->
+  <!-- 5.1: THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator input tool + the
+       ESSENCE SHELF. Round 1: per-section phrase lettering, the three strand cards
+       (press = audition, psych-out convention), ★ Keep → the Shelf (project data),
+       ✓ Apply-to-selection per strand. -->
+  <div class="gridwrap" id="prismPanel" style="margin:12px 0;">
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;" title="“We are distilling inspiration out of the basic building blocks of music and using this magic dust to make magical things happen in our compositions.”">△ The Song Prism · Melody Analyzer / Rhythmic Isolator — one beam in, the hidden spectrum out</div>
+    <div id="przScope" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>
+    <div id="przBody"></div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:12px 0 6px;" title="Rows of favorite extracted essences — contour lines, Note DNA, one-tone rhythms. Project data: rides undo, saves and autosave. Identical strands recognize each other by fingerprint (↔).">★ Essence Shelf</div>
+    <div id="przShelf" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+    <div id="przStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
+  </div>
   <div class="gridwrap" id="importPanel" style="margin:12px 0;position:relative;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;" title="Import music so we can take it apart into bite-sized building blocks — chords, melodies, bass lines, grooves — and cross-pollinate them into This Piece Of Music.">Import · cross-pollination sources — every song is building blocks</div>
     <div class="parts" id="srcStrip" style="margin:0 0 10px 0;align-items:stretch;"></div>
@@ -563,6 +575,23 @@
       <div class="chordlane" id="chordlane"></div>
     </div>
     <div id="laneRows"></div>
+    <!-- 5.3: THE CADENCE WINDOW — physically between the Multi-Track Grid and the
+         Chord Palette (client spec: the palette's 𝄂 link opens it exactly here). ONE
+         window, four categories — Classical incl. Elided (≥2 voices) · Modulating ·
+         Psych-out · Curated most-prominent. The banner is the client definition,
+         verbatim. Managed by WINDOW_DEFS like every window (one-window law). -->
+    <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
+      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">𝄂 Cadences — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</div>
+      <div id="cadEndsRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>
+      <div id="cadTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+      <div id="cadSongsRow" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+      <div id="cadCards" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <label id="cadElideLab" style="font-size:11.5px;color:var(--dim);display:flex;gap:6px;align-items:center;cursor:pointer;" title="Elided placement: the arrival chord lands ON the phrase boundary and STARTS the next phrase — the ending of one melody is the start of another, so it is inherently 2 or more voices (client rule: it applies across tracks, never within a single line)."><input type="checkbox" id="cadElide"> 𝄐 Elide the arrival</label>
+        <button id="cadApplyBtn" title="Write the selected cadence so it ends exactly at the selected phrase end — room is carved from the chords before it, one undo.">✓ Write at the phrase end</button>
+      </div>
+      <div id="cadStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
+    </div>
     <!-- 3.3: the chord palette dock — lengthwise below the grid. Three column-aligned
          rows (diatonic / V of x / V of V of x) for the current key AND its parallel
          set; mode chips with paired relative/parallel keys; passing °7 behind the
@@ -577,6 +606,7 @@
           <span class="cpchip" id="cpJimiChip" title="Jimi chord: every dominant in the palette renders and plays as a 7♯9 — the Hendrix chord">🎸 Jimi</span>
           <span class="cp-mklab">Make:</span><span class="cpchip cpmod" data-kind="maj" title="Rebuild the selected chord as a major triad (root stays)">Major</span><span class="cpchip cpmod" data-kind="min" title="Rebuild the selected chord as a minor triad (root stays)">Minor</span><span class="cpchip cpmod" data-kind="hdim" title="Rebuild the selected chord as a half-diminished 7th (root stays)">m7♭5</span><span class="cpchip cpmod" data-kind="aug" title="Rebuild the selected chord as an augmented triad (root stays)">Augmented</span>
           <span class="cplink" id="cpHmLink">(Show) Harmonic minor</span>
+          <span class="cplink" id="cpCadLink" title="Open the 𝄂 Cadence Window — it opens between the Chord Palette and the Multi-Track Grid (client spec). A cadence: the chords at the end of a musical phrase. Nothing more or less.">𝄂 Cadences</span>
         </div>
       </div>
       <!-- 19y (client request): Scale menu + Conform/extension toggles live at the top of
@@ -1570,6 +1600,461 @@ function sectionsMoveBoundary(secs,idx,newStart,loop){
  if(!(s>0&&s<loop))return null;
  return secs.map((x,i)=>i===idx?{...x,start:s}:{...x});}
 /* ==== /4.1 MODULATION LANE (pure layer) ==== */
+/* ==== 5.3 CADENCES (pure layer) ==== ONE Cadence Window, four categories (client
+   boundaries July 27, definition verbatim): "a cadence means: the chords at the end of
+   a musical phrase. Nothing more or less." The Modulation Engine stays SEPARATE
+   (modulation-only) — a modulating CADENCE here writes the approach chords and re-keys
+   only the LANDING section (2.2b reinterpretation: notes never move; the Machine remains
+   the transposing path). Apply = the pivotExtendChords carve rule: the run ends exactly
+   at the phrase end, room carved from the chords before it (each keeps ≥1 beat), a short
+   carve scales the run, under half a beat = honest null. ELIDED placement = the arrival
+   chord lands ON the boundary, starting the next phrase (inherently ≥2 voices — the
+   client rule, enforced at the UI gate). Phrase ends = section boundaries + the loop
+   end. Pure helpers — unit-tested.
+   WARNING (the grabConst rule — it has bitten THREE times): CADENCE_LIB must contain
+   NO semicolon anywhere inside, comments and descriptions included — the harness grabs
+   it up to the first one. */
+const CADENCE_LIB=[
+ /* -- Classical -- deg = semitone offset from the HOME tonic · q:'T' = the home tonic
+    triad (follows the section mode, i in minor) · runM = minor-home override · an
+    entry-level elide flag forces elided placement (the Elided card) */
+ {id:'perfect',cat:'cls',name:'Perfect (authentic)',
+  run:[{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'V7 home to the tonic — the strongest close in the language.'},
+ {id:'ltAuth',cat:'cls',name:'Leading-tone authentic',
+  run:[{deg:11,iv:DIM,d:1,lbl:'vii°'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'vii° resolving up a half step into the tonic — the inverted vii°6 flavor works the same way.'},
+ {id:'plagal',cat:'cls',name:'Plagal',
+  run:[{deg:5,iv:MAJ,d:1,lbl:'IV'},{deg:0,q:'T',d:2,lbl:'I'}],
+  runM:[{deg:5,iv:MIN,d:1,lbl:'iv'},{deg:0,q:'T',d:2,lbl:'i'}],
+  desc:'IV settling onto the tonic — the Amen close.'},
+ {id:'elided',cat:'cls',name:'Elided',elide:1,
+  run:[{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'The arrival IS the next phrase’s first beat — the ending of one melody is the start of another, so it lives across 2 or more voices, never within a single line. This card turns Elide placement on.'},
+ {id:'deceptive',cat:'cls',name:'Deceptive',
+  run:[{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:9,iv:MIN,d:2,lbl:'vi'}],
+  runM:[{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:8,iv:MAJ,d:2,lbl:'VI'}],
+  desc:'The V resolves onto ANY chord that contains scale-degree 1 — vi is the classic (the generalized rule the detector also uses).'},
+ {id:'half',cat:'cls',name:'Half cadence',
+  run:[{deg:0,q:'T',d:1,lbl:'I'},{deg:7,iv:MAJ,d:2,lbl:'V'}],
+  desc:'The phrase parks on the V — ending on the dominant, question unanswered.'},
+ {id:'supHalf',cat:'cls',name:'Supertonic half',
+  run:[{deg:2,iv:MIN,d:1,lbl:'ii'},{deg:7,iv:MAJ,d:2,lbl:'V'}],
+  runM:[{deg:2,iv:DIM,d:1,lbl:'ii°'},{deg:7,iv:MAJ,d:2,lbl:'V'}],
+  desc:'ii leaning into the V — the supertonic set’s half close.'},
+ {id:'supPlagal',cat:'cls',name:'Supertonic plagal extension',
+  run:[{deg:2,iv:MIN,d:1,lbl:'ii'},{deg:5,iv:MAJ,d:1,lbl:'IV'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'ii through IV onto the tonic — the plagal close with a supertonic on-ramp.'},
+ {id:'supJazz',cat:'cls',name:'Supertonic jazz/modal',
+  run:[{deg:2,iv:MIN7,d:1,lbl:'ii7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'ii straight home, no dominant — the jazz and modal move.'},
+ {id:'mediant',cat:'cls',name:'Mediant',
+  run:[{deg:4,iv:MIN,d:1,lbl:'iii'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'iii onto the tonic — the soft mediant close.'},
+ {id:'chrMediant',cat:'cls',name:'Chromatic mediant',
+  run:[{deg:8,iv:MAJ,d:1,lbl:'♭VI'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'A major chord a third away with no diatonic passport — ♭VI landing home.'},
+ {id:'chromatic',cat:'cls',name:'Chromatic slide',
+  run:[{deg:1,iv:MAJ,d:1,lbl:'♭II'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'♭II sliding down a half step onto the tonic — the Neapolitan-flavored chromatic close.'},
+ {id:'grunge90',cat:'cls',name:'90s grunge',
+  run:[{deg:0,q:'T',d:1,lbl:'I'},{deg:5,iv:MAJ,d:1,lbl:'IV'},{deg:3,iv:MAJ,d:1,lbl:'♭III'},{deg:8,iv:MAJ,d:2,lbl:'♭VI'}],
+  desc:'i – IV – ♭III – ♭VI, parking on the flat six — the Stone Temple Pilots shape.'},
+ {id:'ragtime',cat:'cls',name:'Ragtime/boogie slow-mo',
+  run:[{deg:0,q:'T',d:1,lbl:'I'},{deg:0,iv:DOM7,d:1,lbl:'I7'},{deg:5,iv:MAJ,d:1,lbl:'IV'},{deg:6,iv:DIM7,d:1,lbl:'♯iv°7'},{deg:0,iv:MAJ,bass:7,d:1,lbl:'I64'},{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'The full ragtime and boogie-woogie walk-down in slow motion — I, I7, IV, the ♯iv°7 pinch, I over its fifth, V7, home.'},
+ {id:'giantA',cat:'cls',name:'Giant Steps — faster',
+  run:[{deg:8,iv:MAJ,d:.5,lbl:'♭VI'},{deg:4,iv:MAJ,d:.5,lbl:'III'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'Coltrane way one — ♭VI and III falling in major thirds straight onto the tonic.'},
+ {id:'giantB',cat:'cls',name:'Giant Steps — full movement',
+  run:[{deg:10,iv:MIN7,d:.5,lbl:'ii7/♭VI'},{deg:3,iv:DOM7,d:.5,lbl:'V7/♭VI'},{deg:8,iv:MAJ,d:.5,lbl:'♭VI'},{deg:6,iv:MIN7,d:.5,lbl:'ii7/III'},{deg:11,iv:DOM7,d:.5,lbl:'V7/III'},{deg:4,iv:MAJ,d:.5,lbl:'III'},{deg:2,iv:MIN7,d:.5,lbl:'ii7'},{deg:7,iv:DOM7,d:.5,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'Coltrane way two — a ii–V into each mediant station, then the home ii–V lands it.'},
+ {id:'giantC',cat:'cls',name:'Giant Steps — dominants only',
+  run:[{deg:3,iv:DOM7,d:.5,lbl:'V7/♭VI'},{deg:11,iv:DOM7,d:.5,lbl:'V7/III'},{deg:7,iv:DOM7,d:.5,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'Coltrane way three — V-of-♭VI, V-of-III, V-of-I in a chain of dominants.'},
+ /* -- Modulating -- degs are relative to the DESTINATION key (rel:'src' opts out) ·
+    dest = semitone interval or 'rel' / 'dom' / 'sub' resolved against the home mode ·
+    the arrival I always lands ON the boundary and the landing section re-keys */
+ {id:'modRel',cat:'mod',name:'To the relative key',dest:'rel',
+  run:[{deg:2,iv:MIN7,d:1,lbl:'ii7/new'},{deg:7,iv:DOM7,d:1,lbl:'V7/new'},{deg:0,q:'T',d:2,lbl:'I/new'}],
+  desc:'ii–V into the relative major or minor — same notes, new home.'},
+ {id:'modUp2',cat:'mod',name:'Up a whole step (truck-driver)',dest:2,
+  run:[{deg:2,iv:MIN7,d:1,lbl:'ii7/new'},{deg:7,iv:DOM7,d:1,lbl:'V7/new'},{deg:0,q:'T',d:2,lbl:'I/new'}],
+  desc:'The classic final-chorus gear change, set up by a quick ii–V of the destination.'},
+ {id:'modUp1',cat:'mod',name:'Up a half step',dest:1,
+  run:[{deg:7,iv:DOM7,d:2,lbl:'V7/new'},{deg:0,q:'T',d:2,lbl:'I/new'}],
+  desc:'Slam the new dominant and go — the half-step lift.'},
+ {id:'modDom',cat:'mod',name:'To the dominant key',dest:'dom',
+  run:[{deg:2,iv:MIN7,d:1,lbl:'ii7/new'},{deg:7,iv:DOM7,d:1,lbl:'V7/new'},{deg:0,q:'T',d:2,lbl:'I/new'}],
+  desc:'The sharp-side move — the old V becomes the new I.'},
+ {id:'modSub',cat:'mod',name:'To the subdominant key',dest:'sub',
+  run:[{deg:5,iv:MAJ,d:1,lbl:'IV/new'},{deg:7,iv:DOM7,d:1,lbl:'V7/new'},{deg:0,q:'T',d:2,lbl:'I/new'}],
+  desc:'The flat-side move — the old I is reheard as the new V.'},
+ {id:'modbVI',cat:'mod',name:'To the flat-six key (chromatic mediant)',dest:8,
+  run:[{deg:7,iv:DOM7,d:2,lbl:'V7/new'},{deg:0,q:'T',d:2,lbl:'I/new'}],
+  desc:'A chromatic-mediant drop into the ♭VI key — cinematic and sudden.'},
+ /* -- Psych-out -- pivot toward a new key, then just RETURN — written at the phrase
+    end (unlike the Modulation window’s playback-only feints) — always ends on home I */
+ {id:'psyIV',cat:'psy',name:'Feint to the IV',
+  run:[{deg:0,iv:DOM7,d:1,lbl:'I7 (V/IV)'},{deg:5,iv:MAJ,d:1,lbl:'IV'},{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'The tonic turns dominant and tugs toward IV — then walks straight back home.'},
+ {id:'psyVi',cat:'psy',name:'Relative feint',
+  run:[{deg:4,iv:DOM7,d:1,lbl:'III7 (V/vi)'},{deg:9,iv:MIN,d:1,lbl:'vi'},{deg:7,iv:DOM7,d:1,lbl:'V7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'Leans hard toward the relative minor, touches it, and comes home.'},
+ {id:'psyBk',cat:'psy',name:'Backdoor feint',
+  run:[{deg:5,iv:MIN7,d:1,lbl:'iv7'},{deg:10,iv:DOM7,d:1,lbl:'♭VII7'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'Borrowed iv7 and the backdoor dominant feint toward the flat side before landing home untouched.'},
+ {id:'psybVI',cat:'psy',name:'Flat-side feint',
+  run:[{deg:8,iv:MAJ,d:1,lbl:'♭VI'},{deg:10,iv:MAJ,d:1,lbl:'♭VII'},{deg:0,q:'T',d:2,lbl:'I'}],
+  desc:'♭VI and ♭VII stepping up into the tonic — the aeolian close that still lives at home.'}
+];
+/* roman label for a root+quality against an EXPLICIT tonic — romanFor’s pure twin */
+function cadRoman(r,iv,tonic){
+ const rel=((r-tonic)%12+12)%12;
+ let rn=ROM12[rel];
+ if(iv.includes(3)&&!iv.includes(4))rn=rn.replace(/[IV]+/,x=>x.toLowerCase());
+ let suf=ivName(iv);
+ if(suf==='m')suf='';else if(suf==='m7')suf='7';
+ return rn+suf;}
+/* dest spec → {interval,tgtMode} against the home key ('rel' flips the mode) */
+function cadenceDest(entry,k){
+ if(entry.dest==null)return null;
+ const m=(typeof modeIsMinor==='function')?modeIsMinor(k.mode):(k.mode==='minor'||k.mode==='aeolian');
+ let iv=entry.dest,tm=entry.tgtMode||null;
+ if(entry.dest==='rel'){iv=m?3:9;tm=m?'ionian':'aeolian';}
+ else if(entry.dest==='dom')iv=7;
+ else if(entry.dest==='sub')iv=5;
+ return {interval:((iv%12)+12)%12,tgtMode:tm};}
+/* entry + governing key → absolute chords {d,r,iv,lbl,bass}. Classical/psych-out degs
+   are home-relative, modulating degs destination-relative. q:'T' = tonic triad wearing
+   the right mode (minor home → i, aeolian destination → i/new). */
+function cadenceRun(entry,k){
+ const m=(typeof modeIsMinor==='function')?modeIsMinor(k.mode):(k.mode==='minor'||k.mode==='aeolian');
+ const steps=(m&&entry.runM)?entry.runM:entry.run;
+ const dest=cadenceDest(entry,k);
+ const homeT=((k.tonic%12)+12)%12;
+ const baseT=dest?((homeT+dest.interval)%12+12)%12:homeT;
+ return steps.map(s=>{
+  const root=((entry.cat==='mod'&&s.rel!=='src')?baseT:homeT)+s.deg;
+  let iv=s.iv,lbl=s.lbl;
+  if(s.q==='T'){
+   const minor=entry.cat==='mod'?(dest&&dest.tgtMode?dest.tgtMode==='aeolian':m):m;
+   iv=minor?MIN:MAJ;
+   if(minor)lbl=lbl.replace(/^I/,'i');
+  }
+  return {d:s.d,r:((root%12)+12)%12,iv:iv.slice(),lbl,bass:s.bass||0};});}
+/* every phrase end: section boundaries + the loop end. to:-1 = the song’s end. */
+function phraseEnds(secs,loop){
+ const out=[];
+ const ss=Array.isArray(secs)?secs:[];
+ for(let i=1;i<ss.length;i++)out.push({beat:ss[i].start,from:i-1,to:i});
+ out.push({beat:loop,from:Math.max(0,ss.length-1),to:-1});
+ return out;}
+/* classify the two chords meeting a phrase end against the governing key kF (and the
+   next section’s key kT for the modulating read). The DECEPTIVE test is the client’s
+   generalized rule: a dominant resolving onto ANY chord that contains scale-degree 1. */
+function cadClassifyPair(a,b,kF,kT){
+ if(!b)return null;
+ const rel=(r,t)=>((r-t)%12+12)%12;
+ const L=(c,t)=>cadRoman(c.r,c.iv,t);
+ const isDom=c=>!!c&&rel(c.r,kF.tonic)===7&&(c.iv.includes(4)||c.iv.includes(10));
+ const isLT=c=>!!c&&rel(c.r,kF.tonic)===11&&c.iv.includes(3)&&(c.iv.includes(6)||c.iv.includes(9));
+ const isTonic=c=>rel(c.r,kF.tonic)===0;
+ const hasDeg1=c=>c.iv.some(x=>((c.r+x)%12+12)%12===((kF.tonic%12)+12)%12);
+ const lbls=a?[L(a,kF.tonic),L(b,kF.tonic)]:[L(b,kF.tonic)];
+ if(kT&&(((kT.tonic%12)+12)%12!==((kF.tonic%12)+12)%12||kT.mode!==kF.mode)&&rel(b.r,kT.tonic)===0)
+  return {kind:'modulating',lbls:a?[L(a,kT.tonic)+'/new',L(b,kT.tonic)+'/new']:[L(b,kT.tonic)+'/new']};
+ if((isDom(a)||isLT(a))&&isTonic(b))return {kind:isLT(a)?'leading-tone authentic':'perfect',lbls};
+ if(a&&rel(a.r,kF.tonic)===5&&isTonic(b))return {kind:'plagal',lbls};
+ if(a&&rel(a.r,kF.tonic)===2&&isTonic(b))return {kind:'supertonic',lbls};
+ if(a&&(rel(a.r,kF.tonic)===3||rel(a.r,kF.tonic)===4)&&isTonic(b))return {kind:'mediant',lbls};
+ if(isDom(a)&&!isTonic(b)&&hasDeg1(b))return {kind:'deceptive',lbls};
+ if(rel(b.r,kF.tonic)===7)return {kind:'half',lbls};
+ if(isTonic(b))return {kind:'tonic arrival',lbls};
+ return {kind:'—',lbls};}
+/* the whole song’s phrase ends, classified. An arrival chord STARTING exactly on the
+   boundary that resolves the approach = the ELIDED read (it begins the next phrase). */
+function cadenceClassify(chords,secs,loop){
+ const ss=(Array.isArray(secs)&&secs.length)?secs:[{start:0,name:'A',tonic:0,mode:'ionian'}];
+ return phraseEnds(ss,loop).map(pe=>{
+  const kF=ss[Math.min(pe.from,ss.length-1)];
+  const kT=pe.to>=0?ss[pe.to]:null;
+  let t=0,at=null;
+  const pre=[];
+  for(const c of chords){
+   const a=t,b=t+c.d;
+   if(b<=pe.beat+1e-3)pre.push({c,end:b});
+   if(Math.abs(a-pe.beat)<1e-3&&!at)at=c;
+   t=b;
+  }
+  const c1=(pre.length&&Math.abs(pre[pre.length-1].end-pe.beat)<1e-3)?pre[pre.length-1].c:null;
+  const c0=(c1&&pre.length>1)?pre[pre.length-2].c:null;
+  const RES=['perfect','leading-tone authentic','plagal','supertonic','mediant','modulating','deceptive'];
+  const rAt=(at&&c1)?cadClassifyPair(c1,at,kF,kT):null;
+  if(rAt&&RES.includes(rAt.kind))
+   return {beat:pe.beat,from:kF.name,to:kT?kT.name:null,kind:rAt.kind,elided:true,lbls:rAt.lbls};
+  const r=c1?cadClassifyPair(c0,c1,kF,kT):null;
+  return {beat:pe.beat,from:kF.name,to:kT?kT.name:null,kind:r?r.kind:'—',elided:false,lbls:r?r.lbls:[]};});}
+/* write an ABSOLUTE run so it ends exactly at the boundary — the pivotExtendChords
+   carve rule verbatim (each head chord keeps ≥1 beat, short carve scales the run,
+   under half a beat = honest null). Total duration is invariant. */
+function cadenceWriteChords(chords,boundaryBeat,run){
+ if(!Array.isArray(run)||!run.length)return null;
+ let t=0,idx=-1;
+ const cut=[];
+ for(let i=0;i<chords.length;i++){
+  const c=chords[i];
+  if(idx<0&&Math.abs(t-boundaryBeat)<1e-6)idx=cut.length;
+  if(idx<0&&boundaryBeat>t+1e-6&&boundaryBeat<t+c.d-1e-6){
+   cut.push({...c,iv:c.iv.slice(),d:+(boundaryBeat-t).toFixed(6)});
+   idx=cut.length;
+   cut.push({...c,iv:c.iv.slice(),d:+(t+c.d-boundaryBeat).toFixed(6)});
+   t+=c.d;continue;
+  }
+  cut.push({...c,iv:c.iv.slice()});t+=c.d;
+ }
+ if(idx<0&&Math.abs(t-boundaryBeat)<1e-6)idx=cut.length;   /* the loop end is a phrase end too */
+ if(idx<=0)return null;
+ const need=run.reduce((a,s)=>a+s.d,0);
+ const head=cut.slice(0,idx);
+ let rem=need;
+ for(let i=head.length-1;i>=0&&rem>1e-9;i--){
+  const take=Math.min(head[i].d-1,rem);
+  if(take>0){head[i].d=+(head[i].d-take).toFixed(6);rem-=take;}
+ }
+ const carved=need-rem;
+ if(carved<.5-1e-9)return null;
+ const k=carved/need;
+ const runC=run.map(s=>({d:+(s.d*k).toFixed(6),r:s.r,iv:s.iv.slice(),lbl:s.lbl,bass:s.bass||0}));
+ return {chords:head.concat(runC,cut.slice(idx)),added:runC.length,carved,runStart:+(boundaryBeat-carved).toFixed(6)};}
+/* ELIDED write: the approach ends at the boundary, the ARRIVAL lands ON it (pasted into
+   the next phrase’s opening beats — pasteChordRun keeps the total invariant). */
+function cadenceWriteElided(chords,boundaryBeat,run,step,loop){
+ if(!Array.isArray(run)||!run.length)return null;
+ const approach=run.slice(0,-1),arrival=run[run.length-1];
+ let base={chords:chords.map(c=>({...c,iv:c.iv.slice()})),carved:0,added:0};
+ if(approach.length){
+  base=cadenceWriteChords(chords,boundaryBeat,approach);
+  if(!base)return null;
+ }
+ const out=pasteChordRun(base.chords,[{...arrival,iv:arrival.iv.slice()}],boundaryBeat,step||.25,loop);
+ return {chords:out,added:base.added+1,carved:base.carved};}
+/* modulating landing: cut a boundary at the arrival and re-key ONLY the landing section
+   (a 2.2b reinterpretation — notes never move, later sections keep their stored keys). */
+function cadenceRekeySections(secs,boundaryBeat,interval,tgtMode,loop){
+ const cut=splitSectionAt(secs,boundaryBeat,loop);
+ const i=sectionIdxAt(cut,boundaryBeat);
+ return cut.map((s,j)=>{
+  if(j!==i)return {...s};
+  let b=s.base+interval;
+  if(b>66)b-=12;if(b<54)b+=12;
+  return {...s,tonic:((s.tonic+interval)%12+12)%12,base:b,mode:tgtMode||s.mode};});}
+/* the Curated census: classify every 8-beat phrase end (+ the excerpt end) of each
+   song, tally by kind+formula, remember degree steps so any hit can replay and write
+   in ANY key. Ranked by count. */
+function cadenceCensus(list){
+ const tally={};
+ for(const s of (list||[])){
+  if(!s||!Array.isArray(s.chords)||!s.chords.length)continue;
+  const kF={tonic:((s.tonic%12)+12)%12,mode:s.mode||'ionian',name:''};
+  const L=s.chords.reduce((a,c)=>a+c.d,0);
+  const ends=[];
+  for(let b=8;b<L-1e-6;b+=8)ends.push(b);
+  ends.push(L);
+  for(const beat of ends){
+   let t=0;
+   const pre=[];
+   for(const c of s.chords){t+=c.d;if(t<=beat+1e-3)pre.push({c,end:t});}
+   if(pre.length<2||Math.abs(pre[pre.length-1].end-beat)>1e-3)continue;
+   const c1=pre[pre.length-1].c,c0=pre[pre.length-2].c;
+   const r=cadClassifyPair(c0,c1,kF,null);
+   if(!r||r.kind==='—'||r.kind==='tonic arrival')continue;
+   const key=r.kind+'|'+r.lbls.join('→');
+   if(!tally[key])tally[key]={kind:r.kind,formula:r.lbls.join(' → '),count:0,songs:[],
+    steps:[{deg:((c0.r-kF.tonic)%12+12)%12,iv:c0.iv.slice(),d:1,lbl:r.lbls[0]},
+           {deg:((c1.r-kF.tonic)%12+12)%12,iv:c1.iv.slice(),d:2,lbl:r.lbls[1]}]};
+   tally[key].count++;
+   if(!tally[key].songs.includes(s.name))tally[key].songs.push(s.name);
+  }
+ }
+ return Object.values(tally).sort((a,b)=>b.count-a.count||(a.formula<b.formula?-1:1));}
+/* ==== /5.3 CADENCES (pure layer) ==== */
+/* ==== 5.1 THE SONG PRISM — input-tool pure core ==== (SONG-PRISM-SPEC-2026-07-25 +
+   VISION-SAMPLER-SPEC, Contract 10a). One beam in, three DNA strands out at every
+   level: contour · Note DNA · rhythm. SEGMENTATION (spec call c, the recommended
+   hybrid): boundaries at rests ≥ opts.gap beats, long phrases split past opts.maxBeats.
+   LETTERING (call d): per-strand normalized edit distance — ≤ .25 on interval AND
+   rhythm = the same letter, ≤ .45 = a ′ variant, a full-length match that keeps going
+   = -tag (the client's first-class suffix). FINGERPRINTS follow the raga-match
+   pattern: interval / rhythm / contour strings + hashes, exact identity = hash match
+   PER STRAND (a segment can share Note DNA with one song and rhythm with another —
+   that is the point of decoupling). percContour = the percussion code path (kit-role
+   height ladder — spec call f: the client's listed order, snare's exact rung still a
+   pending client call). embellish/minimalize = the rhythm-engine pair promoted to
+   core ops. All pure, unit-tested. Thresholds are opts-overridable; the defaults are
+   the recorded recommendation.
+   WARNING (the grabConst rule): KIT_LADDER holds NO semicolon anywhere inside. */
+const KIT_LADDER={cymbal:6,hatO:5,hatC:5,tamb:5,tomH:4,tomM:3,tomL:2,snare:1,clap:1,kick:0};
+function prismStrands(rows){
+ /* rows [[beat,dur,midi]…] time-sorted → the three decoupled strands */
+ if(!rows||!rows.length)return {contour:'',noteDNA:[],rhythm:[]};
+ const t0=rows[0][0];
+ let contour='';
+ for(let i=1;i<rows.length;i++)contour+=rows[i][2]>rows[i-1][2]?'U':rows[i][2]<rows[i-1][2]?'D':'R';
+ return {contour,noteDNA:rows.map(r=>r[2]),
+  rhythm:rows.map(r=>[+(r[0]-t0).toFixed(4),+(+r[1]).toFixed(4)])};}
+function prismIntervals(rows){const out=[];for(let i=1;i<rows.length;i++)out.push(rows[i][2]-rows[i-1][2]);return out;}
+function prismHash(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return h.toString(36);}
+function prismFingerprint(rows){
+ const iv=prismIntervals(rows).join(',');
+ const d0=(rows.length&&rows[0][1])?rows[0][1]:1;
+ const ry=rows.map(r=>+(r[1]/d0).toFixed(2)).join(',');
+ const ct=prismStrands(rows).contour;
+ return {intervalStr:iv,rhythmStr:ry,contourStr:ct,
+  hashes:{interval:prismHash(iv),rhythm:prismHash(ry),contour:prismHash(ct)}};}
+function segmentSection(rows,opts){
+ /* time-sorted [[b,d,m]…] → [[segment rows]…] — the phrase splitter */
+ const o=opts||{},gap=(o.gap==null?1:o.gap),maxB=(o.maxBeats==null?8:o.maxBeats);
+ const segs=[];let cur=[];
+ for(const r of rows){
+  if(cur.length){
+   const prev=cur[cur.length-1],rest=r[0]-(prev[0]+prev[1]);
+   const span=r[0]+r[1]-cur[0][0];
+   if(rest>=gap-1e-6||span>maxB+1e-6){segs.push(cur);cur=[];}
+  }
+  cur.push(r);
+ }
+ if(cur.length)segs.push(cur);
+ return segs;}
+function prismEditDist(a,b){
+ /* normalized Levenshtein over token arrays — 0 identical, 1 nothing shared */
+ const m=a.length,n=b.length;
+ if(!m&&!n)return 0;
+ if(!m||!n)return 1;
+ const D=Array.from({length:m+1},(_,i)=>[i].concat(Array(n).fill(0)));
+ for(let j=1;j<=n;j++)D[0][j]=j;
+ for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+  D[i][j]=Math.min(D[i-1][j]+1,D[i][j-1]+1,D[i-1][j-1]+(String(a[i-1])===String(b[j-1])?0:1));
+ return D[m][n]/Math.max(m,n);}
+function letterSegments(segs,opts){
+ /* similarity-lettering: letters in order of first appearance — A, then same-enough
+    = A again, close = A′, full-length match that continues = A-tag, new = B … */
+ const o=opts||{},same=(o.same==null?.25:o.same),vari=(o.vari==null?.45:o.vari);
+ const reps=[],letters=[];
+ for(const s of segs){
+  const iv=prismIntervals(s),ry=s.map(r=>+(+r[1]).toFixed(2));
+  let hit=null,kind=null;
+  for(const rep of reps){
+   if(iv.length>rep.iv.length&&rep.iv.length
+     &&prismEditDist(iv.slice(0,rep.iv.length),rep.iv)<=same
+     &&prismEditDist(ry.slice(0,rep.ry.length),rep.ry)<=same){hit=rep;kind='tag';break;}
+   const dIv=prismEditDist(iv,rep.iv),dRy=prismEditDist(ry,rep.ry);
+   if(dIv<=same&&dRy<=same){hit=rep;kind='same';break;}
+   if(dIv<=vari&&dRy<=vari&&!hit){hit=rep;kind='vari';}
+  }
+  if(!hit){const letter=String.fromCharCode(65+Math.min(25,reps.length));reps.push({letter,iv,ry});letters.push(letter);}
+  else letters.push(kind==='same'?hit.letter:kind==='tag'?hit.letter+'-tag':hit.letter+'′');
+ }
+ return {letters,form:letters.join(' ')};}
+function percContour(rows,kitMap){
+ /* the percussion code path: rows [[beat,dur,role]…] — rise/fall by kit-role height */
+ const km=kitMap||KIT_LADDER;
+ let out='';
+ for(let i=1;i<rows.length;i++){
+  const a=km[rows[i-1][2]],b=km[rows[i][2]];
+  out+=(b==null||a==null)?'R':b>a?'U':b<a?'D':'R';
+ }
+ return out;}
+function prismImportance(rows,i,chordPcs){
+ /* the minimalize ranking (spec call h, recommended): metrical weight + duration +
+    contour extremes + chord-tone status */
+ const r=rows[i];
+ const beatPos=((r[0]%4)+4)%4;
+ let w=beatPos===0?4:beatPos===2?3:(beatPos===1||beatPos===3)?2:1;
+ w+=Math.min(2,r[1]);
+ const m=r[2];
+ if(i>0&&i<rows.length-1){
+  if((m>rows[i-1][2]&&m>rows[i+1][2])||(m<rows[i-1][2]&&m<rows[i+1][2]))w+=1.5;
+ }
+ if(chordPcs&&chordPcs.length&&chordPcs.includes(((m%12)+12)%12))w+=1;
+ return w;}
+function minimalize(rows,amount,opts){
+ /* strip the least-important amount% — the FIRST and LAST notes never leave */
+ if(!rows||rows.length<3)return (rows||[]).map(r=>r.slice());
+ const chordPcs=opts&&opts.chordPcs;
+ const idx=rows.map((_,i)=>i).slice(1,-1)
+  .sort((a,b)=>prismImportance(rows,a,chordPcs)-prismImportance(rows,b,chordPcs));
+ const drop=new Set(idx.slice(0,Math.round(idx.length*Math.max(0,Math.min(100,amount))/100)));
+ return rows.filter((_,i)=>!drop.has(i)).map(r=>r.slice());}
+function embellish(rows,amount,opts){
+ /* add passing tones inside leaps — candidates ranked by leap size, the top amount%
+    fire (deterministic). opts.pcs = the scale's absolute pc ladder for the snap;
+    embellishment STYLES stay the Melisma library's job (cross-link, no duplication). */
+ if(!rows||rows.length<2)return (rows||[]).map(r=>r.slice());
+ const pcs=opts&&opts.pcs;
+ const cands=[];
+ for(let i=1;i<rows.length;i++){
+  const a=rows[i-1],b=rows[i];
+  if(Math.abs(b[2]-a[2])>=3&&a[1]>=.5)cands.push({i,leap:Math.abs(b[2]-a[2])});
+ }
+ cands.sort((x,y)=>y.leap-x.leap);
+ const n=Math.round(cands.length*Math.max(0,Math.min(100,amount))/100);
+ const fire=new Set(cands.slice(0,n).map(c=>c.i));
+ const out=[];
+ for(let i=0;i<rows.length;i++){
+  const r=rows[i].slice();
+  if(fire.has(i)&&out.length){
+   const prev=out[out.length-1];
+   const half=+(prev[1]/2).toFixed(4);
+   const mid=Math.round((prev[2]+r[2])/2);
+   const pm=(pcs&&pcs.length&&typeof melismaWalk==='function')?melismaWalk(mid,pcs,[0])[0]:mid;
+   prev[1]=half;
+   out.push([+(prev[0]+half).toFixed(4),half,pm]);
+  }
+  out.push(r);
+ }
+ return out;}
+/* apply a RHYTHM strand to a selection: the pattern scales to the selection's span,
+   the selection's pitch ORDER carries (cycled over the rhythm's slots). Pure. */
+function applyRhythmTo(selRows,rhythm){
+ if(!selRows||!selRows.length||!rhythm||!rhythm.length)return null;
+ const t0=selRows[0][0];
+ const selEnd=Math.max.apply(null,selRows.map(r=>r[0]+r[1]));
+ const span=selEnd-t0;
+ const rEnd=Math.max.apply(null,rhythm.map(s=>s[0]+s[1]));
+ const f=span/(rEnd||1);
+ return rhythm.map((s,i)=>{
+  const src=selRows[i%selRows.length];
+  return [+(t0+s[0]*f).toFixed(4),+(s[1]*f).toFixed(4),src[2]];});}
+/* apply a NOTE-DNA strand: re-pitch keeping the selection's rhythm — the DNA rides in
+   as an interval sequence re-anchored on the selection's first pitch (cycled). Pure. */
+function applyDnaTo(selRows,dna){
+ if(!selRows||!selRows.length||!dna||!dna.length)return null;
+ const shift=selRows[0][2]-dna[0];
+ return selRows.map((r,i)=>[r[0],r[1],dna[i%dna.length]+shift]);}
+/* a contour string → [[x,y]…] curve samples (normalized 0..1, y 1 = high) in the
+   drawn-curve format curveYAt/contourReshape speak */
+function contourToSamples(contour){
+ if(!contour||!contour.length)return null;
+ const ys=[0];let y=0,lo=0,hi=0;
+ for(const ch2 of contour){
+  y+=ch2==='U'?1:ch2==='D'?-1:0;
+  ys.push(y);lo=Math.min(lo,y);hi=Math.max(hi,y);
+ }
+ const range=(hi-lo)||1,n=ys.length-1;
+ return ys.map((v,i)=>[+(n?i/n:0).toFixed(4),+(((v-lo)/range)).toFixed(4)]);}
+/* THE ESSENCE SHELF — plain-JSON project data: {id,strand,name,level,data,fp} rows.
+   data: contour = the symbol string · dna = midis · rhythm = [[rel,d]…]. Rides undo,
+   project files and autosave like groups. */
+function validShelf(a){
+ return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
+  &&['contour','dna','rhythm'].includes(x.strand)&&typeof x.name==='string'&&x.data!==undefined);}
+function shelfNextId(shelf){
+ let n=1;
+ const ids=new Set((shelf||[]).map(x=>x.id));
+ while(ids.has('sh'+n))n++;
+ return 'sh'+n;}
+/* ==== /5.1 THE SONG PRISM (pure core) ==== */
 /* ==== /THEORY ENGINE ==== */
 function ch(d,root,iv,lbl,bass){return {d,r:PC[root],iv,lbl,bass:bass||0};}
 
@@ -1897,7 +2382,8 @@ let project={song:null,style:null,tonic:0,mode:'major',base:60,
   sections:[{start:0,name:'A',tonic:0,mode:'major',base:60}],
   tracks:{melody:[],bass:null,comping:null,pad:null},
   tempoMap:[],   /* 4.2: the global tempo lane's events [{beat,bpm}…] */
-  srcs:[]};      /* 4.4: cross-pollination sources [{id,ref,label}…] — survive song loads */
+  srcs:[],       /* 4.4: cross-pollination sources [{id,ref,label}…] — survive song loads */
+  shelf:[]};     /* 5.1: THE ESSENCE SHELF — favorite extracted strands, project data */
 /* ==== CHORD LANES (3.2) ==== */
 /* The chord lane generalizes to N lanes — alternate progressions side by side under the
    grid. project.chords IS the active lane's array via the same accessor trick as
@@ -4309,8 +4795,8 @@ const undoStack=[];
    pop their snapshot via dropNoopSnapshot(), which also RESTORES the redo history the
    snapshot preemptively cleared — so a stray click never eats your redos. */
 let redoStack=[],_lastSnap=null,_redoStash=null;
-function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too */
-function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
+function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too */
+function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
 function snapshot(){
  if(typeof snv==='object'&&snv)snv.active=false;   /* any new edit ends an SNV cycling run */
  if(typeof aretha==='object'&&aretha)aretha.active=false;   /* …and an Aretha re-roll run */
@@ -7691,6 +8177,428 @@ document.getElementById('modFav').onclick=e=>{
 };
 drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
 
+/* ==== 5.3 THE CADENCE WINDOW (UI layer) ==== ONE window, four categories. Press a
+   card = audition the cadence in the target phrase's key (psych-out convention —
+   nothing is written) · ✓ writes it so the run ENDS at the selected phrase end (one
+   undo) · 𝄐 Elide lands the arrival ON the boundary (≥2-voices gate, the client rule)
+   · modulating cards always land on the boundary and re-key the landing section.
+   Curated reads the user's SELECTED songs (the 4.4 source boxes), defaulting to the
+   songs that ship with PMW. V1 lines (say the word): cadence cards aren't lane-drag
+   objects yet (✓ writes to the selected phrase end) · the window rebuilds on open and
+   after apply, not live while chords are edited elsewhere. */
+let cadState={cat:'cls',sel:'perfect',end:null,elide:false,exSongs:[],curList:[]};
+const CAD_CATS=[['cls','𝄆 Classical'],['mod','⇧ Modulating'],['psy','⚡ Psych-out'],['cur','★ Curated — most prominent']];
+const cadStatusEl=document.getElementById('cadStatus');
+let cadStatusTimer=null;
+function setCadStatus(msg){
+ if(!cadStatusEl)return;
+ cadStatusEl.textContent=msg;
+ clearTimeout(cadStatusTimer);cadStatusTimer=setTimeout(()=>{cadStatusEl.textContent='';},6000);
+}
+function cadEndsNow(){
+ const ends=phraseEnds(project.sections,LOOP);
+ const cls=cadenceClassify(effectiveChords(),project.sections,LOOP);
+ return ends.map((e,i)=>({...e,det:cls[i]}));
+}
+function cadEndSel(){
+ const es=cadEndsNow();
+ if(!es.length)return null;
+ if(cadState.end!=null){const hit=es.find(e=>Math.abs(e.beat-cadState.end)<1e-6);if(hit)return hit;}
+ /* default: the phrase end just PAST the edit context (selected chord / note / playhead) */
+ const beat=activeKeyBeat();
+ for(const e of es)if(e.beat>beat+1e-6)return e;
+ return es[es.length-1];
+}
+function cadKeyAt(e){const ss=project.sections;return ss[Math.min(e.from,ss.length-1)];}
+function cadEntry(){return CADENCE_LIB.find(x=>x.id===cadState.sel)||null;}
+function cadCuratedSongs(){
+ /* the client rule: the user's selected songs — the 4.4 source boxes when any exist,
+    else every song that ships with PMW; the chips exclude per-song */
+ const refs=(Array.isArray(project.srcs)?project.srcs:[]).map(r=>r.ref);
+ const base=refs.length?SONGS.filter(s=>refs.includes(s.id)):SONGS;
+ return base.filter(s=>!cadState.exSongs.includes(s.id));
+}
+function cadRunNow(){
+ const e=cadEndSel();if(!e)return null;
+ const k=cadKeyAt(e);
+ if(cadState.cat==='cur'){
+  const hit=cadState.curList[+String(cadState.sel).replace('cur:','')];
+  if(!hit)return null;
+  return hit.steps.map(s=>({d:s.d,r:((k.tonic+s.deg)%12+12)%12,iv:s.iv.slice(),lbl:s.lbl,bass:0}));
+ }
+ const entry=cadEntry();if(!entry)return null;
+ return cadenceRun(entry,k);
+}
+function cadAudition(){
+ const go=()=>{try{
+  if(!audioReady||!inst)return;
+  const e=cadEndSel();if(!e)return;
+  const k=cadKeyAt(e);
+  const run=cadRunNow();if(!run)return;
+  /* home-context chord first (the mimicAudition convention), then the cadence */
+  const m=modeIsMinor(k.mode);
+  const rows=[{d:1,r:((k.tonic%12)+12)%12,iv:(m?MIN:MAJ).slice(),bass:0}].concat(run);
+  const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
+  let at=0;
+  for(const c of rows){inst.note('comping',voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+ }catch(e){}};   /* an audition must never break the gesture it rides on */
+ if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+}
+function cadApplySel(){
+ const e=cadEndSel();
+ if(!e){setCadStatus('No phrase end to write at.');return false;}
+ if(effectiveChords()!==project.chords){setCadStatus('Toggle ⚡ Psych-out off before editing the chord lane.');return false;}
+ const isCur=cadState.cat==='cur';
+ const entry=isCur?null:cadEntry();
+ if(!isCur&&!entry){setCadStatus('Choose a cadence card first.');return false;}
+ const k=cadKeyAt(e);
+ const run=cadRunNow();
+ if(!run||!run.length){setCadStatus('Choose a cadence card first.');return false;}
+ const isMod=!isCur&&entry.cat==='mod';
+ const elide=isMod||cadState.elide||!!(entry&&entry.elide);
+ if(isMod&&e.to<0){setCadStatus('A modulating cadence needs a phrase AFTER the boundary to land in — the loop end has nowhere to go. Cut a section boundary first (double-click the bar lane).');return false;}
+ if(elide&&!isMod){
+  if(e.to<0){setCadStatus('An elided arrival starts the NEXT phrase — this boundary is the end of the song. Pick an inner phrase end or un-check 𝄐 Elide.');return false;}
+  const voiced=pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length&&!hiddenTracks.has(t));
+  if(voiced.length<2){setCadStatus('Elided is inherently 2+ voices — the ending of one melody is the start of another. Give a second track its own MIDI first (the category applies across tracks, never within a single line).');return false;}
+ }
+ snapshot();
+ noteEngine('cadence',{id:isCur?String(cadState.sel):entry.id,cat:cadState.cat,elide,beat:e.beat});
+ const res=elide?cadenceWriteElided(project.chords,e.beat,run,.25,LOOP)
+               :cadenceWriteChords(project.chords,e.beat,run);
+ if(!res){dropNoopSnapshot();setCadStatus('No room to carve before that boundary — every chord ahead of it is already at its 1-beat floor.');return false;}
+ project.chords=res.chords;
+ if(isMod){
+  const dest=cadenceDest(entry,k);
+  project.sections=cadenceRekeySections(project.sections,e.beat,dest.interval,dest.tgtMode,LOOP);
+ }
+ selChord=null;closePalette();
+ const chain=run.map(c=>dispLbl(c.lbl)).join(' → ');
+ setCadStatus('Wrote '+chain+(elide?' — the arrival lands ON the boundary'+(isMod?' and the landing section is re-keyed (notes never move — reinterpretation)':' and starts the next phrase'):' — the run ends exactly at the phrase end')+' · ⌘Z undoes.');
+ refresh(true);
+ buildCadWindow();
+ return true;
+}
+function buildCadWindow(){
+ const host=document.getElementById('cadPanel');if(!host)return;
+ /* phrase-end chips — every boundary + the loop end, wearing the detector's read */
+ const er=document.getElementById('cadEndsRow');
+ const sel=cadEndSel();
+ er.innerHTML='<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Phrase end</span>';
+ for(const e of cadEndsNow()){
+  const chip=document.createElement('span');
+  chip.className='cpchip'+(sel&&Math.abs(sel.beat-e.beat)<1e-6?' on':'');
+  const det=e.det&&e.det.kind&&e.det.kind!=='—'?' · '+(e.det.elided?'𝄐 ':'')+e.det.kind:'';
+  chip.textContent=(e.from!=null?project.sections[e.from].name:'?')+' → '+(e.to>=0?project.sections[e.to].name:'end')+' · bar '+(Math.round((e.beat/4)*100)/100+1)+det;
+  chip.title=e.det&&e.det.lbls&&e.det.lbls.length?('The detector reads '+e.det.lbls.map(l=>dispLbl(l)).join(' → ')+(e.det.elided?' with the arrival ON the boundary (elided)':'')):'No cadence detected at this phrase end yet.';
+  chip.onclick=()=>{cadState.end=e.beat;buildCadWindow();};
+  er.appendChild(chip);
+ }
+ /* category tabs */
+ const tabs=document.getElementById('cadTabs');
+ tabs.innerHTML='';
+ for(const [id,name] of CAD_CATS){
+  const c=document.createElement('span');
+  c.className='cpchip'+(cadState.cat===id?' on':'');
+  c.textContent=name;
+  c.onclick=()=>{cadState.cat=id;buildCadWindow();};
+  tabs.appendChild(c);
+ }
+ /* curated song chips */
+ const sr=document.getElementById('cadSongsRow');
+ sr.style.display=cadState.cat==='cur'?'flex':'none';
+ if(cadState.cat==='cur'){
+  const refs=(Array.isArray(project.srcs)?project.srcs:[]).map(r=>r.ref);
+  const base=refs.length?SONGS.filter(s=>refs.includes(s.id)):SONGS;
+  sr.innerHTML='<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The songs the census reads — your 4.4 Import sources when any exist, else every song that ships with PMW. Click to exclude.">Songs'+(refs.length?' (your Import sources)':'')+'</span>';
+  for(const s of base){
+   const c=document.createElement('span');
+   const onn=!cadState.exSongs.includes(s.id);
+   c.className='cpchip'+(onn?' on':'');
+   c.textContent=s.name;
+   c.onclick=()=>{
+    if(onn)cadState.exSongs.push(s.id);
+    else cadState.exSongs=cadState.exSongs.filter(x=>x!==s.id);
+    buildCadWindow();};
+   sr.appendChild(c);
+  }
+ }
+ /* the cards */
+ const cards=document.getElementById('cadCards');
+ cards.innerHTML='';
+ const e2=cadEndSel(),k2=e2?cadKeyAt(e2):{tonic:project.tonic,mode:project.mode};
+ if(cadState.cat==='cur'){
+  cadState.curList=cadenceCensus(cadCuratedSongs());
+  if(!cadState.curList.length)cards.innerHTML='<span style="font-size:11.5px;color:var(--dim);">No cadences detected in the selected songs — check more songs above.</span>';
+  cadState.curList.forEach((h,i)=>{
+   const d=document.createElement('div');
+   d.className='mimCard'+(String(cadState.sel)==='cur:'+i?' on':'');
+   d.title='Detected at the 8-beat phrase ends of: '+h.songs.join(' · ')+'. Press = hear it in this phrase’s key (nothing is written) · ✓ writes it.';
+   d.innerHTML='<div class="mimName">'+h.kind+'</div>'
+    +'<div class="mimMeta">in '+h.songs.length+' song'+(h.songs.length>1?'s':'')+' · '+h.count+' phrase end'+(h.count>1?'s':'')+'</div>'
+    +'<div class="mimChain">'+h.steps.map(s=>dispLbl(s.lbl)).join(' → ')+'</div>';
+   d.onclick=()=>{cadState.sel='cur:'+i;buildCadWindow();cadAudition();};
+   cards.appendChild(d);
+  });
+ }else{
+  for(const t of CADENCE_LIB.filter(x=>x.cat===cadState.cat)){
+   const d=document.createElement('div');
+   d.className='mimCard'+(cadState.sel===t.id?' on':'');
+   d.title=t.desc+' Press = hear it in this phrase’s key (nothing is written) · ✓ writes it at the phrase end.';
+   let extra='';
+   if(t.cat==='mod'){
+    const dest=cadenceDest(t,k2);
+    extra=' <span class="mimIv">lands '+PCN[((k2.tonic+dest.interval)%12+12)%12]
+     +(dest.tgtMode==='aeolian'?' minor':dest.tgtMode==='ionian'?' major':'')+'</span>';
+   }
+   if(t.elide)extra+=' <span class="mimIv">𝄐 elides</span>';
+   const rr=cadenceRun(t,k2);   /* resolved for the phrase's key — labels wear the right case */
+   d.innerHTML='<div class="mimName">'+t.name+'</div>'
+    +'<div class="mimChain">'+rr.map(c=>dispLbl(c.lbl)).join(' → ')+extra+'</div>';
+   d.onclick=()=>{
+    cadState.sel=t.id;
+    if(t.elide)cadState.elide=true;
+    buildCadWindow();cadAudition();};
+   cards.appendChild(d);
+  }
+ }
+ /* elide checkbox + apply state */
+ const cb=document.getElementById('cadElide');
+ const entry=cadState.cat!=='cur'?cadEntry():null;
+ const isMod=cadState.cat==='mod';
+ if(cb){
+  cb.checked=isMod||cadState.elide||!!(entry&&entry.elide);
+  cb.disabled=isMod||!!(entry&&entry.elide);
+  cb.onchange=()=>{cadState.elide=cb.checked;};
+ }
+ const lab=document.getElementById('cadElideLab');
+ if(lab)lab.style.opacity=(cb&&cb.disabled)?.55:1;
+}
+document.getElementById('cadApplyBtn').onclick=e=>{cadApplySel();e.target.blur();};
+document.getElementById('cpCadLink').onclick=()=>{
+ if(uiState.open!=='cadPanel')uiDispatch({type:'toggle',id:'cadPanel'});
+ else{const p=document.getElementById('cadPanel');if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'center'});}catch(e){}}
+};
+/* ==== /5.3 THE CADENCE WINDOW (UI layer) ==== */
+/* ==== 5.1 THE SONG PRISM (UI layer, round 1) ==== scope chips (any track with its own
+   MIDI) · per-section phrase lettering (A A′ B -tag) · press a segment = its three
+   strand cards (MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES — the
+   client's subtext labels, verbatim) · press a card = audition the STRAND alone
+   (psych-out convention, nothing written) · ★ Keep → the ESSENCE SHELF (project data,
+   one undo) · ✓ Apply re-shapes the current grid selection through that strand alone.
+   V1 lines (say the word): shelf objects aren't grid-drag objects yet (✓ applies to
+   the selection) · halves/thirds sub-levels ship with the recursive shelf round ·
+   the 0–100 blend slider and the form browser/reorder tools are their own rounds ·
+   drums scope rides percContour when the drum lane grows its own MIDI surface. */
+let przState={track:'melody',sec:0,seg:0,analysis:null};
+const przStatusEl=document.getElementById('przStatus');
+let przStatusTimer=null;
+function setPrzStatus(msg){
+ if(!przStatusEl)return;
+ przStatusEl.textContent=msg;
+ clearTimeout(przStatusTimer);przStatusTimer=setTimeout(()=>{przStatusEl.textContent='';},6000);
+}
+const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES'};
+function przTracks(){
+ return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length&&!hiddenTracks.has(t));
+}
+function prismAnalyze(track){
+ const notes=(project.tracks[track]||[]).map(n=>[n[0],n[1],n[2]]).sort((a,b)=>a[0]-b[0]);
+ const ss=project.sections;
+ const out=[];
+ for(let i=0;i<ss.length;i++){
+  const a=ss[i].start,b=i+1<ss.length?ss[i+1].start:LOOP;
+  const rows=notes.filter(r=>r[0]>=a-1e-6&&r[0]<b-1e-6);
+  const segs=segmentSection(rows);
+  const let2=letterSegments(segs);
+  out.push({name:ss[i].name,start:a,segs,letters:let2.letters,form:let2.form});
+ }
+ return out;
+}
+function przSeg(){
+ const a=przState.analysis;if(!a)return null;
+ const sec=a[Math.min(przState.sec,a.length-1)];if(!sec||!sec.segs.length)return null;
+ return sec.segs[Math.min(przState.seg,sec.segs.length-1)];
+}
+function przThumb(strand,data){
+ /* tiny SVG per strand — contour polyline · DNA dots · one-tone rhythm bars */
+ const W=180,H=40;
+ let inner='';
+ if(strand==='contour'){
+  const s=contourToSamples(data)||[[0,.5],[1,.5]];
+  const pts=s.map(([x,y])=>(x*W).toFixed(1)+','+((1-y)*(H-8)+4).toFixed(1)).join(' ');
+  inner='<polyline points="'+pts+'" fill="none" stroke="#e8a33d" stroke-width="1.6"/>';
+ }else if(strand==='dna'){
+  const lo=Math.min.apply(null,data),hi=Math.max.apply(null,data),rg=(hi-lo)||1;
+  data.forEach((m,i)=>{
+   const x=(data.length>1?i/(data.length-1):0)*(W-8)+4,y=(1-(m-lo)/rg)*(H-10)+5;
+   inner+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="#5bb98c"/>';
+  });
+ }else{
+  const end=Math.max.apply(null,data.map(s=>s[0]+s[1]))||1;
+  for(const [t,d] of data){
+   inner+='<rect x="'+((t/end)*W).toFixed(1)+'" y="14" width="'+Math.max(2,(d/end)*W-1).toFixed(1)+'" height="12" rx="2" fill="#7f9cf5"/>';
+  }
+ }
+ return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+inner+'</svg>';
+}
+function przAudition(strand,data,startMidi,atBeat){
+ const go=()=>{try{
+  if(!audioReady||!inst)return;
+  const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
+  if(strand==='rhythm'){
+   const base=(typeof gridBase==='function')?project.base:60;
+   data.forEach(([t,d])=>inst.note('comping',base,Math.max(.1,d*spb*.9),t0+t*spb,.55));
+  }else if(strand==='dna'){
+   data.slice(0,24).forEach((m,i)=>inst.note('comping',m,spb*.45,t0+i*spb*.5,.5));
+  }else{
+   const key=melismaKeyAt(atBeat||0),pcs=melismaPcs(key);
+   let cum=0;
+   const steps=[0].concat([...data].map(ch2=>cum+=(ch2==='U'?1:ch2==='D'?-1:0)));
+   const midis=melismaWalk(startMidi||project.base+7,pcs,steps);
+   midis.slice(0,24).forEach((m,i)=>inst.note('comping',m,spb*.45,t0+i*spb*.5,.5));
+  }
+ }catch(e){}};
+ if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+}
+function przSelRows(){
+ if(typeof selNotes==='undefined'||!selNotes.size)return null;
+ const idxs=[...selNotes].filter(i=>project.melody[i]).sort((a,b)=>project.melody[a][0]-project.melody[b][0]);
+ if(!idxs.length)return null;
+ return {idxs,rows:idxs.map(i=>{const n=project.melody[i];return [n[0],n[1],n[2]];})};
+}
+function przApply(strand,data){
+ const sel=przSelRows();
+ if(!sel){setPrzStatus('Select notes in the grid first — ✓ re-shapes a selection through the strand.');return false;}
+ if(strand==='contour'&&sel.rows.length<2){setPrzStatus('A contour needs at least 2 selected notes to re-shape.');return false;}
+ snapshot();
+ noteEngine('prism-apply',{strand,n:sel.rows.length});
+ if(strand==='rhythm'){
+  const out=applyRhythmTo(sel.rows,data);
+  if(!out){dropNoopSnapshot();setPrzStatus('That rhythm is empty — nothing to apply.');return false;}
+  const vel=(project.melody[sel.idxs[0]]&&project.melody[sel.idxs[0]][8]!=null)?project.melody[sel.idxs[0]][8]:undefined;
+  const keep=new Set(sel.idxs);
+  project.melody=project.melody.filter((_,i)=>!keep.has(i));
+  for(const r of out){const n=[r[0],r[1],r[2]];if(vel!==undefined)n[8]=vel;project.melody.push(n);}
+  project.melody.sort((a,b)=>a[0]-b[0]);
+  selNotes.clear();
+  setPrzStatus('Rhythm applied — '+out.length+' notes now carry the pattern, your pitch order rode along · ⌘Z undoes.');
+ }else if(strand==='dna'){
+  const out=applyDnaTo(sel.rows,data);
+  sel.idxs.forEach((i,k)=>{project.melody[i][2]=out[k][2];});
+  setPrzStatus('Note DNA applied — pitches re-anchored on your first note, rhythm untouched · ⌘Z undoes.');
+ }else{
+  const samples=contourToSamples(data);
+  const key=melismaKeyAt(sel.rows[0][0]);
+  const out=contourReshape(sel.rows,samples,melismaPcs(key),{});
+  if(!out){dropNoopSnapshot();setPrzStatus('That contour could not re-shape the selection.');return false;}
+  sel.idxs.forEach((i,k)=>{project.melody[i][2]=out[k];});
+  setPrzStatus('Rise and fall applied — rhythm untouched, pitches walk your scale along the shape · ⌘Z undoes.');
+ }
+ refresh(true);
+ return true;
+}
+function przKeep(strand,data,segLetter){
+ snapshot();
+ noteEngine('prism-keep',{strand});
+ const name=(segLetter?segLetter+' · ':'')+PRZ_LABELS[strand].toLowerCase()+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled');
+ const fp=strand==='contour'?prismHash(String(data)):strand==='dna'?prismHash(data.join(',')):prismHash(data.map(s=>s.join(':')).join(','));
+ project.shelf.push({id:shelfNextId(project.shelf),strand,name:name.slice(0,60),level:'L2',data:JSON.parse(JSON.stringify(data)),fp});
+ autosaveSoon();
+ buildPrism();
+ setPrzStatus('Kept on the Essence Shelf — it rides the project file · ⌘Z undoes.');
+}
+function buildPrism(reanalyze){
+ const host=document.getElementById('prismPanel');if(!host)return;
+ if(reanalyze||!przState.analysis){
+  const ts=przTracks();
+  if(!ts.includes(przState.track))przState.track=ts[0]||'melody';
+  przState.analysis=prismAnalyze(przState.track);
+ }
+ /* scope chips */
+ const sc=document.getElementById('przScope');
+ sc.innerHTML='<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="Any track carrying its own MIDI can go through the Prism. Style-rendered tracks (and the drum lane) join when they grow their own notes.">Beam</span>';
+ for(const t of przTracks()){
+  const c=document.createElement('span');
+  c.className='cpchip'+(przState.track===t?' on':'');
+  c.textContent=(typeof trackLabel==='function'?trackLabel(t):t);
+  c.onclick=()=>{przState.track=t;przState.sec=0;przState.seg=0;buildPrism(true);};
+  sc.appendChild(c);
+ }
+ /* per-section lettering + segments */
+ const body=document.getElementById('przBody');
+ body.innerHTML='';
+ (przState.analysis||[]).forEach((secA,si)=>{
+  const row=document.createElement('div');
+  row.style.cssText='margin-bottom:8px;';
+  const segChips=secA.segs.map((sg,gi)=>{
+   const on=(si===przState.sec&&gi===przState.seg);
+   return '<span class="cpchip przSeg'+(on?' on':'')+'" data-si="'+si+'" data-gi="'+gi+'" title="'+sg.length+' notes — press to split this phrase into its three strands">'+secA.letters[gi]+'</span>';
+  }).join(' ');
+  row.innerHTML='<span style="font-size:11px;color:var(--dim);margin-right:8px;">Section '+secA.name+' · form: <b style="color:var(--text);">'+(secA.form||'—')+'</b></span> '+segChips;
+  body.appendChild(row);
+ });
+ body.querySelectorAll('.przSeg').forEach(ch2=>{
+  ch2.onclick=()=>{przState.sec=+ch2.dataset.si;przState.seg=+ch2.dataset.gi;buildPrism();};
+ });
+ /* the three strand cards for the selected segment */
+ const seg=przSeg();
+ const cardsHost=document.createElement('div');
+ cardsHost.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;';
+ if(seg&&seg.length){
+  const st=prismStrands(seg);
+  const secA=przState.analysis[Math.min(przState.sec,przState.analysis.length-1)];
+  const letter=secA.letters[Math.min(przState.seg,secA.letters.length-1)];
+  const mk=(strand,data,thumbData)=>{
+   const d=document.createElement('div');
+   d.className='mimCard';
+   d.title={contour:'The rise and fall alone — press to hear it re-walked through this key’s scale (nothing is written) · ✓ re-shapes the selected grid notes along it · ★ keeps it on the Shelf.',
+    dna:'The pitches alone, no rhythm — press to hear them evenly (nothing is written) · ✓ re-pitches the selected grid notes (their rhythm stays) · ★ keeps it on the Shelf.',
+    rhythm:'The rhythm alone, one tone — press to hear it (nothing is written) · ✓ re-times the selected grid notes to this pattern · ★ keeps it on the Shelf.'}[strand];
+   d.innerHTML='<div class="mimName">'+letter+' · '+PRZ_LABELS[strand]+'</div>'
+    +'<div style="margin:4px 0;">'+przThumb(strand,thumbData)+'</div>'
+    +'<div style="display:flex;gap:8px;"><span class="cpchip przKeepB">★ Keep</span><span class="cpchip przApplyB">✓ Apply</span></div>';
+   d.onclick=e=>{
+    if(e.target.classList.contains('przKeepB')){e.stopPropagation();przKeep(strand,data,letter);return;}
+    if(e.target.classList.contains('przApplyB')){e.stopPropagation();przApply(strand,data);return;}
+    przAudition(strand,data,seg[0][2],seg[0][0]);
+   };
+   return d;
+  };
+  cardsHost.appendChild(mk('contour',st.contour,st.contour));
+  cardsHost.appendChild(mk('dna',st.noteDNA,st.noteDNA));
+  cardsHost.appendChild(mk('rhythm',st.rhythm,st.rhythm));
+ }else{
+  cardsHost.innerHTML='<span style="font-size:11.5px;color:var(--dim);">This track has no phrases to split here — pick another beam above.</span>';
+ }
+ body.appendChild(cardsHost);
+ /* the Shelf */
+ const sh=document.getElementById('przShelf');
+ sh.innerHTML='';
+ if(!Array.isArray(project.shelf))project.shelf=[];
+ if(!project.shelf.length)sh.innerHTML='<span style="font-size:11.5px;color:var(--dim);">Empty — ★ Keep any strand card and it lives here, in the project file.</span>';
+ project.shelf.forEach((o,i)=>{
+  const d=document.createElement('div');
+  d.className='mimCard';
+  const twin=project.shelf.find(x=>x!==o&&x.strand===o.strand&&x.fp===o.fp);
+  d.title='Press = audition · ✓ applies to the grid selection · double-click the name to rename · ✕ removes.'+(twin?' ↔ An identical '+o.strand+' also lives on the shelf: '+twin.name:'');
+  d.innerHTML='<div class="mimName przShName" style="cursor:text;">'+o.name+(twin?' <span class="mimIv">↔</span>':'')+'</div>'
+   +'<div style="margin:4px 0;">'+przThumb(o.strand,o.data)+'</div>'
+   +'<div style="display:flex;gap:8px;"><span class="cpchip przApplyB">✓ Apply</span><span class="cpchip przDelB">✕</span></div>';
+  d.onclick=e=>{
+   if(e.target.classList.contains('przApplyB')){e.stopPropagation();przApply(o.strand,o.data);return;}
+   if(e.target.classList.contains('przDelB')){e.stopPropagation();snapshot();project.shelf.splice(i,1);autosaveSoon();buildPrism();setPrzStatus('Removed from the Shelf · ⌘Z undoes.');return;}
+   przAudition(o.strand,o.data,project.base+7,0);
+  };
+  d.querySelector('.przShName').ondblclick=e=>{
+   e.stopPropagation();
+   const name=prompt('Name this essence:',o.name);
+   if(name){snapshot();o.name=name.slice(0,60);autosaveSoon();buildPrism();}
+  };
+  sh.appendChild(d);
+ });
+}
+/* ==== /5.1 THE SONG PRISM (UI layer) ==== */
 /* ==== 4.1 THE MODULATION LANE (UI layer) ==== the Keys row above the track stack IS
    the Modulation Engine's lane surface: key-center regions labeled against the home key
    ("C(I)" · "E♭(♭III)"), a grip on every boundary (drag ↔ = move the modulation point),
@@ -14113,6 +15021,7 @@ function buildProjectRecord(p){
   tempoMap:(Array.isArray(p.tempoMap)&&p.tempoMap.length?p.tempoMap:undefined),   /* 4.2 */
   srcs:(Array.isArray(p.srcs)&&p.srcs.length?p.srcs:undefined),   /* 4.4: cross-pollination sources */
   groups:(Array.isArray(p.groups)&&p.groups.length?p.groups:undefined),   /* ⌘G track groups */
+  shelf:(Array.isArray(p.shelf)&&p.shelf.length?p.shelf:undefined),   /* 5.1: the ESSENCE SHELF */
   chords:p.chords,tracks:p.tracks,variations:p.variations||[]};}
 function validSectionRow(s){
  return !!(s&&typeof s==='object'&&typeof s.start==='number'&&isFinite(s.start)&&s.start>=0
@@ -14136,6 +15045,7 @@ function parseProjectFile(str){
   if(o.tempoMap!==undefined&&!validTempoMap(o.tempoMap))return null;   /* 4.2 the tempo lane */
   if(o.srcs!==undefined&&!validSrcs(o.srcs))return null;   /* 4.4 cross-pollination sources */
   if(o.groups!==undefined&&!validGroups(o.groups))return null;   /* ⌘G track groups */
+  if(o.shelf!==undefined&&!validShelf(o.shelf))return null;   /* 5.1: the ESSENCE SHELF */
   return o;
  }catch(e){return null;}}
 let SETTINGS=parseSettings(null);
@@ -14161,7 +15071,7 @@ function currentViewH(){
 function currentProjectRecord(){
  return buildProjectRecord({songId:project.song.id,mode:project.mode,tonic:project.tonic,base:project.base,
   bpm:+tempo.value,styleId:project.style.id,loop:LOOP,chords:project.chords,tracks:project.tracks,
-  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,srcs:project.srcs,groups:project.groups,variations,ts:Date.now()});}
+  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,srcs:project.srcs,groups:project.groups,shelf:project.shelf,variations,ts:Date.now()});}
 function autosaveSoon(){
  projectDirty=true;
  if(!SETTINGS.autosave)return;
@@ -14195,6 +15105,7 @@ function applyProjectFile(o){
  project.style=STYLES.find(x=>x.id===o.styleId)||STYLES[0];
  project.srcs=srcsNormalize(o.srcs,SONGS.map(x=>x.id));   /* 4.4: sources ride project files */
  project.groups=groupsNormalize(o.groups,MIX_TRACKS.concat(customTrackIds(project.tracks)));   /* ⌘G: groups ride them too */
+ project.shelf=validShelf(o.shelf)?JSON.parse(JSON.stringify(o.shelf)):[];   /* 5.1: the Shelf rides project files */
  selHeads.clear();selHead=null;
  selSong.value=s.id;selStyle.value=project.style.id;selChords.value='none';
  setTempo(o.bpm);selNotes.clear();undoStack.length=0;redoStack.length=0;
@@ -14244,6 +15155,8 @@ const WINDOW_DEFS=[
  {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'CHOOSE YOUR OWN ADVENTURE',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
  {id:'wanPanel',   name:'Wanderer',icon:'🧭',tip:'Chord Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers on Weber\'s table (4.6): arrow keys walk the chords of your scale and its parallel relative, every landing plays, ✓ writes it to the lane'},
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits — every key is a planet (4.7): travel by click, arrows or MIDI pads, the change lands on the next bar, the journey is recorded. Per-song orbit map + Weber grid, autonomous maze modulators, ecosystem expansion'},
+ {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
+ {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Lives between the Chord Palette and the Multi-Track Grid.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & Web MIDI (the sample-directory and DAW-routing guides moved behind the ⇪ Import window)'}];
 const RAIL_DEFS=[
  {icon:'📌',act:'pinBtn', tip:'Pin selection — Conform never moves pinned notes (P)'},
@@ -14256,6 +15169,8 @@ const RAIL_DEFS=[
  {icon:'⌕', win:'ragaPanel',tip:'Open the Scale/Raga Browser — CHOOSE YOUR OWN ADVENTURE'},
  {icon:'🧭', win:'wanPanel',tip:'Open the Chord Wanderer — wander related key centers on Weber\'s table (4.6)'},
  {icon:'🪐', win:'orbPanel',tip:'Open Interplanetary Orbits — every key is a planet, travel on the next bar (4.7)'},
+ {icon:'△', win:'prismPanel',tip:'Open THE SONG PRISM — split any track into contour · Note DNA · rhythm, letter the phrases, keep essences on the Shelf (5.1)'},
+ {icon:'𝄂', win:'cadPanel',tip:'Open the Cadence Window — the chords at the end of a musical phrase. Nothing more or less. (5.3)'},
  {icon:'⤢', ui:'expandAll',tip:'Expand every collapsed window (v3 §3 — collapsed windows rest as quiet grey strips)'}];
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
    unchanged, it simply starts as the open one. A saved state (incl. an explicit close)
@@ -14307,12 +15222,20 @@ function uiDispatch(action){
  applyUiState();
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
- if(action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel')){
+ if(action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel')){
   const p=document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
+  if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
+ }
+ /* 5.3: the Cadence Window lives BETWEEN the palette and the grid — opening it scrolls
+    it into view there and rebuilds against the current sections/chords */
+ if(action&&action.type==='toggle'&&uiState.open==='cadPanel'){
+  if(typeof buildCadWindow==='function')buildCadWindow();
+  const p=document.getElementById('cadPanel');
+  if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'center'});}catch(e){}
  }}
 function applyUiState(){
  for(const d of WINDOW_DEFS){
@@ -14951,6 +15874,8 @@ const HELP_HTML=`
  <li><b>Minimize the Chord Lane</b> — hover its upper or lower boundary and drag the glowing yellow line down (or up): the lane snaps shut to a golden line (click it to reopen). While it's hidden, a <b>green square</b> marks the polyphonic instrument carrying the harmony the most — its strip becomes the <b>acting Chord Lane</b> with the full chord-lane gesture surface (select, drag edges/bodies, ⌥-duplicate, ⇧-multi-select, ⌘-velocity, right-click menu, double-click rename, palette targeting)</li>
  <li><b>Minimize ANY track</b> — every lane joins the same law: drag its yellow boundary line shut and the track snaps to a solid golden line (click the line to reopen). <b>Re-order the lanes</b> with the dotted grips at the far left and far right of every row — drag ↕ to move a track, and the <b>Grid block itself drags the same way</b>, so it can sit above or below anything</li>
  <li><b>➿ Melody Melisma Machine</b> (window bar → Melisma — opens at the <b>top of the screen</b>, with the 〜 Slide window docked on its right) — the universal vocal-ornament engine. Browse generic ornaments by <b>tradition, era and family — never by artist</b>; every card draws its <b>MIDI pattern</b> and carries an <b>▲/▼ direction pair</b> (one selected at a time: ▲ as written, ▼ mirrored); <b>press a card</b> to audition it on your selected note; <b>Apply</b> writes it onto every selected note (each ornament fits inside its own note's duration and inherits its velocity); <b>⟲ Re-roll</b> cycles the pace (natural ↔ double-time) and the sliders re-shape live — all in one undo step. Ornament notes are plain notes plus a ➿ bend curve (cents, rendered by the Slide voices); bend curves are derived approximations until ear-approved</li></ul>
+ <li><b>△ The Song Prism</b> (window bar → Prism) — the Melody Analyzer / Rhythmic Isolator: pick a beam (any track with its own MIDI) and the Prism splits every section's melody into lettered phrases (A A′ B, with -tag endings) and each phrase into its three DNA strands — <b>MELODY RISE AND FALL</b> (the contour alone) · <b>NOTE DNA</b> (the pitches with no rhythm) · <b>RHYTHM WITHOUT ANY NOTES</b> (the rhythm on one tone). Press a card to hear the strand alone (nothing is written); <b>✓ Apply</b> re-shapes your grid selection through that strand — rhythm re-times it, DNA re-pitches it (rhythm stays), contour walks its pitches along the shape; <b>★ Keep</b> lands it on the <b>Essence Shelf</b>, which lives in the project file — identical essences recognize each other (↔)</li>
+ <li><b>𝄂 Cadence Window</b> (window bar → Cadences, or the 𝄂 Cadences link in the Chord Palette — it opens <b>between the palette and the Multi-Track Grid</b>) — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.” Four categories: <b>Classical</b> (Perfect · Plagal · <b>Elided</b> — the arrival lands ON the boundary and starts the next phrase, inherently 2+ voices · Deceptive — the V onto any chord containing scale-degree 1 · Half, and the deeper shelf: supertonic set, leading-tone, chromatic mediants, Giant Steps three ways, 90s grunge, ragtime slow-mo) · <b>Modulating</b> (cadences that leave you in a new key — the landing section re-keys, notes never move) · <b>Psych-out</b> (feint toward a new key, then come home — written, unlike the Modulation window's playback-only feints) · <b>Curated — most prominent</b> (the cadences your selected songs actually contain). Press a card = hear it in the phrase's key (nothing is written) · ✓ writes it so the run ends exactly at the phrase end — one undo</li>
  <h3>Everything else</h3>
  <p>Hover any control — every button, slot and knob explains itself in a tooltip.</p>`;
 const ABOUT_HTML=`
