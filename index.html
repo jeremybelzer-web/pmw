@@ -313,6 +313,28 @@
 .tpt:hover{background:#98a0b2;}
 .tpt.live{background:var(--accent);box-shadow:0 0 8px rgba(232,163,61,.8);cursor:grabbing;}
 .tbpm{position:absolute;top:1px;left:4px;font-size:9.5px;color:var(--dim);pointer-events:none;font-variant-numeric:tabular-nums;}
+/* ==== 2.5 ⑪f the Section Lane (Cubase presentation) + ④ the time-signature lane ==== */
+#sectionLaneRow,#tsigLaneRow{margin:0 0 4px 0;}
+#sectionlane{position:relative;height:22px;flex:0 0 auto;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;}
+#tsiglane{position:relative;height:20px;flex:0 0 auto;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;cursor:copy;}
+.secspan{position:absolute;top:0;height:100%;box-sizing:border-box;border:1px solid rgba(111,208,140,.35);border-radius:4px;background:rgba(36,56,43,.55);overflow:hidden;cursor:pointer;}
+.secspan:hover{border-color:#6fd08c;}
+.secspan .slbl{position:sticky;left:3px;font-size:9.5px;color:#9fe6b5;font-weight:600;padding:3px 6px;display:inline-block;white-space:nowrap;pointer-events:none;}
+.posmark{position:absolute;top:0;width:0;height:100%;border-left:1.6px solid #e8a33d;cursor:ew-resize;}
+.posmark .plbl{position:absolute;top:0;left:2px;font-size:8.8px;color:#e8a33d;white-space:nowrap;pointer-events:none;}
+.posmark:hover{border-left-color:#ffd23f;}
+.tsflag{position:absolute;top:1px;font-size:9.5px;font-weight:700;color:#98a0b2;background:#24262f;border:1px solid var(--line);border-radius:3px;padding:1px 5px;cursor:pointer;user-select:none;}
+.tsflag:hover{color:var(--text);border-color:var(--accent);}
+/* ==== 2.5 ① automation lanes ==== nodes announce themselves on hover (item ⑩ fix 2:
+   region automation nodes visible on hover) */
+.alane{position:relative;flex:0 0 auto;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;cursor:crosshair;}
+.alane svg{position:absolute;inset:0;pointer-events:none;}
+.apt{position:absolute;width:8px;height:8px;border-radius:50%;background:#565d6e;border:1.5px solid #2a2d38;box-sizing:border-box;margin:-4px 0 0 -4px;cursor:grab;opacity:.45;}
+.alane:hover .apt,.apt.sel{opacity:1;}
+.apt.sel{background:var(--accent);box-shadow:0 0 6px rgba(232,163,61,.7);}
+.apt:hover{background:#98a0b2;}
+/* Cubase-style marker LINES through the grid (the docked-lane compensation, T3) */
+.mkline{pointer-events:none;}
 .mreg{position:absolute;top:0;height:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.10);border-radius:4px;
  background:rgba(255,255,255,.025);overflow:hidden;pointer-events:none;}
 .mreg.away{background:rgba(232,163,61,.08);border-color:rgba(232,163,61,.3);}
@@ -387,7 +409,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-11a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-11b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -404,7 +426,8 @@
     <div class="ctl"><label>&nbsp;</label><div style="display:flex;gap:8px;">
       <button id="play">▶ Play</button>
       <button id="recBtn" title="Record MIDI — arm a track (the ● under its name), turn this red, hit Play, and play your MIDI keyboard. New notes ADD to what's there; flip “Record over existing MIDI” in ⚙ Settings to replace instead.">⏺ Rec</button>
-      <button id="loopBtn" title="Loop the selected section (double-click-drag the bar lane to select one)">⟳ Loop</button></div></div>
+      <button id="loopBtn" title="Loop the selected section (⌘L from a time selection · double-click-drag the bar lane · or grab the always-on brace's edges)">⟳ Loop</button>
+      <button id="zimBtn" title="Zoomed In Midi — the in-place track renders exactly like the Lower Window (the SAME view object, one code path). Click again to go back. Both workflows ship; keep your habit.">⌕ Zoomed In Midi</button></div></div>
     <!-- Phase 1.1: these four moved to the transform rail left of the grid; hidden buttons keep their handlers -->
     <div class="ctl" style="display:none;"><label>Protect</label><button id="pinBtn" style="background:#3a3e4d;color:#e9eaef;">📌 Pin selection (don’t conform)</button></div>
     <div class="ctl" style="display:none;"><label>Transform</label><button id="negBtn" style="background:#8f6bb8;color:#150a20;" title="Reflect around the tonic/dominant axis — selected notes, selected chord, or the whole track">⇄ Negative harmony</button></div>
@@ -558,10 +581,11 @@
       <div class="parts" style="margin:0;align-items:center;">
         <span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Grid:</span>
         <label class="part" style="gap:5px;" title="Show every other track's notes dimmed behind the one you're editing"><input type="checkbox" id="chkGhosts" style="accent-color:var(--accent);">👥 All tracks</label>
-        <label class="part" style="gap:5px;" title="Music-paper view: the song wraps into systems of 4 bars, like a score page. Read &amp; navigate — click anywhere to move the playhead, click notes to select (Delete works), click section flags to edit them, click the dashed strip at the bottom to add 4 more bars. Editing gestures live in the linear grid — untick to go back."><input type="checkbox" id="chkPaper" style="accent-color:var(--accent);">📄 Paper</label>
+        <label class="part" style="gap:5px;" title="Music-paper view: the song wraps into systems of 4 bars, like a score page. Read &amp; navigate — click anywhere to move the playhead, click notes to select (Delete works), click the dashed strip at the bottom to add 4 more bars. Section edits live in the linear view's Section Lane — untick to go back."><input type="checkbox" id="chkPaper" style="accent-color:var(--accent);">📄 Paper</label>
         <label class="part" style="gap:5px;"><input type="checkbox" id="chkTrip" style="accent-color:var(--accent);">Triplets</label>
         <label class="part" style="gap:5px;" title="Playback-only: every second 1/8 shifts to the triplet position. Grid stays straight."><input type="checkbox" id="chkSwing" style="accent-color:var(--accent);">Swing</label>
         <div class="part" id="btnSwingAct" title="Destructive: rewrites note start times to a physical 1/8-triplet swing (editable tracks). Undo with ⌘Z.">Swing-Actual ⚠</div>
+        <label class="part" style="gap:5px;" title="2.5 ⑧ Continuous view (default OFF): hides all chord/MIDI clip objects and shows each track as one continuous lane — double-click a track opens the track itself, no clip pop-up. Untick to get the clip model back."><input type="checkbox" id="chkCont" style="accent-color:var(--accent);">Continuous</label>
         <label class="part" style="gap:5px;" title="Song length in bars (4/4). Extend: the last chord stretches into the new bars. Shrink: the timeline is trimmed. ⌘-click the bar-number lane to insert a blank bar anywhere.">Bars
           <input type="number" id="barsInp" min="4" max="64" step="1" value="8" style="width:46px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:2px 5px;font-size:11px;"></label>
         <label class="part" style="gap:5px;" title="Set the duration of every selected note at once (undo with ⌘Z)">Dur
@@ -576,6 +600,18 @@
       </div>
     </div>
     <div id="slidePanel" style="display:none;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 10px 0;"></div>
+    <!-- 2.5 ⑪e LANE 1 · THE SONG OVERVIEW (Q2/§9.5): a miniature of the whole
+         arrangement with a viewport outline — drag ←→ scrolls, drag ↕ zooms,
+         double-click inside the outline zooms out to the full arrangement (all three
+         are Ableton's own documented Overview gestures). It renders the same gridW()
+         beat-space the grid views draw, squeezed through a viewBox — not a bespoke
+         canvas — and it is CHROME: in-flow, no z-index. Height/visibility = DEVICE
+         data (cp_settings), never the project file. position:sticky pins it while
+         the timeline scrolls under it. -->
+    <div id="ovRow" style="display:flex;align-items:stretch;position:sticky;left:0;z-index:auto;">
+      <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="Song Overview — the whole arrangement at a glance. Drag ←→ to scroll · drag ↕ to zoom · double-click inside the outline to see the whole song.">Song</span></div>
+      <div id="songOv" style="position:relative;height:34px;background:#15161c;border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;overflow:hidden;cursor:grab;"></div>
+    </div>
     <!-- 4.1: the global modulation lane — THE MODULATION ENGINE's lane surface (F4).
          Key-center regions read straight from project.sections (one data model with the
          Modulation Machine and the psych-outs); boundary grips move a modulation point,
@@ -592,12 +628,61 @@
       <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The global tempo lane (4.2): the tempo slider is the BASE — points override it from their beat onward. Double-click: add a point · drag a point ↕ = bpm, ↔ = beat · right-click: import the linked song's human timing, draw a curve, export a .mid tempo map, flatten.">Tempo</span></div>
       <div id="tempolane"></div>
     </div>
+    <!-- 2.5 ⑪f THE SECTION LANE (Q3, client verbatim: "Sections Markers Should be
+         around Song Structure and should follow the CUBASE DAW MODEL"): Cubase's
+         PRESENTATION and INTERACTIONS over the app's OWN data model — project.sections
+         stays the keyed contiguous partition 2.2b shipped (§9.4's structural-mismatch
+         rule: a literal port of Cubase's gappable spans breaks keyFor/withKeyAt/
+         syncActiveKey). Sections render as named spans with their keys (Cubase cycle
+         markers in all but name); double-click a span = set the loop brace to it
+         (Cubase's own cycle-marker gesture); click = the shipped section editor.
+         Position markers (the one genuinely NEW structure) are the free-standing
+         points. ONE global lane — it does not dock per-track (T3, client-confirmed;
+         Cubase's marker LINES through the grid are the compensating half). -->
+    <div id="sectionLaneRow" style="display:flex;align-items:stretch;">
+      <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The Section Lane (Cubase model): sections as named spans with their keys. Click a span: rename / change key / merge · double-click a span: loop it · ⌥-click empty space: drop a position marker · drag a marker ↔ to move it · double-click a marker: rename · right-click a marker: delete.">Sections</span></div>
+      <div id="sectionlane"></div>
+    </div>
+    <!-- 2.5 ④ THE TIME-SIGNATURE LANE: a tempo-lane sibling (the tempo lane is the
+         template — §7.5). NOTATIONAL this round: the map rides the project file and
+         renders here; playback stays 4/4 (an honest limit, stated in the tooltip —
+         re-metering the transport is its own future round). -->
+    <div id="tsigLaneRow" style="display:flex;align-items:stretch;">
+      <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The time-signature lane: double-click adds a meter change at that bar · click a flag cycles 4/4 → 3/4 → 6/8 → 2/4 → 5/4 → 7/8 → 12/8 · drag ↔ moves it · right-click deletes. Notational for now — the map rides your project file; playback still counts 4/4.">Time Sig</span></div>
+      <div id="tsiglane"></div>
+    </div>
     <div id="trackStrips"></div>
     <div id="gridRow" style="display:flex;align-items:stretch;">
+      <!-- 2.5 ⑤⑥ THE FLYOUT COLUMN: +Chord Editor above, Quantize below (the client's
+           stated order). IN-FLOW chrome — it PUSHES THE GRID RIGHT (the grid's left
+           edge measurably moves), floats over nothing, carries NO z-index, and is NOT
+           a WINDOW_DEFS window (§3 landmine ①: the one-window law is untouched).
+           Opens from ctrl+click in the grid background (one dispatcher — landmine ⑨:
+           on macOS ctrl+click IS contextmenu). -->
+      <div id="flyCol" style="display:none;flex:0 0 176px;flex-direction:column;gap:8px;margin-right:8px;min-width:0;">
+        <div id="chordEdFly" style="background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;"></div>
+        <div id="quantWin" style="background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;"></div>
+      </div>
       <div id="gridHead" class="thead"></div>
       <div class="gvwrap"><svg id="grid" style="flex:0 0 auto;"></svg><div class="rzh" id="mainRzT" title="Drag to resize the Grid from its top edge"><div class="rzline"></div></div><div class="rzh" id="mainRz" title="Drag to resize the Grid — shrink it and a slim scrollbar appears when notes fall out of view"><div class="rzline"></div></div></div>
     </div>
     <div id="trackStripsB"></div><!-- July 27a: lanes ordered BELOW the Grid block land here -->
+    <!-- 2.5 ⑦ THE LOWER WINDOW: the Ableton-style zoomed edit pane, dragged down from
+         the Grid block's bottom edge — between #trackStripsB and #chordRow, exactly
+         "above the Chord Lane" (when the Chord Lane is tucked away, this handle IS the
+         Grid's bottom line). A registered GRID_VIEWS entry ('lower') rendered through
+         drawGridView and reached by gridViewForEvent — the full gesture surface, not a
+         bespoke canvas (§2b). CHROME: in-flow, no z-index, not a WINDOW_DEFS window.
+         Its height rides DEVICE state (cp_settings.lowerPx), never the project file. -->
+    <div id="lowerHandle" title="Drag down to open the Lower Window — a zoomed edit pane for the selected clip/track (drag its bottom edge to resize; the ⌕ Zoomed In Midi transport button shows the same view in place)" style="height:7px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;"><div style="width:64px;height:3px;border-radius:2px;background:var(--line);"></div></div>
+    <div id="lowerRow" style="display:none;align-items:stretch;">
+      <div id="lowerHead" class="thead" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;"></div>
+      <div class="gvwrap" style="flex-direction:column;">
+        <div id="lowerBar" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:0 0 4px 0;"></div>
+        <svg id="lowerGrid" style="display:block;user-select:none;cursor:crosshair;border-radius:4px;background:#191b22;"></svg>
+        <div class="rzh" id="lowerRz" title="Drag to resize the Lower Window"><div class="rzline"></div></div>
+      </div>
+    </div>
     <div id="chordRow" style="display:flex;align-items:stretch;">
       <div id="chordHead" class="thead"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Chords</span></div>
       <div class="chordlane" id="chordlane"></div>
@@ -2351,6 +2436,168 @@ function sectionsShiftFrom(secs,atBeat,delta){
  return secs.map((s,i)=>({...s,start:(i&&s.start>=atBeat-1e-6)?+(s.start+delta).toFixed(4):s.start}));}
 function sectionsTrimTo(secs,len){
  return secs.filter(s=>s.start<len-1e-6).map(s=>({...s}));}
+/* ==== 2.5 ⑪f · POSITION MARKERS (pure layer) ==== Cubase's other marker type: a
+   free-standing point with a name — NOT a section boundary, NO musical data. The one
+   genuinely new persisted structure in the transport fold, shaped to mirror sections
+   so normalizeSections' discipline copies wholesale: sorted, deduped, trimmed to the
+   loop, never invalid. PROJECT data — rides the file, undo and autosave (the §2d
+   four-place rule, honoured in all four). Pure — unit-tested. */
+function normalizeMarkers(ms,loop){
+ return (Array.isArray(ms)?ms:[]).filter(m=>m&&typeof m==='object'
+   &&typeof m.start==='number'&&isFinite(m.start)&&m.start>=-1e-6&&m.start<loop-1e-6)
+  .map(m=>({start:Math.max(0,+(+m.start).toFixed(4)),
+    name:(typeof m.name==='string'&&m.name)?String(m.name).slice(0,40):''}))
+  .sort((a,b)=>a.start-b.start)
+  .filter((m,i,a)=>!i||m.start>a[i-1].start+1e-6)
+  .map((m,i)=>m.name?m:{...m,name:'M'+(i+1)});
+}
+function validMarkers(ms){
+ return Array.isArray(ms)&&ms.every(m=>m&&typeof m==='object'
+  &&typeof m.start==='number'&&isFinite(m.start)&&m.start>=0
+  &&(m.name===undefined||typeof m.name==='string'));
+}
+/* ==== 2.5 ④ · THE TIME-SIGNATURE MAP (pure layer) ==== [{beat,num,den}…] sorted, one
+   per beat — the tempo map's shape with a meter payload. NOTATIONAL this round:
+   playback stays 4/4 (stated honestly in the lane's tooltip); the map rides the
+   project file so the notation survives. Pure — unit-tested. */
+const TSIG_CYCLE=[[4,4],[3,4],[6,8],[2,4],[5,4],[7,8],[12,8]];
+function normalizeTsigMap(map,loop){
+ return (Array.isArray(map)?map:[]).filter(e=>e&&typeof e==='object'
+   &&typeof e.beat==='number'&&isFinite(e.beat)&&e.beat>=-1e-6&&e.beat<loop-1e-6
+   &&typeof e.num==='number'&&e.num>=1&&e.num<=32
+   &&typeof e.den==='number'&&[1,2,4,8,16].indexOf(e.den)>=0)
+  .map(e=>({beat:Math.max(0,+(+e.beat).toFixed(4)),num:Math.round(e.num),den:Math.round(e.den)}))
+  .sort((a,b)=>a.beat-b.beat)
+  .filter((e,i,a)=>!i||e.beat>a[i-1].beat+1e-6);
+}
+function validTsigMap(map){
+ return Array.isArray(map)&&map.every(e=>e&&typeof e==='object'
+  &&typeof e.beat==='number'&&isFinite(e.beat)&&e.beat>=0
+  &&typeof e.num==='number'&&typeof e.den==='number');
+}
+function tsigNextValue(num,den){
+ const i=TSIG_CYCLE.findIndex(c=>c[0]===num&&c[1]===den);
+ return TSIG_CYCLE[(i+1)%TSIG_CYCLE.length];
+}
+/* ==== 2.5 ①② · AUTOMATION LANES (pure layer) ==== project.autoLanes =
+   [{id, track, kind:'auto'|'bend', name, nodes:[[beat,val]…], vis}] — PROJECT data
+   (nodes ride the file, §2d's four places). kind 'bend' carries NO nodes: the
+   pitch-bend lane RENDERS n[7].pb and never grows a parallel store (§3 landmine ⑧ —
+   one store; GEMS §11: this lane IS Melisma-round-3's queued pitch-bend lane).
+   val is normalized 0..1. Pure — unit-tested. */
+function normalizeAutoLanes(list,trackIds,loop){
+ const seen=new Set();
+ return (Array.isArray(list)?list:[]).filter(l=>l&&typeof l==='object'
+   &&typeof l.id==='string'&&l.id&&!seen.has(l.id)&&(seen.add(l.id),true)
+   &&typeof l.track==='string'&&trackIds.indexOf(l.track)>=0
+   &&(l.kind==='auto'||l.kind==='bend'))
+  .map(l=>({id:l.id,track:l.track,kind:l.kind,
+    name:(typeof l.name==='string'&&l.name)?String(l.name).slice(0,24):(l.kind==='bend'?'Pitch Bend':'Automation'),
+    nodes:l.kind==='bend'?[]:(Array.isArray(l.nodes)?l.nodes:[])
+     .filter(n=>Array.isArray(n)&&typeof n[0]==='number'&&isFinite(n[0])&&n[0]>=-1e-6&&n[0]<loop+1e-6
+       &&typeof n[1]==='number'&&isFinite(n[1]))
+     .map(n=>[Math.max(0,+(+n[0]).toFixed(4)),Math.max(0,Math.min(1,+(+n[1]).toFixed(4)))])
+     .sort((a,b)=>a[0]-b[0])
+     .filter((n,i,a)=>!i||n[0]>a[i-1][0]+1e-6)}));
+}
+function validAutoLanes(list){
+ return Array.isArray(list)&&list.every(l=>l&&typeof l==='object'
+  &&typeof l.id==='string'&&typeof l.track==='string'
+  &&(l.kind==='auto'||l.kind==='bend')
+  &&(l.nodes===undefined||Array.isArray(l.nodes)));
+}
+/* the segment re-curve — the app's OWN curve vocabulary (§5's fact-check: Ardour's
+   curve-menu entries are NOT verifiable, so the menu reuses the language the SLIDE
+   workbench already taught — internal consistency beats borrowed vocabulary) */
+function autoCurveShapeY(shape,x){
+ x=Math.max(0,Math.min(1,x));
+ if(shape==='easeIn')return x*x;
+ if(shape==='easeOut')return 1-(1-x)*(1-x);
+ if(shape==='sCurve')return x*x*(3-2*x);
+ if(shape==='hold')return x<1?0:1;
+ return x;   /* 'line' */
+}
+function autoCurveSegment(nodes,i0,i1,shape,step){
+ /* re-curve BETWEEN two existing nodes: intermediate nodes resample along the shape.
+    Fresh rows — the input is never mutated (undo snapshots stay honest). Pure. */
+ if(!Array.isArray(nodes)||i0<0||i1<=i0||i1>=nodes.length)return nodes?nodes.map(n=>n.slice()):[];
+ const a=nodes[i0],b=nodes[i1],out=nodes.slice(0,i0+1).map(n=>n.slice());
+ const span=b[0]-a[0];
+ if(span>step*1.5)
+  for(let t=a[0]+step;t<b[0]-1e-6;t+=step){
+   const x=(t-a[0])/span;
+   out.push([+t.toFixed(4),+(a[1]+(b[1]-a[1])*autoCurveShapeY(shape,x)).toFixed(4)]);
+  }
+ for(let k=i1;k<nodes.length;k++)out.push(nodes[k].slice());
+ return out;
+}
+/* ==== 2.5 ⑥ · QUANTIZE (pure layer) ==== starts pull toward the grid by `strength`
+   (Ableton's amount slider); durations optionally snap too. Fresh rows. Pure. */
+function quantizeRows(rows,idxs,step,strength,alsoDur){
+ const set=new Set(idxs);
+ return rows.map((n,i)=>{
+  if(!set.has(i)||!n)return n?n.slice():n;
+  const c=n.slice();
+  const snap=Math.round(c[0]/step)*step;
+  c[0]=+(c[0]+(snap-c[0])*strength).toFixed(6);
+  if(alsoDur)c[1]=+Math.max(step,Math.round(c[1]/step)*step).toFixed(6);
+  return c;
+ });
+}
+/* ==== 2.5 ⑤ · VOICING TRANSFORMS (pure layer) ==== over a sorted midi set:
+   Move Up/Down cycle inversions; Drop 2 / Drop 3 / Drop 2+4 lower the named voices
+   (counted from the TOP, close position) by an octave — the client's Ardour-parity
+   list. Pure — unit-tested. */
+function invCycleMidis(ms,dir){
+ const s=[...ms].sort((a,b)=>a-b);
+ if(s.length<2)return s;
+ if(dir>0){s[0]+=12;}else{s[s.length-1]-=12;}
+ return s.sort((a,b)=>a-b);
+}
+function dropVoicingMidis(ms,which){
+ const s=[...ms].sort((a,b)=>b-a);   /* top first */
+ const drop=i=>{if(s[i]!=null)s[i]-=12;};
+ if(which==='drop2')drop(1);
+ else if(which==='drop3')drop(2);
+ else if(which==='drop24'){drop(1);drop(3);}
+ return s.sort((a,b)=>a-b);
+}
+/* ==== 2.5 ⑦ · QUICK-EDIT TRANSFORMS (pure layer) ==== each is one strip button;
+   each call is one undo at the call site. Fresh rows throughout. Pure — unit-tested. */
+function qeReverseRows(rows,idxs){
+ const set=new Set(idxs);
+ let a=1/0,b=-1/0;
+ for(const i of set){const n=rows[i];if(!n)continue;a=Math.min(a,n[0]);b=Math.max(b,n[0]+n[1]);}
+ if(!isFinite(a))return rows.map(n=>n?n.slice():n);
+ return rows.map((n,i)=>{
+  if(!set.has(i)||!n)return n?n.slice():n;
+  const c=n.slice();c[0]=+(a+b-(n[0]+n[1])).toFixed(6);return c;
+ });
+}
+function qeLegatoRows(rows,idxs){
+ const set=new Set(idxs);
+ const starts=[...set].map(i=>rows[i]).filter(Boolean).map(n=>n[0]).sort((a,b)=>a-b);
+ return rows.map((n,i)=>{
+  if(!set.has(i)||!n)return n?n.slice():n;
+  const nx=starts.find(s=>s>n[0]+1e-6);
+  if(nx==null)return n.slice();
+  const c=n.slice();c[1]=+Math.max(.0625,nx-n[0]).toFixed(6);return c;
+ });
+}
+function qeVelRangeRows(rows,idxs,lo,hi){
+ /* rescale the selection's velocity spread into [lo,hi] (0..1 each) */
+ const set=new Set(idxs);
+ let mn=1/0,mx=-1/0;
+ for(const i of set){const n=rows[i];if(!n)continue;const v=(typeof n[8]==='number')?n[8]:.8;mn=Math.min(mn,v);mx=Math.max(mx,v);}
+ if(!isFinite(mn))return rows.map(n=>n?n.slice():n);
+ const spread=mx-mn;
+ return rows.map((n,i)=>{
+  if(!set.has(i)||!n)return n?n.slice():n;
+  const c=n.slice();const v=(typeof n[8]==='number')?n[8]:.8;
+  c[8]=+(spread<1e-6?(lo+hi)/2:lo+(v-mn)/spread*(hi-lo)).toFixed(3);
+  return c;
+ });
+}
 /* Modulation Machine → sections: cut a boundary at the modulation's landing beat and
    lift the key of everything from there on (the injected bridge + transposed tail live
    in the new-key section; the head keeps its own labels/colors — the July 12 known
@@ -2413,6 +2660,9 @@ let project={song:null,style:null,tonic:0,mode:'major',base:60,
   sections:[{start:0,name:'A',tonic:0,mode:'major',base:60}],
   tracks:{melody:[],bass:null,comping:null,pad:null},
   tempoMap:[],   /* 4.2: the global tempo lane's events [{beat,bpm}…] */
+  markers:[],    /* 2.5 ⑪f: position markers [{start,name}…] — Cubase's free-standing points */
+  tsigMap:[],    /* 2.5 ④: the time-signature lane's events [{beat,num,den}…] (notational) */
+  autoLanes:[],  /* 2.5 ①②: per-track automation lanes [{id,track,kind,name,nodes}…] */
   srcs:[],       /* 4.4: cross-pollination sources [{id,ref,label}…] — survive song loads */
   shelf:[]};     /* 5.1: THE ESSENCE SHELF — favorite extracted strands, project data */
 /* ==== CHORD LANES (3.2) ==== */
@@ -4135,7 +4385,28 @@ function loopSlide(sel,delta,step,loop){
  a=Math.max(0,Math.min(loop-w,a));
  return {a:+a.toFixed(4),b:+(a+w).toFixed(4)};
 }
-function loopEdgeBeats(){return loopSel?Math.min(14/PPB,(loopSel.b-loopSel.a)/3):0;}   /* July 30 fix 4: 8→14px — real fingers miss 8px edges */
+function loopEdgeBeats(){const s=braceRegion(loopSel,LOOP);return Math.min(14/PPB,(s.b-s.a)/3);}   /* July 30 fix 4: 8→14px — real fingers miss 8px edges · 2.5 ⑪b: measured against the effective brace */
+/* ==== 2.5 ⑪b (Q2 + T1, client-confirmed Aug 11): THE LOOP BRACE ALWAYS EXISTS ====
+   Ableton's model, from its own manual: "If no clip(s) or time is selected, the loop
+   brace will cover the entire Arrangement." loopSel stays {a,b}|null underneath — the
+   pure helpers and every unit assertion on them are untouched (a brace is still a
+   region); braceRegion is the one accessor that says what the brace covers NOW. Pure. */
+function braceRegion(sel,loop){return sel||{a:0,b:loop};}
+/* ⌘/Ctrl+↑↓ (Ableton's modified pair — the bare arrows stay pitch/step): scale the
+   brace's length about its start; floor = one grid step, clamped inside the loop. Pure. */
+function loopResize(sel,factor,step,loop){
+ const w=Math.max(step,(sel.b-sel.a)*factor);
+ const a=Math.max(0,Math.min(loop-step,sel.a));
+ return {a:+a.toFixed(4),b:+Math.min(loop,a+w).toFixed(4)};
+}
+/* ==== 2.5 ⑪d · THE SCRUB AREA (pure half) ==== the jump between triggered play
+   positions is quantized — Ableton quantizes to its global launch-quantization menu;
+   the app has no such menu (§9.7 landmine ⑮), so the scrub jump quantizes to the BAR
+   as a hard default this round (item ⑥'s Quantize window is where a user-facing
+   setting would eventually live). Pure. */
+function scrubQuantBeat(rawBeat,loop){
+ return Math.max(0,Math.min(Math.max(0,loop-4),Math.floor(rawBeat/4)*4));
+}
 /* July 30 client fix 4: a SINGLE drag on the bar lane reads its own direction —
    vertical stays ZOOM, horizontal DRAWS the loop region (the double-click-drag gesture
    stays, but is no longer the only way). Pure: 'zoom' | 'loop' | null (undecided <5px). */
@@ -4159,6 +4430,48 @@ function followScrollLeft(mode,phvx,scrollLeft,viewW,maxScroll,ppb){
  if(phvx>viewW-48)return Math.min(maxScroll,scrollLeft+16*ppb);   /* 4 bars right */
  if(phvx<0)return Math.max(0,Math.min(maxScroll,scrollLeft+phvx-48));   /* looped back → bring the view home */
  return null;
+}
+/* ==== 2.5 ⑪d · THE SCRUB AREA (gesture half) ==== click = launch playback from that
+   bar (the jump quantized to the BAR — §9.7 landmine ⑮: the app has no global launch-
+   quantization menu, so the bar is the hard default this round) · press-and-hold =
+   repeat that bar (Ableton documents press-and-hold repeating a portion) · drag ←→ =
+   scrub bar to bar (⚠ the DRAG half is the client's own ask — Ableton documents click,
+   hold and ⇧-click only; §9.3 — build as asked, do not attribute). Own listeners, own
+   state: `drag`, selBox, selNotes, selChordSet, PPB and every view scroll are untouched
+   by construction. */
+let scrubHoldOn=false,scrubHoldTimer=null;
+function scrubHoldLoop(bar){
+ scrubHoldOn=true;
+ try{Tone.Transport.loopStart=bbs(bar);Tone.Transport.loopEnd=bbs(Math.min(LOOP,bar+4));}catch(err){}
+}
+function scrubDown(e){
+ const v=(activeGridView&&activeGridView.laneOnly&&activeGridView.el&&activeGridView.el.isConnected)?activeGridView:GRID_VIEWS.main;
+ const el=(v.el&&v.el.isConnected)?v.el:svg;
+ const r0=el.getBoundingClientRect();
+ let bar=scrubQuantBeat((e.clientX-r0.left-GUT)/PPB,LOOP);
+ scrubLive=bar;
+ setPlayheadBeat(bar);
+ if(typeof playing!=='undefined'&&!playing)togglePlay();
+ clearTimeout(scrubHoldTimer);
+ scrubHoldTimer=setTimeout(()=>scrubHoldLoop(bar),400);
+ redrawBarLanes();drawGrid();
+ const mv=ev=>{
+  const nb=scrubQuantBeat((ev.clientX-r0.left-GUT)/PPB,LOOP);
+  if(nb===bar)return;
+  bar=nb;scrubLive=bar;
+  setPlayheadBeat(bar);
+  if(scrubHoldOn)scrubHoldLoop(bar);
+  else{clearTimeout(scrubHoldTimer);scrubHoldTimer=setTimeout(()=>scrubHoldLoop(bar),400);}
+  redrawBarLanes();drawGrid();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  clearTimeout(scrubHoldTimer);
+  scrubLive=null;
+  if(scrubHoldOn){scrubHoldOn=false;applyLoopToTransport();}   /* the temporary hold-loop lets go; the real brace state rules again */
+  redrawBarLanes();drawGrid();
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
 }
 /* transport position → beat (works under any loop points, unlike progress×LOOP) */
 function beatFromBBS(pos){const p=String(pos).split(':');return (+p[0])*4+(+p[1])+(+p[2]||0)/4;}
@@ -4255,6 +4568,13 @@ function rebuild(){
 
 /* ================= grid rendering ================= */
 const CELLH=21,GUT=34,BARH=26;   /* lane grew (loop-select lives here) */
+/* 2.5 ⑪d: the scrub strip rides under the ruler in every bar-lane home. hdrH() is the
+   full transport-header height inside a lane svg — use it, never BARH+12 by hand. */
+const SCRUBH=12;
+function hdrH(){try{return (SETTINGS&&SETTINGS.showScrub===false)?BARH:BARH+SCRUBH;}catch(e){return BARH+SCRUBH;}}   /* try — SETTINGS is a let declared later; sizeSvg runs at parse (TDZ) */
+let scrubLive=null;   /* the bar being held/scrubbed, for the strip's highlight */
+/* the speaker cursor is the client's ask (no cursor is Ableton-documented — §9.9) */
+const SCRUB_CURSOR="url(\"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27%3E%3Cpath d=%27M2 6v4h3l4 3V3L5 6H2z%27 fill=%27%23e8e8f0%27/%3E%3Cpath d=%27M11 5a4 4 0 0 1 0 6%27 stroke=%27%23e8e8f0%27 fill=%27none%27/%3E%3C/svg%3E\") 8 8, pointer";
 const NROWS0=18,ROWSTART0=-3,GRID_GROW_MAX=24;
 /* ==== GRID VIEWS (2.1b refactor) ==== per-view viewport state. The 19v globals
    (NROWS/ROWSTART/H) are GONE: every grid view owns {rows,rowStart,px,scroll} —
@@ -4322,7 +4642,7 @@ function trackExpandHeight(remembered,minH,chordH,maxH){
   ?remembered:Math.max(chordH+8,Math.round(6*(minH||TRACK_MIN_H)));
  return Math.max(TRACK_MIN_H,Math.min(maxH||GRIDVIEW_MAX,Math.round(want)));
 }
-function viewTop(v){return v.top==null?BARH:v.top;}
+function viewTop(v){return v.top==null?(typeof hdrH==='function'?hdrH():BARH):v.top;}   /* ⑪d: the header = ruler + scrub strip (typeof-guarded — harness-extractable, same idiom as keyFor) */
 function viewMaxScroll(v){return Math.max(0,v.rows*CELLH-v.px);}
 function clampScroll(v,s){return Math.max(0,Math.min(viewMaxScroll(v),s));}
 function centerScrollFor(y0,y1,px,maxScroll){
@@ -4733,27 +5053,36 @@ function sizeSvg(){
    grids, and by the docked lane rows everywhere else. Same gestures in every home. */
 function barLaneMarkup(isMainLane){
  let out='';
- out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="#23252e" style="cursor:ns-resize"><title>Click: playhead · drag ↕: zoom · drag ←→: loop region (edges resize · middle moves · double-click deletes) · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
+ out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="#23252e" style="cursor:zoom-in"><title>Click: playhead · drag ↕: zoom · drag ←→: scroll (Ableton) · loop: ⌘L from a time selection, double-click-drag draws, edges resize · middle moves · double-click deletes · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
  out+=barLaneTicks(PPB,LOOP,GUT,BARH,gridTriplets);   /* 2026-08-11a FIX 4: bar/beat/subdivision delineation, zoom-adaptive */
- /* loop-select region (double-click-drag the lane): yellow — brighter when looping is ON */
- if(loopSel){
-  out+=`<rect x="${GUT+loopSel.a*PPB}" y="0" width="${(loopSel.b-loopSel.a)*PPB}" height="${BARH}" fill="#ffd23f" opacity="${loopOn?.4:.18}" pointer-events="none"/>`;
-  out+=`<rect x="${GUT+loopSel.a*PPB}" y="0" width="${(loopSel.b-loopSel.a)*PPB}" height="3.5" fill="#ffd23f" opacity="${loopOn?.95:.55}" pointer-events="none"/>`;
+ /* ⑪b (Q2 + T1, client-confirmed): THE BRACE ALWAYS EXISTS — with no region of its own
+    it covers the whole arrangement, dimmer; a user-made region keeps the shipped look.
+    ⚠ the magnifying-glass cursor above is the CLIENT's ask, not Ableton's — no cursor
+    shape is documented anywhere in Ableton's Arrangement chapter (§9.9 correction 3). */
+ {const effB=braceRegion(loopSel,LOOP),defB=!loopSel;
+  out+=`<rect x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="${BARH}" fill="#ffd23f" opacity="${defB?.05:loopOn?.4:.18}" pointer-events="none"/>`;
+  out+=`<rect class="lbrace" x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="3.5" fill="#ffd23f" opacity="${defB?.35:loopOn?.95:.55}" pointer-events="none"/>`;
   /* July 30 fix 4: visible EDGE HANDLES — the resize grips announce themselves */
-  out+=`<rect class="lph" x="${GUT+loopSel.a*PPB}" y="0" width="5" height="${BARH}" rx="1" fill="#ffd23f" opacity="${loopOn?.9:.5}" pointer-events="none"/>`;
-  out+=`<rect class="lph" x="${GUT+loopSel.b*PPB-5}" y="0" width="5" height="${BARH}" rx="1" fill="#ffd23f" opacity="${loopOn?.9:.5}" pointer-events="none"/>`;
+  out+=`<rect class="lph" x="${GUT+effB.a*PPB}" y="0" width="5" height="${BARH}" rx="1" fill="#ffd23f" opacity="${defB?.3:loopOn?.9:.5}" pointer-events="none"/>`;
+  out+=`<rect class="lph" x="${GUT+effB.b*PPB-5}" y="0" width="5" height="${BARH}" rx="1" fill="#ffd23f" opacity="${defB?.3:loopOn?.9:.5}" pointer-events="none"/>`;
  }
  for(let b=0;b<LOOP/4;b++)
   out+=`<text x="${GUT+b*4*PPB+4}" y="${BARH-8}" fill="#98a0b2" font-size="10.5" font-weight="600" pointer-events="none">${b+1}</text>`;
- /* section flags (2.2b) travel with the bar lane wherever it docks */
- if(project.sections.length>1)project.sections.forEach((s,i)=>{
-  const x=GUT+s.start*PPB;
-  const lbl=`${s.name} · ${sectionKeyLabel(s)}`;
-  const fw=lbl.length*5.6+11;
-  out+=`<g style="cursor:pointer"><rect data-sec="${i}" x="${x+(i?1.5:0)}" y="1.5" width="${fw}" height="11.5" rx="3" fill="#24382b" stroke="#6fd08c" stroke-width=".8" opacity=".95"><title>Section ${s.name} — ${sectionKeyLabel(s)} · click to rename, change its key, or merge it into the previous section</title></rect>`
-   +`<text data-sec="${i}" x="${x+(i?1.5:0)+5}" y="10" font-size="8.8" fill="#9fe6b5" font-weight="600" style="pointer-events:none">${lbl}</text></g>`;
- });
- if(!isMainLane)out+=`<line class="phx" x1="${GUT}" y1="0" x2="${GUT}" y2="${BARH}" stroke="#e8a33d" stroke-width="1.6" opacity="0"/>`;
+ /* ⑪g: the section flags LEFT the bar lane (Q3 — they live in the Section Lane now,
+    with their keys; the ⌥-click split and the 9451 flag-click branch survive for the
+    lane's other gestures). Do not re-add them here — §9.7 landmine ⑰. */
+ /* ⑪d LANE 3 · THE SCRUB AREA — a hollow strip under the ruler, every home. Click =
+    launch playback from that bar · press-and-hold = repeat that bar · drag = scrub.
+    It never touches selection or zoom (the client's explicit requirement). The speaker
+    cursor is the client's ask, not Ableton's (§9.9 correction 3). */
+ if(!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showScrub===false)){
+  out+=`<rect class="scrubStrip" x="0" y="${BARH}" width="${gridW()}" height="${SCRUBH}" fill="#1c1e26" style='cursor:${SCRUB_CURSOR}'><title>Scrub area — click: play from this bar · hold: repeat this bar · drag ←→: scrub. Never touches your selection or zoom.</title></rect>`;
+  out+=`<line x1="0" y1="${BARH}" x2="${gridW()}" y2="${BARH}" stroke="#2e3342" stroke-width="1" pointer-events="none"/>`;
+  for(let b=0;b<=LOOP/4;b++)
+   out+=`<line x1="${GUT+b*4*PPB}" y1="${BARH}" x2="${GUT+b*4*PPB}" y2="${BARH+SCRUBH}" stroke="#2e3342" stroke-width="0.8" pointer-events="none"/>`;
+  if(scrubLive!=null)out+=`<rect x="${GUT+scrubLive*PPB}" y="${BARH}" width="${4*PPB}" height="${SCRUBH}" fill="#e8a33d" opacity=".3" pointer-events="none"/>`;
+ }
+ if(!isMainLane)out+=`<line class="phx" x1="${GUT}" y1="0" x2="${GUT}" y2="${hdrH()}" stroke="#e8a33d" stroke-width="1.6" opacity="0"/>`;
  return out;
 }
 function redrawBarLanes(){
@@ -4806,6 +5135,7 @@ function midiToK(m,v){v=v||activeGridView;let bk=v.rowStart,bd=1e9;for(let k=v.r
 function degOfK(k){const L=curScale().pcs.length;return ((k%L)+L)%L;}
 
 let selNotes=new Set(),clipboard=null,pasteCount=0,rb=null;
+let zoomBackStack=[];   /* ⑪b: bare Z pushes {ppb,sl}; bare X pops (Ableton's zoom-to-selection pair) */
 /* ==== SELECTION MANAGER ==== one API over the existing selection stores. The stores
    themselves (selNotes, selChord/selChordSet) stay exactly where they are — rendering
    and editing code keep reading them directly (zero re-render / perf change); the
@@ -4875,8 +5205,8 @@ const undoStack=[];
    pop their snapshot via dropNoopSnapshot(), which also RESTORES the redo history the
    snapshot preemptively cleared — so a stray click never eats your redos. */
 let redoStack=[],_lastSnap=null,_redoStash=null;
-function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too */
-function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
+function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too */
+function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
 function snapshot(){
  if(typeof snv==='object'&&snv)snv.active=false;   /* any new edit ends an SNV cycling run */
  if(typeof aretha==='object'&&aretha)aretha.active=false;   /* …and an Aretha re-roll run */
@@ -4894,9 +5224,15 @@ function dropNoopSnapshot(){
 function undo(){const s=undoStack.pop();if(!s)return;if(typeof snv==='object'&&snv)snv.active=false;if(typeof xselClear==='function')xselClear();redoStack.push(captureState());applyState(s);}   /* MG: indices shift — the capture lets go */
 function redo(){const s=redoStack.pop();if(!s)return;if(typeof snv==='object'&&snv)snv.active=false;if(typeof xselClear==='function')xselClear();undoStack.push(captureState());applyState(s);}
 function drawGrid(){
- /* 2.1b: every registered grid view redraws — main plus any expanded strip-grids */
- drawGridView(GRID_VIEWS.main,svg);
- for(const id in GRID_VIEWS){const gv=GRID_VIEWS[id];if(id!=='main'&&gv.el&&gv.el.isConnected)drawGridView(gv,gv.el);}
+ /* 2.1b: every registered grid view redraws — main plus any expanded strip-grids.
+    2.5 ⑦: with Zoomed In Midi ON, the main svg hosts the LOWER view object instead —
+    the same view the Lower Window renders, one code path (the transport button's whole
+    promise). Gestures resolve to it through viewForEl, so editing works identically. */
+ if(typeof zimOn!=='undefined'&&zimOn&&typeof lowerConfigure==='function'){
+  const lv2=lowerConfigure();lv2.el=svg;
+  drawGridView(lv2,svg);
+ }else drawGridView(GRID_VIEWS.main,svg);
+ for(const id in GRID_VIEWS){const gv=GRID_VIEWS[id];if(id!=='main'&&gv.el&&gv.el!==svg&&gv.el.isConnected)drawGridView(gv,gv.el);}
 }
 /* 2.1b: the renderer is parameterized on (view, svg element). Main-only pieces (bar lane,
    section flags, loop region, playhead) gate on the view; selection visuals (selBox,
@@ -4926,6 +5262,18 @@ function drawGridView(v,svgEl){
   if(i)out+=`<line x1="${GUT+s.start*PPB}" y1="0" x2="${GUT+s.start*PPB}" y2="${vt+v.px}" stroke="#6fd08c" stroke-width="1.3" stroke-dasharray="5 4" opacity=".5" pointer-events="none"/>`;
  });
  }   /* /isMain — bar lane, boundary lines */
+ /* ⑪f: Cubase-style MARKER LINES through the event display — the docked-lane
+    compensation (T3, client-confirmed): the section lane does NOT dock per-track;
+    these lines carry marker positions into every lane instead ("You can show vertical
+    marker lines that indicate marker positions on all tracks" — Steinberg's own
+    three-state preference: off / active track / all). With ONE global marker lane,
+    'active' and 'all' draw the same lines; the distinction is kept for the day a
+    second marker lane exists (Cubase allows ten). DEVICE data, in cp_settings. */
+ if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.markerLines&&SETTINGS.markerLines!=='off'&&Array.isArray(project.markers)&&!v.laneOnly)
+  for(const mk2 of project.markers){
+   if(mk2.start<W.b0-1e-6||mk2.start>W.bEnd+1e-6)continue;
+   out+=`<line class="mkline" x1="${bx(mk2.start)}" y1="${isMain?0:vt}" x2="${bx(mk2.start)}" y2="${vt+v.px}" stroke="#e8a33d" stroke-width="1" stroke-dasharray="2 3" opacity=".5" pointer-events="none"/>`;
+  }
  /* July 24 r2: a minimized main Grid is a LANE — the lattice content is skipped entirely
     (the strip of clip cells renders below the bar lane, see drawMainStrip) */
  const asStrip=isMain&&typeof mainIsStrip==='function'&&mainIsStrip();
@@ -4937,6 +5285,16 @@ function drawGridView(v,svgEl){
   const tonicRow=deg===0;
   out+=`<rect x="${GUT}" y="${viewRowY(v,r)}" width="${W.bN*PPB}" height="${CELLH}" fill="${tonicRow?'#262a36':'#1d1f27'}" stroke="#262933" stroke-width="0.5"/>`;
   out+=`<text x="${GUT-5}" y="${viewRowY(v,r)+15}" fill="${degColor(deg)}" font-size="10.5" text-anchor="end" font-weight="600">${curScale().labels[deg]}</text>`;
+  /* 2.5 ③: the PIANO ROLL down the far left of every open grid lane (Ardour's clear
+     roll is the model): white/black keys per row, C rows named. It renders INSIDE the
+     scrolled clip group, so the keys line up with the lattice at every zoom and scroll
+     position by construction. pointer-events off — the gutter stays gesture-free. */
+  if(!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showPianoRoll===false)){
+   const pmid=scalePitch(k),ppc=((pmid%12)+12)%12;
+   const blk=ppc===1||ppc===3||ppc===6||ppc===8||ppc===10;
+   out+=`<rect x="0" y="${viewRowY(v,r)}" width="11" height="${CELLH}" fill="${blk?'#23242c':'#c9cdd9'}" stroke="#14151b" stroke-width="0.6" pointer-events="none"/>`;
+   if(ppc===0)out+=`<text x="1" y="${viewRowY(v,r)+14}" font-size="7.5" fill="#3a3d49" font-weight="700" pointer-events="none">C${Math.floor(pmid/12)-1}</text>`;
+  }
  }
  /* chord-tone highlights — each chord column resolves rows/colors in ITS section's key (2.2b) */
  let t=0;
@@ -4967,8 +5325,17 @@ function drawGridView(v,svgEl){
  out+=`<g clip-path="url(#${gcId})">`;   /* ghosts + notes scroll with the rows */
  /* 👥 ghost overlay (Phase 2.1): every other pitched track's notes, dimmed, no hit-testing —
     reference while you edit; click a chip (or a ghost's color) to switch tracks */
- if(ghostsOn)for(const gt of pitchedTrackIds(project.tracks)){
-  if(gt===(v.track||activeTrack))continue;
+ /* 2.5 ⑨: MULTI-SELECT DIM GHOSTS — with 2+ name boxes ⇧-selected, the working lane
+    shows the OTHER selected tracks' MIDI dimmed (not every track — that's the 👥
+    toggle's job). Same renderer, different set; pointer-events off, so the ghosts are
+    never selectable or draggable (§6 claim 17). */
+ const ghostSet=(()=>{
+  const cur2=v.track||activeTrack;
+  if(typeof selHeads!=='undefined'&&selHeads.size>=2&&selHeads.has(cur2))
+   return [...selHeads].filter(t2=>t2!==cur2&&t2!=='drums');
+  return ghostsOn?pitchedTrackIds(project.tracks).filter(t2=>t2!==cur2):[];
+ })();
+ for(const gt of ghostSet){
   const gn=project.tracks[gt];if(!gn||!gn.length)continue;
   const gc=trackColorOf(gt);
   for(const n of gn){
@@ -5241,15 +5608,17 @@ function drawPaper(){
   });
   t+=c.d;
  }
- /* section boundaries + flags (clickable, same editor as the linear view) */
+ /* ⑪g: section boundaries stay as dashed lines; the FLAGS left for the Section Lane
+    (Q3) — this renderer was the second data-sec emitter (§9.7 landmine ⑰: "move both
+    or the flags survive in the strips"). Paper is read-and-navigate; section edits
+    live in the linear view's Section Lane now. A small label (non-interactive) keeps
+    the page readable. */
  if(project.sections.length>1)project.sections.forEach((s,i)=>{
   const sys=paperSys(s.start,spb),off=paperOff(s.start,spb);
   const x=GUT+off*PPB,y0=sys*sysH;
   if(i)out+=`<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0+BARH+v.px}" stroke="#6fd08c" stroke-width="1.3" stroke-dasharray="5 4" opacity=".55" pointer-events="none"/>`;
   const lbl=`${s.name} · ${sectionKeyLabel(s)}`;
-  const fw=lbl.length*5.6+11;
-  out+=`<g style="cursor:pointer"><rect data-sec="${i}" x="${x+(i?1.5:0)}" y="${y0+1.5}" width="${fw}" height="11.5" rx="3" fill="#24382b" stroke="#6fd08c" stroke-width=".8" opacity=".95"><title>Section ${s.name} — ${sectionKeyLabel(s)} · click to rename, change its key, or merge it into the previous section</title></rect>`
-   +`<text data-sec="${i}" x="${x+(i?1.5:0)+5}" y="${y0+10}" font-size="8.8" fill="#9fe6b5" font-weight="600" style="pointer-events:none">${lbl}</text></g>`;
+  out+=`<text x="${x+(i?4:2)}" y="${y0+10}" font-size="8.8" fill="#9fe6b5" font-weight="600" opacity=".8" pointer-events="none">${lbl}</text>`;
  });
  /* notes (selectable; Delete works — other editing lives in the linear grid) */
  project.melody.forEach((nn,i)=>{
@@ -9329,6 +9698,1078 @@ function openTempoMenu(x,y){
  document.body.appendChild(m);tempoMenuEl=m;
  setTimeout(()=>{document.addEventListener('mousedown',closeTempoMenu,{once:true});},0);
 }
+/* ==== 2.5 ⑪f · THE SECTION LANE (renderer + gestures) ==== Cubase's presentation
+   over the app's own partition (§9.4's rule). Sections = spans (cycle markers in all
+   but name): double-click a span sets the loop brace to it — the payoff that makes
+   the always-on brace worth having. Position markers = the free-standing points.
+   ONE global lane (T3). Hidden by Paper view, like the tempo lane. */
+function drawSectionLane(){
+ const row=document.getElementById('sectionLaneRow'),lane=document.getElementById('sectionlane');
+ if(!row||!lane)return;
+ const hide=(typeof paperView!=='undefined'&&paperView)||(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showSecLane===false);
+ if(hide){row.style.display='none';return;}
+ row.style.display='flex';
+ lane.innerHTML='';
+ lane.style.width=(LOOP*PPB)+'px';lane.style.marginLeft=GUT+'px';
+ const secs=project.sections;
+ secs.forEach((s,i)=>{
+  const end=(i+1<secs.length)?secs[i+1].start:LOOP;
+  const sp=document.createElement('div');sp.className='secspan';
+  sp.style.left=(s.start*PPB)+'px';sp.style.width=Math.max(8,(end-s.start)*PPB-1)+'px';
+  sp.title='Section '+s.name+' — '+sectionKeyLabel(s)+' · click: rename / change key / merge · double-click: loop this section (the brace snaps to it — Cubase’s cycle-marker gesture)';
+  const lb=document.createElement('span');lb.className='slbl';lb.textContent=s.name+' · '+sectionKeyLabel(s);
+  sp.appendChild(lb);
+  let clkT=0;
+  sp.onmousedown=ev=>{
+   if(ev.altKey)return;   /* ⌥-click bubbles to the LANE — markers drop anywhere, spans notwithstanding (the partition covers the whole strip) */
+   if(ev.button!==0)return;ev.preventDefault();ev.stopPropagation();
+  };
+  sp.onclick=ev=>{
+   if(ev.altKey)return;   /* the ⌥ gesture belongs to the lane (marker drop) */
+   const now=performance.now();
+   if(now-clkT<350){ /* double-click: the brace snaps to the section span */
+    clkT=0;
+    loopSel={a:+(+s.start).toFixed(4),b:+(+end).toFixed(4)};
+    loopOn=true;drawLoopBtn();
+    if(playing)applyLoopToTransport();
+    refresh(false);
+    return;
+   }
+   clkT=now;
+   const cx=ev.clientX,cy=ev.clientY;
+   setTimeout(()=>{if(clkT&&performance.now()-clkT>=340){clkT=0;openSectionEditor(i,cx,cy);}},360);
+  };
+  lane.appendChild(sp);
+ });
+ /* position markers ride ON TOP of the spans */
+ (Array.isArray(project.markers)?project.markers:[]).forEach((m,i)=>{
+  const pm=document.createElement('div');pm.className='posmark';
+  pm.style.left=(m.start*PPB)+'px';
+  pm.title=m.name+' — beat '+m.start+' · drag ↔ to move (bar snap) · double-click: rename · right-click: delete';
+  const lb=document.createElement('span');lb.className='plbl';lb.textContent=m.name;
+  pm.appendChild(lb);
+  pm.onmousedown=ev=>{if(ev.button===0)markerDown(ev,i);};
+  pm.ondblclick=ev=>{ev.preventDefault();ev.stopPropagation();markerRename(i,ev.clientX,ev.clientY);};
+  pm.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();
+   snapshot();project.markers=project.markers.filter((_,j)=>j!==i);
+   noteEngine('marker',{op:'delete'});refresh(false);};
+  lane.appendChild(pm);
+ });
+ lane.onmousedown=ev=>{
+  if(!ev.altKey)return;
+  if(ev.target.closest&&(ev.target.closest('.posmark')))return;
+  /* ⌥-click empty lane space = drop a position marker at that bar (mirrors ⌥-click
+     the ruler = split section; markers are points, sections are the partition) */
+  ev.preventDefault();ev.stopPropagation();
+  const r=lane.getBoundingClientRect();
+  const beat=Math.max(0,Math.min(LOOP-1e-4,Math.round((ev.clientX-r.left)/PPB/4)*4));
+  snapshot();
+  project.markers=normalizeMarkers([...(project.markers||[]),{start:beat,name:''}],LOOP);
+  noteEngine('marker',{op:'add',beat});
+  refresh(false);
+ };
+}
+function markerDown(e,i){
+ e.preventDefault();e.stopPropagation();
+ const lane=document.getElementById('sectionlane');if(!lane)return;
+ const r=lane.getBoundingClientRect();
+ const orig=JSON.parse(JSON.stringify(project.markers));
+ let moved=false;
+ const mv=ev=>{
+  const beat=Math.max(0,Math.min(LOOP-1e-4,Math.round((ev.clientX-r.left)/PPB/4)*4));
+  if(Math.abs(beat-orig[i].start)>1e-6)moved=true;
+  const ms=orig.map(m=>({...m}));ms[i]={...ms[i],start:beat};
+  project.markers=normalizeMarkers(ms,LOOP);
+  drawSectionLane();drawGrid();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(moved){
+   const now=project.markers;project.markers=orig;   /* snapshot the BEFORE, then land the after (the tempo lane's own idiom) */
+   snapshot();project.markers=now;
+   noteEngine('marker',{op:'move'});refresh(false);
+  }else drawSectionLane();
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function markerRename(i,cx,cy){
+ const m=project.markers[i];if(!m)return;
+ const d=document.createElement('div');
+ d.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;gap:6px;align-items:center;';
+ d.style.left=Math.min(cx,window.innerWidth-220)+'px';d.style.top=Math.min(cy,window.innerHeight-60)+'px';
+ const inp=document.createElement('input');
+ inp.value=m.name;inp.maxLength=40;
+ inp.style.cssText='background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-size:11.5px;width:130px;';
+ const done=ok=>{
+  if(ok&&inp.value.trim()&&inp.value.trim()!==m.name){
+   snapshot();
+   project.markers=project.markers.map((mm,j)=>j===i?{...mm,name:inp.value.trim().slice(0,40)}:mm);
+   noteEngine('marker',{op:'rename'});refresh(false);
+  }
+  d.remove();
+ };
+ inp.onkeydown=ke=>{ke.stopPropagation();if(ke.key==='Enter')done(true);else if(ke.key==='Escape')done(false);};
+ inp.onblur=()=>done(true);
+ d.appendChild(inp);document.body.appendChild(d);inp.focus();inp.select();
+}
+/* ==== 2.5 ④ · THE TIME-SIGNATURE LANE (renderer + gestures) ==== the tempo lane is
+   the template (§7.5): double-click adds · click a flag cycles the meter · drag ↔
+   moves · right-click deletes · Paper view hides it · Settings can hide it. */
+function drawTsigLane(){
+ const row=document.getElementById('tsigLaneRow'),lane=document.getElementById('tsiglane');
+ if(!row||!lane)return;
+ const hide=(typeof paperView!=='undefined'&&paperView)||(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showTsig===false);
+ if(hide){row.style.display='none';return;}
+ row.style.display='flex';
+ lane.innerHTML='';
+ lane.style.width=(LOOP*PPB)+'px';lane.style.marginLeft=GUT+'px';
+ const map=Array.isArray(project.tsigMap)?project.tsigMap:[];
+ /* the meter in force from beat 0: 4/4 until the first event says otherwise */
+ const base=document.createElement('span');
+ base.textContent=(map.length&&map[0].beat<1e-6)?'':'4/4';
+ base.style.cssText='position:absolute;top:3px;left:4px;font-size:9.5px;color:var(--dim);pointer-events:none;';
+ lane.appendChild(base);
+ map.forEach((ev2,i)=>{
+  const f=document.createElement('span');f.className='tsflag';
+  f.style.left=(ev2.beat*PPB)+'px';
+  f.textContent=ev2.num+'/'+ev2.den;
+  f.title=ev2.num+'/'+ev2.den+' from beat '+ev2.beat+' — click: cycle the meter · drag ↔: move · right-click: delete (notational: playback still counts 4/4)';
+  let f0=null;
+  f.onmousedown=fe=>{
+   if(fe.button!==0)return;
+   fe.preventDefault();fe.stopPropagation();
+   f0={x:fe.clientX,moved:false};
+   const r=lane.getBoundingClientRect();
+   const orig=JSON.parse(JSON.stringify(project.tsigMap));
+   const mv=me=>{
+    if(Math.abs(me.clientX-f0.x)>3)f0.moved=true;
+    if(!f0.moved)return;
+    const beat=Math.max(0,Math.min(LOOP-1e-4,Math.round((me.clientX-r.left)/PPB/4)*4));
+    const ms=orig.map(m=>({...m}));ms[i]={...ms[i],beat};
+    project.tsigMap=normalizeTsigMap(ms,LOOP);
+    drawTsigLane();
+   };
+   const up=()=>{
+    document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+    if(f0.moved){
+     const now=project.tsigMap;project.tsigMap=orig;
+     snapshot();project.tsigMap=now;
+     noteEngine('tsig',{op:'move'});refresh(false);
+    }else{ /* plain click: cycle 4/4 → 3/4 → 6/8 → … */
+     const nx=tsigNextValue(ev2.num,ev2.den);
+     snapshot();
+     project.tsigMap=project.tsigMap.map((m,j)=>j===i?{...m,num:nx[0],den:nx[1]}:m);
+     noteEngine('tsig',{op:'cycle'});refresh(false);
+    }
+    f0=null;
+   };
+   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  };
+  f.oncontextmenu=fe=>{fe.preventDefault();fe.stopPropagation();
+   snapshot();project.tsigMap=project.tsigMap.filter((_,j)=>j!==i);
+   noteEngine('tsig',{op:'delete'});refresh(false);};
+  lane.appendChild(f);
+ });
+ lane.ondblclick=ev=>{
+  if(ev.target.closest&&ev.target.closest('.tsflag'))return;
+  const r=lane.getBoundingClientRect();
+  const beat=Math.max(0,Math.min(LOOP-1e-4,Math.round((ev.clientX-r.left)/PPB/4)*4));
+  snapshot();
+  project.tsigMap=normalizeTsigMap([...(project.tsigMap||[]),{beat,num:3,den:4}],LOOP);
+  noteEngine('tsig',{op:'add',beat});
+  refresh(false);
+ };
+}
+/* ==== 2.5 ⑪e · THE SONG OVERVIEW (renderer + gestures) ==== Ableton's Overview,
+   from its own manual: "displays the Arrangement's entire layout … the black outline
+   represents the currently displayed part." Drag ←→ scrolls · drag ↕ zooms ·
+   double-click inside the outline zooms out to the whole arrangement — all three are
+   its documented gestures (§9.3). The svg squeezes the same gridW() beat-space the
+   grid views draw through a viewBox — a scaled render of the one geometry, not a
+   bespoke canvas. Chrome: no z-index. Own listeners: selections never touched. */
+function ovWrapMetrics(){
+ const w=document.getElementById('gridWrap');
+ return w?{sl:w.scrollLeft,vw:w.clientWidth,total:GUT+14+76+LOOP*PPB}:{sl:0,vw:800,total:LOOP*PPB};
+}
+function ovViewportRect(sl,vw,total,W){
+ /* pure: wrap scroll state → outline x/w in overview px. Unit-tested. */
+ const x=Math.max(0,Math.min(1,total>0?sl/total:0))*W;
+ const w=Math.max(8,Math.min(W,total>0?vw/total*W:W));
+ return {x:+x.toFixed(2),w:+Math.min(w,W-x).toFixed(2)};
+}
+function drawOverview(){
+ const row=document.getElementById('ovRow'),host=document.getElementById('songOv');
+ if(!row||!host)return;
+ const hide=(typeof paperView!=='undefined'&&paperView)||(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showOverview===false);
+ if(hide){row.style.display='none';return;}
+ row.style.display='flex';
+ const m=ovWrapMetrics();
+ const W=Math.max(160,m.vw-GUT-14-76-8);
+ host.style.width=W+'px';
+ const H=32;
+ let inner='';
+ /* every track as a slim thumb row — the same thumbSpec the strips render with */
+ const ids=['melody','bass','comping','pad'].concat(Object.keys(project.tracks).filter(t2=>/^x\d+$/.test(t2)));
+ const rows2=ids.filter(t2=>Array.isArray(project.tracks[t2])&&project.tracks[t2].length);
+ const rh=rows2.length?Math.max(3,Math.floor(H/Math.max(1,rows2.length))):H;
+ rows2.forEach((t2,ri)=>{
+  const col=(typeof trackColorOf==='function')?trackColorOf(t2):'#8a90a3';
+  for(const r2 of thumbSpec(project.tracks[t2],W,rh-1,LOOP))
+   inner+=`<rect x="${r2.x}" y="${ri*rh+r2.y}" width="${r2.w}" height="${r2.h}" fill="${col}" opacity=".8"/>`;
+ });
+ /* section tints, faint, so the structure reads at a glance */
+ project.sections.forEach((s,i)=>{
+  const end=(i+1<project.sections.length)?project.sections[i+1].start:LOOP;
+  if(i%2)inner+=`<rect x="${s.start/LOOP*W}" y="0" width="${(end-s.start)/LOOP*W}" height="${H}" fill="#fff" opacity=".03"/>`;
+ });
+ const vp=ovViewportRect(m.sl,m.vw,m.total,W);
+ inner+=`<rect id="ovVp" x="${vp.x}" y="0" width="${vp.w}" height="${H}" fill="none" stroke="#e8e8f0" stroke-width="1.4" rx="2"/>`;
+ host.innerHTML=`<svg width="${W}" height="${H}" style="display:block">${inner}</svg>`;
+}
+(function(){
+ const host=document.getElementById('songOv');if(!host)return;
+ let od=null;
+ host.addEventListener('mousedown',e=>{
+  e.preventDefault();
+  const w=document.getElementById('gridWrap');if(!w)return;
+  od={x0:e.clientX,y0:e.clientY,s0:w.scrollLeft,p0:PPB,decided:null,t0:performance.now()};
+  host.style.cursor='grabbing';
+  const mv=ev=>{
+   if(!od)return;
+   const dx=ev.clientX-od.x0,dy=ev.clientY-od.y0;
+   if(!od.decided&&Math.abs(dx)<4&&Math.abs(dy)<4)return;
+   if(!od.decided)od.decided=Math.abs(dy)>=Math.abs(dx)?'zoom':'scroll';
+   if(od.decided==='scroll'){
+    const m2=ovWrapMetrics();
+    const W=Math.max(160,m2.vw-GUT-14-76-8);
+    w.scrollLeft=Math.max(0,od.s0+dx*(m2.total/W));
+   }else{
+    PPB=Math.max(14,Math.min(240,od.p0*Math.exp(dy/110)));
+    refresh(false);
+   }
+   drawOverview();
+  };
+  const up=ev=>{
+   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+   host.style.cursor='grab';
+   if(od&&!od.decided&&performance.now()-od.t0<300){
+    /* a plain click jumps the view there (centered) — and double-click zooms out to
+       the whole arrangement (Ableton: "double-click anywhere within the black
+       outline" — free here since the whole strip is the outline's home) */
+    const now=performance.now();
+    if(host.__ovClk&&now-host.__ovClk<350){
+     host.__ovClk=0;
+     PPB=14;refresh(false);w.scrollLeft=0;
+    }else{
+     host.__ovClk=now;
+     const r=host.getBoundingClientRect();
+     const m2=ovWrapMetrics();
+     const W=Math.max(160,m2.vw-GUT-14-76-8);
+     w.scrollLeft=Math.max(0,(ev.clientX-r.left)/W*m2.total-m2.vw/2);
+    }
+    drawOverview();
+   }
+   od=null;
+  };
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ });
+})();
+/* ==== 2.5 ①② · AUTOMATION LANES (runtime) ==== stacked below their track (Ardour's
+   pseudo-track shape; the Erase/Clear button is the CLIENT's ask — Ardour's header has
+   Hide, not Clear — §5's correction: build it as asked, don't call it parity). The
+   SLIDE/pitch-bend lane is Melisma-round-3's queued lane (GEMS §11 merge): it RENDERS
+   n[7].pb against a centre line and never grows a second store (§3 landmine ⑧).
+   One undo per gesture (§3 landmine ⑩ — a 40-node pencil run is ONE undo). */
+const ALANE_CENTS=600;   /* the bend lane's half-height, in cents */
+let autoSel={id:null,set:new Set()};   /* node-select: Delete clears the selected nodes */
+function autoLanesFor(t){return (Array.isArray(project.autoLanes)?project.autoLanes:[]).filter(l=>l&&l.track===t);}
+function autoLaneById(id){return (project.autoLanes||[]).find(l=>l.id===id);}
+function addAutoLane(t,kind){
+ snapshot();
+ const n=(project.autoLanes||[]).filter(l=>l.track===t&&l.kind==='auto').length;
+ project.autoLanes=[...(project.autoLanes||[]),{id:'al'+Date.now().toString(36)+Math.floor(Math.random()*1e4),
+  track:t,kind,name:kind==='bend'?'Pitch Bend':'Automation'+(n?' '+(n+1):''),nodes:[]}];
+ noteEngine('auto-lane',{op:'add',kind});
+ drawTrackSel();
+}
+function removeAutoLane(id){
+ snapshot();
+ project.autoLanes=(project.autoLanes||[]).filter(l=>l.id!==id);
+ if(autoSel.id===id)autoSel={id:null,set:new Set()};
+ noteEngine('auto-lane',{op:'remove'});
+ drawTrackSel();
+}
+function alaneH(){return Math.max(30,typeof stripBoundaryH==='function'?stripBoundaryH():30);}   /* §3 landmine ⑦: heights go through the boundary law — no sliver lanes */
+function alaneValY(val,h){return h-4-Math.max(0,Math.min(1,val))*(h-8);}
+function alaneYVal(y,h){return Math.max(0,Math.min(1,(h-4-y)/(h-8)));}
+function alaneCentsY(cents,h){return h/2-Math.max(-ALANE_CENTS,Math.min(ALANE_CENTS,cents))/ALANE_CENTS*(h/2-3);}
+function alaneYCents(y,h){return Math.round(Math.max(-ALANE_CENTS,Math.min(ALANE_CENTS,(h/2-y)/(h/2-3)*ALANE_CENTS)));}
+function mkAutoLaneRow(al){
+ const row=document.createElement('div');row.className='trow alanerow';row.dataset.alid=al.id;
+ const hd=document.createElement('div');hd.className='thead';
+ hd.style.cssText='display:flex;align-items:center;gap:4px;';
+ const nm=document.createElement('span');
+ nm.style.cssText='font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+ nm.textContent=al.name;
+ nm.title=(al.kind==='bend'
+  ?'The pitch-bend lane — centre line = no bend. Every slide/melisma on '+trackLabel(al.track)+' draws its real curve here; drag a node ↕ to re-bend, click a slide line to select the notes at both ends, pencil a shape over a note to re-draw its bend.'
+  :al.name+' — '+trackLabel(al.track)+'. Pencil: drag to draw nodes · ⌥-drag: straight ramp (⇧ = level) · ctrl+click: curve the segment · click a node to select, Delete clears it · drag a node ↕↔.');
+ hd.appendChild(nm);
+ const clr=document.createElement('span');
+ clr.textContent='⌫';clr.style.cssText='cursor:pointer;font-size:11px;color:var(--dim);';
+ clr.title=al.kind==='bend'?'Clear every bend on this track’s notes (one undo)':'Erase/Clear — empty this lane’s nodes (one undo)';
+ clr.onclick=()=>{
+  snapshot();
+  if(al.kind==='bend'){
+   const arr=project.tracks[al.track];
+   if(Array.isArray(arr))for(const nn of arr)if(nn&&nn[7]&&nn[7].pb)nn[7]=null;
+  }else{
+   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:[]}:l);
+  }
+  noteEngine('auto-lane',{op:'clear'});refresh(false);drawAutoLanes();
+ };
+ hd.appendChild(clr);
+ const x=document.createElement('span');
+ x.textContent='✕';x.style.cssText='cursor:pointer;font-size:11px;color:var(--dim);';
+ x.title='Close this lane (its data rides undo)';
+ x.onclick=()=>removeAutoLane(al.id);
+ hd.appendChild(x);
+ row.appendChild(hd);
+ const gw=document.createElement('div');gw.className='gvwrap';
+ const lane=document.createElement('div');lane.className='alane';lane.dataset.alid=al.id;
+ lane.style.height=alaneH()+'px';
+ lane.style.marginLeft=GUT+'px';lane.style.width=(LOOP*PPB)+'px';
+ wireAutoLane(lane,al.id);
+ gw.appendChild(lane);row.appendChild(gw);
+ renderAutoLane(lane,al.id);
+ return row;
+}
+function drawAutoLanes(){
+ document.querySelectorAll('.alane[data-alid]').forEach(el=>{
+  el.style.width=(LOOP*PPB)+'px';
+  renderAutoLane(el,el.dataset.alid);
+ });
+}
+function renderAutoLane(lane,id){
+ const al=autoLaneById(id);if(!al)return;
+ const h=alaneH();
+ lane.querySelectorAll('svg,.apt').forEach(x=>x.remove());
+ const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ sv.setAttribute('width',LOOP*PPB);sv.setAttribute('height',h);
+ let inner='';
+ if(al.kind==='bend'){
+  sv.style.pointerEvents='auto';   /* the slide lines are clickable (select both end notes) */
+  inner+=`<line x1="0" y1="${h/2}" x2="${LOOP*PPB}" y2="${h/2}" stroke="#3a3f4d" stroke-dasharray="4 3" stroke-width="1.2"/>`;
+  const arr=project.tracks[al.track];
+  let pts=0;
+  if(Array.isArray(arr))arr.forEach((nn,ni)=>{
+   if(!nn||!nn[7]||!Array.isArray(nn[7].pb)||nn[7].pb.length<2)return;
+   const x0=nn[0]*PPB,w=Math.max(2,nn[1]*PPB);
+   let d='';
+   for(const p of nn[7].pb)d+=(d?'L':'M')+(x0+p[0]*w).toFixed(1)+','+alaneCentsY(p[1],h).toFixed(1)+' ';
+   const isLine=!!nn[7].line;
+   inner+=`<path data-bn="${ni}" d="${d}" fill="none" stroke="${isLine?'#e8a33d':'#98a0b2'}" stroke-width="1.6" style="pointer-events:stroke;cursor:pointer;" opacity="${selNotes.has(ni)?'1':'.75'}"><title>${isLine?'Slide line — click: select the notes at both ends (drag either to move the line with them)':'Bend curve ('+((nn[7].orn)||'drawn')+') — drag a node ↕ to re-bend'}</title></path>`;
+   pts+=nn[7].pb.length;
+  });
+  sv.innerHTML=inner;lane.appendChild(sv);
+  /* node handles (capped so a melisma-dense track stays light) */
+  if(pts<=220&&Array.isArray(arr))arr.forEach((nn,ni)=>{
+   if(!nn||!nn[7]||!Array.isArray(nn[7].pb)||nn[7].pb.length<2)return;
+   const x0=nn[0]*PPB,w=Math.max(2,nn[1]*PPB);
+   nn[7].pb.forEach((p,pi)=>{
+    const el2=document.createElement('div');el2.className='apt';
+    el2.style.left=(x0+p[0]*w)+'px';el2.style.top=alaneCentsY(p[1],h)+'px';
+    el2.title=Math.round(p[1])+' cents at t='+p[0]+' — drag ↕';
+    el2.onmousedown=ev=>{if(ev.button===0)bendNodeDown(ev,lane,al,ni,pi);};
+    lane.appendChild(el2);
+   });
+  });
+  sv.addEventListener('mousedown',ev=>{
+   const path=ev.target.closest&&ev.target.closest('path[data-bn]');
+   if(!path)return;
+   ev.preventDefault();ev.stopPropagation();
+   /* click a line: select the notes at either end (the slide's host + the note that
+      starts where it lands) — the FIXES §6 rule: selecting the line carries its notes */
+   const ni=+path.dataset.bn,arr2=project.tracks[al.track];
+   const nn=arr2&&arr2[ni];if(!nn)return;
+   selNotes.clear();selNotes.add(ni);
+   if(nn[7]&&nn[7].line){
+    const endBeat=nn[0]+nn[1];
+    arr2.forEach((m2,mi)=>{if(mi!==ni&&m2&&Math.abs(m2[0]-endBeat)<1e-3)selNotes.add(mi);});
+   }
+   bendLineDrag(ev,lane,al,[...selNotes]);
+  });
+ }else{
+  const nodes=al.nodes||[];
+  let d='';
+  for(const n2 of nodes)d+=(d?'L':'M')+(n2[0]*PPB).toFixed(1)+','+alaneValY(n2[1],h).toFixed(1)+' ';
+  if(nodes.length)inner+=`<path d="${d}" fill="none" stroke="#98a0b2" stroke-width="1.6"/>`;
+  sv.innerHTML=inner;lane.appendChild(sv);
+  nodes.forEach((n2,i)=>{
+   const el2=document.createElement('div');el2.className='apt'+(autoSel.id===id&&autoSel.set.has(i)?' sel':'');
+   el2.style.left=(n2[0]*PPB)+'px';el2.style.top=alaneValY(n2[1],h)+'px';
+   el2.title=n2[1].toFixed(2)+' at beat '+n2[0]+' — drag ↕↔ · click: select (Delete clears) · right-click: delete';
+   el2.onmousedown=ev=>{if(ev.button===0)autoNodeDown(ev,lane,al,i);};
+   el2.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();
+    snapshot();
+    project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:l.nodes.filter((_,j)=>j!==i)}:l);
+    noteEngine('auto-node',{op:'delete'});drawAutoLanes();};
+   lane.appendChild(el2);
+  });
+ }
+}
+function alaneCommit(orig,tag){
+ /* the tempo lane's own undo idiom: snapshot the BEFORE, then land the after */
+ const now=project.autoLanes;project.autoLanes=orig;
+ snapshot();project.autoLanes=now;
+ noteEngine(tag,{});
+ drawAutoLanes();
+}
+function autoNodeDown(e,lane,al,i){
+ e.preventDefault();e.stopPropagation();
+ const h=alaneH(),r=lane.getBoundingClientRect();
+ const orig=JSON.parse(JSON.stringify(project.autoLanes));
+ let moved=false;
+ const mv=ev=>{
+  moved=true;
+  const st=gridStep();
+  const beat=Math.max(0,Math.min(LOOP,Math.round((ev.clientX-r.left)/PPB/st)*st));
+  const val=alaneYVal(ev.clientY-r.top,h);
+  project.autoLanes=(project.autoLanes||[]).map(l=>{
+   if(l.id!==al.id)return l;
+   const ns=l.nodes.map(n2=>n2.slice());ns[i]=[beat,+val.toFixed(4)];
+   ns.sort((a,b)=>a[0]-b[0]);
+   return {...l,nodes:ns.filter((n2,j)=>!j||n2[0]>ns[j-1][0]+1e-6)};
+  });
+  drawAutoLanes();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(moved)alaneCommit(orig,'auto-node');
+  else{ /* click = node-select (Delete clears the selected nodes — §6 claim 6) */
+   if(autoSel.id!==al.id)autoSel={id:al.id,set:new Set()};
+   if(autoSel.set.has(i))autoSel.set.delete(i);else autoSel.set.add(i);
+   drawAutoLanes();
+  }
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function bendNodeDown(e,lane,al,ni,pi){
+ e.preventDefault();e.stopPropagation();
+ const h=alaneH(),r=lane.getBoundingClientRect();
+ const arr=project.tracks[al.track];if(!arr||!arr[ni]||!arr[ni][7])return;
+ const origTracks=JSON.parse(JSON.stringify(project.tracks));
+ let moved=false;
+ const mv=ev=>{
+  moved=true;
+  const cents=alaneYCents(ev.clientY-r.top,h);
+  const nn=project.tracks[al.track][ni];
+  if(nn&&nn[7]&&nn[7].pb&&nn[7].pb[pi])nn[7].pb[pi][1]=cents;
+  drawAutoLanes();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(moved){
+   const now=project.tracks;project.tracks=origTracks;
+   snapshot();project.tracks=now;
+   noteEngine('bend-node',{});refresh(false);drawAutoLanes();
+  }
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function bendLineDrag(e,lane,al,idxs){
+ /* FIXES §6: "select a line and it drags the notes at either end with it" — ↔ moves
+    the selected notes in time (whole-step snap), one undo */
+ const r=lane.getBoundingClientRect(),x0=e.clientX;
+ const arr=project.tracks[al.track];if(!arr)return;
+ const orig=idxs.map(i=>({i,b:arr[i]?arr[i][0]:0}));
+ const origTracks=JSON.parse(JSON.stringify(project.tracks));
+ let moved=false;
+ const mv=ev=>{
+  const st=gridStep();
+  const db=Math.round((ev.clientX-x0)/PPB/st)*st;
+  if(Math.abs(ev.clientX-x0)>4)moved=true;
+  if(!moved)return;
+  for(const o of orig){
+   const nn=project.tracks[al.track][o.i];
+   if(nn)nn[0]=+Math.max(0,Math.min(LOOP-nn[1],o.b+db)).toFixed(6);
+  }
+  refresh(false);drawAutoLanes();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(moved){
+   const now=project.tracks;project.tracks=origTracks;
+   snapshot();project.tracks=now;
+   noteEngine('bend-line-drag',{});refresh(true);
+  }else{refresh(false);drawAutoLanes();}   /* plain click: the selection change alone */
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function wireAutoLane(lane,id){
+ lane.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  if(e.target.closest&&(e.target.closest('.apt')||e.target.closest('path[data-bn]')))return;
+  const al=autoLaneById(id);if(!al)return;
+  e.preventDefault();
+  if(e.altKey)alaneLineTool(e,lane,al);
+  else alanePencil(e,lane,al);
+ });
+ lane.addEventListener('contextmenu',e=>{
+  /* ctrl+click on macOS IS a right-click (§3 landmine ⑨ — line 5578's rule): the
+     contextmenu handler owns the curve menu, one dispatcher */
+  e.preventDefault();e.stopPropagation();
+  const al=autoLaneById(id);if(!al||al.kind==='bend')return;
+  openAutoCurveMenu(e.clientX,e.clientY,lane,al);
+ });
+}
+function alanePencil(e,lane,al){
+ const h=alaneH(),r=lane.getBoundingClientRect();
+ const orig=JSON.parse(JSON.stringify(project.autoLanes));
+ const origTracks=al.kind==='bend'?JSON.parse(JSON.stringify(project.tracks)):null;
+ const drawn=[];   /* [beat,val|cents] collected over the whole gesture */
+ const put=ev=>{
+  const st=Math.max(.0625,gridStep()/2);   /* pencil grain: half the grid step */
+  const beat=Math.max(0,Math.min(LOOP,Math.round((ev.clientX-r.left)/PPB/st)*st));
+  const val=al.kind==='bend'?alaneYCents(ev.clientY-r.top,h):+alaneYVal(ev.clientY-r.top,h).toFixed(4);
+  const at=drawn.findIndex(p=>Math.abs(p[0]-beat)<1e-6);
+  if(at>=0)drawn[at]=[beat,val];else drawn.push([beat,val]);
+  if(al.kind!=='bend'){
+   const merged=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes
+    .filter(n2=>!drawn.some(p=>Math.abs(p[0]-n2[0])<1e-6))
+    .concat(drawn.map(p=>p.slice())).sort((a,b)=>a[0]-b[0]);
+   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:merged}:l);
+   drawAutoLanes();
+  }
+ };
+ put(e);
+ const mv=ev=>put(ev);
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(al.kind==='bend'){
+   /* the pencil re-draws the bend of every note it crossed — n[7].pb, the ONE store */
+   drawn.sort((a,b)=>a[0]-b[0]);
+   const arr=project.tracks[al.track];
+   let touched=0;
+   if(Array.isArray(arr))for(const nn of arr){
+    if(!nn)continue;
+    const inside=drawn.filter(p=>p[0]>=nn[0]-1e-6&&p[0]<=nn[0]+nn[1]+1e-6);
+    if(inside.length<2)continue;
+    const pb=inside.map(p=>[+Math.max(0,Math.min(1,(p[0]-nn[0])/nn[1])).toFixed(3),Math.round(p[1])]);
+    if(!pb.some(p=>Math.abs(p[1])>1))continue;
+    nn[7]={pb,orn:(nn[7]&&nn[7].orn)||'penciled',...(nn[7]&&nn[7].line?{line:1}:{})};
+    touched++;
+   }
+   if(touched){
+    const now=project.tracks;project.tracks=origTracks;
+    snapshot();project.tracks=now;
+    noteEngine('bend-pencil',{notes:touched});refresh(false);drawAutoLanes();
+   }
+  }else if(drawn.length)alaneCommit(orig,'auto-pencil');
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function alaneLineTool(e,lane,al){
+ /* ⌥-drag = the two-point line tool (Ableton's own modifier vocabulary, §5: Alt draws
+    along a straight line, adding ⇧ makes it horizontal) — nodes land at grid steps */
+ if(al.kind==='bend')return alanePencil(e,lane,al);   /* the bend lane's pencil already rules lines fine */
+ const h=alaneH(),r=lane.getBoundingClientRect();
+ const orig=JSON.parse(JSON.stringify(project.autoLanes));
+ const st=gridStep();
+ const b0=Math.max(0,Math.min(LOOP,Math.round((e.clientX-r.left)/PPB/st)*st));
+ const v0=alaneYVal(e.clientY-r.top,h);
+ const apply=ev=>{
+  const b1=Math.max(0,Math.min(LOOP,Math.round((ev.clientX-r.left)/PPB/st)*st));
+  const v1=ev.shiftKey?v0:alaneYVal(ev.clientY-r.top,h);   /* ⇧ = horizontal */
+  const lo=Math.min(b0,b1),hi=Math.max(b0,b1);
+  const line=[];
+  for(let b=lo;b<=hi+1e-9;b+=st){
+   const x=hi>lo?(b-lo)/(hi-lo):0;
+   const vv=b0<=b1?v0+(v1-v0)*x:v1+(v0-v1)*x;
+   line.push([+b.toFixed(4),+vv.toFixed(4)]);
+  }
+  const keep=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes.filter(n2=>n2[0]<lo-1e-6||n2[0]>hi+1e-6);
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:keep.concat(line).sort((a,b)=>a[0]-b[0])}:l);
+  drawAutoLanes();
+ };
+ apply(e);
+ const mv=ev=>apply(ev);
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  alaneCommit(orig,'auto-line');
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+let autoMenuEl=null;
+function closeAutoMenu(){if(autoMenuEl){try{autoMenuEl.remove();}catch(e){}autoMenuEl=null;}}
+function openAutoCurveMenu(x,y,lane,al){
+ /* the curve menu — z-index 140, beside the tempo menu it is modelled on (§2e). Its
+    vocabulary is the app's OWN (§5's recommendation (a): Ardour's menu entries were
+    not verifiable, and internal consistency beats borrowed language). The shape
+    re-curves the segment between the two nodes flanking the click. */
+ closeAutoMenu();
+ const r=lane.getBoundingClientRect();
+ const beat=(x-r.left)/PPB;
+ const m=document.createElement('div');
+ m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:4px;min-width:190px;';
+ m.style.left=Math.min(x,window.innerWidth-210)+'px';m.style.top=Math.min(y,window.innerHeight-190)+'px';
+ const shapes=[['line','― Straight'],['easeIn','⟋ Ease in'],['easeOut','⟍ Ease out'],['sCurve','∫ S-curve'],['hold','⌐ Hold (step)']];
+ for(const [id2,label] of shapes){
+  const b=document.createElement('span');b.className='part';b.style.cssText='padding:4px 12px;font-size:11.5px;';
+  b.textContent=label;
+  b.title='Re-curve the segment around beat '+beat.toFixed(1)+' along this shape (one undo)';
+  b.onclick=()=>{
+   closeAutoMenu();
+   const nodes=(autoLaneById(al.id)||{nodes:[]}).nodes;
+   if(nodes.length<2){flashHint('Draw two nodes first — the curve shapes the segment between them.');return;}
+   let i1=nodes.findIndex(n2=>n2[0]>beat);
+   if(i1<0)i1=nodes.length-1;if(i1===0)i1=1;
+   const orig=JSON.parse(JSON.stringify(project.autoLanes));
+   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+    ?{...l,nodes:autoCurveSegment(l.nodes,i1-1,i1,id2,Math.max(.125,gridStep()/2))}:l);
+   alaneCommit(orig,'auto-curve');
+  };
+  m.appendChild(b);
+ }
+ /* the rest of the client's screenshot (fixes-images/Ableton Grid Menu Dropdown.png):
+    Delete + Clear Envelope are real here; Freeze Track is in Ableton's picture but
+    freezing needs an audio-render substrate the app doesn't have — recorded as a
+    FINDING in the session entry, not silently faked with a dead menu row. */
+ const sep=document.createElement('div');sep.style.cssText='border-top:1px solid var(--line);margin:2px 4px;';
+ m.appendChild(sep);
+ const mk2=(label,tip,fn,dis)=>{
+  const b=document.createElement('span');b.className='part';b.style.cssText='padding:4px 12px;font-size:11.5px;'+(dis?'opacity:.45;cursor:default;':'');
+  b.textContent=label;b.title=tip;
+  if(!dis)b.onclick=()=>{closeAutoMenu();fn();};
+  m.appendChild(b);
+ };
+ mk2('✕ Delete selected nodes','Clears the node-selected points (Delete does this too)',()=>{
+  if(!(autoSel.id===al.id&&autoSel.set.size))return;
+  snapshot();
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:l.nodes.filter((_,j)=>!autoSel.set.has(j))}:l);
+  autoSel={id:null,set:new Set()};
+  noteEngine('auto-node',{op:'delete-selected'});drawAutoLanes();
+ },!(autoSel.id===al.id&&autoSel.set.size));
+ mk2('⌫ Clear the lane','Empty every node in this lane (one undo) — the header’s ⌫ does this too',()=>{
+  snapshot();
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:[]}:l);
+  noteEngine('auto-lane',{op:'clear'});drawAutoLanes();
+ },!(autoLaneById(al.id)||{nodes:[]}).nodes.length);
+ m.onmousedown=e2=>e2.stopPropagation();
+ document.body.appendChild(m);autoMenuEl=m;
+ setTimeout(()=>{document.addEventListener('mousedown',closeAutoMenu,{once:true});},0);
+}
+/* ==== 2.5 ⑤⑥ · THE FLYOUT COLUMN: +CHORD EDITOR + QUANTIZE (runtime) ==== both are
+   CHROME despite their names (§3 landmine ① — nothing in 2.5 is a WINDOW_DEFS window):
+   an in-flow column that pushes the grid right. ⑤ is Ardour-parity in intent (pencil
+   chords from a list · Move Up/Down inversions · Drop 2 / Drop 3 / Drop 2+4 ·
+   select-all-then-click-new-root · per-tool hover directions); ⑥ is the note-quantize
+   window (Ableton parity: grid + amount) — the app's first, distinct from the Orbit
+   tuplet chooser which is deliberately never called Quantize (§2g). */
+let flyOpen=false;
+function openFlyCol(){
+ flyOpen=true;
+ const c=document.getElementById('flyCol');if(!c)return;
+ c.style.display='flex';
+ renderChordEdFly();renderQuantWin();
+}
+function closeFlyCol(){
+ flyOpen=false;
+ const c=document.getElementById('flyCol');if(c)c.style.display='none';
+}
+function flyChordDegs(){
+ const pcs=curScale().pcs,L=pcs.length,out=[];
+ for(let d=0;d<L;d++){
+  const tr=scaleDegreeTriad(pcs,d);if(!tr)continue;
+  out.push({deg:d,off:tr.off,iv:tr.iv,lbl:withKeyAt(typeof playheadBeat==='number'?playheadBeat:0,()=>{
+   try{return romanFor((project.tonic+tr.off)%12,tr.iv)||('deg '+(d+1));}catch(e){return 'deg '+(d+1);}
+  })});
+ }
+ return out;
+}
+function flyChordMidis(off,iv,seventh){
+ const rootPc=((project.tonic+off)%12+12)%12;
+ let root=project.base+(((rootPc-((project.base%12)+12)%12)+12)%12);
+ if(root>project.base+6)root-=12;
+ const ms=iv.map(x=>root+x);
+ if(seventh){
+  const pcs=curScale().pcs,L=pcs.length,d=pcs.indexOf(off);
+  if(d>=0){const sev=pcs[(d+6)%L]+12*Math.floor((d+6)/L);ms.push(root+((((sev-off)%12)+12)%12));}
+ }
+ return ms;
+}
+function flyInsertChord(midis,beat,track){
+ snapshot();
+ const arr=track&&project.tracks[track]?project.tracks[track]:project.melody;
+ const b=Math.max(0,Math.min(LOOP-2,Math.round(beat/gridStep())*gridStep()));
+ for(const m of midis)arr.push([b,2,m]);
+ noteEngine('fly-chord',{n:midis.length});
+ refresh(true);
+}
+function renderChordEdFly(){
+ const el=document.getElementById('chordEdFly');if(!el||!flyOpen)return;
+ el.innerHTML='';
+ const hd=document.createElement('div');
+ hd.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+ hd.innerHTML='<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);flex:1;">＋ Chord Editor</span>';
+ const x=document.createElement('span');x.textContent='✕';x.style.cssText='cursor:pointer;color:var(--dim);font-size:12px;';
+ x.title='Close the flyout column (the grid slides back left)';
+ x.onclick=closeFlyCol;
+ hd.appendChild(x);el.appendChild(hd);
+ /* the chord list — click writes at the playhead; drag pencils it onto any grid lane */
+ const sev=el.__sev===true;
+ const sevRow=document.createElement('label');
+ sevRow.style.cssText='display:flex;gap:5px;align-items:center;font-size:10.5px;color:var(--dim);margin-bottom:4px;cursor:pointer;';
+ sevRow.innerHTML='<input type="checkbox" '+(sev?'checked':'')+' style="accent-color:var(--accent);"> 7th chords';
+ sevRow.querySelector('input').onchange=ev=>{el.__sev=ev.target.checked;renderChordEdFly();};
+ el.appendChild(sevRow);
+ const list=document.createElement('div');
+ list.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;';
+ for(const c of flyChordDegs()){
+  const chip=document.createElement('span');chip.className='part';
+  chip.style.cssText='padding:3px 8px;font-size:11px;cursor:grab;';
+  chip.textContent=dispLbl(c.lbl)+(sev?'7':'');
+  chip.title='Click: write '+c.lbl+' at the playhead · drag onto any grid lane to pencil it in at that beat (2 beats long — stretch after)';
+  chip.onmousedown=ev=>{
+   ev.preventDefault();
+   const x0=ev.clientX,y0=ev.clientY;let ghost=null;
+   const mv=me=>{
+    if(!ghost&&Math.abs(me.clientX-x0)+Math.abs(me.clientY-y0)>5){
+     ghost=document.createElement('div');
+     ghost.style.cssText='position:fixed;z-index:130;pointer-events:none;background:var(--panel2);border:1px solid var(--accent);border-radius:5px;padding:2px 8px;font-size:11px;color:var(--accent);';
+     ghost.textContent=chip.textContent;document.body.appendChild(ghost);
+    }
+    if(ghost){ghost.style.left=(me.clientX+8)+'px';ghost.style.top=(me.clientY+8)+'px';}
+   };
+   const up=me=>{
+    document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+    const midis=flyChordMidis(c.off,c.iv,sev);
+    if(!ghost){flyInsertChord(midis,(typeof playheadBeat==='number')?playheadBeat:0,null);return;}
+    ghost.remove();
+    const tgt=document.elementFromPoint(me.clientX,me.clientY);
+    const sv2=tgt&&tgt.closest?tgt.closest('svg'):null;
+    const gv2=sv2?(function(){for(const id in GRID_VIEWS){if(GRID_VIEWS[id].el===sv2)return GRID_VIEWS[id];}return sv2===svg?GRID_VIEWS.main:null;})():null;
+    if(!gv2)return;
+    const r2=sv2.getBoundingClientRect();
+    const wb2=viewBeatWindow(gv2,LOOP);
+    flyInsertChord(midis,wb2.b0+(me.clientX-r2.left-GUT)/PPB,gv2.track||null);
+   };
+   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  };
+  list.appendChild(chip);
+ }
+ el.appendChild(list);
+ /* voicing tools — each explains itself on hover (the client's per-tool directions) */
+ const tools=document.createElement('div');
+ tools.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;';
+ const mkT=(label,tip,fn)=>{
+  const b=document.createElement('span');b.className='part';
+  b.style.cssText='padding:3px 8px;font-size:10.5px;';
+  b.textContent=label;b.title=tip;
+  b.onclick=()=>{
+   if(!selNotes.size){flashHint('Select the chord’s notes first — then the voicing tools re-stack them.');return;}
+   fn();
+  };
+  tools.appendChild(b);
+ };
+ const applyMidis=ms2=>{
+  snapshot();
+  const idxs=[...selNotes].filter(i=>project.melody[i]).sort((a,b)=>project.melody[a][2]-project.melody[b][2]);
+  const sorted=[...ms2].sort((a,b)=>a-b);
+  idxs.forEach((ix,j)=>{if(sorted[j]!=null)project.melody[ix][2]=sorted[j];});
+  refresh(true);
+ };
+ const selMidis=()=>[...selNotes].map(i=>project.melody[i]).filter(Boolean).map(n=>n[2]);
+ mkT('▲ Move Up','Cycle the voicing UP an inversion — the lowest note jumps an octave (Ardour’s Move Up)',()=>applyMidis(invCycleMidis(selMidis(),1)));
+ mkT('▼ Move Down','Cycle the voicing DOWN an inversion — the highest note drops an octave',()=>applyMidis(invCycleMidis(selMidis(),-1)));
+ mkT('Drop 2','Lower the 2nd voice from the top an octave — the classic Drop 2 spread',()=>applyMidis(dropVoicingMidis(selMidis(),'drop2')));
+ mkT('Drop 3','Lower the 3rd voice from the top an octave',()=>applyMidis(dropVoicingMidis(selMidis(),'drop3')));
+ mkT('Drop 2+4','Lower the 2nd AND 4th voices from the top an octave',()=>applyMidis(dropVoicingMidis(selMidis(),'drop24')));
+ el.appendChild(tools);
+ /* the root-jump row — select all, then click the new root (the whole selection
+    transposes so its lowest note lands on that root, nearest direction) */
+ const roots=document.createElement('div');
+ roots.style.cssText='display:flex;flex-wrap:wrap;gap:2.5px;';
+ for(let pc=0;pc<12;pc++){
+  const b=document.createElement('span');b.className='part';
+  b.style.cssText='padding:2px 5.5px;font-size:10px;';
+  b.textContent=PCN[pc];
+  b.title='Jump the selection to a '+PCN[pc]+' root — select all the chord’s notes, click here, and the whole voicing re-lands (nearest direction)';
+  b.onclick=()=>{
+   if(!selNotes.size){flashHint('Select the chord’s notes first, then click the new root.');return;}
+   const ms2=selMidis();if(!ms2.length)return;
+   const lowPc=((Math.min(...ms2)%12)+12)%12;
+   let d=((pc-lowPc)%12+12)%12;if(d>6)d-=12;
+   if(!d){flashHint('Already rooted on '+PCN[pc]+'.');return;}
+   snapshot();
+   for(const i of selNotes){const n=project.melody[i];if(n)n[2]+=d;}
+   refresh(true);
+  };
+  roots.appendChild(b);
+ }
+ el.appendChild(roots);
+}
+function renderQuantWin(){
+ const el=document.getElementById('quantWin');if(!el||!flyOpen)return;
+ el.innerHTML='';
+ el.innerHTML='<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;">⊞ Quantize</div>';
+ const row=document.createElement('div');
+ row.style.cssText='display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--text);';
+ row.innerHTML=
+  '<label style="display:flex;gap:6px;align-items:center;" title="The grid the note starts pull toward">Grid <select id="qzGrid" style="flex:1;min-width:0;padding:2px 4px;font-size:11px;">'
+  +'<option value="4">1 bar</option><option value="2">1/2</option><option value="1">1/4</option>'
+  +'<option value="0.5">1/8</option><option value="0.25" selected>1/16</option><option value="0.125">1/32</option></select></label>'
+  +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Scale the grid by 2/3 — triplet feel"><input type="checkbox" id="qzTrip" style="accent-color:var(--accent);"> Triplet</label>'
+  +'<label style="display:flex;gap:6px;align-items:center;" title="100% lands exactly on the grid; less pulls part-way (Ableton’s Amount)">Amount <input type="range" id="qzAmt" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);"><span id="qzAmtV" style="min-width:30px;color:var(--dim);">100%</span></label>'
+  +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Snap durations to the grid too (starts always quantize)"><input type="checkbox" id="qzDur" style="accent-color:var(--accent);"> Also durations</label>';
+ el.appendChild(row);
+ const btn=document.createElement('button');
+ btn.textContent='✓ Quantize selection';
+ btn.title='Pull the selected notes’ starts toward the grid by Amount — one undo';
+ btn.style.cssText='margin-top:6px;width:100%;';
+ btn.onclick=()=>{
+  if(!selNotes.size){flashHint('Select some notes first — Quantize pulls the selection to the grid.');return;}
+  const g=document.getElementById('qzGrid'),tr=document.getElementById('qzTrip'),am=document.getElementById('qzAmt'),du=document.getElementById('qzDur');
+  let st=+g.value;if(tr.checked)st=st*2/3;
+  snapshot();
+  const out=quantizeRows(project.melody,[...selNotes],st,(+am.value)/100,du.checked);
+  project.melody.length=0;for(const n of out)project.melody.push(n);
+  noteEngine('quantize',{n:selNotes.size,grid:st});
+  refresh(true);
+ };
+ el.appendChild(btn);
+ const amt=el.querySelector('#qzAmt'),amtV=el.querySelector('#qzAmtV');
+ if(amt)amt.oninput=()=>{amtV.textContent=amt.value+'%';};
+}
+/* the ctrl+click dispatcher (§3 landmine ⑨: on macOS ctrl+click IS contextmenu — ONE
+   handler owns the grid background's right-click and dispatches) */
+let gridBgMenuEl=null;
+function closeGridBgMenu(){if(gridBgMenuEl){try{gridBgMenuEl.remove();}catch(e){}gridBgMenuEl=null;}}
+function gridCtxMenu(e){
+ if(e.target.closest&&(e.target.closest('rect[data-n]')||e.target.closest('[data-sec]')))return;   /* notes + flags keep their own menus/gestures */
+ const v=gridViewForEvent(e);
+ if(v&&v.laneOnly)return;   /* the bar lane keeps its own gestures */
+ const p2=svgPoint(e,false,v);
+ if(p2&&(p2.inLane||p2.inScrub))return;
+ e.preventDefault();e.stopPropagation();
+ closeGridBgMenu();
+ const m=document.createElement('div');
+ m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:4px;min-width:190px;';
+ m.style.left=Math.min(e.clientX,window.innerWidth-210)+'px';m.style.top=Math.min(e.clientY,window.innerHeight-130)+'px';
+ const mk=(label,tip,fn)=>{
+  const b=document.createElement('span');b.className='part';b.style.cssText='padding:4px 12px;font-size:11.5px;';
+  b.textContent=label;b.title=tip;
+  b.onclick=()=>{closeGridBgMenu();fn();};
+  m.appendChild(b);
+ };
+ mk('＋ Chord Editor','Open the +Chord Editor flyout on the grid’s left — it pushes the grid right, floats over nothing',()=>{openFlyCol();});
+ mk('⊞ Quantize','Open the Quantize window (below the +Chord Editor, same column)',()=>{openFlyCol();});
+ if(flyOpen)mk('✕ Close the flyout column','The grid slides back left',closeFlyCol);
+ m.onmousedown=e2=>e2.stopPropagation();
+ document.body.appendChild(m);gridBgMenuEl=m;
+ setTimeout(()=>{document.addEventListener('mousedown',closeGridBgMenu,{once:true});},0);
+}
+/* ==== 2.5 ⑦ · THE LOWER WINDOW (runtime) ==== an Ableton-style zoomed edit pane for
+   the selected clip/track: a REGISTERED GRID_VIEWS ENTRY ('lower') with its own
+   {rows,rowStart,px,scroll} and a beat WINDOW (v.b0/v.bN — the July-24 windowed-view
+   substrate), rendered through drawGridView and reached by gridViewForEvent. The
+   "Zoomed In Midi" transport button renders the SAME view object into the main svg —
+   one view, one code path, two homes (the client asked for both workflows; both ship,
+   users keep their habits). Height = DEVICE state (cp_settings.lowerPx). */
+let lowerOpen=false,zimOn=false;
+function lowerView(){
+ let v=GRID_VIEWS.lower;
+ if(!v){v=makeGridView('lower',NROWS0,ROWSTART0);GRID_VIEWS.lower=v;}
+ return v;
+}
+function lowerTargetTrack(){
+ if(typeof stripSel!=='undefined'&&stripSel&&stripSel.t&&stripSel.t!=='drums'&&(stripSel.t in project.tracks))return stripSel.t;
+ return (activeTrack==='drums')?'melody':activeTrack;
+}
+function lowerConfigure(){
+ /* aim the view: the selected clip's span when a clip is selected, else 4 bars from
+    the playhead's bar ("the selected clip/track appears zoomed from the playhead") */
+ const v=lowerView(),t=lowerTargetTrack();
+ if(v.track!==t){v.track=t;resetGridRange(v);}
+ let b0=Math.floor((((typeof playheadBeat==='number')?playheadBeat:0)%LOOP)/4)*4,bN=Math.min(16,LOOP-b0);
+ if(typeof stripSel!=='undefined'&&stripSel&&stripSel.t===t&&stripSel.i!=null){
+  const sp=trackCellSpans(t)[stripSel.i];
+  if(sp){b0=sp.a;bN=Math.max(4,Math.min(sp.d,LOOP-sp.a));}
+ }
+ v.b0=b0;v.bN=Math.max(4,bN);
+ v.px=Math.max(100,Math.min(600,(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.lowerPx)||180));
+ v.userPx=true;
+ return v;
+}
+function drawLower(){
+ const row=document.getElementById('lowerRow'),hd=document.getElementById('lowerHead'),el=document.getElementById('lowerGrid'),bar=document.getElementById('lowerBar'),handle=document.getElementById('lowerHandle');
+ if(!row||!el)return;
+ const show=lowerOpen&&!zimOn&&!(typeof paperView!=='undefined'&&paperView);
+ if(handle)handle.style.display=(typeof paperView!=='undefined'&&paperView)?'none':'flex';
+ if(!show){row.style.display='none';if(!zimOn&&GRID_VIEWS.lower&&GRID_VIEWS.lower.el&&GRID_VIEWS.lower.el!==svg)GRID_VIEWS.lower.el=null;return;}
+ row.style.display='flex';
+ const v=lowerConfigure();
+ v.el=el;
+ drawGridView(v,el);
+ lowerAudioOverlay(el,v);
+ if(hd){
+  hd.innerHTML='<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);">Lower<br>Window</span>'
+   +'<span style="font-size:10px;color:'+trackColorOf(v.track)+';font-weight:700;">'+trackLabel(v.track)+'</span>';
+  const cl=document.createElement('span');cl.textContent='✕';cl.style.cssText='cursor:pointer;color:var(--dim);font-size:12px;';
+  cl.title='Close the Lower Window (drag the handle above the Chord Lane to reopen)';
+  cl.onclick=()=>{lowerOpen=false;drawLower();};
+  hd.appendChild(cl);
+ }
+ if(bar&&!bar.__built){bar.__built=true;buildLowerBar(bar);}
+}
+function lowerAudioOverlay(el,v){
+ /* "audio populates it too": a linked track draws its clip name + anchor ticks over
+    the pane (the audio substrate is the Import window's link — peaks live there) */
+ try{
+  const L=audioLinks[v.track];if(!L||!L.isLinkedToAudio)return;
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  let inner='<text x="'+(GUT+4)+'" y="'+(viewTop(v)+12)+'" font-size="9.5" fill="#7fb4d8" opacity=".8" pointer-events="none">♫ '+(L.clipName||'linked audio')+'</text>';
+  if(Array.isArray(L.anchors))for(const a of L.anchors){
+   const b=(a-((L.offsetBeats||0)))*(L.beatsPerClap||1);
+   if(b>=v.b0&&b<=v.b0+v.bN)inner+='<line x1="'+(GUT+(b-v.b0)*PPB)+'" y1="'+viewTop(v)+'" x2="'+(GUT+(b-v.b0)*PPB)+'" y2="'+(viewTop(v)+v.px)+'" stroke="#7fb4d8" stroke-width="0.8" opacity=".35" pointer-events="none"/>';
+  }
+  g.innerHTML=inner;el.appendChild(g);
+ }catch(e){}
+}
+function qeOwnerTrack(){
+ const ov=GRID_VIEWS[selOwner];
+ return (ov&&ov.track)||activeTrack;
+}
+function buildLowerBar(bar){
+ /* the QUICK-EDIT STRIP: +2 · ×2 · reverse · invert · legato · duplicate · randomize ·
+    velocity · velocity-range (the client's list — NOT Ableton's note context menu;
+    §5's correction: the screenshots are the authority, the prose was wrong). ×2,
+    invert and velocity reuse the shipped implementations; the rest are the new pure
+    layer. One undo per press. +Chord Editor and +Quantize sit on its left (⑦'s spec). */
+ const mkB=(label,tip,fn)=>{
+  const b=document.createElement('span');b.className='part';
+  b.style.cssText='padding:3px 9px;font-size:10.5px;';
+  b.textContent=label;b.title=tip;
+  b.onclick=fn;
+  bar.appendChild(b);
+ };
+ const needSel=fn=>()=>{
+  if(!selNotes.size){flashHint('Select some notes first (drag a box in the Lower Window).');return;}
+  fn();
+ };
+ const applyRows=(f,tag)=>needSel(()=>{
+  snapshot();
+  withTrack(qeOwnerTrack(),()=>{
+   const out=f(project.melody,[...selNotes]);
+   project.melody.length=0;for(const n of out)project.melody.push(n);
+  });
+  noteEngine(tag,{n:selNotes.size});
+  refresh(true);
+ });
+ mkB('＋ Chord','Open the +Chord Editor flyout (left of the grid)',()=>openFlyCol());
+ mkB('⊞ Quant','Open the Quantize window (left of the grid, below +Chord Editor)',()=>openFlyCol());
+ const sep=document.createElement('span');sep.style.cssText='width:1px;height:14px;background:var(--line);margin:0 2px;';bar.appendChild(sep);
+ mkB('+2','Transpose the selection up 2 semitones (one undo; select and press again to keep climbing)',needSel(()=>{
+  snapshot();withTrack(qeOwnerTrack(),()=>{for(const i of selNotes){const n=project.melody[i];if(n)n[2]+=2;}});
+  noteEngine('qe-plus2',{});refresh(true);
+ }));
+ mkB('×2','Double the selection’s length — the shipped 2× stretch (needs the dashed selection box)',()=>{
+  if(!selBox){flashHint('Select 2+ notes first — ×2 stretches the boxed material.');return;}
+  transformSelection(2);
+ });
+ mkB('◀ reverse','Mirror the selection in time — last note first (one undo)',applyRows((r,i2)=>qeReverseRows(r,i2),'qe-reverse'));
+ mkB('♻ invert','Cycle the chord voicing — lowest note up an octave (the shipped inversion)',needSel(()=>{
+  withTrack(qeOwnerTrack(),()=>{
+   const r=invertGridChord(project.melody,[...selNotes],1);
+   if(!r){flashHint('Select 2+ notes of a chord first.');return;}
+   snapshot();noteEngine('invert-grid-chord',{dir:1});
+   project.melody[r.idx][2]=r.midi;
+  });
+  refresh(true);
+ }));
+ mkB('― legato','Extend each selected note to the next selected note’s start — no gaps (one undo)',applyRows((r,i2)=>qeLegatoRows(r,i2),'qe-legato'));
+ mkB('⧉ duplicate','Copy the selection immediately after itself (one undo)',needSel(()=>{
+  snapshot();
+  withTrack(qeOwnerTrack(),()=>{
+   const idxs=[...selNotes].filter(i=>project.melody[i]);
+   let a=1/0,b=-1/0;
+   for(const i of idxs){const n=project.melody[i];a=Math.min(a,n[0]);b=Math.max(b,n[0]+n[1]);}
+   const span=b-a,base=project.melody.length;
+   for(const i of idxs){
+    const c=project.melody[i].slice();c[0]=+(c[0]+span).toFixed(6);
+    if(c[0]<LOOP-1e-6){c[1]=Math.min(c[1],+(LOOP-c[0]).toFixed(6));project.melody.push(c);}
+   }
+   selNotes.clear();for(let k2=base;k2<project.melody.length;k2++)selNotes.add(k2);
+  });
+  noteEngine('qe-duplicate',{});refresh(true);
+ }));
+ mkB('⚄ randomize','Humanize the selection’s velocities — a gentle ±12% scatter (one undo)',needSel(()=>{
+  snapshot();
+  withTrack(qeOwnerTrack(),()=>{
+   for(const i of selNotes){const n=project.melody[i];if(!n)continue;
+    const v0=(typeof n[8]==='number')?n[8]:.8;
+    n[8]=+Math.max(.05,Math.min(1,v0+(Math.random()*.24-.12))).toFixed(3);}
+  });
+  noteEngine('qe-randomize',{});refresh(true);
+ }));
+ mkB('🔊 velocity','Set every selected note’s velocity to the Vel slider’s value (the shipped control)',needSel(()=>{
+  const vr=document.getElementById('velRange');
+  snapshot();
+  withTrack(qeOwnerTrack(),()=>{for(const i of selNotes){const n=project.melody[i];if(n)n[8]=+(vr?vr.value/100:.8).toFixed(3);}});
+  noteEngine('qe-velocity',{});refresh(true);
+ }));
+ mkB('◧ vel-range','Rescale the selection’s velocity SPREAD into a range you pick (one undo)',needSel(()=>{
+  const lo=prompt('Velocity range — low (5–100):','40'),hi=lo==null?null:prompt('…and high (5–100):','95');
+  if(lo==null||hi==null)return;
+  const l2=Math.max(.05,Math.min(1,(+lo||40)/100)),h2=Math.max(l2,Math.min(1,(+hi||95)/100));
+  snapshot();
+  withTrack(qeOwnerTrack(),()=>{
+   const out=qeVelRangeRows(project.melody,[...selNotes],l2,h2);
+   project.melody.length=0;for(const n of out)project.melody.push(n);
+  });
+  noteEngine('qe-velrange',{});refresh(true);
+ }));
+}
+/* the open/resize gestures + the ZIM toggle */
+(function(){
+ const handle=document.getElementById('lowerHandle'),rz=document.getElementById('lowerRz'),el=document.getElementById('lowerGrid');
+ if(el){
+  el.addEventListener('mousedown',gridMouseDown);
+  el.addEventListener('wheel',gridWheel,{passive:false});
+  el.addEventListener('contextmenu',e=>{if(typeof gridCtxMenu==='function')gridCtxMenu(e);});
+ }
+ const dragH=(e,opening)=>{
+  e.preventDefault();
+  const y0=e.clientY,p0=lowerOpen?((SETTINGS&&SETTINGS.lowerPx)||180):0;
+  let did=false;
+  const mv=ev=>{
+   const d=ev.clientY-y0;
+   if(Math.abs(d)>6)did=true;
+   if(!did)return;
+   const px=Math.max(100,Math.min(600,p0+d));
+   if(!lowerOpen&&d>10)lowerOpen=true;
+   if(lowerOpen){SETTINGS.lowerPx=px;drawLower();}
+  };
+  const up=()=>{
+   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+   if(!did&&opening){lowerOpen=!lowerOpen;drawLower();}   /* a plain click toggles too */
+   persistSettings();
+  };
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
+ if(handle)handle.addEventListener('mousedown',e=>dragH(e,true));
+ if(rz)rz.addEventListener('mousedown',e=>dragH(e,false));
+ const zb=document.getElementById('zimBtn');
+ if(zb)zb.onclick=()=>{
+  zimOn=!zimOn;
+  zb.classList.toggle('on',zimOn);
+  zb.style.background=zimOn?'var(--accent)':'';zb.style.color=zimOn?'#1a1408':'';
+  if(zimOn){const v=lowerConfigure();v.el=svg;}
+  else{const v=GRID_VIEWS.lower;if(v)v.el=document.getElementById('lowerGrid');}
+  refresh(false);
+  zb.blur();
+ };
+})();
 let tempoDrawEl=null;
 function closeTempoDraw(){if(tempoDrawEl){try{tempoDrawEl.remove();}catch(e){}tempoDrawEl=null;}}
 function openTempoDraw(x,y){
@@ -9444,6 +10885,11 @@ function gridMouseDown(e){
   return;
  }
  const pt=svgPoint(e);if(!pt)return;
+ if(pt.inScrub){ /* ⑪d: the scrub area rides its OWN listeners — the global `drag`
+    object, the selections, the zoom and the loop are untouched by construction
+    (the client's explicit requirement; verify-25 asserts it directly) */
+  e.preventDefault();scrubDown(e);return;
+ }
  if(pt.inLane){ /* vertical drag = zoom · plain click = move playhead · plain drag ←→ = loop-select
                   (July 30 fix 4, the lanepend path) · DOUBLE-click-drag = loop-select too ·
                   plain double-click = delete the loop · existing region: edges resize, middle drags
@@ -9477,12 +10923,17 @@ function gridMouseDown(e){
    lastLaneClick=null;
    return;
   }
-  const hitL=loopHit(loopSel,(pt.x-GUT)/PPB,loopEdgeBeats());
+  /* ⑪b: the hit test speaks the EFFECTIVE brace — with no region of its own the brace
+     covers the whole arrangement (Ableton's model), so its two edge handles are always
+     grabbable. The default brace's MIDDLE stays pass-through (plain click = playhead,
+     ↔ = scroll) — only a user-made region slides/toggles from its middle. */
+  const effB=braceRegion(loopSel,LOOP);
+  const hitL=loopHit(effB,(pt.x-GUT)/PPB,loopEdgeBeats());
   if(hitL==='L'||hitL==='R'){ /* grab an edge: resize (anchor = the opposite edge) */
-   drag={mode:'loopsel',anchor:hitL==='L'?loopSel.b:loopSel.a,x0:pt.x,y0:pt.y};
+   drag={mode:'loopsel',anchor:hitL==='L'?effB.b:effB.a,x0:pt.x,y0:pt.y,fromDef:!loopSel};
    return;
   }
-  if(hitL==='M'){ /* grab the middle: slide the whole region, width intact */
+  if(hitL==='M'&&loopSel){ /* grab the middle: slide the whole region, width intact */
    drag={mode:'loopmove',sel0:{a:loopSel.a,b:loopSel.b},x0:pt.x,y0:pt.y};
    return;
   }
@@ -9607,11 +11058,20 @@ function gridMouseDown(e){
  refresh(false);
 }
 svg.addEventListener('mousedown',gridMouseDown);
+svg.addEventListener('contextmenu',e=>{if(typeof gridCtxMenu==='function')gridCtxMenu(e);});   /* 2.5 ⑤⑥: ctrl+click in the grid background → the flyout dispatcher */
 /* 2.1b: two-finger trackpad scroll pans any grid view vertically — only when its lattice
    overflows the viewport (otherwise the page scrolls as always). Horizontal wheel keeps
    the .gridwrap timeline scroll. */
 function gridWheel(e){
  if(typeof paperView!=='undefined'&&paperView)return;
+ /* 2.5 ⑩ fix 1 (+ ⑪'s ⇧+scroll row): shift+scroll = HORIZONTAL timeline scroll, over
+    regions, even with notes selected — the selection never eats the gesture. Also
+    Ableton's own documented Scroll Left/Right binding (§9.3's shortcut table). */
+ if(e.shiftKey&&!(e.ctrlKey||e.metaKey)){
+  const w=document.getElementById('gridWrap');
+  if(w){e.preventDefault();w.scrollLeft+=(e.deltaY||e.deltaX||0);}
+  return;
+ }
  const v=gridViewForEvent(e);
  const ms=viewMaxScroll(v);
  if(ms<=0||Math.abs(e.deltaY)<=Math.abs(e.deltaX))return;
@@ -9652,6 +11112,7 @@ function wheelZoomPPB(ppb,dy){
   raf=requestAnimationFrame(()=>{
    raf=0;
    if(typeof paperView!=='undefined'&&paperView)return;
+   if(typeof drawOverview==='function')drawOverview();   /* ⑪e: the outline tracks every pan */
    let any=viewMaxScroll(GRID_VIEWS.main)>0;
    if(!any)for(const id in GRID_VIEWS)if(id!=='main'&&viewMaxScroll(GRID_VIEWS[id])>0){any=true;break;}
    if(any)drawGrid();
@@ -9764,18 +11225,23 @@ document.addEventListener('mousemove',e=>{
   if(drag.xor)selChordSet=xorSelection(drag.baseC,enclC);
   else{selChordSet.clear();drag.baseC.forEach(ci=>selChordSet.add(ci));enclC.forEach(ci=>selChordSet.add(ci));}
  }else if(drag.mode==='lanepend'){
-  /* July 30 fix 4: the lane drag declares itself — ↕ promotes to zoom, ↔ starts
-     drawing a loop region from the press beat (armed, like the double-click path) */
+  /* July 30 fix 4: the lane drag declares itself — ↕ promotes to zoom (as ever).
+     2.5 ⑪a (Q2, client verbatim: "Yes. It becomes scroll."): ↔ now SCROLLS the view —
+     Ableton's own documented ruler drag ("drag left or right to scroll through the
+     timeline"). The old draw-a-loop ↔ path is RETIRED; loops are created by ⌘/Ctrl+L
+     from a time selection, by double-click-drag (the app's own kept gesture, T2), or
+     by grabbing the always-on brace's edges (⑪b). */
   const m=laneDragMode(pt.x-drag.x0,pt.y-drag.y0);
   if(m==='zoom')drag.mode='zoom';
   else if(m==='loop'){
-   const st=gridStep();
-   const anchor=Math.max(0,Math.min(LOOP,Math.round(((drag.x0-GUT)/PPB)/st)*st));
-   loopSel=loopSelFromDrag(anchor,anchor,st,LOOP);
-   loopOn=true;drawLoopBtn();
-   drag={mode:'loopsel',anchor,x0:drag.x0,y0:drag.y0,did:true};
-   refresh(false);
+   const w=document.getElementById('gridWrap');
+   drag={mode:'lanescroll',cx0:e.clientX,s0:w?w.scrollLeft:0};
   }
+  return;
+ }else if(drag.mode==='lanescroll'){
+  /* ⑪a: grab-the-timeline scroll — dragging right brings earlier bars into view */
+  const w=document.getElementById('gridWrap');
+  if(w)w.scrollLeft=Math.max(0,drag.s0-(e.clientX-drag.cx0));
   return;
  }else if(drag.mode==='zoom'){
   PPB=Math.max(14,Math.min(240,drag.p0*Math.exp((pt.y-drag.y0)/110)));   /* deeper max zoom: room for the 32nd band */
@@ -9784,7 +11250,7 @@ document.addEventListener('mousemove',e=>{
   const st=gridStep();
   const cb=Math.max(0,Math.min(LOOP,Math.round(((pt.x-GUT)/PPB)/st)*st));
   if(Math.abs(pt.x-drag.x0)>4)drag.did=true;
-  if(drag.fromDbl&&!drag.did)return;   /* 2026-08-11a FIX 2: a double-click press creates nothing until the drag declares itself — a plain double-click stays a pure delete (mouseup) */
+  if((drag.fromDbl||drag.fromDef)&&!drag.did)return;   /* 2026-08-11a FIX 2: a double-click press creates nothing until the drag declares itself — a plain double-click stays a pure delete (mouseup) · ⑪b: a default-brace edge press is the same — a click never mints a region */
   loopSel=loopSelFromDrag(drag.anchor,cb,st,LOOP);
   if(drag.fromDbl&&!drag.armed){drag.armed=true;loopOn=true;drawLoopBtn();}   /* a fresh dbl-drag selection arms the loop, as it always did */
   if(drag.did&&playing&&loopOn)applyLoopToTransport();   /* live re-aim while looping */
@@ -9953,6 +11419,7 @@ window.addEventListener('mouseup',e=>{
   if(playheadMoveIntent(false,moved>=4,drag.additive||drag.xor))
    setPlayheadBeat(beatFromClickX(drag.x0,GUT,PPB,gridStep(),LOOP));
  }
+ if(drag.mode==='lanescroll'){drag=null;return;}   /* ⑪a: a ruler scroll ends clean — no playhead move (it only starts past the 5px threshold) */
  if(drag.mode==='zoom'||drag.mode==='lanepend'){
   /* the bar-number lane doubles as a timeline bar: click (no real drag) = position playhead
      (strip/background-initiated zooms never touch the playhead) — measured against the
@@ -10041,13 +11508,14 @@ function svgPoint(e,unclamped,v){
  const r=(v.el||svg).getBoundingClientRect();
  const x=e.clientX-r.left,y=e.clientY-r.top;
  const inLane=(v.top==null)&&y<BARH;   /* strip-grids have no bar lane */
- if(!unclamped&&x<GUT&&!inLane)return null;
+ const inScrub=(v.top==null)&&y>=BARH&&y<hdrH()&&hdrH()>BARH;   /* ⑪d: the scrub strip under the ruler */
+ if(!unclamped&&x<GUT&&!inLane&&!inScrub)return null;
  const wb=viewBeatWindow(v,LOOP);   /* July 24: windowed views hit-test in absolute beats */
  const step=gridStep(),raw=wb.b0+(x-GUT)/PPB;
  const beat=Math.max(wb.b0,Math.min(wb.bEnd,Math.round(raw/step)*step));
  const beatFloor=Math.max(wb.b0,Math.min(wb.bEnd-step,Math.floor(raw/step+1e-6)*step));
  const row=viewRowAt(v,y);
- return {x,y,beat,beatFloor,row,inLane,step};
+ return {x,y,beat,beatFloor,row,inLane,inScrub,step};
 }
 
 /* ==== CURVE KIT (component) ==== a reusable curve editor. Give it a host element,
@@ -13905,6 +15373,13 @@ function togglePin(){
 document.getElementById('pinBtn').onclick=e=>{togglePin();e.target.blur();};
 document.getElementById('chkTrip').onchange=e=>{gridTriplets=e.target.checked;refresh(false);e.target.blur();};
 document.getElementById('chkGhosts').onchange=e=>{ghostsOn=e.target.checked;try{localStorage.setItem('cp_ghosts',ghostsOn?'1':'0');}catch(x){}refresh(false);e.target.blur();};
+/* 2.5 ⑧: the Continuous toggle — DEVICE data (cp_settings), default OFF. (Only the
+   handler wires here — SETTINGS is a later `let`, so the checked-state sync lives at
+   the SETTINGS declaration site; a typeof here would throw on the TDZ.) */
+(function(){
+ const cc=document.getElementById('chkCont');if(!cc)return;
+ cc.onchange=e=>{SETTINGS.continuous=!!e.target.checked;persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();e.target.blur();};
+})();
 document.getElementById('chkPaper').onchange=e=>{
  paperView=e.target.checked;
  if(cdrag&&cdrag.ghost)cdrag.ghost.remove();
@@ -13989,6 +15464,58 @@ window.addEventListener('keydown',e=>{
    refresh(false);
   }
  }
+ /* ==== 2.5 ⑪b · THE ABLETON LOOP/ZOOM KEYBOARD SET (§9.3 — five bindings, all
+    verified free, all Ableton's own documented commands) ==== */
+ else if(mod&&e.shiftKey&&(e.key==='l'||e.key==='L')){
+  /* ⌘⇧L — Select Material in Loop: the brace's contents become the note selection */
+  e.preventDefault();
+  const br=braceRegion(loopSel,LOOP);
+  Sel.clearSelection('note');
+  windowNoteIndices(project.melody,br.a,br.b).forEach(i=>Sel.select('note',i,true));
+  refresh(false);
+ }
+ else if(mod&&(e.key==='l'||e.key==='L')){
+  /* ⌘L — Ableton documents TWO names for this one key ("Loop Selection" in the
+     Arrangement chapter, "Toggle Loop Brace" in the shortcut chapter — §9.3): with a
+     time selection it sets the brace to it and arms the loop; set to the same
+     selection again (or with nothing selected) it toggles the loop on/off. */
+  e.preventDefault();
+  if(selBox&&typeof selBox.b0==='number'&&selBox.b1-selBox.b0>1e-6){
+   const st=gridStep();
+   const a=Math.max(0,Math.round(selBox.b0/st)*st),b=Math.min(LOOP,Math.round(selBox.b1/st)*st);
+   if(loopSel&&loopOn&&Math.abs(loopSel.a-a)<1e-6&&Math.abs(loopSel.b-b)<1e-6)loopOn=false;
+   else{loopSel=loopSelFromDrag(a,b,st,LOOP);loopOn=true;}
+  }else loopOn=!loopOn;
+  drawLoopBtn();if(playing)applyLoopToTransport();refresh(false);
+ }
+ else if(mod&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+  /* ⌘↑/↓ — Halve / Double Loop Length (Ableton's MODIFIED pair; the bare arrows keep
+     their shipped pitch/step meanings — §9.3's collision table). ↑ doubles, ↓ halves. */
+  e.preventDefault();
+  loopSel=loopResize(braceRegion(loopSel,LOOP),e.key==='ArrowUp'?2:.5,gridStep(),LOOP);
+  if(!loopOn){loopOn=true;drawLoopBtn();}
+  if(playing)applyLoopToTransport();refresh(false);
+ }
+ else if(!mod&&!e.altKey&&!e.shiftKey&&(e.key==='z'||e.key==='Z')){
+  /* bare Z — Zoom to Arrangement Time Selection (Ableton's own; bare z was unbound) */
+  if(selBox&&typeof selBox.b0==='number'&&selBox.b1-selBox.b0>1e-6){
+   e.preventDefault();
+   const w=document.getElementById('gridWrap');
+   zoomBackStack.push({ppb:PPB,sl:w?w.scrollLeft:0});
+   const vw=w?Math.max(120,w.clientWidth-GUT-14-76):800;
+   PPB=Math.max(14,Math.min(240,vw/(selBox.b1-selBox.b0)));
+   refresh(false);
+   if(w)w.scrollLeft=Math.max(0,GUT+14+76+selBox.b0*PPB-8);
+  }
+ }
+ else if(!mod&&!e.altKey&&!e.shiftKey&&(e.key==='x'||e.key==='X')){
+  /* bare X — Zoom Back from Arrangement Time Selection (steps back through Z zooms) */
+  const zb=zoomBackStack.pop();
+  if(zb){
+   e.preventDefault();PPB=zb.ppb;refresh(false);
+   const w=document.getElementById('gridWrap');if(w)w.scrollLeft=zb.sl;
+  }
+ }
  else if(e.key==='Delete'||e.key==='Backspace'){
   e.preventDefault();
   /* v3 (client §2): a SELECTED NAME BOX + Delete removes the track — built-ins are
@@ -13996,6 +15523,16 @@ window.addEventListener('keydown',e=>{
   if(typeof selHead!=='undefined'&&selHead){deleteTrackFromUI(selHead);return;}
   /* MG round: a live cross-track capture deletes whole (one undo) */
   if(typeof xselActive==='function'&&xselActive()){xselDelete();return;}
+  /* 2.5 ①: selected automation nodes delete first (node-select + Delete, §6 claim 6) */
+  if(typeof autoSel!=='undefined'&&autoSel.id&&autoSel.set.size){
+   snapshot();
+   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===autoSel.id
+    ?{...l,nodes:l.nodes.filter((_,j)=>!autoSel.set.has(j))}:l);
+   autoSel={id:null,set:new Set()};
+   noteEngine('auto-node',{op:'delete-selected'});
+   if(typeof drawAutoLanes==='function')drawAutoLanes();
+   return;
+  }
   /* July 30 client fix 1: a selected strip clip deletes its MIDI (the cell goes black) */
   if(selSurface==='strip'&&typeof stripDeleteSelected==='function'&&stripDeleteSelected())return;
   /* nothing else selected → Delete removes the loop region */
@@ -14114,6 +15651,7 @@ function loadSong(id){
  project.tracks={melody:s.melody.filter(n=>n[0]<LOOP).map(n=>n.slice()),bass:null,comping:null,pad:null};
  project.clipMap={};   /* July 24 r2: song loads reset every lane to default (chord-aligned) clips */
  project.tempoMap=[];   /* 4.2: song loads flatten the tempo lane */
+ project.markers=[];project.tsigMap=[];project.autoLanes=[];   /* 2.5: song loads reset the transport-fold structures too */
  activeTrack='melody';
  project.style=STYLES.find(x=>x.id===s.style);
  selStyle.value=s.style;selChords.value='none';
@@ -14442,6 +15980,11 @@ function openTrackMenu(t,px,py,nmEl){
   hiddenTracks&&hiddenTracks.size?'':'No tracks are hidden right now');
  mk('✕ Delete track',()=>deleteTrackFromUI(t),false,
   /^x\d+$/.test(t)?'Deletes this custom track':'Built-in tracks are preserved (hidden + silent) — recover them any time');
+ /* 2.5 ①②: automation lanes hang off their track — as many as needed, stacked */
+ mk('＋ Automation lane',()=>addAutoLane(t,'auto'),t==='drums',
+  'Opens a MIDI automation lane below '+trackLabel(t)+' — pencil draws nodes, ⌥-drag rules a straight ramp (⇧ holds it level), ctrl+click curves a segment, ⌫ clears. Add as many as you need — they stack.');
+ mk('〜 Pitch-bend lane',()=>addAutoLane(t,'bend'),t==='drums'||(project.autoLanes||[]).some(l=>l.track===t&&l.kind==='bend'),
+  'Opens the pitch-bend lane below '+trackLabel(t)+' — the centre line is no bend; every slide and melisma on the track draws its real n[7] curve here (one store, never two).');
  /* ⌘G round: grouping lives in the menu too (the keyboard path is ⇧-click + ⌘G) */
  const gHere=groupOf(t,projGroups());
  if(gHere)
@@ -14712,6 +16255,8 @@ function drawTrackSel(){
  }
  if(selOwner==='cliped'){   /* the pop-up clip editor owns its selection while it's open */
   if(!GRID_VIEWS.cliped){selOwner='main';selNotes.clear();activeGridView=GRID_VIEWS.main;}
+ }else if(selOwner==='lower'){   /* 2.5 ⑦: the Lower Window owns its selection while open (or in ZIM) */
+  if(!GRID_VIEWS.lower||(!lowerOpen&&!zimOn)){selOwner='main';selNotes.clear();activeGridView=GRID_VIEWS.main;}
  }else if(selOwner!=='main'){
   const ov=GRID_VIEWS[selOwner];
   const ot=ov&&ov.track;
@@ -14754,7 +16299,11 @@ function drawTrackSel(){
  let stackIdx=0;
  const renderedG=new Set();
  for(const t of order){
-  if(t==='__grid'){cur=hostB||host;stackIdx++;continue;}
+  if(t==='__grid'){
+   cur=hostB||host;stackIdx++;
+   for(const al of autoLanesFor(activeTrack))cur.appendChild(mkAutoLaneRow(al));   /* 2.5 ①②: the active track's automation lanes hang just below the Grid block */
+   continue;
+  }
   if(lanePlan.stripLanes.indexOf(stackIdx)>=0)cur.appendChild(mkLaneRow(laneIdx++));
   stackIdx++;
   const gT=groupOf(t,projGroups());
@@ -14808,6 +16357,7 @@ function drawTrackSel(){
       so a marquee can sweep across tracks without the app reading it as a resize */
    row.appendChild(sw);
    cur.appendChild(row);
+   for(const al of autoLanesFor(t))cur.appendChild(mkAutoLaneRow(al));   /* 2.5 ①② */
    continue;
   }
   const strip=document.createElement('div');strip.className='tstrip';
@@ -14819,6 +16369,7 @@ function drawTrackSel(){
   /* v3 (client Q3): strip resize lines moved to the name box — see trackHead */
   row.appendChild(sw);
   cur.appendChild(row);
+  for(const al of autoLanesFor(t))cur.appendChild(mkAutoLaneRow(al));   /* 2.5 ①② */
  }
  LANE_VIEWS.length=laneIdx;   /* July 24 r3: drop lane views whose position vanished */
  applyCornerPin();   /* July 30 fix 4: a just-toggled corner triangle stays under the cursor */
@@ -15074,8 +16625,13 @@ function buildStripContent(strip,t){
   :' — chord/MIDI clips: press = select + play · ⇧-click = multi-select · ⌘-click = merge menu · double-click = pop-up clip editor · drag onto another lane = merge/replace there');
  /* layer 1: the clip cells (60% transparent chord tints + the break lines) */
  const cells=document.createElement('div');cells.className='scells';
+ /* 2.5 ⑧ CONTINUOUS (default OFF — every clip assertion still runs against the OFF
+    state untouched): ON hides the clip objects — one full-width span per track, no
+    boundaries, no chord labels; double-click opens the TRACK itself (stripCellDown) */
+ const contOn=!acting&&t!=='drums'&&(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.continuous===true);
  const spans=acting
   ?(function(){const out=[];let t2=0;for(const ch of project.chords){if(t2>=LOOP-1e-6)break;out.push({a:t2,d:Math.min(ch.d,LOOP-t2)});t2+=ch.d;}return out;})()
+  :contOn?[{a:0,d:LOOP}]
   :trackCellSpans(t);
  /* July 30 client fix 1: an EMPTY clip span reads BLACK — a deleted clip leaves a
     visible gap, not a chord-colored cell that pretends MIDI is there. Drums (style-
@@ -15127,7 +16683,7 @@ function buildStripContent(strip,t){
  /* layer 3 (July 26b): the underlying chord written in the middle of every clip —
     default ON app-wide (⚙ Settings → Clips can turn clip names off; the Chord Palette
     and the Chord Lane always keep theirs, and the ACTING chord lane is exempt too) */
- if(acting||!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.clipChordNames===false)){
+ if(!contOn&&(acting||!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.clipChordNames===false))){   /* ⑧: Continuous hides the clip chrome, names included */
   const labs=document.createElement('div');labs.className='sclabs';
   spans.forEach((sp,ci)=>{
    const lb=document.createElement('div');lb.className='sclab';lb.style.flex=String(sp.d);
@@ -15150,14 +16706,14 @@ function mkLaneRow(idx){
  const wrapEl=document.createElement('div');wrapEl.className='gvwrap';
  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
  sv.setAttribute('class','blane');
- sv.setAttribute('width',gridW());sv.setAttribute('height',BARH);
+ sv.setAttribute('width',gridW());sv.setAttribute('height',hdrH());   /* ⑪d: ruler + scrub in every docked home */
  sv.style.cssText='display:block;user-select:none;';
  sv.innerHTML=barLaneMarkup(false);
  sv.addEventListener('mousedown',gridMouseDown);
  /* lane VIEWS persist across rebuilds (same object, fresh element) so a live zoom/loop
     drag survives the mid-drag drawTrackSel the zoom itself triggers */
  let lv=LANE_VIEWS[idx];
- if(!lv){lv=makeGridView('blane'+idx,0,0);lv.px=BARH;lv.laneOnly=true;LANE_VIEWS[idx]=lv;}
+ if(!lv){lv=makeGridView('blane'+idx,0,0);lv.px=hdrH();lv.laneOnly=true;LANE_VIEWS[idx]=lv;}
  lv.el=sv;
  wrapEl.appendChild(sv);row.appendChild(wrapEl);
  return row;
@@ -15271,9 +16827,12 @@ function stripCellDown(ev,t,i,a,d){
  const now=Date.now();
  if(stripClk.t===t&&stripClk.i===i&&now-stripClk.tm<350){
   /* July 24 round (client): double-click a selected cell = pop-up MIDI clip editor
-     (the old open-in-Grid lives on as the ⇱ button inside the pop-up) */
+     (the old open-in-Grid lives on as the ⇱ button inside the pop-up).
+     2.5 ⑧: in CONTINUOUS view, double-click opens the TRACK ITSELF — no clip pop-up
+     (the client's exact words). */
   stripClk={t:null,i:null,tm:0};
-  openClipEditor(t,a,d);
+  if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.continuous===true&&t!=='drums'&&typeof toggleTrackBig==='function')toggleTrackBig(t);
+  else openClipEditor(t,a,d);
   return;
  }
  stripClk={t,i,tm:now};
@@ -15375,8 +16934,11 @@ function positionMainRz(){
  const stripEl=document.getElementById('mainStrip');
  const contentBottom=svgH+(stripEl?stripEl.offsetHeight:0);
  /* top line sits at the lattice's top edge — just under the bar lane when main owns it.
-    Zones lean OUTWARD so even a minimum-height clip lane keeps a clickable middle. */
- mrT.style.top=(viewTop(GRID_VIEWS.main)-7)+'px';
+    Zones lean OUTWARD so even a minimum-height clip lane keeps a clickable middle.
+    2.5 ⑪d: the header now ends in the SCRUB STRIP — the zone leans INTO the lattice
+    (down) so the strip keeps its pixels (§3 landmine ④'s cure: zones lean into the
+    box; content stays out of their pixels — the stolen-mousedown bug's third visit). */
+ mrT.style.top=(viewTop(GRID_VIEWS.main)-2)+'px';
  mr.style.bottom='';
  mr.style.top=(contentBottom-2)+'px';
 }
@@ -15878,6 +17440,11 @@ function refresh(reschedule){
  drawChordLane();drawChordPanel();drawClipPanel();
  if(typeof drawModLane==='function')drawModLane();   /* 4.1: the Keys lane tracks sections/zoom/psych */
  if(typeof drawTempoLane==='function')drawTempoLane();   /* 4.2: the Tempo lane tracks zoom/undo/edits */
+ if(typeof drawSectionLane==='function')drawSectionLane();   /* 2.5 ⑪f */
+ if(typeof drawTsigLane==='function')drawTsigLane();   /* 2.5 ④ */
+ if(typeof drawOverview==='function')drawOverview();   /* 2.5 ⑪e */
+ if(typeof drawAutoLanes==='function')drawAutoLanes();   /* 2.5 ①② */
+ if(typeof drawLower==='function')drawLower();   /* 2.5 ⑦ */
  if(typeof syncVelControl==='function')syncVelControl();   /* 2.3: Vel readout follows the selection */
  if(typeof syncSlidePanel==='function')syncSlidePanel();
  /* 5.0 r5: the flip-book tracks selection + edits live while it's the open view */
@@ -15949,12 +17516,8 @@ document.getElementById('recBtn').onclick=e=>{toggleRecord();e.target.blur();};
 const loopBtn=document.getElementById('loopBtn');
 function drawLoopBtn(){loopBtn.classList.toggle('on',loopOn);}
 loopBtn.onclick=e=>{
- if(!loopSel){
-  const old=loopBtn.textContent;
-  loopBtn.textContent='⟳ double-click-drag the bar lane first';
-  setTimeout(()=>{loopBtn.textContent=old;},1800);
-  e.target.blur();return;
- }
+ /* ⑪b: the brace always exists now — with no region of its own the toggle loops the
+    whole arrangement (Ableton's model: an empty brace covers everything) */
  loopOn=!loopOn;drawLoopBtn();
  applyLoopToTransport();
  refresh(false);e.target.blur();
@@ -15990,7 +17553,10 @@ function romanLblToNumbers(lbl){
  const minor=low&&!/^[°ø]/.test(suf)?'m':'';   /* ° / ø already imply the small third */
  return (m[1]||'')+DEG[m[2].toLowerCase()]+minor+suf;}
 function parseSettings(str){
- const def={numerals:'roman',laneLabel:'function',autosave:true,recordOver:false,clipAlign:'chords',clipDrop:'ask',clipChordNames:true,chordLaneCanHide:true,ragaFamFirst:'carnatic',ragaTerms:'',ragaMidiAud:true};
+ const def={numerals:'roman',laneLabel:'function',autosave:true,recordOver:false,clipAlign:'chords',clipDrop:'ask',clipChordNames:true,chordLaneCanHide:true,ragaFamFirst:'carnatic',ragaTerms:'',ragaMidiAud:true,
+  /* 2.5: the transport-fold + chrome preferences — DEVICE data (§2d: these ride
+     cp_settings, never the project file; the workspace-vs-device line for 1.7 R0) */
+  showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180};
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -16005,6 +17571,14 @@ function parseSettings(str){
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
    if(o.ragaMidiAud===false)def.ragaMidiAud=false;   /* 3.5: toggle ② defaults ON (client call, #13d) */   /* v3 (client §3): default ON — the lane may tuck away */
+   if(o.showOverview===false)def.showOverview=false;   /* 2.5 ⑪e */
+   if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
+   if(o.showSecLane===false)def.showSecLane=false;   /* 2.5 ⑪f */
+   if(o.showTsig===false)def.showTsig=false;   /* 2.5 ④ */
+   if(o.showPianoRoll===false)def.showPianoRoll=false;   /* 2.5 ③ */
+   if(o.markerLines==='off'||o.markerLines==='all')def.markerLines=o.markerLines;   /* 2.5 ⑪f: three-state, 'active' is the default */
+   if(o.continuous===true)def.continuous=true;   /* 2.5 ⑧: default OFF — the clip model rules */
+   if(typeof o.lowerPx==='number'&&o.lowerPx>=100&&o.lowerPx<=600)def.lowerPx=Math.round(o.lowerPx);   /* 2.5 ⑦: view state, device side */
   }
  }catch(e){}
  return def;}
@@ -16017,6 +17591,9 @@ function buildProjectRecord(p){
   viewH:(p.viewH&&Object.keys(p.viewH).length?p.viewH:undefined),   /* v3 fix: an order/hidden-only viewH persists too (27a dropped it) */
   clipMap:(p.clipMap&&Object.keys(p.clipMap).length?p.clipMap:undefined),
   tempoMap:(Array.isArray(p.tempoMap)&&p.tempoMap.length?p.tempoMap:undefined),   /* 4.2 */
+  markers:(Array.isArray(p.markers)&&p.markers.length?p.markers:undefined),   /* 2.5 ⑪f position markers */
+  tsigMap:(Array.isArray(p.tsigMap)&&p.tsigMap.length?p.tsigMap:undefined),   /* 2.5 ④ time signatures */
+  autoLanes:(Array.isArray(p.autoLanes)&&p.autoLanes.length?p.autoLanes:undefined),   /* 2.5 ①② automation lanes */
   srcs:(Array.isArray(p.srcs)&&p.srcs.length?p.srcs:undefined),   /* 4.4: cross-pollination sources */
   groups:(Array.isArray(p.groups)&&p.groups.length?p.groups:undefined),   /* ⌘G track groups */
   shelf:(Array.isArray(p.shelf)&&p.shelf.length?p.shelf:undefined),   /* 5.1: the ESSENCE SHELF */
@@ -16041,6 +17618,9 @@ function parseProjectFile(str){
   if(o.viewH!==undefined&&!validViewH(o.viewH))return null;   /* 2.1b (#12c) */
   if(o.clipMap!==undefined&&!validClipMap(o.clipMap))return null;   /* July 24 r2 clip boundaries */
   if(o.tempoMap!==undefined&&!validTempoMap(o.tempoMap))return null;   /* 4.2 the tempo lane */
+  if(o.markers!==undefined&&!validMarkers(o.markers))return null;   /* 2.5 ⑪f position markers */
+  if(o.tsigMap!==undefined&&!validTsigMap(o.tsigMap))return null;   /* 2.5 ④ time signatures */
+  if(o.autoLanes!==undefined&&!validAutoLanes(o.autoLanes))return null;   /* 2.5 ①② automation lanes */
   if(o.srcs!==undefined&&!validSrcs(o.srcs))return null;   /* 4.4 cross-pollination sources */
   if(o.groups!==undefined&&!validGroups(o.groups))return null;   /* ⌘G track groups */
   if(o.shelf!==undefined&&!validShelf(o.shelf))return null;   /* 5.1: the ESSENCE SHELF */
@@ -16048,6 +17628,7 @@ function parseProjectFile(str){
  }catch(e){return null;}}
 let SETTINGS=parseSettings(null);
 try{SETTINGS=parseSettings(localStorage.getItem('cp_settings'));}catch(e){}
+(function(){const cc=document.getElementById('chkCont');if(cc)cc.checked=SETTINGS.continuous===true;})();   /* 2.5 ⑧: the toggle reads its stored state here, past the TDZ */
 function persistSettings(){try{localStorage.setItem('cp_settings',JSON.stringify(SETTINGS));}catch(e){}}
 function dispLbl(l){return SETTINGS.numerals==='numbers'?romanLblToNumbers(l):l;}
 let projectDirty=false,autosaveTimer=null;
@@ -16069,7 +17650,7 @@ function currentViewH(){
 function currentProjectRecord(){
  return buildProjectRecord({songId:project.song.id,mode:project.mode,tonic:project.tonic,base:project.base,
   bpm:+tempo.value,styleId:project.style.id,loop:LOOP,chords:project.chords,tracks:project.tracks,
-  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,srcs:project.srcs,groups:project.groups,shelf:project.shelf,variations,ts:Date.now()});}
+  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,variations,ts:Date.now()});}
 function autosaveSoon(){
  projectDirty=true;
  if(!SETTINGS.autosave)return;
@@ -16099,6 +17680,9 @@ function applyProjectFile(o){
  project.tracks=JSON.parse(JSON.stringify(o.tracks));
  project.clipMap=o.clipMap?JSON.parse(JSON.stringify(o.clipMap)):{};   /* July 24 r2 */
  project.tempoMap=Array.isArray(o.tempoMap)?JSON.parse(JSON.stringify(o.tempoMap)):[];   /* 4.2 */
+ project.markers=normalizeMarkers(o.markers,LOOP);   /* 2.5 ⑪f */
+ project.tsigMap=normalizeTsigMap(o.tsigMap,LOOP);   /* 2.5 ④ */
+ project.autoLanes=normalizeAutoLanes(o.autoLanes,['melody','bass','comping','pad','drums'].concat(Object.keys(o.tracks||{})),LOOP);   /* 2.5 ①② */
  activeTrack='melody';
  project.style=STYLES.find(x=>x.id===o.styleId)||STYLES[0];
  project.srcs=srcsNormalize(o.srcs,SONGS.map(x=>x.id));   /* 4.4: sources ride project files */
@@ -17030,6 +18614,19 @@ function settingsHTML(){
   <option value="merge" ${SETTINGS.clipDrop==='merge'?'selected':''}>Always merge (add to what's there)</option>
   <option value="replace" ${SETTINGS.clipDrop==='replace'?'selected':''}>Always replace (clear the clips it engulfs first)</option>
  </select></p>
+ <h3>Transport &amp; Lanes</h3>
+ <p style="font-size:11.5px;color:var(--dim);">The transport header's lanes and the grid chrome — all hideable here (2.5 item ④'s rule). These are device preferences: they never ride your project file.</p>
+ <p><label><input type="checkbox" id="setOvLane" ${SETTINGS.showOverview!==false?'checked':''}> <b>Song Overview lane</b> — the whole arrangement in miniature with a viewport outline (drag ←→ scroll · ↕ zoom · double-click = whole song)</label></p>
+ <p><label><input type="checkbox" id="setScrubLane" ${SETTINGS.showScrub!==false?'checked':''}> <b>Scrub area</b> — the strip under the ruler (click: play from that bar · hold: repeat it · drag: scrub)</label></p>
+ <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
+ <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
+ <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
+ <p><b>Marker lines</b> — vertical lines through the tracks at each position marker (the Cubase preference):<br>
+ <select id="setMkLines">
+  <option value="off" ${SETTINGS.markerLines==='off'?'selected':''}>Off — markers show only in the section lane</option>
+  <option value="active" ${SETTINGS.markerLines!=='off'&&SETTINGS.markerLines!=='all'?'selected':''}>From the marker lane (default)</option>
+  <option value="all" ${SETTINGS.markerLines==='all'?'selected':''}>From all marker lanes</option>
+ </select></p>
  <h3>SCALE/RAGA SEARCH WINDOW</h3>
  <p><b>Family order</b> — which families list first in the Browser:<br>
  <select id="setRagaFam">
@@ -17055,6 +18652,13 @@ function openSettings(){
  if(g('setClipDrop'))g('setClipDrop').onchange=e=>{SETTINGS.clipDrop=(e.target.value==='merge'||e.target.value==='replace')?e.target.value:'ask';persistSettings();};
  if(g('setClipNames'))g('setClipNames').onchange=e=>{SETTINGS.clipChordNames=!!e.target.checked;persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
  if(g('setLaneHide'))g('setLaneHide').onchange=e=>{SETTINGS.chordLaneCanHide=!!e.target.checked;persistSettings();if(!SETTINGS.chordLaneCanHide&&typeof chordLaneHidden!=='undefined'&&chordLaneHidden)setChordLaneHidden(false);};   /* v3: turning it off also brings a tucked lane back */
+ /* 2.5: the transport/chrome toggles — each re-render is the cheap one it owns */
+ if(g('setOvLane'))g('setOvLane').onchange=e=>{SETTINGS.showOverview=!!e.target.checked;persistSettings();drawOverview();};
+ if(g('setScrubLane'))g('setScrubLane').onchange=e=>{SETTINGS.showScrub=!!e.target.checked;persistSettings();refresh(false);drawTrackSel();};
+ if(g('setSecLane'))g('setSecLane').onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
+ if(g('setTsigLane'))g('setTsigLane').onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
+ if(g('setPRoll'))g('setPRoll').onchange=e=>{SETTINGS.showPianoRoll=!!e.target.checked;persistSettings();refresh(false);};
+ if(g('setMkLines'))g('setMkLines').onchange=e=>{SETTINGS.markerLines=(e.target.value==='off'||e.target.value==='all')?e.target.value:'active';persistSettings();refresh(false);};
  if(g('setNew'))g('setNew').onclick=()=>{if(confirm('Start fresh from the current song? (Saved variations stay on the shelf.)')){loadSong(project.song.id);projectDirty=false;document.getElementById('infoOverlay').style.display='none';}};
  if(g('setOpen'))g('setOpen').onclick=openProjectFile;
  if(g('setSave'))g('setSave').onclick=saveProjectFile;
