@@ -387,7 +387,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-07-30s</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-11a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -4734,6 +4734,7 @@ function sizeSvg(){
 function barLaneMarkup(isMainLane){
  let out='';
  out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="#23252e" style="cursor:ns-resize"><title>Click: playhead · drag ↕: zoom · drag ←→: loop region (edges resize · middle moves · double-click deletes) · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
+ out+=barLaneTicks(PPB,LOOP,GUT,BARH,gridTriplets);   /* 2026-08-11a FIX 4: bar/beat/subdivision delineation, zoom-adaptive */
  /* loop-select region (double-click-drag the lane): yellow — brighter when looping is ON */
  if(loopSel){
   out+=`<rect x="${GUT+loopSel.a*PPB}" y="0" width="${(loopSel.b-loopSel.a)*PPB}" height="${BARH}" fill="#ffd23f" opacity="${loopOn?.4:.18}" pointer-events="none"/>`;
@@ -4780,6 +4781,24 @@ function gridStepForPPB(ppb,triplets){
  return triplets? st*2/3 : st;
 }
 function gridStep(){return gridStepForPPB(PPB,gridTriplets);}
+function barLaneTicks(ppb,loopBeats,gut,h,triplets){
+ /* pure (unit-tested) — 2026-08-11a FIX 4 (client §3, bar/beat delineation): the tick
+    lines that make the bar lane read as a beats-and-bars RULER. Bars: full height,
+    heaviest stroke. Beats: lower two-thirds. Finer subdivisions: lower third. Same
+    colors and weights as the lattice (4946), and the line count follows the zoom
+    through the same gridStepForPPB the background grid uses — zoom in and the lane
+    grows 8th/16th/32nd ticks exactly where the grid does. Every home gets them:
+    the main lane and the docked lane rows share this one renderer. */
+ const step=gridStepForPPB(ppb,triplets);
+ let out='';
+ const n=Math.round(loopBeats/step);
+ for(let i=0;i<=n;i++){
+  const b=i*step,x=gut+b*ppb;
+  const isBar=Math.abs(b-4*Math.round(b/4))<1e-6,isBeat=Math.abs(b-Math.round(b))<1e-6;
+  out+=`<line x1="${x}" y1="${isBar?0:isBeat?(h*.35).toFixed(1):(h*.62).toFixed(1)}" x2="${x}" y2="${h}" stroke="${isBar?'#525870':isBeat?'#3d4356':'#2e3342'}" stroke-width="${isBar?1.5:isBeat?0.9:0.6}" pointer-events="none"/>`;
+ }
+ return out;
+}
 function scalePitch(k){const sc=curScale().pcs,L=sc.length;const o=Math.floor(k/L),d=((k%L)+L)%L;return gridBase()+12*o+sc[d];}
 function rowOfK(k,v){v=v||activeGridView;return v.rows-1-(k-v.rowStart);}
 function kOfRow(row,v){v=v||activeGridView;return v.rowStart+(v.rows-1-row);}
@@ -5889,6 +5908,15 @@ let curatedApplied=false;
 async function ensureAudio(){
  if(!audioReady){await Tone.start();await makeAudio();}
  applyCuratedDefaults();   /* fire-and-forget: empty slots fill with curated sounds */
+}
+function audNow(){
+ /* 2026-08-11a FIX 3 (client §2②, audition attack latency): Tone.now() carries the
+    context's default 100ms lookAhead, so a press-audition scheduled at Tone.now()+.05
+    landed ~150ms after the click — the client's "slight delay". One-shot auditions
+    schedule against the RAW context clock plus a tiny safety pad instead (the
+    metronome's playClickAt precedent at +.005). Transport playback keeps its
+    lookAhead — this is for press-to-hear surfaces only. */
+ try{return Tone.getContext().rawContext.currentTime+.015;}catch(e){return Tone.now();}
 }
 async function loadClipWithFallback(clip,urls,onProgress){
  /* walk the entry's fallback chain: best host first, mirrors after */
@@ -9416,8 +9444,10 @@ function gridMouseDown(e){
   return;
  }
  const pt=svgPoint(e);if(!pt)return;
- if(pt.inLane){ /* vertical drag = zoom · plain click = move playhead · DOUBLE-click(+drag ←→) = loop-select
-                  existing loop region: edges resize, middle drags the whole region */
+ if(pt.inLane){ /* vertical drag = zoom · plain click = move playhead · plain drag ←→ = loop-select
+                  (July 30 fix 4, the lanepend path) · DOUBLE-click-drag = loop-select too ·
+                  plain double-click = delete the loop · existing region: edges resize, middle drags
+                  (2026-08-11a: this comment now agrees with the lane tooltip — both gestures draw) */
   const secHit=e.target&&e.target.dataset?e.target.dataset.sec:undefined;
   if(secHit!==undefined&&secHit!==''){ /* 2.2b: click a section flag → section editor */
    e.preventDefault();openSectionEditor(+secHit,e.clientX,e.clientY);return;
@@ -9438,11 +9468,14 @@ function gridMouseDown(e){
   if(isDblLane){
    const st=gridStep();
    const anchor=Math.max(0,Math.min(LOOP,Math.round(((pt.x-GUT)/PPB)/st)*st));
-   loopSel=loopSelFromDrag(anchor,anchor,st,LOOP);
-   loopOn=true;drawLoopBtn();   /* a fresh selection arms the loop by default */
+   /* 2026-08-11a FIX 2 (the loop-dismiss ghost): create NOTHING here. A plain
+      double-click DELETES on mouseup, and the old eager zero-width loopSel replaced
+      the real region for one frame at the cursor — the client's "offset to the
+      right" ghost. The loop is now created only when the drag declares itself
+      (the 'loopsel' move branch, >4px), which keeps double-click-drag alive. */
    drag={mode:'loopsel',anchor,x0:pt.x,y0:pt.y,fromDbl:true};
    lastLaneClick=null;
-   refresh(false);return;
+   return;
   }
   const hitL=loopHit(loopSel,(pt.x-GUT)/PPB,loopEdgeBeats());
   if(hitL==='L'||hitL==='R'){ /* grab an edge: resize (anchor = the opposite edge) */
@@ -9750,8 +9783,10 @@ document.addEventListener('mousemove',e=>{
  }else if(drag.mode==='loopsel'){
   const st=gridStep();
   const cb=Math.max(0,Math.min(LOOP,Math.round(((pt.x-GUT)/PPB)/st)*st));
-  loopSel=loopSelFromDrag(drag.anchor,cb,st,LOOP);
   if(Math.abs(pt.x-drag.x0)>4)drag.did=true;
+  if(drag.fromDbl&&!drag.did)return;   /* 2026-08-11a FIX 2: a double-click press creates nothing until the drag declares itself — a plain double-click stays a pure delete (mouseup) */
+  loopSel=loopSelFromDrag(drag.anchor,cb,st,LOOP);
+  if(drag.fromDbl&&!drag.armed){drag.armed=true;loopOn=true;drawLoopBtn();}   /* a fresh dbl-drag selection arms the loop, as it always did */
   if(drag.did&&playing&&loopOn)applyLoopToTransport();   /* live re-aim while looping */
   refresh(false);return;
  }else if(drag.mode==='loopmove'){
@@ -11343,7 +11378,7 @@ async function melismaAudition(orn){
   const spb=60/(melState.bpm||+tempo.value||96);
   const r=melismaRealize(orn,midi,melismaKeyAt(beat),(orn.pat&&orn.pat.length>6)?2:1.5,
    {intensity:melState.intensity,speed:melState.speed,variant:melDirVariant(0,melState.dir)});   /* July 27a: the audition honors ▲▼ */
-  const t0=Tone.now()+.05;
+  const t0=audNow();   /* 2026-08-11a FIX 3: instant attack — was Tone.now()+.05 (~150ms with lookAhead) */
   const span=Math.max.apply(null,r.notes.map(n=>n[0]+n[1]));
   for(const row of r.notes){
    const pb=r.curve?melismaCurveSlice(r.curve,row[0]/span,(row[0]+row[1])/span):null;
@@ -11521,7 +11556,7 @@ function ragaMelPreview(orn,e0){
   const key={tonic:ragaKeyTonic(),pcs:e.pcs};
   const root=ragaRootMidi()+e.pcs[Math.min(2,e.pcs.length-1)];
   const r=melismaRealize(orn,root,key,(orn.pat&&orn.pat.length>6)?2:1.5,{intensity:1,speed:1,variant:0});
-  const t0=Tone.now()+.05;
+  const t0=audNow();   /* 2026-08-11a FIX 3: instant attack for the Q4 ornament preview too */
   const spb=60/(+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96));
   const span=Math.max.apply(null,r.notes.map(n=>n[0]+n[1]));
   for(const row of r.notes){
@@ -14818,6 +14853,34 @@ function xselActive(){
 function xselClear(){if(xselActive()){xsel={notes:{},cells:{}};return true;}return false;}
 function xselHasNote(t,i){const s=xsel.notes[t];return !!(s&&s.has(i));}
 function xselHasCell(t,ci){const s=xsel.cells[t];return !!(s&&s.has(ci));}
+function toggleCellInCapture(cells,t,ci){
+ /* pure (unit-tested) — 2026-08-11a FIX 1 (client §1): grow/shrink the cross-track
+    capture map by one clip. The capture (xsel) is the one selection that already
+    spans tracks, with delete/drag riding on it — ⇧-click now feeds it directly. */
+ const s=cells[t]||(cells[t]=new Set());
+ if(s.has(ci))s.delete(ci);else s.add(ci);
+ return cells;
+}
+function xselToggleCell(t,ci){
+ /* 2026-08-11a FIX 1: ⇧-click a clip on ANY lane while a capture (or a selection on
+    another lane) exists → toggle it into the cross-track capture. One selection law:
+    the capture owns it; the single-lane stores let go. */
+ toggleCellInCapture(xsel.cells,t,ci);
+ selNotes.clear();selChordSet.clear();selChord=null;
+ stripSel=null;stripMulti={t:null,set:new Set()};
+ selSurface='strip';
+ const c=xselCount();
+ if(!c.notes&&!c.cells)xselClear();
+ refresh(false);drawTrackSel();drawMainStrip();drawChordLane();
+}
+function promoteStripSelectionToXsel(){
+ /* 2026-08-11a FIX 1: lift whatever single-lane clip selection exists (stripMulti,
+    else the single selected clip) into the cross-track capture, so a ⇧-click on a
+    SECOND lane extends instead of silently resetting — the client's §1 bug. */
+ if(stripMulti.t&&stripMulti.set.size)xsel.cells[stripMulti.t]=new Set(stripMulti.set);
+ else if(stripSel&&stripSel.t&&stripSel.i!=null)xsel.cells[stripSel.t]=new Set([stripSel.i]);
+ stripSel=null;stripMulti={t:null,set:new Set()};
+}
 function xselCount(){
  let n=0,c=0;const tr=new Set();
  for(const k in xsel.notes){n+=xsel.notes[k].size;if(xsel.notes[k].size)tr.add(k);}
@@ -15177,6 +15240,7 @@ function stripCellDown(ev,t,i,a,d){
  /* MG round: a press on a CAPTURED clip drags the whole cross-track capture ↔;
     any other cell press lets the capture go */
  if(typeof xselActive==='function'&&xselActive()){
+  if(ev.shiftKey&&!ev.metaKey&&!ev.ctrlKey){xselToggleCell(t,i);return;}   /* 2026-08-11a FIX 1: ⇧-click grows/shrinks the live capture instead of dropping it */
   if(xselHasCell(t,i)&&!ev.shiftKey&&!ev.metaKey&&!ev.ctrlKey){xMoveStart(ev);return;}
   xselClear();refresh(false);drawChordLane();
  }
@@ -15189,7 +15253,13 @@ function stripCellDown(ev,t,i,a,d){
   openClipMergeMenu(ev.clientX,ev.clientY,t,i,a,d);
   return;
  }
- if(ev.shiftKey){   /* July 24 r2: ⇧-click = multi-select clips within this lane */
+ if(ev.shiftKey){   /* July 24 r2: ⇧-click = multi-select clips within this lane
+                       2026-08-11a FIX 1 (client §1): …and ACROSS lanes — a ⇧-click on a
+                       different lane promotes the selection to the cross-track capture
+                       (the MG marquee substrate) instead of silently resetting it */
+  if((stripMulti.t&&stripMulti.set.size&&stripMulti.t!==t)||(!stripMulti.t&&stripSel&&stripSel.t!==t&&stripSel.i!=null)){
+   promoteStripSelectionToXsel();xselToggleCell(t,i);return;
+  }
   if(stripMulti.t!==t)stripMulti={t,set:new Set(stripSel&&stripSel.t===t&&stripSel.i!=null?[stripSel.i]:[])};
   if(stripMulti.set.has(i))stripMulti.set.delete(i);else stripMulti.set.add(i);
   stripSel={t,i};
