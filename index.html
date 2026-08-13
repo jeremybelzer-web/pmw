@@ -405,11 +405,20 @@
 .winBody-limit{overflow-y:auto;}
 .winResize{height:7px;margin:6px -16px -10px -16px;cursor:ns-resize;border-radius:0 0 10px 10px;}
 .winResize:hover{background:var(--line);}
+/* ==== 4.7 GEMS R1 (build 2026-08-12a): Full Screen Animation Mode — the fullscreen
+   element is #orbBody (it survives renderOrb()'s innerHTML rebuild; fullscreening a
+   child would collapse the mode on every re-render). The left column hides, the map
+   fills the stage, Esc exits natively (the Fullscreen API's own behaviour IS the spec). */
+#orbBody:fullscreen{background:radial-gradient(ellipse at 30% 25%,#131722 0%,#07080d 72%);padding:24px;overflow:auto;display:flex;align-items:center;justify-content:center;}
+#orbBody:fullscreen>div{margin:0 auto;justify-content:center;}
+#orbBody:fullscreen>div>div:first-child{display:none!important;}
+#orbBody:fullscreen #orbMapWrap{border:none;background:transparent;}
+#orbBody:fullscreen #orbMapWrap svg{max-width:min(94vw,150vh)!important;margin:0 auto;}
 </style>
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-11b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-12a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -13702,7 +13711,8 @@ function buildWanPanel(){
    ⏺ Record captures the whole re-harmonization as ONE chords object on the Essence
    Shelf. 🚀 Pilot view flies the map. Pure layer unit-tested. ==== */
 var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
- ghost:'weber',expandedOn:false,userPivots:[],pilot:false,rec:false,recN:0,clicks:[]};
+ ghost:'weber',expandedOn:false,userPivots:[],pilot:false,rec:false,recN:0,clicks:[],
+ view:'solar',orbitMode:'orbit',rotate:true,rotDeg:0};   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round) */
 var orbJourney={active:false,log:[]};
 var orbBot={next:0};
 function orbCircleSlots(pcs){
@@ -13819,7 +13829,10 @@ function orbDepartures(tonic,pcs){
  return out;
 }
 function orbNextBoundary(beat,q,loop){
- /* the next quantize landing after `beat` — pure (the Ableton law's arithmetic) */
+ /* the next quantize landing after `beat` — pure (the Ableton law's arithmetic).
+    q === -1 is the GEMS "instantaneous" sentinel: the landing is NOW (q=0 keeps the
+    shipped zero-fallback meaning "a bar" — FINDING 5, so instantaneous is NOT 0) */
+ if(q===-1)return beat>=loop?null:+(+beat).toFixed(6);
  q=q>0?q:4;
  const b=Math.floor(beat/q+1e-9)*q+q;
  return b>=loop?null:+b.toFixed(6);
@@ -13845,7 +13858,7 @@ function progressionOnDegree(chords,tonic,pcs,k){
  });
 }
 function setOrbStatus(m){const el=document.getElementById('orbStatus');if(el)el.textContent=m||'';}
-function orbQ(){return orbState.q>0?orbState.q:4;}
+function orbQ(){return orbState.q===-1?-1:(orbState.q>0?orbState.q:4);}
 function orbBeatNow(){
  return (playing&&typeof transportBeat==='function')?transportBeat():((typeof playheadBeat==='number')?playheadBeat:0);
 }
@@ -14086,7 +14099,8 @@ function orbBotTick(){
   .map(c=>c.k==='planet'?c:{tonic:((c.pv.dest&&c.pv.dest.tonic)||0),minor:!!(c.pv.dest&&c.pv.dest.minor),k:'pivot',pv:c.pv});
  const pick=orbBotPick(cands,orbCurrentKey());
  if(pick)orbActivate(pick.k==='pivot'?pick:{k:'planet',tonic:pick.tonic,minor:pick.minor});
- orbBot.next=Math.floor(b/orbQ()+1e-9)*orbQ()+orbQ()*2;   /* wander every OTHER landing — room to hear the world */
+ const bq=orbQ()>0?orbQ():1;                              /* instantaneous: the bot still paces itself by the beat */
+ orbBot.next=Math.floor(b/bq+1e-9)*bq+bq*2;               /* wander every OTHER landing — room to hear the world */
 }
 function orbShipTick(){
  /* the 🚀 rides the chord the grid is playing — cheap positional update, no re-render */
@@ -14098,10 +14112,31 @@ function orbShipTick(){
  const c=chordAt(effectiveChords(),orbBeatNow()).c;if(!c)return;
  const rel=(((c.r||0)-cur.tonic)%12+12)%12;
  const di=pcs.indexOf(rel);
- const a=di>=0?(-Math.PI/2+(di/pcs.length)*Math.PI*2):orbPivotAngle(pcs,rel);
+ const rot=(orbState.view!=='circles'?(orbState.rotDeg||0):0)*Math.PI/180;   /* GEMS: the 🚀 turns WITH the moons — one tick source, no drift */
+ const a=(di>=0?(-Math.PI/2+(di/pcs.length)*Math.PI*2):orbPivotAngle(pcs,rel))+rot;
  const x=geo.cx+Math.cos(a)*(geo.r-30),y=geo.cy+Math.sin(a)*(geo.r-30);
  ship.style.left=(x-11)+'px';ship.style.top=(y-13)+'px';
  ship.style.transform='rotate('+Math.round((a+Math.PI/2)*180/Math.PI)+'deg)';
+}
+function orbRotTick(){
+ /* GEMS R1 — the cinematic rotation. Rides the SAME 150ms interval as the bot and the
+    🚀 (the one-tick-source law): Solar view + Orbit Mode + 🔄 on, else it does nothing
+    at all — toggled off, no styles are written and no frames are requested. */
+ if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ if(orbState.view==='circles'||orbState.orbitMode!=='orbit'||!orbState.rotate)return;
+ orbState.rotDeg=((orbState.rotDeg||0)+0.35)%360;
+ orbApplyRot();
+}
+function orbApplyRot(){
+ /* apply the current rotation to the moon ring — a cheap attribute update, never a
+    re-render (landmine 2: renderOrb() would destroy the animation state, so the angle
+    lives on orbState and is re-applied after every rebuild) */
+ const g=document.getElementById('orbMoonG');if(!g)return;
+ const geo=orbState.geo||{};const d=orbState.rotDeg||0;
+ g.setAttribute('transform','rotate('+d.toFixed(2)+' '+geo.cx+' '+geo.cy+')');
+ g.querySelectorAll('.orbMoonN').forEach(n=>{
+  n.setAttribute('transform','rotate('+(-d).toFixed(2)+' '+n.getAttribute('data-x')+' '+n.getAttribute('data-y')+')');
+ });
 }
 function orbWheelSVG(tonic,minor,size,opts){
  /* a key as a planet/wheel: the ring, its scale tones as surface dots, the label */
@@ -14129,11 +14164,22 @@ function renderOrb(){
  const ana=orbGhostAnalysis();
  const used=orbUsedDegrees(flatChords(project.chords),cur.tonic,pcs);
  const slots=orbCircleSlots(pcs);
- /* ---- the map geometry: ONE big planet (the key we are in), destinations around it ---- */
- const W=840,H=520,cx=280,cy=262,R=152;
+ /* ---- the map geometry — GEMS R1: two views of the same worlds. Circles = the
+    shipped 30r wheel, untouched; Solar (the default) = the solar system: ☀ sun = the
+    essence aboard · planet = the current object · moons = its parts · grey nodes =
+    alternatives · dotted lines = travel. clicks[] is pushed in the SAME ORDER in both
+    views — chords, then pivots, then planets — so arrow keys and the MIDI pads address
+    the same map either way (FINDING 4: reordering silently re-maps every pad). ---- */
+ const solar=orbState.view!=='circles';
+ const equal=solar&&orbState.orbitMode==='equal';
+ const W=840,H=520;
+ const cx=solar?350:280,cy=solar?282:262,R=solar?118:152;
+ const bodyR=58,sunX=112,sunY=100,sunR=40;
  orbState.geo={cx,cy,r:R};
- const clicks=[];let lines='',nodes='';
+ const clicks=[];let lines='',nodes='',sunS='',moonS='',laneS='';
  const chipLbl=(root,iv)=>PCN[T(root)]+(iv[1]===3?(iv[2]===6?'°':'m'):(iv[2]===8?'+':''));
+ if(!solar){
+ /* ================= CIRCLES VIEW — the shipped 30r map, byte-for-byte ================= */
  /* the planet body */
  nodes+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="rgba(232,163,61,.045)" stroke="var(--accent)" stroke-width="2.2"/>'
   +'<circle cx="'+cx+'" cy="'+cy+'" r="'+(R-34)+'" fill="none" stroke="rgba(255,255,255,.05)"/>'
@@ -14205,9 +14251,113 @@ function renderOrb(){
    +(pl.tag?'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+pl.tag+'</text>':'')
    +'</g>';
  });
+ }else{
+ /* ================= SOLAR SYSTEM VIEW — the GEMS default (design law #17) ================= */
+ sunS+='<defs><radialGradient id="orbSunGrad"><stop offset="0%" stop-color="#ffe9b0"/><stop offset="55%" stop-color="#e8a33d"/><stop offset="100%" stop-color="rgba(232,163,61,0)"/></radialGradient></defs>';
+ /* orbit guides: the planet&#8217;s path around the sun, the moons&#8217; path around the planet */
+ const sunDist=Math.hypot(cx-sunX,cy-sunY);
+ sunS+='<circle cx="'+sunX+'" cy="'+sunY+'" r="'+sunDist.toFixed(1)+'" fill="none" stroke="rgba(255,255,255,.045)"/>'
+  +'<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.05)"/>';
+ /* ☀ the sun — the essence aboard (Keys &amp; Chords is the only essence docked so far;
+    the essence selector rides the R4 round) */
+ sunS+='<g><title>The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤).</title>'
+  +'<circle cx="'+sunX+'" cy="'+sunY+'" r="'+(sunR*1.85)+'" fill="url(#orbSunGrad)" opacity=".8"/>'
+  +'<circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(sunR*.62)+'" fill="#ffdf9e" stroke="#e8a33d" stroke-width="1.5"/>'
+  +'<text x="'+sunX+'" y="'+(sunY+sunR+18)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#e8a33d">KEYS &amp; CHORDS</text>'
+  +'<text x="'+sunX+'" y="'+(sunY+sunR+30)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">the essence aboard</text></g>';
+ /* the planet — the current object (translucent in cinematic Orbit Mode) */
+ nodes+='<g'+(equal?'':' opacity=".72"')+'><title>The planet is the CURRENT OBJECT — the key the song is in right now. Its diatonic chords orbit as moons; its parts ride the planet lane below.</title>'
+  +'<circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="rgba(232,163,61,'+(equal?'.09':'.05')+')" stroke="var(--accent)" stroke-width="2.2"/>'
+  +'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>'
+  +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+(cur.minor?'minor':'major')+' — you are here</text></g>';
+ /* the moons — the 7 diatonic chords orbit the planet (Equal Orbit Mode: one size) */
+ slots.forEach((s,k)=>{
+  const tri=scaleDegreeTriad(pcs,k);if(!tri)return;
+  const root=T(cur.tonic+s.pc);
+  const roman=degRomanW(k,tri.iv,n);
+  const x=cx+Math.cos(s.angle)*R,y=cy+Math.sin(s.angle)*R;
+  const idx=clicks.length;
+  clicks.push({k:'chord',r:root,iv:tri.iv.slice(),lbl:roman,deg:k});
+  const isUsed=used.has(k),sel=orbState.sel===idx;
+  const mr=equal?17:(isUsed?19:15);
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[root]+' ('+roman+')'+(isUsed?' — the grid plays this chord':' — in this key, unused so far')+'. Click = the chord under the next landing is replaced with this one (loop on = you hear it every round).</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+mr+'" fill="'+(isUsed?'rgba(232,163,61,.22)':'rgba(20,22,28,.92)')+'" stroke="'+(sel?'var(--accent)':isUsed?'var(--accent)':'#59607a')+'" stroke-width="'+(sel?2.6:isUsed?1.8:1.1)+'"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="'+(isUsed?'var(--accent)':'#c8cde0')+'">'+roman+'</text>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+11.5).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="#8b93a7">'+chipLbl(root,tri.iv)+'</text></g>';
+ });
+ /* pivot moons — dashed, in degree order on the same ring (the alternatives&#8217; doorways) */
+ const pivotPts=[];
+ ana.pivots.forEach(pv=>{
+  const rel=T(pv.r-cur.tonic);
+  const a=orbPivotAngle(pcs,rel);
+  const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'pivot',pv});
+  const col=pv.kind==='user'?'#7b8194':pv.kind==='expanded'?'#5bb98c':'#e8a33d';
+  const sel=orbState.sel===idx;
+  const lbl=pv.lbl||chipLbl(pv.r,pv.iv);
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>Pivot chord '+lbl+(pv.dest&&!pv.dest.psych?' — opens the road to '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major'):' — a psych-out feint: out for a moment, straight back home')+(pv.kind==='user'?' (yours)':pv.kind==='expanded'?' (Expanded)':' (from the ghost song)')+'. Click = fire it on the next landing.</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(equal?17:13)+'" fill="rgba(20,22,28,.94)" stroke="'+col+'" stroke-width="'+(sel?2.6:1.5)+'" stroke-dasharray="4 3"'+(pv.kind==='user'?' opacity=".75"':'')+'/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+col+'">'+lbl.slice(0,6)+'</text></g>';
+  pivotPts.push({pv,x,y,col});
+ });
+ /* alternative worlds + their dotted travel roads (roads leave the planet&#8217;s rim, not
+    the rotating moons — rotation-proof by construction) */
+ const placed=[{x:sunX,y:sunY}];   /* seeded with the sun so no world lands on it */
+ ana.planets.forEach((pl,i)=>{
+  const pvp=pivotPts.find(p=>p.pv.dest&&p.pv.dest.tonic===pl.tonic&&p.pv.dest.minor===pl.minor&&!!p.pv.dest.psych===!!pl.psych);
+  let a=pvp?Math.atan2(pvp.y-cy,pvp.x-cx):(-Math.PI/2+((i+0.5)/Math.max(4,ana.planets.length))*Math.PI*2);
+  let px=0,py=0,tries=0;
+  for(;;){
+   px=cx+Math.cos(a)*(R+140);py=cy+Math.sin(a)*(R+140);
+   px=Math.max(76,Math.min(W-80,px));py=Math.max(62,Math.min(H-70,py));
+   if(!placed.some(q=>(q.x-px)*(q.x-px)+(q.y-py)*(q.y-py)<95*95)||++tries>16)break;
+   a+=0.42;
+  }
+  placed.push({x:px,y:py});
+  const pr=pl.psych?32:42;
+  const grey=pl.kind==='user';
+  const col=grey?'#5a6070':pl.psych?'#c77dff':'#8b93a7';
+  const idx=clicks.length;
+  clicks.push({k:'planet',tonic:pl.tonic,minor:pl.minor});
+  const sel=orbState.sel===idx;
+  const sx=cx+Math.cos(a)*(bodyR+6),sy=cy+Math.sin(a)*(bodyR+6);
+  const ex=px-Math.cos(a)*pr,ey=py-Math.sin(a)*pr;
+  lines+='<line x1="'+sx.toFixed(1)+'" y1="'+sy.toFixed(1)+'" x2="'+ex.toFixed(1)+'" y2="'+ey.toFixed(1)+'" stroke="'+col+'" stroke-width="1.4" stroke-dasharray="5 5"'+(grey?' opacity=".55"':'')+'/>';
+  const dpcs=(SCALE_DB[pl.minor?'aeolian':'ionian']||SCALE_DB.ionian).pcs;
+  let dots='';
+  for(const p of dpcs){
+   const da=(p/12)*Math.PI*2-Math.PI/2;
+   dots+='<circle cx="'+(px+Math.cos(da)*pr*.74).toFixed(1)+'" cy="'+(py+Math.sin(da)*pr*.74).toFixed(1)+'" r="'+(p===0?2.6:1.5)+'" fill="'+(p===0?col:'#6b7186')+'"/>';
+  }
+  nodes+='<g class="orbNode" data-orb="'+idx+'"'+(grey?' opacity=".62"':'')+'><title>'+PCN[pl.tonic]+' '+(pl.minor?'Minor':'Major')+(pl.psych?' — a Psych-out world: the song only visits for a moment':' — an alternative world with its own diatonic ring')+(pl.tag?' · Weber: '+pl.tag:'')+'. Click = break gravity and land there on the next boundary.</title>'
+   +'<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="'+pr+'" fill="rgba(20,22,28,.55)" stroke="'+(sel?'var(--accent)':col)+'" stroke-width="'+(sel?2.4:1.5)+'" stroke-dasharray="6 4"/>'
+   +dots
+   +'<text x="'+px.toFixed(1)+'" y="'+(py+4).toFixed(1)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+(sel?'var(--accent)':'#e9eaef')+'">'+PCN[pl.tonic]+(pl.minor?'m':'')+'</text>'
+   +(pl.psych?'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#c77dff">Psych!</text>':'')
+   +(pl.tag?'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+pl.tag+'</text>':'')
+   +'</g>';
+ });
+ /* the PLANET LANE — the mini edit lane the design law asks for: the current object&#8217;s
+    parts as chips; clicking one GLIDES the selection to its moon. Sketching here never
+    creates a planet (the law) — the deeper sketch-to-glide editor rides R2/R4. */
+ const fcL=flatChords(project.chords).slice(0,8);
+ if(fcL.length){
+  const chW=42,chG=5,totW=fcL.length*(chW+chG)-chG;
+  let lx=Math.max(8,Math.min(W-8-totW,cx-totW/2));
+  laneS+='<text x="'+cx+'" y="'+(H-36)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">THE PLANET LANE — its parts · click a part to glide to its moon</text>';
+  fcL.forEach(c=>{
+   const rel=T((c.r||0)-cur.tonic),di=pcs.indexOf(rel);
+   laneS+='<g class="orbLane" data-di="'+di+'" style="cursor:pointer;"><title>'+(c.lbl||chipLbl(c.r,c.iv||[0,4,7]))+(di>=0?' — click to glide to its moon (sketching never creates a new planet)':' — outside this key: no moon carries it (a pivot may)')+'</title>'
+    +'<rect x="'+lx+'" y="'+(H-30)+'" width="'+chW+'" height="17" rx="8" fill="rgba(20,22,28,.9)" stroke="'+(di>=0?'#59607a':'#3a3e4d')+'"/>'
+    +'<text x="'+(lx+chW/2)+'" y="'+(H-18)+'" text-anchor="middle" font-size="9.5" fill="'+(di>=0?'#c8cde0':'#6b7186')+'">'+(c.lbl||chipLbl(c.r,c.iv||[0,4,7]))+'</text></g>';
+   lx+=chW+chG;
+  });
+ }
+ }
  orbState.clicks=clicks;
  const route=regs.map((r,i)=>romanKeyLabel(r.tonic,orbMinor(r.mode),home.tonic)+(i<regs.length-1?' ⟶ ':'')).join('');
- const speedOpts=[[16,'4 bars'],[8,'2 bars'],[4,'1 bar'],[3,'dotted half'],[2,'half note'],[1.5,'dotted quarter'],[1,'quarter'],[0.75,'dotted 8th'],[0.5,'8th'],[0.3333,'triplet 8th']]
+ const speedOpts=[[16,'4 bars'],[8,'2 bars'],[4,'1 bar'],[3,'dotted half'],[2,'half note'],[1.5,'dotted quarter'],[1,'quarter'],[0.75,'dotted 8th'],[0.5,'8th'],[0.3333,'triplet 8th'],[0.25,'16th'],[-1,'instantaneous']]
   .map(o=>'<option value="'+o[0]+'"'+(Math.abs(orbState.q-o[0])<1e-3?' selected':'')+'>'+o[1]+'</option>').join('');
  const jl=orbJourney.log.length
   ?orbJourney.log.map(e=>'b'+e.beat+' → '+(e.psych?'Psych!':e.chord?e.chord:PCN[e.tonic]+(e.minor?'m':''))).join(' · ')
@@ -14227,7 +14377,7 @@ function renderOrb(){
   +(ana.note?'<div style="font-size:10.5px;color:var(--dim);line-height:1.45;">'+ana.note+'</div>':'')
   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;">Modulations</div><div>'+modRows+'</div>'
   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;" title="A Psych-Out Modulation is when a piece of music departs the key only for a moment and immediately returns.">Psych-out modulations</div><div>'+psyRows+'</div>'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;" title="The Performance speed: how soon a click lands — the change waits for the NEXT boundary of this size (audio never stops)">⏱ Performance speed</label>'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;" title="The Performance speed: how soon a click lands — the change waits for the NEXT boundary of this size (audio never stops). Instantaneous lands NOW.">⏱ Performance speed</label>'
   +'<select id="orbSpeed">'+speedOpts+'</select>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Autonomous modulators wander the maze while the song plays — the treasure is what the journey sounds like"><input type="checkbox" id="orbAuto"'+(orbState.auto?' checked':'')+' style="accent-color:var(--accent);">🤖 Modulator wanders the maze</label>'
   +'<select id="orbShape" '+(orbState.auto?'':'disabled')+'><option value="drunkard"'+(orbState.shape==='drunkard'?' selected':'')+'>Drunkard walk</option><option value="loop"'+(orbState.shape==='loop'?' selected':'')+'>Orbit loop</option><option value="pendulum"'+(orbState.shape==='pendulum'?' selected':'')+'>Pendulum (home ↔ away)</option></select>'
@@ -14255,15 +14405,23 @@ function renderOrb(){
   +'</div>'
   +'<div style="flex:1;min-width:520px;">'
   +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
+  +'<span class="cpchip'+(solar?' on':'')+'" id="orbView" title="Two views of the same worlds — 🪐 Solar System (GEMS: the sun is the essence, the planet the current object, the moons its parts) ↔ ⭕ the Circles wheel, exactly as it shipped. Nothing is thrown away; switching is free.">'+(solar?'🪐 Solar':'⭕ Circles')+'</span>'
+  +(solar?'<span class="cpchip'+(equal?' on':'')+'" id="orbEq" title="Equal Orbit Mode — every moon the same size and nothing rotates: easier clicking, better live. Off = cinematic Orbit Mode (slow spin, translucent planet).">⚪ Equal orbit</span>':'')
+  +(solar&&!equal?'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The cinematic spin. Toggle OFF for performance — with it off nothing animates and no frames are scheduled."><input type="checkbox" id="orbRotate"'+(orbState.rotate?' checked':'')+' style="accent-color:var(--accent);">🔄</label>':'')
+  +'<span class="cpchip" id="orbFull" title="Full Screen Animation Mode — the map fills the screen for stage projection. Esc returns (the browser&#8217;s own exit IS the spec). MIDI pads and arrow keys keep working.">⛶ Full screen</span>'
   +'<span class="cpchip" id="orbExpand" style="'+(orbState.expandedOn?'background:rgba(91,185,140,.18);border-color:#5bb98c;':'')+'" title="Find every OTHER pivot chord available from this planet and slot each into its right clockwise spot (a &#9837;III lands before the iii, a III right after it)">🔭 Expanded</span>'
   +'<span class="cpchip" id="orbUser" title="Type your own pivot chord — even one far outside the key. It joins the ring greyed out, with a grey dotted road to the planet it opens.">＋ User created</span>'
   +'<span class="cpchip" id="orbPilot" style="'+(orbState.pilot?'background:rgba(232,163,61,.16);border-color:var(--accent);':'')+'" title="Pilot view — fly the map like a space game: the camera rides your planet and travels zoom to each new world">🚀 Pilot view</span>'
   +'<span style="font-size:10.5px;color:var(--dim);">Written route: <span style="color:var(--text);">'+route+'</span></span>'
   +'</div>'
-  +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">The big planet is the key you are in — its diatonic chords ring it clockwise from 12 o&#8217;clock, the glowing ones are what the grid plays, and the 🚀 rides the chord sounding now. Dashed chords are pivots; dotted roads lead to their planets. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the next boundary.</div>'
+  +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
+   ?'Solar System view — the ☀ is the essence, the planet is the key you are in, and its diatonic chords orbit as moons (the glowing ones are what the grid plays; the 🚀 rides the chord sounding now). Dashed moons are pivots; dotted roads travel to alternative worlds. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the ⏱ boundary.'
+   :'The big planet is the key you are in — its diatonic chords ring it clockwise from 12 o&#8217;clock, the glowing ones are what the grid plays, and the 🚀 rides the chord sounding now. Dashed chords are pivots; dotted roads lead to their planets. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the next boundary.')+'</div>'
   +'<div id="orbMapWrap" style="position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 30% 25%,#131722 0%,#0a0c12 70%);">'
   +'<div id="orbMapIn" style="transition:transform .9s ease;transform-origin:'+cx+'px '+cy+'px;position:relative;">'
-  +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;max-width:'+W+'px;">'+lines+nodes+'</svg>'
+  +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;max-width:'+W+'px;">'
+  +(solar?sunS+lines+nodes+'<g id="orbMoonG">'+moonS+'</g>'+laneS:lines+nodes)
+  +'</svg>'
   +'<div id="orbShip" style="position:absolute;left:'+(cx-11)+'px;top:'+(cy-R+18)+'px;font-size:20px;pointer-events:none;transition:left .35s,top .35s;text-shadow:0 0 8px rgba(232,163,61,.8);">🚀</div>'
   +'</div></div>'
   +'<details style="margin-top:10px;border-top:1px solid var(--line);padding-top:6px;">'
@@ -14290,6 +14448,25 @@ function renderOrb(){
   el.onclick=()=>orbTravelTo(+el.dataset.t,el.dataset.m==='1');
  });
  document.getElementById('orbGhost').onchange=e=>{orbState.ghost=e.target.value;orbState.sel=0;renderOrb();};
+ /* GEMS R1 controls */
+ const vB=document.getElementById('orbView');if(vB)vB.onclick=()=>{orbState.view=solar?'circles':'solar';renderOrb();};
+ const eB=document.getElementById('orbEq');if(eB)eB.onclick=()=>{orbState.orbitMode=equal?'orbit':'equal';if(orbState.orbitMode==='equal')orbState.rotDeg=0;renderOrb();};
+ const rC=document.getElementById('orbRotate');if(rC)rC.onchange=e=>{orbState.rotate=!!e.target.checked;};
+ const fB=document.getElementById('orbFull');if(fB)fB.onclick=()=>{
+  if(document.fullscreenElement){if(document.exitFullscreen)document.exitFullscreen();}
+  else{const bd=document.getElementById('orbBody');if(bd&&bd.requestFullscreen)bd.requestFullscreen().catch(()=>{});}
+ };
+ B.querySelectorAll('.orbLane').forEach(el=>{
+  el.addEventListener('click',()=>{
+   const di=+el.getAttribute('data-di');
+   if(di<0){setOrbStatus('That part lives outside this key — no moon carries it (its pivot may).');return;}
+   const gi=orbState.clicks.findIndex(c=>c.k==='chord'&&c.deg===di);
+   if(gi<0)return;
+   orbState.sel=gi;renderOrb();
+   setOrbStatus('Glided to the '+(orbState.clicks[gi].lbl||'')+' moon — Enter fires it on the ⏱ boundary. Sketching in the lane never creates a new planet.');
+  });
+ });
+ if(solar)orbApplyRot();
  document.getElementById('orbExpand').onclick=()=>{orbState.expandedOn=!orbState.expandedOn;renderOrb();};
  document.getElementById('orbUser').onclick=orbUserPrompt;
  document.getElementById('orbPilot').onclick=()=>{orbState.pilot=!orbState.pilot;renderOrb();};
@@ -14422,7 +14599,8 @@ function buildOrbPanel(){
  B.dataset.built='1';
  renderOrb();
  document.addEventListener('keydown',orbKeydown);
- setInterval(()=>{try{orbBotTick();orbShipTick();}catch(e){}},150);
+ document.addEventListener('fullscreenchange',()=>{if(typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')renderOrb();});
+ setInterval(()=>{try{orbBotTick();orbRotTick();orbShipTick();}catch(e){}},150);
 }
 /* ==== /4.7 INTERPLANETARY ORBITS ==== */
 
