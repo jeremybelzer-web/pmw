@@ -418,7 +418,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-12a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-16a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -1284,6 +1284,18 @@ function conformAllowedPCs(c){
    interval's direction and scale-step magnitude — pinned notes are hard anchors the
    walk restarts from. helpers = {scaleAt(beat)→abs pcs, allowedAt(beat)→abs pcs}.
    Fresh rows out, input untouched. Pure. */
+/* the ONE pitch snapper — extracted from conformLine (build 2026-08-16a) so
+   simpleVary could reuse it rather than grow a second one. Behavior unchanged:
+   nearest legal pitch, search widens a semitone at a time, DOWN first. Pure. */
+function prismNearest(pcs,m0){
+ if(!pcs||!pcs.length)return m0;
+ if(pcs.indexOf(((m0%12)+12)%12)>=0)return m0;
+ for(let d=1;d<=6;d++){
+  if(pcs.indexOf((((m0-d)%12)+12)%12)>=0)return m0-d;
+  if(pcs.indexOf((((m0+d)%12)+12)%12)>=0)return m0+d;
+ }
+ return m0;
+}
 function conformLine(rows,mode,helpers){
  const src=(rows||[]).map(n=>n.slice());
  if(mode==='abs'||!mode)return src;
@@ -1292,15 +1304,7 @@ function conformLine(rows,mode,helpers){
   for(let m=m0-36;m<=m0+36;m++)if(pcs.indexOf(((m%12)+12)%12)>=0)L.push(m);
   return L;
  };
- const nearest=(pcs,m0)=>{
-  if(!pcs||!pcs.length)return m0;
-  if(pcs.indexOf(((m0%12)+12)%12)>=0)return m0;
-  for(let d=1;d<=6;d++){
-   if(pcs.indexOf((((m0-d)%12)+12)%12)>=0)return m0-d;
-   if(pcs.indexOf((((m0+d)%12)+12)%12)>=0)return m0+d;
-  }
-  return m0;
- };
+ const nearest=prismNearest;
  if(mode==='scale'||mode==='func'){
   const pick=mode==='scale'?helpers.scaleAt:helpers.allowedAt;
   for(const n of src)if(!n[3])n[2]=nearest(pick(n[0]),n[2]);
@@ -2093,7 +2097,13 @@ function prismImportance(rows,i,chordPcs){
     contour extremes + chord-tone status */
  const r=rows[i];
  const beatPos=((r[0]%4)+4)%4;
- let w=beatPos===0?4:beatPos===2?3:(beatPos===1||beatPos===3)?2:1;
+ /* R0 fix (build 2026-08-16a): TOLERANCE, not strict float equality — a performed
+    note a hair off the beat is still ON the beat. The distance is CIRCULAR (mod 4)
+    so a note a hair EARLY of a downbeat (beatPos≈3.999) counts too — the brief's
+    proposed near() only caught the late side; the build decides (hard rule 2). */
+ const bEPS=1e-3;
+ const bNear=(x,t)=>{const d=Math.abs(x-t);return Math.min(d,4-d)<bEPS;};
+ let w=bNear(beatPos,0)?4:bNear(beatPos,2)?3:(bNear(beatPos,1)||bNear(beatPos,3))?2:1;
  w+=Math.min(2,r[1]);
  const m=r[2];
  if(i>0&&i<rows.length-1){
@@ -2102,13 +2112,25 @@ function prismImportance(rows,i,chordPcs){
  if(chordPcs&&chordPcs.length&&chordPcs.includes(((m%12)+12)%12))w+=1;
  return w;}
 function minimalize(rows,amount,opts){
- /* strip the least-important amount% — the FIRST and LAST notes never leave */
+ /* strip the least-important amount% — the FIRST and LAST notes never leave.
+    opts.fill (the ring's stage-1 fork, his words: "add more silences OR extend
+    notes to cover the holes") — when true, the note BEFORE each dropped span
+    holds through it; default off = silences, the shipped behavior. */
  if(!rows||rows.length<3)return (rows||[]).map(r=>r.slice());
  const chordPcs=opts&&opts.chordPcs;
  const idx=rows.map((_,i)=>i).slice(1,-1)
   .sort((a,b)=>prismImportance(rows,a,chordPcs)-prismImportance(rows,b,chordPcs));
  const drop=new Set(idx.slice(0,Math.round(idx.length*Math.max(0,Math.min(100,amount))/100)));
- return rows.filter((_,i)=>!drop.has(i)).map(r=>r.slice());}
+ const out=rows.filter((_,i)=>!drop.has(i)).map(r=>r.slice());
+ if(opts&&opts.fill&&drop.size){
+  const dropped=rows.filter((_,i)=>drop.has(i));
+  for(let i=0;i<out.length-1;i++){
+   const gap0=out[i][0]+out[i][1],gap1=out[i+1][0];
+   if(gap1>gap0+1e-9&&dropped.some(dr=>dr[0]>=gap0-1e-9&&dr[0]<gap1-1e-9))
+    out[i][1]=+(gap1-out[i][0]).toFixed(4);
+  }
+ }
+ return out;}
 function embellish(rows,amount,opts){
  /* add passing tones inside leaps — candidates ranked by leap size, the top amount%
     fire (deterministic). opts.pcs = the scale's absolute pc ladder for the snap;
@@ -2134,6 +2156,47 @@ function embellish(rows,amount,opts){
    prev[1]=half;
    out.push([+(prev[0]+half).toFixed(4),half,pm]);
   }
+  out.push(r);
+ }
+ return out;}
+function simpleVary(rows,amount,opts){
+ /* SIMPLE VARIATION (the ring's ≈, client spec Aug 14): copy the line wholesale,
+    re-root it on a DIFFERENT chord tone, then walk the scale keeping every rise
+    and fall. Note count NEVER changes (his classifier: same count = simple
+    variation) and the U/D/R contour survives exactly. amount 0..100 picks how far
+    up the chord-tone candidate list the new root sits (E-145's distance dial run
+    forward: 0 = the nearest, 100 = the furthest within an octave either way).
+    opts.chordPcs = the allowed chord pcs at the selection's start · opts.pcs = the
+    scale's abs pc ladder (the snap grid; falls back to chordPcs). Snapping goes
+    through prismNearest — the one snapper. Pure: fresh rows out, input untouched. */
+ if(!rows||!rows.length)return (rows||[]).map(r=>r.slice());
+ const chordPcs=(opts&&opts.chordPcs&&opts.chordPcs.length)?opts.chordPcs:null;
+ const pcs=(opts&&opts.pcs&&opts.pcs.length)?opts.pcs:chordPcs;
+ if(!chordPcs||!pcs)return rows.map(r=>r.slice());
+ const m0=rows[0][2];
+ const cands=[];
+ for(let m=m0-12;m<=m0+12;m++)if(m!==m0&&chordPcs.indexOf(((m%12)+12)%12)>=0)cands.push(m);
+ if(!cands.length)return rows.map(r=>r.slice());
+ cands.sort((a,b)=>Math.abs(a-m0)-Math.abs(b-m0)||a-b);
+ const a=Math.max(0,Math.min(100,amount==null?25:amount));
+ const root=cands[Math.round(a/100*(cands.length-1))];
+ const step=(m,dir)=>{for(let d=1;d<=12;d++){const x=m+dir*d;if(pcs.indexOf(((x%12)+12)%12)>=0)return x;}return m+dir;};
+ const out=[];
+ let prevIn=null,prevOut=null;
+ for(let i=0;i<rows.length;i++){
+  const r=rows[i].slice();
+  if(i===0)r[2]=root;
+  else{
+   const iv=rows[i][2]-prevIn;
+   if(iv===0)r[2]=prevOut;
+   else{
+    let m=prismNearest(pcs,prevOut+iv);
+    if(iv>0&&m<=prevOut)m=step(prevOut,1);
+    if(iv<0&&m>=prevOut)m=step(prevOut,-1);
+    r[2]=m;
+   }
+  }
+  prevIn=rows[i][2];prevOut=r[2];
   out.push(r);
  }
  return out;}
@@ -8857,7 +8920,7 @@ document.getElementById('cpCadLink').onclick=()=>{
    the selection) · halves/thirds sub-levels ship with the recursive shelf round ·
    the 0–100 blend slider and the form browser/reorder tools are their own rounds ·
    drums scope rides percContour when the drum lane grows its own MIDI surface. */
-let przState={track:'melody',sec:0,seg:0,analysis:null};
+let przState={track:'melody',sec:0,seg:0,analysis:null,varyAmt:25,varyFill:false};
 const przStatusEl=document.getElementById('przStatus');
 let przStatusTimer=null;
 function setPrzStatus(msg){
@@ -9008,6 +9071,68 @@ function przKeep(strand,data,segLetter,level){
  buildPrism();
  setPrzStatus('Kept on the Essence Shelf — it rides the project file · ⌘Z undoes.');
 }
+function przVary(kind){
+ /* THE VARIATION RING (ROADMAP 4.7 ⑤, layer-② VERBS): − Minimal · ≈ Vary ·
+    + Embellish against the GRID selection — the same przSelRows() contract as
+    ✓ Apply, ONE undo per press. ⛔ NO strand kind: variations write to the grid,
+    nothing lands on the Shelf, validShelf untouched. */
+ const sel=przSelRows();
+ if(!sel){setPrzStatus('Select notes in the grid first — the ring varies a selection.');return false;}
+ const amt=przState.varyAmt,H=conformHelpers(),t0=sel.rows[0][0];
+ if(kind==='min'){
+  if(sel.rows.length<3){setPrzStatus('Pick at least 3 notes — the first and last never leave.');return false;}
+  const out=minimalize(sel.rows,amt,{chordPcs:H.allowedAt(t0),fill:przState.varyFill});
+  let p=0;const kept=new Set(),newDur=new Map();
+  for(const r of out){
+   while(p<sel.rows.length&&!(sel.rows[p][0]===r[0]&&sel.rows[p][2]===r[2]))p++;
+   kept.add(p);newDur.set(p,r[1]);p++;
+  }
+  const dropCount=sel.rows.length-kept.size;
+  if(!dropCount){setPrzStatus('Nothing leaves at that intensity — slide it right and press again.');return false;}
+  snapshot();
+  noteEngine('prism-vary',{kind:'min',amt,n:dropCount});
+  const dropIdx=new Set(sel.idxs.filter((_,k)=>!kept.has(k)));
+  sel.idxs.forEach((gi,k)=>{if(kept.has(k))project.melody[gi][1]=newDur.get(k);});
+  project.melody=project.melody.filter((_,i)=>!dropIdx.has(i));
+  selNotes.clear();
+  refresh(true);
+  setPrzStatus(dropCount+(dropCount===1?' note out.':' notes out.')+' The strong beats stayed'+(przState.varyFill?', the holes are held':'')+' · ⌘Z undoes.');
+  return true;
+ }
+ if(kind==='emb'){
+  if(sel.rows.length<2){setPrzStatus('Pick at least 2 notes — embellishment fills the leaps between them.');return false;}
+  const out=embellish(sel.rows,amt,{pcs:H.scaleAt(t0)});
+  if(out.length===sel.rows.length){setPrzStatus('No leaps to fill here — it wants a jump of a 3rd or more off a longer note.');return false;}
+  snapshot();
+  noteEngine('prism-vary',{kind:'emb',amt,n:out.length-sel.rows.length});
+  let p=0;const inserted=[];
+  for(const r of out){
+   if(p<sel.rows.length&&sel.rows[p][0]===r[0]&&sel.rows[p][2]===r[2]){project.melody[sel.idxs[p]][1]=r[1];p++;}
+   else{
+    const src=p>0?project.melody[sel.idxs[p-1]]:null;
+    const n=[r[0],r[1],r[2]];
+    if(src&&src[8]!=null)n[8]=src[8];
+    inserted.push(n);
+   }
+  }
+  for(const n of inserted)project.melody.push(n);
+  project.melody.sort((a,b)=>a[0]-b[0]);
+  selNotes.clear();
+  refresh(true);
+  setPrzStatus(inserted.length+(inserted.length===1?' passing tone in':' passing tones in')+' — the biggest leaps filled first · ⌘Z undoes.');
+  return true;
+ }
+ /* ≈ Vary — in-place re-pitch: count and rhythm untouched, extras (pins, bends,
+    velocities) ride because the note arrays are edited, not replaced */
+ const out=simpleVary(sel.rows,amt,{chordPcs:H.allowedAt(t0),pcs:H.scaleAt(t0)});
+ if(!out.some((r,k)=>r[2]!==sel.rows[k][2])){setPrzStatus('No other chord tone to re-root on here.');return false;}
+ snapshot();
+ noteEngine('prism-vary',{kind:'vary',amt,n:out.length});
+ sel.idxs.forEach((gi,k)=>{project.melody[gi][2]=out[k][2];});
+ refresh(true);
+ setPrzStatus('Same '+out.length+' notes, new home — rooted on a chord tone, every rise and fall intact · ⌘Z undoes.');
+ return true;
+}
 function buildPrism(reanalyze){
  const host=document.getElementById('prismPanel');if(!host)return;
  if(reanalyze||!przState.analysis){
@@ -9093,6 +9218,26 @@ function buildPrism(reanalyze){
   cardsHost.innerHTML='<span style="font-size:11.5px;color:var(--dim);">This track has no phrases to split here — pick another beam above.</span>';
  }
  body.appendChild(cardsHost);
+ /* THE VARIATION RING — ROADMAP 4.7 ⑤'s "universal inner variation ring", its first
+    three verbs (Minimalism · Simple Variation · Embellishment) + one intensity
+    slider (E-145's distance-from-source dial) + the stage-1 minimalism fork.
+    Chips in an existing panel — NOT a WINDOW_DEFS entry (the one-window law). */
+ const ring=document.createElement('div');
+ ring.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;';
+ ring.innerHTML='<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The variation ring — the three straightest variations of the notes selected in the grid. Fewer notes = minimalism · the same count = simple variation · more = embellishment.">Ring</span>'
+  +'<span class="cpchip przMinB" title="MINIMALISM — strip the least-important notes first (strong beats, long notes, contour turns and chord tones stay longest; the first and last never leave). Uses the slider · one undo.">− Minimal</span>'
+  +'<span class="cpchip przVarB" title="SIMPLE VARIATION — the same notes re-rooted on a different chord tone, strays snapped to the scale, every rise and fall intact. The slider picks how far the new root sits · one undo.">≈ Vary</span>'
+  +'<span class="cpchip przEmbB" title="EMBELLISH — passing tones inside the biggest leaps first. Uses the slider · one undo.">+ Embellish</span>'
+  +'<input id="przVaryAmt" type="range" min="0" max="100" value="'+przState.varyAmt+'" style="width:86px;" title="Intensity — the distance from the source. 0 barely moves; 100 goes all the way.">'
+  +'<span id="przVaryLbl" style="font-size:10.5px;color:var(--dim);min-width:18px;">'+przState.varyAmt+'</span>'
+  +'<span class="cpchip przFillB'+(przState.varyFill?' on':'')+'" title="The minimalism fork, his words: add more silences OR extend notes to cover the holes. Off = silences stay · On = the note before each hole holds through it.">⇥ Hold the holes</span>';
+ ring.querySelector('.przMinB').onclick=()=>przVary('min');
+ ring.querySelector('.przVarB').onclick=()=>przVary('vary');
+ ring.querySelector('.przEmbB').onclick=()=>przVary('emb');
+ ring.querySelector('.przFillB').onclick=e=>{przState.varyFill=!przState.varyFill;e.target.classList.toggle('on',przState.varyFill);};
+ const przRS=ring.querySelector('#przVaryAmt');
+ przRS.oninput=()=>{przState.varyAmt=+przRS.value;ring.querySelector('#przVaryLbl').textContent=przRS.value;};
+ body.appendChild(ring);
  /* the Shelf */
  const sh=document.getElementById('przShelf');
  sh.innerHTML='';
@@ -13712,9 +13857,11 @@ function buildWanPanel(){
    Shelf. 🚀 Pilot view flies the map. Pure layer unit-tested. ==== */
 var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
  ghost:'weber',expandedOn:false,userPivots:[],pilot:false,rec:false,recN:0,clicks:[],
- view:'solar',orbitMode:'orbit',rotate:true,rotDeg:0};   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round) */
+ view:'solar',orbitMode:'orbit',rotate:true,rotDeg:0,
+ varMoons:false,ecoSrc:'own'};   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round). R2 adds varMoons (⑦, default OFF) + ecoSrc (the 🌌 relative pairing, mirrored here so a re-render stops resetting the select — and so the twin planets survive one) */
 var orbJourney={active:false,log:[]};
 var orbBot={next:0};
+var orbNav={stack:[{kind:'key'}],pos:0};   /* GEMS R2 — the fractal history. Frame 0 is the KEY level (always derived live from the song); a chord frame pins {kind:'chord',r,iv,lbl,deg}. Back/Forward walk pos; a new zoom truncates the forward tail (the browser law, pure in orbNavAdvance). Session-only device data, like the rest of the view state. */
 function orbCircleSlots(pcs){
  /* the planet's clockwise chord ring: degree 1 at 12 o'clock, the rest evenly
     clockwise (the client call: 1 at 12 · 4 near 6 o'clock) — pure */
@@ -13735,6 +13882,60 @@ function orbPivotAngle(pcs,rootRel){
  for(let k=0;k<n;k++)if(pcs[k]<r)prev=k;
  if(prev<0)return -Math.PI/2-step*.5;
  return -Math.PI/2+(prev/n)*Math.PI*2+step*.62;
+}
+function orbNavAdvance(stack,pos,frame){
+ /* GEMS R2 — the browser-history law, pure: advancing from pos truncates the forward
+    tail, appends the frame, and moves onto it. Back keeps Forward alive; a NEW zoom
+    from an earlier level starts a fresh forward path (exactly what a browser does). */
+ const s=(stack||[]).slice(0,pos+1);
+ s.push(frame);
+ return {stack:s,pos:s.length-1};
+}
+function orbToneMoons(r,iv,tonic,pcs){
+ /* GEMS R2 — the chord-level fractal map, pure: zoomed onto a chord, its TONES are
+    the solid moons (Root · 3rd · 5th · …) and the key's remaining scale tones orbit
+    as dashed COLOR moons, each named by its interval above the chord root (9th, 11th,
+    ♯11 …) — the fractal law: every level is a solar system with parts and alternatives. */
+ const T=t=>((t%12)+12)%12;
+ const roles=['Root','3rd','5th','7th','9th','11th','13th'];
+ const tones=(iv||[]).map((v,i)=>({pc:T(r+v),role:roles[i]||('+'+v)}));
+ const have=tones.map(t=>t.pc);
+ const CN={1:'♭9',2:'9th',3:'♯9',4:'3rd',5:'11th',6:'♯11',7:'5th',8:'♭13',9:'13th',10:'7th',11:'maj7'};
+ const colors=[];
+ for(const p of (pcs||[])){
+  const a=T(tonic+p);
+  if(have.indexOf(a)>=0)continue;
+  colors.push({pc:a,role:CN[T(a-r)]||('+'+T(a-r))});
+ }
+ return {tones,colors};
+}
+function orbCommonToneWorlds(r,iv,tonic,pcs){
+ /* GEMS R2 — the chord level's alternative worlds, pure: the key's OTHER diatonic
+    chords ranked by how many tones they share with this one (≥2 = a neighboring
+    world — the classic common-tone substitution map). Never includes the chord
+    itself; capped at four so the sky stays readable. */
+ const T=t=>((t%12)+12)%12;
+ const mine=(iv||[]).map(v=>T(r+v));
+ const out=[];
+ const n=(pcs||[]).length;
+ for(let k=0;k<n;k++){
+  const tri=scaleDegreeTriad(pcs,k);if(!tri)continue;
+  const root=T(tonic+pcs[k]);
+  if(root===T(r))continue;
+  const theirs=tri.iv.map(v=>T(root+v));
+  const shared=theirs.filter(p=>mine.indexOf(p)>=0).length;
+  if(shared>=2)out.push({deg:k,r:root,iv:tri.iv.slice(),shared});
+ }
+ out.sort((a,b)=>b.shared-a.shared||a.deg-b.deg);
+ return out.slice(0,4);
+}
+function orbTwinArcAngle(i,n,side){
+ /* GEMS R2 — the siamese twins' moon arcs, pure: each twin's moons occupy the half
+    of the sky FACING AWAY from its sibling (left twin: 90°→270° through 180°; right
+    twin: 270°→90° through 0°), so the pair reads as one two-lobed system and the
+    moons never cross the seam. */
+ const f=((i+.5)/Math.max(1,n))*Math.PI;
+ return side==='left'?Math.PI/2+f:-Math.PI/2+f;
 }
 function ghostSongsFrom(db){
  /* the Ghost Song shelf: curated modulation moments grouped by source recording — pure */
@@ -14060,6 +14261,87 @@ function orbEndJourney(){
  renderOrb();
  setOrbStatus('Journey closed — the next travel starts a fresh one (its own undo).');
 }
+function orbNavFrame(){return orbNav.stack[orbNav.pos]||{kind:'key'};}
+function orbTwinOn(){
+ /* GEMS R2 ⑦ — the twins dock when a relative pairing is picked in the 🌌 selector
+    (parallel major / parallel minor / the 4.6 same-root relative), at the KEY level,
+    in Solar view, with the moons showing PARTS (the 🧬 variables view has no chords
+    to twin). Rotation rests while the twins are docked — half-arcs don't spin. */
+ return orbState.view!=='circles'&&orbNavFrame().kind==='key'&&!orbState.varMoons
+  &&!!orbState.ecoSrc&&orbState.ecoSrc!=='own';
+}
+function orbZoomAnim(x,y,zin,done){
+ /* GEMS R2 ④ — the Google-Maps-style zoom: dive toward the moon (or pull back out),
+    re-render at the new level mid-flight, then settle in from the other side. Runs on
+    #orbMapIn's transform only — renderOrb() rebuilds the children, so each phase
+    re-finds the element. Restores the 🚀 Pilot camera if it is up. */
+ const base=orbState.pilot?'scale(1.9)':'';
+ const mi=document.getElementById('orbMapIn');
+ if(!mi){if(done)done();return;}
+ mi.style.transition='transform .42s ease, opacity .42s ease';
+ mi.style.transformOrigin=(x!=null&&y!=null)?(x+'px '+y+'px'):'50% 50%';
+ mi.style.opacity='.12';
+ mi.style.transform=zin?'scale(2.7)':'scale(.45)';
+ setTimeout(()=>{
+  if(done)done();
+  const m2=document.getElementById('orbMapIn');if(!m2)return;
+  m2.style.transition='none';
+  m2.style.transformOrigin='50% 50%';
+  m2.style.opacity='.12';
+  m2.style.transform=zin?'scale(.55)':'scale(1.9)';
+  requestAnimationFrame(()=>{requestAnimationFrame(()=>{
+   m2.style.transition='transform .5s ease, opacity .5s ease';
+   m2.style.opacity='1';
+   m2.style.transform=base||'scale(1)';
+   setTimeout(()=>{
+    const m3=document.getElementById('orbMapIn');if(!m3)return;
+    m3.style.transition='transform .9s ease';
+    if(!base)m3.style.transform='';
+    m3.style.opacity='';
+   },520);
+  });});
+ },430);
+}
+function orbZoomTo(item,x,y){
+ /* GEMS R2 ④ — double-click a moon and it BECOMES the planet: push a chord frame
+    onto the fractal history (truncating any forward tail, the browser law) and dive. */
+ if(orbState.view==='circles'||!item||item.k!=='chord')return false;
+ const adv=orbNavAdvance(orbNav.stack,orbNav.pos,
+  {kind:'chord',r:item.r,iv:(item.iv||[]).slice(),lbl:item.lbl,deg:(item.deg!=null?item.deg:-1)});
+ orbNav.stack=adv.stack;orbNav.pos=adv.pos;
+ orbState.sel=0;
+ orbZoomAnim(x,y,true,renderOrb);
+ setOrbStatus('Zoomed in — '+(item.lbl||'the moon')+' is the planet now: its tones are the moons, dashed moons are the key’s colors, and the worlds beyond share its tones. ⬅ Back returns (the fractal law: every level is a solar system).');
+ return true;
+}
+function orbNavGo(d){
+ /* GEMS R2 ④ — ⬅ Back / ➡ Forward across the granularities. Back keeps Forward
+    alive; only a new zoom rewrites the future. */
+ const np=orbNav.pos+d;
+ if(np<0||np>=orbNav.stack.length)return false;
+ orbNav.pos=np;orbState.sel=0;
+ orbZoomAnim(null,null,d>0,renderOrb);
+ const f=orbNavFrame();
+ setOrbStatus((d<0?'⬅ Back — ':'➡ Forward — ')+(f.kind==='key'?'the key level: the planet is the key again.':'the '+(f.lbl||'chord')+' level: its tones are the moons.'));
+ return true;
+}
+function orbCamKiss(gi){
+ /* GEMS R2 — the lane's camera glide: after a lane part glides the selection to its
+    moon, the camera leans toward that moon and settles back (the R1 entry recorded
+    the sketch-to-glide surface as deepening with R2's camera — this is that half). */
+ const el=document.querySelector('#orbBody .orbNode[data-orb="'+gi+'"]');
+ const mi=document.getElementById('orbMapIn');
+ if(!el||!mi)return;
+ const x=+el.getAttribute('data-x'),y=+el.getAttribute('data-y');
+ if(!isFinite(x)||!isFinite(y))return;
+ const base=orbState.pilot?'scale(1.9)':'';
+ mi.style.transition='transform .45s ease';
+ mi.style.transformOrigin=x+'px '+y+'px';
+ mi.style.transform='scale(1.32)';
+ setTimeout(()=>{const m2=document.getElementById('orbMapIn');if(!m2)return;
+  m2.style.transform=base||'scale(1)';
+  setTimeout(()=>{const m3=document.getElementById('orbMapIn');if(m3&&!base){m3.style.transform='';m3.style.transition='transform .9s ease';}},480);},470);
+}
 function orbActivate(item){
  /* one activation path for click, Enter, MIDI pads and the bot */
  if(!item)return false;
@@ -14069,6 +14351,22 @@ function orbActivate(item){
  }
  if(item.k==='pivot')return orbPivotGo(item.pv);
  if(item.k==='planet')return orbTravelTo(item.tonic,item.minor);
+ if(item.k==='tone'){
+  /* GEMS R2 — a tone moon auditions its tone (nothing is written; editing the tones
+     themselves rides the R4 essences) */
+  const go=()=>{try{
+   inst.note('comping',voice({r:item.pc,iv:[0]},null),.6,Tone.now()+.05,.55);
+  }catch(e){}};
+  if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
+  setOrbStatus('The '+(item.role||'tone')+' — '+PCN[item.pc]+'. A chord’s tones are its moons at this level; editing them rides the R4 essences. ⬅ Back returns to the key.');
+  return true;
+ }
+ if(item.k==='var'){
+  /* GEMS R2 ⑦ — a variable moon reports its shelf standing; docking each variable's
+     own solar system is the R4 round (the toggle already swaps the moon set) */
+  setOrbStatus(item.name+' — '+(item.count||0)+' strand'+(item.count===1?'':'s')+' of this variable on the Essence Shelf (open the △ Prism window to see them). Docking each variable’s own solar system rides R4; this toggle is its doorway.');
+  return true;
+ }
  return false;
 }
 function orbMidiTravel(note){
@@ -14113,6 +14411,23 @@ function orbShipTick(){
  const rel=(((c.r||0)-cur.tonic)%12+12)%12;
  const di=pcs.indexOf(rel);
  const rot=(orbState.view!=='circles'?(orbState.rotDeg||0):0)*Math.PI/180;   /* GEMS: the 🚀 turns WITH the moons — one tick source, no drift */
+ if(orbState.view!=='circles'){
+  /* GEMS R2: zoomed onto a chord the 🚀 rests (it rides the KEY level's moons only);
+     at the key level it finds its moon BY data-deg, which keeps it glued through the
+     twins' half-arc layout as well as the classic ring */
+  if(orbNavFrame().kind!=='key'){ship.style.display='none';return;}
+  if(ship.style.display==='none')ship.style.display='';
+  const nd=document.querySelector('#orbMoonG .orbMoonN[data-deg="'+di+'"]');
+  if(nd){
+   const nx=+nd.getAttribute('data-x'),ny=+nd.getAttribute('data-y');
+   const a0=Math.atan2(ny-geo.cy,nx-geo.cx)+rot;
+   const rr=Math.hypot(nx-geo.cx,ny-geo.cy);
+   const x=geo.cx+Math.cos(a0)*(rr-30),y=geo.cy+Math.sin(a0)*(rr-30);
+   ship.style.left=(x-11)+'px';ship.style.top=(y-13)+'px';
+   ship.style.transform='rotate('+Math.round((a0+Math.PI/2)*180/Math.PI)+'deg)';
+   return;
+  }
+ }
  const a=(di>=0?(-Math.PI/2+(di/pcs.length)*Math.PI*2):orbPivotAngle(pcs,rel))+rot;
  const x=geo.cx+Math.cos(a)*(geo.r-30),y=geo.cy+Math.sin(a)*(geo.r-30);
  ship.style.left=(x-11)+'px';ship.style.top=(y-13)+'px';
@@ -14124,6 +14439,7 @@ function orbRotTick(){
     at all — toggled off, no styles are written and no frames are requested. */
  if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
  if(orbState.view==='circles'||orbState.orbitMode!=='orbit'||!orbState.rotate)return;
+ if(orbTwinOn())return;   /* GEMS R2: rotation rests while the twins are docked — the half-arcs don't spin */
  orbState.rotDeg=((orbState.rotDeg||0)+0.35)%360;
  orbApplyRot();
 }
@@ -14172,6 +14488,14 @@ function renderOrb(){
     the same map either way (FINDING 4: reordering silently re-maps every pad). ---- */
  const solar=orbState.view!=='circles';
  const equal=solar&&orbState.orbitMode==='equal';
+ /* ---- GEMS R2: the fractal frame (④), the twins (⑦) and the variables toggle (⑦)
+    all branch INSIDE the solar view — Circles stays the key-level 30r wheel and
+    ignores the frame entirely, so its suites never see any of this. ---- */
+ const frame=solar?orbNavFrame():{kind:'key'};
+ const zoomed=solar&&frame.kind==='chord';
+ const twin=solar&&orbTwinOn();
+ const varM=solar&&!zoomed&&!twin&&orbState.varMoons;
+ const twinScale=twin?orbEcoScale():null;
  const W=840,H=520;
  const cx=solar?350:280,cy=solar?282:262,R=solar?118:152;
  const bodyR=58,sunX=112,sunY=100,sunR=40;
@@ -14257,7 +14581,7 @@ function renderOrb(){
  /* orbit guides: the planet&#8217;s path around the sun, the moons&#8217; path around the planet */
  const sunDist=Math.hypot(cx-sunX,cy-sunY);
  sunS+='<circle cx="'+sunX+'" cy="'+sunY+'" r="'+sunDist.toFixed(1)+'" fill="none" stroke="rgba(255,255,255,.045)"/>'
-  +'<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.05)"/>';
+  +(twin?'':'<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.05)"/>');
  /* ☀ the sun — the essence aboard (Keys &amp; Chords is the only essence docked so far;
     the essence selector rides the R4 round) */
  sunS+='<g><title>The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤).</title>'
@@ -14265,11 +14589,142 @@ function renderOrb(){
   +'<circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(sunR*.62)+'" fill="#ffdf9e" stroke="#e8a33d" stroke-width="1.5"/>'
   +'<text x="'+sunX+'" y="'+(sunY+sunR+18)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#e8a33d">KEYS &amp; CHORDS</text>'
   +'<text x="'+sunX+'" y="'+(sunY+sunR+30)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">the essence aboard</text></g>';
+ if(zoomed){
+ /* ============ CHORD LEVEL (GEMS R2 ④) — the moon became the planet ============ */
+ const zr=frame.r,ziv=frame.iv&&frame.iv.length?frame.iv:[0,4,7];
+ const zlbl=frame.lbl||chipLbl(zr,ziv);
+ nodes+='<g'+(equal?'':' opacity=".72"')+'><title>'+PCN[zr]+' — '+zlbl+' of '+PCN[cur.tonic]+(cur.minor?' minor':' major')+', zoomed to be the planet (the fractal law: every level is a solar system). Its tones are the moons, dashed moons are the key&#8217;s colors, and the worlds beyond share its tones. ⬅ Back returns.</title>'
+  +'<circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="rgba(232,163,61,'+(equal?'.09':'.05')+')" stroke="var(--accent)" stroke-width="2.2"/>'
+  +'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+zlbl+'</text>'
+  +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+PCN[zr]+' — a chord of '+PCN[cur.tonic]+(cur.minor?'m':'')+'</text></g>';
+ /* the moons — the chord's TONES (solid) + the key's colors (dashed), one shared ring */
+ const tm=orbToneMoons(zr,ziv,cur.tonic,pcs);
+ const zn=Math.max(1,tm.tones.length+tm.colors.length);
+ tm.tones.forEach((t0,i)=>{
+  const a=-Math.PI/2+(i/zn)*Math.PI*2;
+  const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'tone',pc:t0.pc,role:t0.role});
+  const sel=orbState.sel===idx;
+  const mr=equal?17:(i===0?19:15);
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[t0.pc]+' — the '+t0.role+'. A chord&#8217;s tones are its moons at this level; click = hear the tone (nothing is written; editing the tones rides the R4 essences).</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+mr+'" fill="rgba(232,163,61,.14)" stroke="'+(sel?'var(--accent)':'#a08347')+'" stroke-width="'+(sel?2.6:1.6)+'"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="'+(sel?'var(--accent)':'#e2d9c4')+'">'+PCN[t0.pc]+'</text>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+11.5).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="#8b93a7">'+t0.role+'</text></g>';
+ });
+ tm.colors.forEach((t0,i)=>{
+  const a=-Math.PI/2+((tm.tones.length+i)/zn)*Math.PI*2;
+  const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'tone',pc:t0.pc,role:t0.role});
+  const sel=orbState.sel===idx;
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[t0.pc]+' — a color: the '+t0.role+' above this chord&#8217;s root, borrowed from the key. Click = hear it (nothing is written).</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(equal?17:12)+'" fill="rgba(20,22,28,.94)" stroke="#59607a" stroke-width="'+(sel?2.6:1.2)+'" stroke-dasharray="4 3"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+(sel?'var(--accent)':'#8b93a7')+'">'+PCN[t0.pc]+'</text></g>';
+ });
+ /* the alternative worlds — the key's other chords ranked by shared tones */
+ const worlds=orbCommonToneWorlds(zr,ziv,cur.tonic,pcs);
+ const placedZ=[{x:sunX,y:sunY}];
+ worlds.forEach((w,i)=>{
+  let a=-Math.PI/2+((i+0.5)/Math.max(4,worlds.length))*Math.PI*2;
+  let px=0,py=0,tries=0;
+  for(;;){
+   px=cx+Math.cos(a)*(R+140);py=cy+Math.sin(a)*(R+140);
+   px=Math.max(76,Math.min(W-80,px));py=Math.max(62,Math.min(H-70,py));
+   if(!placedZ.some(q=>(q.x-px)*(q.x-px)+(q.y-py)*(q.y-py)<95*95)||++tries>16)break;
+   a+=0.42;
+  }
+  placedZ.push({x:px,y:py});
+  const roman=degRomanW(w.deg,w.iv,n);
+  const idx=clicks.length;
+  clicks.push({k:'chord',r:w.r,iv:w.iv.slice(),lbl:roman,deg:w.deg});
+  const sel=orbState.sel===idx;
+  const pr=34;
+  const sx=cx+Math.cos(a)*(bodyR+6),sy=cy+Math.sin(a)*(bodyR+6);
+  lines+='<line x1="'+sx.toFixed(1)+'" y1="'+sy.toFixed(1)+'" x2="'+(px-Math.cos(a)*pr).toFixed(1)+'" y2="'+(py-Math.sin(a)*pr).toFixed(1)+'" stroke="#8b93a7" stroke-width="1.4" stroke-dasharray="5 5"/>';
+  nodes+='<g class="orbNode" data-orb="'+idx+'" data-x="'+px.toFixed(1)+'" data-y="'+py.toFixed(1)+'"><title>'+PCN[w.r]+' ('+roman+') — shares '+w.shared+' tone'+(w.shared===1?'':'s')+' with '+zlbl+' (the common-tone substitution map). Click = the chord under the next landing is replaced with it · double-click = zoom to make IT the planet.</title>'
+   +'<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="'+pr+'" fill="rgba(20,22,28,.55)" stroke="'+(sel?'var(--accent)':'#8b93a7')+'" stroke-width="'+(sel?2.4:1.5)+'" stroke-dasharray="6 4"/>'
+   +'<text x="'+px.toFixed(1)+'" y="'+(py+4).toFixed(1)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+(sel?'var(--accent)':'#e9eaef')+'">'+roman+'</text>'
+   +'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+w.shared+' shared</text></g>';
+ });
+ }else if(twin){
+ /* ============ TWIN PLANETS (GEMS R2 ⑦) — the relative pairing docks a sibling ============ */
+ const tw=twinScale||{tonic:cur.tonic,pcs:pcs};
+ const pcx=cx-42,tcx=cx+42;
+ orbState.geo={cx:pcx,cy:cy,r:R};   /* the 🚀 rides the primary twin */
+ const twn=(tw.pcs||[]).length||7;
+ const twT=T(tw.tonic||0);
+ const twMinor=(function(){const t0=scaleDegreeTriad(tw.pcs,0);return !!(t0&&t0.iv[1]===3);})();
+ const srcLbl=orbState.ecoSrc==='parMaj'?'parallel major':orbState.ecoSrc==='parMin'?'parallel minor':'same-root relative';
+ /* the two bodies TOUCH — siamese (GEMS §5, 3.3's expansion): one two-lobed system */
+ nodes+='<g'+(equal?'':' opacity=".72"')+'><title>The twins (GEMS ⑦): '+PCN[cur.tonic]+(cur.minor?' minor':' major')+' and its '+srcLbl+' share one sky — each twin&#8217;s chords orbit its own half, and you may pick from EITHER. The 🌌 selector chose the pairing; set it back to “this scale” to undock. Pivots and far worlds rest while the twins are docked.</title>'
+  +'<circle cx="'+pcx+'" cy="'+cy+'" r="44" fill="rgba(232,163,61,'+(equal?'.09':'.05')+')" stroke="var(--accent)" stroke-width="2.2"/>'
+  +'<text x="'+pcx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="17" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>'
+  +'<text x="'+pcx+'" y="'+(cy+13)+'" text-anchor="middle" font-size="8" fill="#8b93a7">you are here</text>'
+  +'<circle cx="'+tcx+'" cy="'+cy+'" r="44" fill="rgba(232,163,61,.04)" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="6 4"/>'
+  +'<text x="'+tcx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="17" font-weight="800" fill="#c8cde0">'+PCN[twT]+(twMinor?'m':'')+'</text>'
+  +'<text x="'+tcx+'" y="'+(cy+13)+'" text-anchor="middle" font-size="8" fill="#8b93a7">the '+srcLbl+' twin</text></g>';
+ /* the primary twin's moons — the LEFT half-arc, facing away from its sibling */
+ slots.forEach((s,k)=>{
+  const tri=scaleDegreeTriad(pcs,k);if(!tri)return;
+  const root=T(cur.tonic+s.pc);
+  const roman=degRomanW(k,tri.iv,n);
+  const a=orbTwinArcAngle(k,n,'left');
+  const x=pcx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'chord',r:root,iv:tri.iv.slice(),lbl:roman,deg:k});
+  const isUsed=used.has(k),sel=orbState.sel===idx;
+  const mr=equal?15:(isUsed?17:13);
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-deg="'+k+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[root]+' ('+roman+') of '+PCN[cur.tonic]+(cur.minor?'m':'')+(isUsed?' — the grid plays this chord':'')+'. Click = the chord under the next landing is replaced with it · double-click = zoom in.</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+mr+'" fill="'+(isUsed?'rgba(232,163,61,.22)':'rgba(20,22,28,.92)')+'" stroke="'+(sel?'var(--accent)':isUsed?'var(--accent)':'#59607a')+'" stroke-width="'+(sel?2.6:isUsed?1.8:1.1)+'"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="'+(isUsed?'var(--accent)':'#c8cde0')+'">'+roman+'</text>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+11).toFixed(1)+'" text-anchor="middle" font-size="7" fill="#8b93a7">'+chipLbl(root,tri.iv)+'</text></g>';
+ });
+ /* the sibling's moons — its OWN diatonic chords on the RIGHT half-arc */
+ const twMoons=[];
+ for(let k2=0;k2<twn;k2++){const tri=scaleDegreeTriad(tw.pcs,k2);if(tri)twMoons.push({k:k2,tri});}
+ twMoons.forEach((m,j)=>{
+  const root=T(twT+tw.pcs[m.k]);
+  const roman=degRomanW(m.k,m.tri.iv,twn);
+  const a=orbTwinArcAngle(j,twMoons.length,'right');
+  const x=tcx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'chord',r:root,iv:m.tri.iv.slice(),lbl:roman,deg:-1});
+  const sel=orbState.sel===idx;
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[root]+' ('+roman+' of the twin) — a chord of the '+srcLbl+'. Click = the chord under the next landing is replaced with it (a borrowed color, one undo) · double-click = zoom in.</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(equal?15:13)+'" fill="rgba(20,22,28,.92)" stroke="'+(sel?'var(--accent)':'#7b8194')+'" stroke-width="'+(sel?2.6:1.2)+'" stroke-dasharray="4 3"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#c8cde0">'+roman+'</text>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+11).toFixed(1)+'" text-anchor="middle" font-size="7" fill="#8b93a7">'+chipLbl(root,m.tri.iv)+'</text></g>';
+ });
+ }else{
+ /* ============ KEY LEVEL — the R1 layout (moons = parts, or 🧬 variables) ============ */
  /* the planet — the current object (translucent in cinematic Orbit Mode) */
  nodes+='<g'+(equal?'':' opacity=".72"')+'><title>The planet is the CURRENT OBJECT — the key the song is in right now. Its diatonic chords orbit as moons; its parts ride the planet lane below.</title>'
   +'<circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="rgba(232,163,61,'+(equal?'.09':'.05')+')" stroke="var(--accent)" stroke-width="2.2"/>'
   +'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>'
   +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+(cur.minor?'minor':'major')+' — you are here</text></g>';
+ const pivotPts=[];
+ if(varM){
+ /* GEMS R2 ⑦ — “Use variables as the moons”: the ring swaps from the planet's PARTS
+    to its VARIABLES — the Essence Shelf's strand kinds, each moon carrying its shelf
+    count. validShelf's whitelist is UNTOUCHED: no new strand kind ships with a view
+    toggle (the silent-drop landmine stays unarmed). Docking each variable's own
+    solar system is the R4 round; pivot moons rest while the variables are up. */
+ const shelfV=Array.isArray(project.shelf)?project.shelf:[];
+ const VARS=[['contour','〰','Contour'],['dna','🧶','DNA'],['rhythm','𝄴','Rhythm'],['chords','𝄞','Chords']];
+ VARS.forEach((v,i)=>{
+  const cnt=shelfV.filter(s2=>s2&&s2.strand===v[0]).length;
+  const a=-Math.PI/2+(i/VARS.length)*Math.PI*2;
+  const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+  const idx=clicks.length;
+  clicks.push({k:'var',kind:v[0],name:v[2],count:cnt});
+  const sel=orbState.sel===idx;
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+v[2]+' — a VARIABLE of this object ('+cnt+' strand'+(cnt===1?'':'s')+' on the Essence Shelf). GEMS ⑦: this toggle swaps the moons from parts to variables; each variable&#8217;s own solar system docks in R4.</title>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(equal?17:19)+'" fill="rgba(20,22,28,.92)" stroke="'+(sel?'var(--accent)':'#5bb98c')+'" stroke-width="'+(sel?2.6:1.5)+'"/>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y-2).toFixed(1)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="'+(sel?'var(--accent)':'#c8cde0')+'">'+v[1]+' '+v[2]+'</text>'
+   +'<text x="'+x.toFixed(1)+'" y="'+(y+10).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="#8b93a7">'+cnt+' on the Shelf</text></g>';
+ });
+ }else{
  /* the moons — the 7 diatonic chords orbit the planet (Equal Orbit Mode: one size) */
  slots.forEach((s,k)=>{
   const tri=scaleDegreeTriad(pcs,k);if(!tri)return;
@@ -14280,13 +14735,12 @@ function renderOrb(){
   clicks.push({k:'chord',r:root,iv:tri.iv.slice(),lbl:roman,deg:k});
   const isUsed=used.has(k),sel=orbState.sel===idx;
   const mr=equal?17:(isUsed?19:15);
-  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[root]+' ('+roman+')'+(isUsed?' — the grid plays this chord':' — in this key, unused so far')+'. Click = the chord under the next landing is replaced with this one (loop on = you hear it every round).</title>'
+  moonS+='<g class="orbNode orbMoonN" data-orb="'+idx+'" data-deg="'+k+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[root]+' ('+roman+')'+(isUsed?' — the grid plays this chord':' — in this key, unused so far')+'. Click = the chord under the next landing is replaced with this one (loop on = you hear it every round). Double-click = zoom in: the moon becomes the planet (GEMS ④).</title>'
    +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+mr+'" fill="'+(isUsed?'rgba(232,163,61,.22)':'rgba(20,22,28,.92)')+'" stroke="'+(sel?'var(--accent)':isUsed?'var(--accent)':'#59607a')+'" stroke-width="'+(sel?2.6:isUsed?1.8:1.1)+'"/>'
    +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="'+(isUsed?'var(--accent)':'#c8cde0')+'">'+roman+'</text>'
    +'<text x="'+x.toFixed(1)+'" y="'+(y+11.5).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="#8b93a7">'+chipLbl(root,tri.iv)+'</text></g>';
  });
  /* pivot moons — dashed, in degree order on the same ring (the alternatives&#8217; doorways) */
- const pivotPts=[];
  ana.pivots.forEach(pv=>{
   const rel=T(pv.r-cur.tonic);
   const a=orbPivotAngle(pcs,rel);
@@ -14301,6 +14755,7 @@ function renderOrb(){
    +'<text x="'+x.toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+col+'">'+lbl.slice(0,6)+'</text></g>';
   pivotPts.push({pv,x,y,col});
  });
+ }
  /* alternative worlds + their dotted travel roads (roads leave the planet&#8217;s rim, not
     the rotating moons — rotation-proof by construction) */
  const placed=[{x:sunX,y:sunY}];   /* seeded with the sun so no world lands on it */
@@ -14338,9 +14793,25 @@ function renderOrb(){
    +(pl.tag?'<text x="'+px.toFixed(1)+'" y="'+(py+pr+13).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+pl.tag+'</text>':'')
    +'</g>';
  });
+ }
  /* the PLANET LANE — the mini edit lane the design law asks for: the current object&#8217;s
-    parts as chips; clicking one GLIDES the selection to its moon. Sketching here never
-    creates a planet (the law) — the deeper sketch-to-glide editor rides R2/R4. */
+    parts as chips; clicking one GLIDES the selection (and, since R2, the camera) to
+    its moon. Sketching here never creates a planet (the law). At the chord level the
+    parts are the TONES. */
+ if(zoomed){
+  const tl=clicks.map((c2,i2)=>({c:c2,i:i2})).filter(o=>o.c.k==='tone');
+  if(tl.length){
+   const chW=42,chG=5,totW=tl.length*(chW+chG)-chG;
+   let lx=Math.max(8,Math.min(W-8-totW,cx-totW/2));
+   laneS+='<text x="'+cx+'" y="'+(H-36)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">THE PLANET LANE — its tones · click one to glide to its moon</text>';
+   tl.forEach(o=>{
+    laneS+='<g class="orbLane" data-gi="'+o.i+'" style="cursor:pointer;"><title>'+PCN[o.c.pc]+' — the '+o.c.role+' · click to glide to its moon (sketching never creates a new planet)</title>'
+     +'<rect x="'+lx+'" y="'+(H-30)+'" width="'+chW+'" height="17" rx="8" fill="rgba(20,22,28,.9)" stroke="#59607a"/>'
+     +'<text x="'+(lx+chW/2)+'" y="'+(H-18)+'" text-anchor="middle" font-size="9.5" fill="#c8cde0">'+PCN[o.c.pc]+'</text></g>';
+    lx+=chW+chG;
+   });
+  }
+ }else{
  const fcL=flatChords(project.chords).slice(0,8);
  if(fcL.length){
   const chW=42,chG=5,totW=fcL.length*(chW+chG)-chG;
@@ -14354,6 +14825,9 @@ function renderOrb(){
    lx+=chW+chG;
   });
  }
+ }
+ /* GEMS R2 ④ — the Pro Tip (the client asked for it by name) */
+ laneS+='<text class="orbTip" x="'+(W-12)+'" y="16" text-anchor="end" font-size="9.5" fill="#8b93a7">💡 Pro Tip — Double Click a Moon: it becomes the planet'+(zoomed?' · ⬅ Back returns':'')+'</text>';
  }
  orbState.clicks=clicks;
  const route=regs.map((r,i)=>romanKeyLabel(r.tonic,orbMinor(r.mode),home.tonic)+(i<regs.length-1?' ⟶ ':'')).join('');
@@ -14406,6 +14880,10 @@ function renderOrb(){
   +'<div style="flex:1;min-width:520px;">'
   +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
   +'<span class="cpchip'+(solar?' on':'')+'" id="orbView" title="Two views of the same worlds — 🪐 Solar System (GEMS: the sun is the essence, the planet the current object, the moons its parts) ↔ ⭕ the Circles wheel, exactly as it shipped. Nothing is thrown away; switching is free.">'+(solar?'🪐 Solar':'⭕ Circles')+'</span>'
+  +(solar?'<span class="cpchip" id="orbBack" style="'+(orbNav.pos>0?'':'opacity:.4;')+'" title="⬅ Back — return to the previous granularity of the fractal history (double-clicking a moon zooms in; Back keeps Forward alive, the browser law).">⬅</span>'
+   +'<span class="cpchip" id="orbFwd" style="'+(orbNav.pos<orbNav.stack.length-1?'':'opacity:.4;')+'" title="➡ Forward — re-enter the level you came Back from. A new zoom from here starts a fresh forward path.">➡</span>'
+   +'<span id="orbCrumb" style="font-size:10px;color:var(--dim);">'+orbNav.stack.slice(0,orbNav.pos+1).map(f2=>f2.kind==='key'?(PCN[cur.tonic]+(cur.minor?'m':'')):(f2.lbl||'chord')).join(' › ')+(orbNav.pos<orbNav.stack.length-1?' ⋯':'')+'</span>':'')
+  +(solar&&!zoomed?'<span class="cpchip'+(orbState.varMoons?' on':'')+'" id="orbVarMoons" title="GEMS ⑦ — Use variables as the moons (default OFF): the moon ring swaps from the planet&#8217;s PARTS to its VARIABLES — the Essence Shelf&#8217;s strand kinds, each with its shelf count. Docking each variable&#8217;s own solar system rides R4. While the variables are up, pivots and the twins rest.">🧬 Variables as moons</span>':'')
   +(solar?'<span class="cpchip'+(equal?' on':'')+'" id="orbEq" title="Equal Orbit Mode — every moon the same size and nothing rotates: easier clicking, better live. Off = cinematic Orbit Mode (slow spin, translucent planet).">⚪ Equal orbit</span>':'')
   +(solar&&!equal?'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The cinematic spin. Toggle OFF for performance — with it off nothing animates and no frames are scheduled."><input type="checkbox" id="orbRotate"'+(orbState.rotate?' checked':'')+' style="accent-color:var(--accent);">🔄</label>':'')
   +'<span class="cpchip" id="orbFull" title="Full Screen Animation Mode — the map fills the screen for stage projection. Esc returns (the browser&#8217;s own exit IS the spec). MIDI pads and arrow keys keep working.">⛶ Full screen</span>'
@@ -14415,7 +14893,11 @@ function renderOrb(){
   +'<span style="font-size:10.5px;color:var(--dim);">Written route: <span style="color:var(--text);">'+route+'</span></span>'
   +'</div>'
   +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
-   ?'Solar System view — the ☀ is the essence, the planet is the key you are in, and its diatonic chords orbit as moons (the glowing ones are what the grid plays; the 🚀 rides the chord sounding now). Dashed moons are pivots; dotted roads travel to alternative worlds. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the ⏱ boundary.'
+   ?(zoomed
+    ?'Zoomed in (the fractal law: every level is a solar system) — the planet is now the <b style="color:var(--text);">'+(frame.lbl||'chord')+'</b> chord: its TONES are the moons, dashed moons are the key&#8217;s colors, and dotted roads reach the worlds that share its tones. ⬅ Back returns; double-click any world to travel deeper.'
+    :twin
+    ?'The twins — two keys share one sky: each twin&#8217;s chords orbit its own half, and a click on EITHER side lands that chord on the ⏱ boundary. The 🌌 selector below picked the pairing; “this scale” undocks. ← → picks, <b style="color:var(--text);">Enter fires</b>.'
+    :'Solar System view — the ☀ is the essence, the planet is the key you are in, and its diatonic chords orbit as moons (the glowing ones are what the grid plays; the 🚀 rides the chord sounding now). Dashed moons are pivots; dotted roads travel to alternative worlds. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the ⏱ boundary. 💡 Double-click a moon to zoom in.')
    :'The big planet is the key you are in — its diatonic chords ring it clockwise from 12 o&#8217;clock, the glowing ones are what the grid plays, and the 🚀 rides the chord sounding now. Dashed chords are pivots; dotted roads lead to their planets. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the next boundary.')+'</div>'
   +'<div id="orbMapWrap" style="position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 30% 25%,#131722 0%,#0a0c12 70%);">'
   +'<div id="orbMapIn" style="transition:transform .9s ease;transform-origin:'+cx+'px '+cy+'px;position:relative;">'
@@ -14427,7 +14909,10 @@ function renderOrb(){
   +'<details style="margin-top:10px;border-top:1px solid var(--line);padding-top:6px;">'
   +'<summary style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);cursor:pointer;" title="Any good piece of music has its own logic which can always be expanded on — an advanced toy, tucked away: the main circle always just starts in the key the grid is in.">🌌 Ecosystem expansion (advanced)</summary>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px;">'+degs
-  +'<select id="orbEcoSrc" style="margin-left:6px;"><option value="own">this scale</option><option value="parMaj">parallel major</option><option value="parMin">parallel minor</option><option value="rel46">same-root relative (🧭 4.6: C major ↔ C Aeolian)</option></select>'
+  +'<select id="orbEcoSrc" style="margin-left:6px;" title="The relative pairing — anything but “this scale” also docks the TWIN PLANETS on the map (GEMS ⑦: two keys, one sky).">'
+  +[['own','this scale'],['parMaj','parallel major'],['parMin','parallel minor'],['rel46','same-root relative (🧭 4.6: C major ↔ C Aeolian)']]
+   .map(o=>'<option value="'+o[0]+'"'+(orbState.ecoSrc===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')
+  +'</select>'
   +'<button id="orbEcoPlay" style="padding:4px 10px;font-size:11.5px;">▶ Hear it</button>'
   +'<button id="orbEcoUse" style="padding:4px 10px;font-size:11.5px;">✓ Replace the lane</button>'
   +'<span id="orbEcoSel" style="font-size:10.5px;color:var(--dim);"></span></div>'
@@ -14441,7 +14926,27 @@ function renderOrb(){
   el.addEventListener('click',()=>{
    const i=+el.getAttribute('data-orb');
    orbState.sel=i;
-   orbActivate(clicks[i]);
+   const it=clicks[i];
+   if(solar&&it&&it.k==='chord'){
+    /* GEMS R2 ④: a double-click ZOOMS (the moon becomes the planet), so a chord
+       moon's single click arms after the dblclick window — 230ms, under a 16th at
+       most tempos, and the landing waits for the ⏱ boundary anyway. Pivots, planets,
+       tones and variables stay instant; Circles view is untouched. */
+    if(orbState._ct)clearTimeout(orbState._ct);
+    orbState._ct=setTimeout(()=>{orbState._ct=null;orbActivate(it);},230);
+    return;
+   }
+   orbActivate(it);
+  });
+  el.addEventListener('dblclick',e=>{
+   if(!solar)return;
+   const i=+el.getAttribute('data-orb');
+   const it=clicks[i];
+   if(!it||it.k!=='chord')return;
+   e.preventDefault();
+   if(orbState._ct){clearTimeout(orbState._ct);orbState._ct=null;}
+   const zx=parseFloat(el.getAttribute('data-x')),zy=parseFloat(el.getAttribute('data-y'));
+   orbZoomTo(it,isFinite(zx)?zx:null,isFinite(zy)?zy:null);
   });
  });
  B.querySelectorAll('.orbWb').forEach(el=>{
@@ -14458,15 +14963,35 @@ function renderOrb(){
  };
  B.querySelectorAll('.orbLane').forEach(el=>{
   el.addEventListener('click',()=>{
+   if(el.hasAttribute('data-gi')){
+    /* the chord level's lane (GEMS R2): the parts are the tones */
+    const gi2=+el.getAttribute('data-gi');
+    if(!(orbState.clicks[gi2]))return;
+    orbState.sel=gi2;renderOrb();
+    orbCamKiss(gi2);
+    setOrbStatus('Glided to the '+(orbState.clicks[gi2].role||'tone')+' moon — Enter hears it. Sketching in the lane never creates a new planet.');
+    return;
+   }
    const di=+el.getAttribute('data-di');
    if(di<0){setOrbStatus('That part lives outside this key — no moon carries it (its pivot may).');return;}
    const gi=orbState.clicks.findIndex(c=>c.k==='chord'&&c.deg===di);
-   if(gi<0)return;
+   if(gi<0){setOrbStatus(orbState.varMoons?'The moons are showing VARIABLES just now (🧬) — toggle back to parts to glide to a chord moon.':'No moon carries that part just now.');return;}
    orbState.sel=gi;renderOrb();
+   orbCamKiss(gi);   /* GEMS R2: the camera leans toward the moon and settles back — the glide got its motion */
    setOrbStatus('Glided to the '+(orbState.clicks[gi].lbl||'')+' moon — Enter fires it on the ⏱ boundary. Sketching in the lane never creates a new planet.');
   });
  });
  if(solar)orbApplyRot();
+ /* GEMS R2 controls */
+ const bB=document.getElementById('orbBack');if(bB)bB.onclick=()=>{if(!orbNavGo(-1))setOrbStatus('⬅ Nothing further back — this is the key level, where the fractal starts.');};
+ const fB2=document.getElementById('orbFwd');if(fB2)fB2.onclick=()=>{if(!orbNavGo(1))setOrbStatus('➡ Nothing further forward — double-click a moon to zoom somewhere new.');};
+ const vM=document.getElementById('orbVarMoons');if(vM)vM.onclick=()=>{orbState.varMoons=!orbState.varMoons;orbState.sel=0;renderOrb();};
+ const eS=document.getElementById('orbEcoSrc');if(eS)eS.onchange=e=>{
+  orbState.ecoSrc=e.target.value||'own';
+  orbState.rotDeg=0;orbState.sel=0;   /* the twins' half-arcs don't spin — dock them square */
+  renderOrb();
+  setOrbStatus(orbState.ecoSrc==='own'?'The twin undocked — one planet again.':'The twin planets docked (GEMS ⑦) — two keys, one sky; pick chords from either half. Rotation rests while they are up.');
+ };
  document.getElementById('orbExpand').onclick=()=>{orbState.expandedOn=!orbState.expandedOn;renderOrb();};
  document.getElementById('orbUser').onclick=orbUserPrompt;
  document.getElementById('orbPilot').onclick=()=>{orbState.pilot=!orbState.pilot;renderOrb();};
@@ -14539,7 +15064,7 @@ function orbRecToggle(){
 function orbEcoScale(){
  const st=keyFor((typeof playheadBeat==='number')?playheadBeat:0);
  const sc=SCALE_DB[st.mode]||SCALE_DB.ionian;
- const src=(document.getElementById('orbEcoSrc')||{}).value||'own';
+ const src=orbState.ecoSrc||(document.getElementById('orbEcoSrc')||{}).value||'own';   /* GEMS R2: orbState.ecoSrc is the source of truth — the select used to reset to 'own' on every re-render, which would undock the twins mid-thought */
  if(src==='parMaj')return {tonic:st.tonic||0,pcs:SCALE_DB.ionian.pcs};
  if(src==='parMin')return {tonic:st.tonic||0,pcs:SCALE_DB.aeolian.pcs};
  if(src==='rel46')return {tonic:st.tonic||0,pcs:relParallelPcs(sc.pcs,(typeof wanState==='object'&&wanState.relStep)||2,(typeof wanState==='object'&&wanState.relDir)||'below')};
