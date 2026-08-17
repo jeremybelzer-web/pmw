@@ -418,7 +418,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-16a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-16b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -2734,6 +2734,7 @@ let project={song:null,style:null,tonic:0,mode:'major',base:60,
   tempoMap:[],   /* 4.2: the global tempo lane's events [{beat,bpm}…] */
   markers:[],    /* 2.5 ⑪f: position markers [{start,name}…] — Cubase's free-standing points */
   tsigMap:[],    /* 2.5 ④: the time-signature lane's events [{beat,num,den}…] (notational) */
+  trips:[],      /* 4.7 R3: the UPCOMING TRIPS itinerary [{it,bars,lbl}…] — PROJECT data (GEMS ⑥; the from-scratch build, FINDING 1) */
   autoLanes:[],  /* 2.5 ①②: per-track automation lanes [{id,track,kind,name,nodes}…] */
   srcs:[],       /* 4.4: cross-pollination sources [{id,ref,label}…] — survive song loads */
   shelf:[]};     /* 5.1: THE ESSENCE SHELF — favorite extracted strands, project data */
@@ -5277,8 +5278,8 @@ const undoStack=[];
    pop their snapshot via dropNoopSnapshot(), which also RESTORES the redo history the
    snapshot preemptively cleared — so a stray click never eats your redos. */
 let redoStack=[],_lastSnap=null,_redoStash=null;
-function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too */
-function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
+function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined),trips:(Array.isArray(project.trips)&&project.trips.length?JSON.parse(JSON.stringify(project.trips)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too · 4.7 R3: the trips itinerary rides it too */
+function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
 function snapshot(){
  if(typeof snv==='object'&&snv)snv.active=false;   /* any new edit ends an SNV cycling run */
  if(typeof aretha==='object'&&aretha)aretha.active=false;   /* …and an Aretha re-roll run */
@@ -13858,7 +13859,7 @@ function buildWanPanel(){
 var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
  ghost:'weber',expandedOn:false,userPivots:[],pilot:false,rec:false,recN:0,clicks:[],
  view:'solar',orbitMode:'orbit',rotate:true,rotDeg:0,
- varMoons:false,ecoSrc:'own'};   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round). R2 adds varMoons (⑦, default OFF) + ecoSrc (the 🌌 relative pairing, mirrored here so a re-render stops resetting the select — and so the twin planets survive one) */
+ varMoons:false,ecoSrc:'own',djMute:false};   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round). R2 adds varMoons (⑦, default OFF) + ecoSrc (the 🌌 relative pairing, mirrored here so a re-render stops resetting the select — and so the twin planets survive one). R3 adds djMute (⑧, default OFF — the audience hears everything until the DJ says otherwise) */
 var orbJourney={active:false,log:[]};
 var orbBot={next:0};
 var orbNav={stack:[{kind:'key'}],pos:0};   /* GEMS R2 — the fractal history. Frame 0 is the KEY level (always derived live from the song); a chord frame pins {kind:'chord',r,iv,lbl,deg}. Back/Forward walk pos; a new zoom truncates the forward tail (the browser law, pure in orbNavAdvance). Session-only device data, like the rest of the view state. */
@@ -14028,6 +14029,186 @@ function orbDepartures(tonic,pcs){
   out.push({tonic:((tonic+tri.off)%12+12)%12,minor:tri.iv[1]===3,deg:k});
  }
  return out;
+}
+/* ==== 4.7 R3 · UPCOMING TRIPS (GEMS ⑥ — the from-scratch build, FINDING 1) ====
+   The itinerary is PROJECT data: project.trips = [{it,bars,lbl}…] where `it` is a
+   clicks-shaped item ({k:'chord'|'pivot'|'planet',…}) — a trip EXECUTES through
+   orbActivate, the same seam every other travel uses. The run state below is device/
+   session data, like the rest of the view state. Spec: the union of ROADMAP 4.6's
+   paragraph and GEMS-RAW 1612–1615. Pure layer first — unit-tested. */
+var orbTrips={run:false,idx:0,next:null,sync:4,syncOn:false,drag:null,dragDid:false};
+function validTrips(a){
+ return Array.isArray(a)&&a.every(function(tr){
+  if(!tr||typeof tr!=='object')return false;
+  if(!(typeof tr.bars==='number'&&isFinite(tr.bars)&&tr.bars>=1&&tr.bars<=256))return false;
+  if(tr.lbl!==undefined&&typeof tr.lbl!=='string')return false;
+  var it=tr.it;
+  if(!it||typeof it!=='object')return false;
+  if(it.k==='planet')return typeof it.tonic==='number'&&it.tonic>=0&&it.tonic<12;
+  if(it.k==='chord')return typeof it.r==='number'&&isFinite(it.r)&&Array.isArray(it.iv)&&it.iv.length>=2;
+  if(it.k==='pivot')return !!(it.pv&&typeof it.pv==='object'&&typeof it.pv.r==='number'&&Array.isArray(it.pv.iv));
+  return false;
+ });
+}
+function normalizeTrips(a){
+ if(!validTrips(a))return [];
+ return JSON.parse(JSON.stringify(a)).map(function(tr){
+  return {it:tr.it,bars:Math.round(tr.bars),lbl:typeof tr.lbl==='string'?tr.lbl.slice(0,24):''};
+ });
+}
+function orbTripNextBeat(land,bars,syncQ){
+ /* when the NEXT trip departs: the trip stays `bars` bars (4 beats each — playback is
+    4/4; the tsig lane is notational) after its landing, then the departure quantizes
+    FORWARD to the sync boundary. syncQ<=0 = depart right at the bars point. Pure. */
+ var at=land+Math.max(1,bars)*4;
+ if(!(syncQ>0))return at;
+ return Math.ceil(at/syncQ-1e-9)*syncQ;
+}
+function orbTripLabel(tr){
+ var it=tr&&tr.it;if(!it)return '';
+ if(tr.lbl)return tr.lbl;
+ if(it.k==='planet')return PCN[((it.tonic%12)+12)%12]+(it.minor?'m':'')+' (key)';
+ if(it.k==='chord')return (it.lbl||PCN[((it.r%12)+12)%12])+' (chord)';
+ if(it.k==='pivot'){
+  var pv=it.pv||{};
+  var d=pv.dest&&!pv.dest.psych?' → '+PCN[((pv.dest.tonic%12)+12)%12]+(pv.dest.minor?'m':''):' (psych!)';
+  return (pv.lbl||PCN[((pv.r%12)+12)%12])+d;
+ }
+ return '';
+}
+function orbTripsNow(){
+ /* the itinerary's clock — ABSOLUTE transport beats (never %LOOP: a trip that stays
+    longer than the loop still departs; the modulo clock would wait forever) */
+ try{return beatFromBBS(Tone.Transport.position);}catch(e){return 0;}
+}
+function orbTripsTick(){
+ /* rides the SAME 150ms interval as the bot, the 🚀 and the rotation — one tick source */
+ if(!orbTrips.run||!playing)return;
+ if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ var list=(project.trips||[]);
+ if(orbTrips.idx>=list.length){
+  orbTrips.run=false;orbTrips.next=null;orbTripsRefresh();
+  setOrbStatus('🧳 The itinerary is complete — every trip has flown. ↩ undoes journey by journey.');
+  return;
+ }
+ var b=orbTripsNow();
+ if(orbTrips.next!=null&&b+1e-6<orbTrips.next)return;
+ var tr=list[orbTrips.idx];
+ orbActivate(JSON.parse(JSON.stringify(tr.it)));
+ var q=orbQ();
+ var land=q>0?(Math.floor(b/q+1e-9)*q+q):b;
+ orbTrips.next=orbTripNextBeat(land,tr.bars,orbTrips.syncOn?orbTrips.sync:0);
+ orbTrips.idx++;
+ orbTripsRefresh();
+}
+function orbTripAdd(item){
+ if(!item||(item.k!=='chord'&&item.k!=='pivot'&&item.k!=='planet')){
+  setOrbStatus('Only chords, pivots and planets pack for a trip — tones and variables stay home.');
+  return false;
+ }
+ snapshot();   /* one undo per edit to the list — the client's claim 25 */
+ if(!Array.isArray(project.trips))project.trips=[];
+ var it;
+ if(item.k==='pivot'){
+  var pv=item.pv||{};
+  it={k:'pivot',pv:JSON.parse(JSON.stringify({r:pv.r,iv:pv.iv,lbl:pv.lbl,kind:pv.kind,tplId:pv.tplId,dest:pv.dest}))};
+ }else if(item.k==='chord')it={k:'chord',r:item.r,iv:item.iv.slice(),lbl:item.lbl,deg:item.deg};
+ else it={k:'planet',tonic:((item.tonic%12)+12)%12,minor:!!item.minor};
+ project.trips.push({it:it,bars:4,lbl:''});
+ if(typeof autosaveSoon==='function')autosaveSoon();
+ orbTripsRefresh();
+ setOrbStatus('🧳 '+orbTripLabel(project.trips[project.trips.length-1])+' joined the Upcoming Trips — set its bars, its ▶ flies it now, ▶ Play all runs the whole itinerary in order.');
+ return true;
+}
+function orbTripEdit(i,fn){
+ var list=project.trips||[];
+ if(!(i>=0&&i<list.length))return;
+ snapshot();
+ fn(list[i],list,i);
+ project.trips=normalizeTrips(project.trips);
+ if(typeof autosaveSoon==='function')autosaveSoon();
+ orbTripsRefresh();
+}
+function orbTripsPlayAll(){
+ if(orbTrips.run){
+  orbTrips.run=false;orbTrips.next=null;orbTripsRefresh();
+  setOrbStatus('🧳 The itinerary paused — ▶ Play all departs again from the top.');
+  return;
+ }
+ if(!(project.trips||[]).length){setOrbStatus('🧳 The itinerary is empty — drag a moon, pivot or planet in first (or ⇧-click one).');return;}
+ orbTrips.run=true;orbTrips.idx=0;orbTrips.next=null;
+ orbTripsRefresh();
+ setOrbStatus(playing
+  ?'🧳 Departure — the first trip flies on the ⏱ boundary; each stays for its bars, then the next leaves'+(orbTrips.syncOn?' on the sync point':'')+'.'
+  :'🧳 The itinerary is armed — press ⏵ Play and the first trip departs with the transport.');
+}
+function orbTripsRefresh(){
+ /* a targeted rebuild of the trips box only — renderOrb() is a full innerHTML rebuild
+    (landmine 2) and would eat a bars field mid-type, so the rows keep their own path */
+ var box=document.getElementById('orbTripsBox');
+ if(box){box.innerHTML=orbTripRowsHTML();orbTripsBindRows(box);}
+ var pa=document.getElementById('orbTripsPlayAll');
+ if(pa){pa.textContent=orbTrips.run?'⏸ Pause all':'▶ Play all';pa.style.background=orbTrips.run?'rgba(232,163,61,.16)':'';}
+}
+function orbTripRowsHTML(){
+ var list=project.trips||[];
+ if(!list.length)return '<div style="font-size:10.5px;color:var(--dim);line-height:1.55;">(empty — drag any moon, pivot or planet here, or ⇧-click one on the map)</div>';
+ var h='<div style="display:flex;gap:4px;align-items:center;font-size:8.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;"><span style="flex:1;">Trip</span><span style="width:52px;text-align:center;" title="Enter how many bars you want to stay in this new world before progressing to the next trip in the itinerary.">For how many bars?</span><span style="width:60px;"></span></div>';
+ list.forEach(function(tr,i){
+  var hot=orbTrips.run&&orbTrips.idx===i;
+  h+='<div class="orbTripRow" data-i="'+i+'" style="display:flex;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05);'+(hot?'background:rgba(232,163,61,.08);':'')+'">'
+   +'<button class="orbTripPlay" data-i="'+i+'" title="Fly this trip now — it lands on the ⏱ boundary (one undo per journey)." style="padding:1px 6px;font-size:10px;">▶</button>'
+   +'<input class="orbTripLbl" data-i="'+i+'" value="'+String(orbTripLabel(tr)).replace(/"/g,'&quot;')+'" title="The itinerary is editable by typing — a chord name (Ab7, F#m) rewrites this trip as that chord; a bare key (Ab, F#m + Enter) as that destination." style="flex:1;min-width:0;font-size:10.5px;padding:2px 4px;background:transparent;border:1px solid transparent;color:var(--text);"/>'
+   +'<input class="orbTripBars" data-i="'+i+'" type="number" min="1" max="256" value="'+tr.bars+'" style="width:46px;font-size:10.5px;padding:2px 3px;text-align:center;"/>'
+   +'<button class="orbTripUp" data-i="'+i+'" title="Earlier in the itinerary" style="padding:1px 4px;font-size:9px;"'+(i===0?' disabled':'')+'>▲</button>'
+   +'<button class="orbTripDn" data-i="'+i+'" title="Later in the itinerary" style="padding:1px 4px;font-size:9px;"'+(i===list.length-1?' disabled':'')+'>▼</button>'
+   +'<button class="orbTripDel" data-i="'+i+'" title="Remove this trip (one undo returns it)" style="padding:1px 5px;font-size:10px;background:#3a3e4d;color:#e9eaef;">✕</button>'
+   +'</div>';
+ });
+ return h;
+}
+function orbTripsBindRows(box){
+ box.querySelectorAll('.orbTripPlay').forEach(function(el){el.onclick=function(){
+  var tr=(project.trips||[])[+el.getAttribute('data-i')];
+  if(tr)orbActivate(JSON.parse(JSON.stringify(tr.it)));
+ };});
+ box.querySelectorAll('.orbTripBars').forEach(function(el){el.onchange=function(){
+  var v=Math.round(+el.value||4);
+  orbTripEdit(+el.getAttribute('data-i'),function(tr){tr.bars=Math.max(1,Math.min(256,v));});
+ };});
+ box.querySelectorAll('.orbTripLbl').forEach(function(el){
+  el.onfocus=function(){el.style.border='1px solid var(--line)';};
+  el.onblur=function(){el.style.border='1px solid transparent';};
+  el.onchange=function(){
+   var txt=(el.value||'').trim();
+   var i=+el.getAttribute('data-i');
+   if(!txt){orbTripsRefresh();return;}
+   var mKey=txt.match(/^([A-Ga-g][#b♯♭]?)\s*(m|min|minor)?$/);
+   var p=(typeof parseChordText==='function')&&parseChordText(txt);
+   if(mKey&&p&&p.r!=null){
+    orbTripEdit(i,function(tr){tr.it={k:'planet',tonic:((p.r%12)+12)%12,minor:!!mKey[2]};tr.lbl='';});
+    setOrbStatus('🧳 Trip '+(i+1)+' now flies to '+PCN[((p.r%12)+12)%12]+(mKey[2]?' minor':' major')+'.');
+   }else if(p&&p.r!=null&&Array.isArray(p.iv)){
+    orbTripEdit(i,function(tr){tr.it={k:'chord',r:((p.r%12)+12)%12,iv:p.iv.slice(),lbl:p.lbl||txt.slice(0,8)};tr.lbl='';});
+    setOrbStatus('🧳 Trip '+(i+1)+' now lands the '+(p.lbl||txt)+' chord.');
+   }else{
+    setOrbStatus('Could not read “'+txt+'” — a chord (Ab7, F#m, Bsus4) or a bare key (Ab, F#m) works.');
+    orbTripsRefresh();
+   }
+  };
+ });
+ box.querySelectorAll('.orbTripDel').forEach(function(el){el.onclick=function(){
+  var i=+el.getAttribute('data-i');
+  orbTripEdit(i,function(tr,list){list.splice(i,1);if(orbTrips.idx>i)orbTrips.idx--;});
+ };});
+ box.querySelectorAll('.orbTripUp').forEach(function(el){el.onclick=function(){
+  var i=+el.getAttribute('data-i');
+  orbTripEdit(i,function(tr,list){if(i>0){list[i]=list[i-1];list[i-1]=tr;}});
+ };});
+ box.querySelectorAll('.orbTripDn').forEach(function(el){el.onclick=function(){
+  var i=+el.getAttribute('data-i');
+  orbTripEdit(i,function(tr,list){if(i<list.length-1){list[i]=list[i+1];list[i+1]=tr;}});
+ };});
 }
 function orbNextBoundary(beat,q,loop){
  /* the next quantize landing after `beat` — pure (the Ableton law's arithmetic).
@@ -14353,10 +14534,11 @@ function orbActivate(item){
  if(item.k==='planet')return orbTravelTo(item.tonic,item.minor);
  if(item.k==='tone'){
   /* GEMS R2 — a tone moon auditions its tone (nothing is written; editing the tones
-     themselves rides the R4 essences) */
+     themselves rides the R4 essences). R3 ⑧: the 🔇 mutes the audition, not the map. */
   const go=()=>{try{
    inst.note('comping',voice({r:item.pc,iv:[0]},null),.6,Tone.now()+.05,.55);
   }catch(e){}};
+  if(orbState.djMute){setOrbStatus('🔇 Muted audition — the '+(item.role||'tone')+' moon ('+PCN[item.pc]+') would sound here. Toggle 🔇 Mute DJ off to hear it.');return true;}
   if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
   setOrbStatus('The '+(item.role||'tone')+' — '+PCN[item.pc]+'. A chord’s tones are its moons at this level; editing them rides the R4 essences. ⬅ Back returns to the key.');
   return true;
@@ -14890,6 +15072,7 @@ function renderOrb(){
   +'<span class="cpchip" id="orbExpand" style="'+(orbState.expandedOn?'background:rgba(91,185,140,.18);border-color:#5bb98c;':'')+'" title="Find every OTHER pivot chord available from this planet and slot each into its right clockwise spot (a &#9837;III lands before the iii, a III right after it)">🔭 Expanded</span>'
   +'<span class="cpchip" id="orbUser" title="Type your own pivot chord — even one far outside the key. It joins the ring greyed out, with a grey dotted road to the planet it opens.">＋ User created</span>'
   +'<span class="cpchip" id="orbPilot" style="'+(orbState.pilot?'background:rgba(232,163,61,.16);border-color:var(--accent);':'')+'" title="Pilot view — fly the map like a space game: the camera rides your planet and travels zoom to each new world">🚀 Pilot view</span>'
+  +'<span class="cpchip'+(orbState.djMute?' on':'')+'" id="orbDjMute" title="Mute DJ&#8217;s actions from listener (GEMS ⑧) — ON, your auditions (tone moons, 🌌 ▶ Hear it) make no sound; real travels still play through the band. Honest note: until the multi-output substrate lands the whole room shares one stereo pair, so a muted audition is silent for you too. Pairs with 6.7.">🔇 Mute DJ</span>'
   +'<span style="font-size:10.5px;color:var(--dim);">Written route: <span style="color:var(--text);">'+route+'</span></span>'
   +'</div>'
   +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
@@ -14916,15 +15099,40 @@ function renderOrb(){
   +'<button id="orbEcoPlay" style="padding:4px 10px;font-size:11.5px;">▶ Hear it</button>'
   +'<button id="orbEcoUse" style="padding:4px 10px;font-size:11.5px;">✓ Replace the lane</button>'
   +'<span id="orbEcoSel" style="font-size:10.5px;color:var(--dim);"></span></div>'
-  +'</details></div></div>';
+  +'</details></div>'
+  /* ==== 4.7 R3 · the UPCOMING TRIPS column (GEMS ⑥) — near the sun, per the RAW ==== */
+  +'<div id="orbTripsCol" style="flex:0 0 234px;display:flex;flex-direction:column;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:8px;">'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="The itinerary: drag any moon, pivot or planet in (or ⇧-click one) — each trip flies, stays for its bars, then the next departs. The list is PROJECT data: it saves, autosaves and rides undo (one undo per edit).">🧳 Upcoming Trips</label>'
+  +'<div style="display:flex;gap:6px;align-items:center;">'
+  +'<button id="orbTripsPlayAll" style="padding:4px 10px;font-size:11.5px;'+(orbTrips.run?'background:rgba(232,163,61,.16);':'')+'" title="Play the whole itinerary in order — the big Play button at the top of the column, per the spec.">'+(orbTrips.run?'⏸ Pause all':'▶ Play all')+'</button>'
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:10.5px;color:var(--dim);cursor:not-allowed;" title="Audition Upcoming Trips — hear the itinerary through outputs 3 &amp; 4 while the audience hears 1 &amp; 2 (outputs configurable in Settings). Greyed honestly: the app&#8217;s audio path addresses ONE stereo pair today'+((function(){try{return ' (this browser reports '+(Tone&&Tone.getContext&&Tone.getContext().destination&&Tone.getContext().destination.maxChannelCount||2)+' output channels)';}catch(e){return '';}})())+' — the checkbox enables when the multi-output substrate lands (recorded with 6.2b&#8217;s offline-render engine)."><input type="checkbox" id="orbTripsAud" disabled style="accent-color:var(--accent);">Audition 3&amp;4</label>'
+  +'</div>'
+  +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:10.5px;color:var(--text);cursor:pointer;" title="Start next trip in ___ — when checked, each next trip departs automatically at the chosen synchronization point (bar, half note, beat, 8th, 16th… or immediately)."><input type="checkbox" id="orbTripsSyncOn"'+(orbTrips.syncOn?' checked':'')+' style="accent-color:var(--accent);">Start next trip in</label>'
+  +'<select id="orbTripsSync" style="font-size:10.5px;">'
+  +[[128,'32 bars',''],[64,'16 bars',''],[32,'8 bars',''],[16,'4 bars',''],[8,'2 bars',''],[4,'1 bar',''],[2,'1/2',''],[1,'1/4',''],[0.6667,'1/4T','1/4 Triplet'],[0.5,'1/8',''],[0.3333,'1/8T','1/8 Triplet'],[0.25,'1/16',''],[0.1667,'1/16T','1/16 Triplet'],[-1,'immediately','']]
+   .map(o=>'<option value="'+o[0]+'"'+(Math.abs(orbTrips.sync-o[0])<1e-3?' selected':'')+(o[2]?' title="'+o[2]+'"':'')+'>'+o[1]+'</option>').join('')
+  +'<option value="type" title="Type your own value, in beats (e.g. 6 = a bar and a half)">Type Here…</option>'
+  +'</select></div>'
+  +'<div id="orbTripsBox" style="display:flex;flex-direction:column;max-height:300px;overflow:auto;">'+orbTripRowsHTML()+'</div>'
+  +'</div>'
+  +'</div>';
  /* pilot camera */
  const mi=document.getElementById('orbMapIn');
  if(mi&&orbState.pilot){requestAnimationFrame(()=>{mi.style.transform='scale(1.9)';});}
  /* wiring */
  B.querySelectorAll('.orbNode').forEach(el=>{
   el.style.cursor='pointer';
-  el.addEventListener('click',()=>{
+  el.addEventListener('mousedown',ev=>{
+   /* 4.7 R3: arm a possible drag-to-Trips — it only becomes one past the 7px threshold
+      (the document-level movers below), so plain clicks and dblclicks are untouched */
+   if(ev.button!==0)return;
+   orbTrips.drag={i:+el.getAttribute('data-orb'),x:ev.clientX,y:ev.clientY,on:false};
+  });
+  el.addEventListener('click',ev=>{
+   if(orbTrips.dragDid)return;   /* 4.7 R3: a completed drag is not a click */
    const i=+el.getAttribute('data-orb');
+   if(ev.shiftKey){const itS=clicks[i];if(itS&&(itS.k==='chord'||itS.k==='pivot'||itS.k==='planet')){orbTripAdd(itS);return;}}
    orbState.sel=i;
    const it=clicks[i];
    if(solar&&it&&it.k==='chord'){
@@ -15010,6 +15218,56 @@ function renderOrb(){
  });
  document.getElementById('orbEcoPlay').onclick=()=>orbEcoRun(false);
  document.getElementById('orbEcoUse').onclick=()=>orbEcoRun(true);
+ /* ==== 4.7 R3 wiring — the Trips column, the 🔇, and the drag-to-Trips movers ==== */
+ const djB=document.getElementById('orbDjMute');
+ if(djB)djB.onclick=()=>{orbState.djMute=!orbState.djMute;renderOrb();
+  setOrbStatus(orbState.djMute?'🔇 The DJ works in silence — auditions are muted for the listener (and, honestly, for you too until multi-output lands). Real travels still play.':'🔊 Auditions sound again.');};
+ const paB=document.getElementById('orbTripsPlayAll');if(paB)paB.onclick=orbTripsPlayAll;
+ const syC=document.getElementById('orbTripsSyncOn');if(syC)syC.onchange=e=>{orbTrips.syncOn=!!e.target.checked;};
+ const syS=document.getElementById('orbTripsSync');
+ if(syS)syS.onchange=e=>{
+  if(e.target.value==='type'){
+   const v=parseFloat(prompt('Start next trip in how many beats? (e.g. 6 = a bar and a half)')||'');
+   if(isFinite(v)&&v>0)orbTrips.sync=v;
+   renderOrb();return;
+  }
+  orbTrips.sync=+e.target.value||4;
+ };
+ const tbox=document.getElementById('orbTripsBox');if(tbox)orbTripsBindRows(tbox);
+ if(!window._orbTripDragWired){
+  window._orbTripDragWired=true;
+  document.addEventListener('mousemove',e=>{
+   const d=orbTrips.drag;if(!d)return;
+   if(!d.on){
+    if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<7)return;
+    d.on=true;
+    const it=orbState.clicks[d.i];
+    const g=document.createElement('div');g.id='orbTripGhost';
+    g.textContent='🧳 '+(it?orbTripLabel({it:it}):'trip');
+    g.style.cssText='position:fixed;z-index:150;pointer-events:none;font-size:11px;padding:3px 8px;border:1px dashed var(--accent);border-radius:8px;background:rgba(20,22,28,.95);color:var(--accent);';
+    document.body.appendChild(g);
+   }
+   const g=document.getElementById('orbTripGhost');
+   if(g){g.style.left=(e.clientX+12)+'px';g.style.top=(e.clientY-8)+'px';}
+   const col=document.getElementById('orbTripsCol');
+   if(col){const r=col.getBoundingClientRect();
+    col.style.outline=(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom)?'1px dashed var(--accent)':'';}
+  });
+  document.addEventListener('mouseup',e=>{
+   const d=orbTrips.drag;if(!d)return;
+   orbTrips.drag=null;
+   const g=document.getElementById('orbTripGhost');if(g)g.remove();
+   const col=document.getElementById('orbTripsCol');
+   if(!d.on)return;
+   orbTrips.dragDid=true;setTimeout(()=>{orbTrips.dragDid=false;},0);
+   if(!col)return;
+   col.style.outline='';
+   const r=col.getBoundingClientRect();
+   if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
+    const it=orbState.clicks[d.i];if(it)orbTripAdd(it);
+   }
+  });
+ }
  orbShipTick();
 }
 function orbUserPrompt(){
@@ -15085,7 +15343,9 @@ function orbEcoRun(write){
   setOrbStatus('The progression re-rooted on degree '+(k+1)+' — one undo returns the original world.');
   return;
  }
- /* psych-out audition: the re-rooted progression plays through, capped at 16 beats */
+ /* psych-out audition: the re-rooted progression plays through, capped at 16 beats.
+    R3 ⑧: the 🔇 mutes this audition too — it is a DJ action, not a travel. */
+ if(orbState.djMute){setOrbStatus('🔇 Muted audition — degree '+(k+1)+' would play here. Toggle 🔇 Mute DJ off to hear it (✓ Replace still writes for real).');return;}
  const go=()=>{try{
   const spb=60/(+tempo.value||96);
   const t0=Tone.now()+.05;
@@ -15125,7 +15385,7 @@ function buildOrbPanel(){
  renderOrb();
  document.addEventListener('keydown',orbKeydown);
  document.addEventListener('fullscreenchange',()=>{if(typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')renderOrb();});
- setInterval(()=>{try{orbBotTick();orbRotTick();orbShipTick();}catch(e){}},150);
+ setInterval(()=>{try{orbBotTick();orbRotTick();orbShipTick();orbTripsTick();}catch(e){}},150);   /* 4.7 R3: the itinerary rides the same tick — one clock source */
 }
 /* ==== /4.7 INTERPLANETARY ORBITS ==== */
 
@@ -16355,6 +16615,7 @@ function loadSong(id){
  project.clipMap={};   /* July 24 r2: song loads reset every lane to default (chord-aligned) clips */
  project.tempoMap=[];   /* 4.2: song loads flatten the tempo lane */
  project.markers=[];project.tsigMap=[];project.autoLanes=[];   /* 2.5: song loads reset the transport-fold structures too */
+ project.trips=[];orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;   /* 4.7 R3: a song load empties the itinerary and grounds the fleet */
  activeTrack='melody';
  project.style=STYLES.find(x=>x.id===s.style);
  selStyle.value=s.style;selChords.value='none';
@@ -18153,6 +18414,7 @@ function refresh(reschedule){
  /* 5.0 r5: the flip-book tracks selection + edits live while it's the open view */
  if(typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='melPanel'&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
  if(typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: ⟲ follow — the board tracks the playhead's key */
+ if(typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')orbTripsRefresh();   /* 4.7 R3: the itinerary follows undo/edits while Orbits is up */
  /* multi-track strips follow zoom / song length / paper toggles */
  if(typeof stripPPB!=='undefined'&&(stripPPB!==PPB||stripLOOP!==LOOP||stripPaper!==paperView))drawTrackSel();
  const st=project.style;
@@ -18300,6 +18562,7 @@ function buildProjectRecord(p){
   srcs:(Array.isArray(p.srcs)&&p.srcs.length?p.srcs:undefined),   /* 4.4: cross-pollination sources */
   groups:(Array.isArray(p.groups)&&p.groups.length?p.groups:undefined),   /* ⌘G track groups */
   shelf:(Array.isArray(p.shelf)&&p.shelf.length?p.shelf:undefined),   /* 5.1: the ESSENCE SHELF */
+  trips:(Array.isArray(p.trips)&&p.trips.length?p.trips:undefined),   /* 4.7 R3: the Upcoming Trips itinerary */
   chords:p.chords,tracks:p.tracks,variations:p.variations||[]};}
 function validSectionRow(s){
  return !!(s&&typeof s==='object'&&typeof s.start==='number'&&isFinite(s.start)&&s.start>=0
@@ -18327,6 +18590,7 @@ function parseProjectFile(str){
   if(o.srcs!==undefined&&!validSrcs(o.srcs))return null;   /* 4.4 cross-pollination sources */
   if(o.groups!==undefined&&!validGroups(o.groups))return null;   /* ⌘G track groups */
   if(o.shelf!==undefined&&!validShelf(o.shelf))return null;   /* 5.1: the ESSENCE SHELF */
+  if(o.trips!==undefined&&!validTrips(o.trips))return null;   /* 4.7 R3: the Upcoming Trips itinerary */
   return o;
  }catch(e){return null;}}
 let SETTINGS=parseSettings(null);
@@ -18353,7 +18617,7 @@ function currentViewH(){
 function currentProjectRecord(){
  return buildProjectRecord({songId:project.song.id,mode:project.mode,tonic:project.tonic,base:project.base,
   bpm:+tempo.value,styleId:project.style.id,loop:LOOP,chords:project.chords,tracks:project.tracks,
-  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,variations,ts:Date.now()});}
+  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,trips:project.trips,variations,ts:Date.now()});}
 function autosaveSoon(){
  projectDirty=true;
  if(!SETTINGS.autosave)return;
@@ -18391,6 +18655,7 @@ function applyProjectFile(o){
  project.srcs=srcsNormalize(o.srcs,SONGS.map(x=>x.id));   /* 4.4: sources ride project files */
  project.groups=groupsNormalize(o.groups,MIX_TRACKS.concat(customTrackIds(project.tracks)));   /* ⌘G: groups ride them too */
  project.shelf=validShelf(o.shelf)?JSON.parse(JSON.stringify(o.shelf)):[];   /* 5.1: the Shelf rides project files */
+ project.trips=normalizeTrips(o.trips);orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;   /* 4.7 R3: the itinerary rides project files; a load grounds the fleet */
  selHeads.clear();selHead=null;
  selSong.value=s.id;selStyle.value=project.style.id;selChords.value='none';
  setTempo(o.bpm);selNotes.clear();undoStack.length=0;redoStack.length=0;
