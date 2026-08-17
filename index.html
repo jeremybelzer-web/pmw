@@ -330,9 +330,11 @@
 .alane{position:relative;flex:0 0 auto;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;cursor:crosshair;}
 .alane svg{position:absolute;inset:0;pointer-events:none;}
 .apt{position:absolute;width:8px;height:8px;border-radius:50%;background:#565d6e;border:1.5px solid #2a2d38;box-sizing:border-box;margin:-4px 0 0 -4px;cursor:grab;opacity:.45;}
-.alane:hover .apt,.apt.sel{opacity:1;}
-.apt.sel{background:var(--accent);box-shadow:0 0 6px rgba(232,163,61,.7);}
+.alane:hover .apt{opacity:1;}
 .apt:hover{background:#98a0b2;}
+.ahdl{position:absolute;width:7px;height:7px;background:rgba(232,193,88,.5);border:1px solid rgba(232,193,88,.9);border-radius:2px;box-sizing:border-box;margin:-3.5px 0 0 -3.5px;opacity:.5;}   /* 2.6 R3: the brace band's stretch/skew grips */
+.alane:hover .ahdl{opacity:1;}
+.ahdl:hover{background:rgba(232,193,88,.95);}
 /* Cubase-style marker LINES through the grid (the docked-lane compensation, T3) */
 .mkline{pointer-events:none;}
 .mreg{position:absolute;top:0;height:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.10);border-radius:4px;
@@ -418,7 +420,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-17b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-17d</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -2670,6 +2672,87 @@ function bendSegmentNodes(nodes,i0,i1,k,step){
  }
  for(let j=i1;j<nodes.length;j++)out.push(nodes[j].slice());
  return out;
+}
+/* ==== 2.6 R2 · THE FULL ABLETON BREAKPOINT MODEL (Q7 — client answer, Aug 12) ====
+   Ableton's documented breakpoint grammar, adopted whole: a click ON a point DELETES
+   it, there is NO point selection, right-click on a point becomes Edit Value. The
+   shipped click-to-select + Delete-key clearing is REMOVED, node-selection store and
+   all 13 of its sites — the cost was measured at ZERO before the cut: no unit, no
+   suite, no other call site. The ergonomic risk of click-deletes is recorded as ACCEPTED, not
+   overlooked — drag still moves a point, and every delete is one undo. Pure below. */
+function deleteAutoNode(nodes,i){
+ /* remove node i — fresh rows, never mutates. A bad index returns a clean copy. */
+ if(!Array.isArray(nodes))return [];
+ if(!(i>=0&&i<nodes.length))return nodes.map(n=>n.slice());
+ return nodes.filter((n,j)=>j!==i).map(n=>n.slice());
+}
+function parseAutoValue(s){
+ /* Edit Value's parser — accepts "0.35", ".35" or "35%" · clamps 0..1 · null on junk */
+ if(typeof s!=='string')return null;
+ const m=s.trim().match(/^([0-9]*\.?[0-9]+)\s*(%)?$/);
+ if(!m)return null;
+ let v=parseFloat(m[1]);
+ if(m[2])v=v/100;
+ if(!isFinite(v))return null;
+ return +Math.max(0,Math.min(1,v)).toFixed(4);
+}
+function setAutoNodeValue(nodes,i,v){
+ /* Edit Value's writer — set node i's VALUE, beat untouched. Fresh rows, clamped. */
+ if(!Array.isArray(nodes))return [];
+ if(!(i>=0&&i<nodes.length)||typeof v!=='number'||!isFinite(v))return nodes.map(n=>n.slice());
+ return nodes.map((n,j)=>j===i?[n[0],+Math.max(0,Math.min(1,v)).toFixed(4)]:n.slice());
+}
+/* ==== 2.6 R3 · STRETCH/SKEW + COPY/PASTE OVER THE BRACE (B3/B4 + B6-time) ====
+   Ableton's handle grammar, per AUTOMATION-SORTED §4.3's fact-check: "Dragging the
+   left and right center handles lets you stretch the automation along the horizontal
+   axis." / "Dragging any of the corner handles lets you skew the automation." — ONE
+   feature, not two (the sort's own correction). Every verb reads alaneRange (Q5's
+   law). THE BRACE NEVER MOVES: it is the loop, so the handles remap the ENVELOPE
+   inside it, not the selection — the app-native reading, the build's call. Copy/
+   paste is TIME-TO-TIME (the sort's cut: parameter-to-parameter waits for R4's
+   binding); the clip is SESSION state, like solo — never in the file, never in
+   undo. All fresh rows. Pure below — unit-tested. */
+function stretchAutoNodes(nodes,a,b,a2,b2){
+ /* remap the nodes inside [a,b] linearly onto [a2,b2]; keep-outside runs over the
+    UNION of the two spans, so a shrink leaves a clean gap and a grow overwrites
+    exactly what it covers. Fresh rows. */
+ if(!Array.isArray(nodes))return [];
+ if(!(b>a)||!(b2>a2))return nodes.map(n=>n.slice());
+ const ins=nodes.filter(n=>n[0]>=a-1e-6&&n[0]<=b+1e-6)
+  .map(n=>[+(a2+(n[0]-a)/(b-a)*(b2-a2)).toFixed(4),n[1]]);
+ const lo=Math.min(a,a2),hi=Math.max(b,b2);
+ return nodes.filter(n=>n[0]<lo-1e-6||n[0]>hi+1e-6).map(n=>n.slice())
+  .concat(ins).sort((x,y)=>x[0]-y[0]).filter((n,i,arr)=>!i||n[0]>arr[i-1][0]+1e-6);
+}
+function skewAutoNodes(nodes,a,b,dv0,dv1){
+ /* tilt the values inside [a,b] — a node at beat t gains dv0→dv1 by its position
+    in the range, clamped 0..1 (Ableton's corner-handle skew). Fresh rows. */
+ if(!Array.isArray(nodes))return [];
+ if(!(b>a))return nodes.map(n=>n.slice());
+ return nodes.map(n=>{
+  if(n[0]<a-1e-6||n[0]>b+1e-6)return n.slice();
+  const x=(n[0]-a)/(b-a);
+  return [n[0],+Math.max(0,Math.min(1,n[1]+(+dv0||0)+((+dv1||0)-(+dv0||0))*x)).toFixed(4)];
+ });
+}
+function copyAutoRange(nodes,a,b){
+ /* the clip: {len, pts:[[rel,val]…]} — beats relative to the range start, edge
+    values SAMPLED via alaneValueAt so the paste reproduces the range's sound even
+    when no node sits on an edge. An empty lane copies its honest flat .5. */
+ if(!(b>a))return null;
+ const pts=(Array.isArray(nodes)?nodes:[]).filter(n=>n[0]>=a-1e-6&&n[0]<=b+1e-6)
+  .map(n=>[+(n[0]-a).toFixed(4),n[1]]);
+ if(!pts.length||pts[0][0]>1e-6)pts.unshift([0,+alaneValueAt(nodes,a).toFixed(4)]);
+ if(pts[pts.length-1][0]<b-a-1e-6)pts.push([+(b-a).toFixed(4),+alaneValueAt(nodes,b).toFixed(4)]);
+ return {len:+(b-a).toFixed(4),pts};
+}
+function pasteAutoRange(nodes,at,clip){
+ /* splice the clip in at `at`, ITS OWN length — spliceAutoNodes' keep-outside rule.
+    Scaling to a different range is the stretch handle's one drag, never a hidden
+    paste behaviour. Fresh rows. */
+ if(!clip||!Array.isArray(clip.pts)||!(clip.len>0)||typeof at!=='number'||!isFinite(at))
+  return Array.isArray(nodes)?nodes.map(n=>n.slice()):[];
+ return spliceAutoNodes(nodes,at,at+clip.len,clip.pts.map(p=>[+(at+p[0]).toFixed(4),p[1]]));
 }
 /* the segment re-curve — the app's OWN curve vocabulary (§5's fact-check: Ardour's
    curve-menu entries are NOT verifiable, so the menu reuses the language the SLIDE
@@ -10257,7 +10340,8 @@ function drawOverview(){
    n[7].pb against a centre line and never grows a second store (§3 landmine ⑧).
    One undo per gesture (§3 landmine ⑩ — a 40-node pencil run is ONE undo). */
 const ALANE_CENTS=600;   /* the bend lane's half-height, in cents */
-let autoSel={id:null,set:new Set()};   /* node-select: Delete clears the selected nodes */
+/* 2.6 R2 (Q7): there is NO node selection — the full Ableton model. Click deletes,
+   drag moves, right-click edits the value. The old selection store is gone outright. */
 function autoLanesFor(t){return (Array.isArray(project.autoLanes)?project.autoLanes:[]).filter(l=>l&&l.track===t);}
 function autoLaneById(id){return (project.autoLanes||[]).find(l=>l.id===id);}
 function addAutoLane(t,kind){
@@ -10271,7 +10355,6 @@ function addAutoLane(t,kind){
 function removeAutoLane(id){
  snapshot();
  project.autoLanes=(project.autoLanes||[]).filter(l=>l.id!==id);
- if(autoSel.id===id)autoSel={id:null,set:new Set()};
  noteEngine('auto-lane',{op:'remove'});
  drawTrackSel();
 }
@@ -10289,7 +10372,7 @@ function mkAutoLaneRow(al){
  nm.textContent=al.name;
  nm.title=(al.kind==='bend'
   ?'The pitch-bend lane — centre line = no bend. Every slide/melisma on '+trackLabel(al.track)+' draws its real curve here; drag a node ↕ to re-bend, click a slide line to select the notes at both ends, pencil a shape over a note to re-draw its bend.'
-  :al.name+' — '+trackLabel(al.track)+'. Pencil: drag to draw nodes · ⌥-drag: straight ramp (⇧ = level) · ctrl+click: curve the segment · click a node to select, Delete clears it · drag a node ↕↔. The yellow band is the loop brace — this lane’s time range (no band = the range is the whole arrangement; inserts, stretch/skew and copy land on it in the next automation rounds).');
+  :al.name+' — '+trackLabel(al.track)+'. Pencil: drag to draw nodes (a click adds one) · ⌥-drag: bend the segment · ctrl+click: the curve menu · drag a node ↕↔ · click a node: DELETE it · right-click a node: Edit Value. The yellow band is the loop brace — this lane’s time range: its ↔ edge handles stretch and its ↕ corner handles skew the envelope inside it, and the menu’s Range verbs copy/paste it (no band = the range is the whole arrangement).');
  hd.appendChild(nm);
  const clr=document.createElement('span');
  clr.textContent='⌫';clr.style.cssText='cursor:pointer;font-size:11px;color:var(--dim);';
@@ -10386,15 +10469,37 @@ function renderAutoLane(lane,id){
   for(const n2 of nodes)d+=(d?'L':'M')+(n2[0]*PPB).toFixed(1)+','+alaneValY(n2[1],h).toFixed(1)+' ';
   if(nodes.length)inner+=`<path d="${d}" fill="none" stroke="#98a0b2" stroke-width="1.6"/>`;
   sv.innerHTML=inner;lane.appendChild(sv);
+  /* 2.6 R3: a real brace grows HANDLES on the band — Ableton's grammar (edge =
+     stretch ↔ · corner = skew ↕) mapped onto a ~30px lane: the two top corner grips
+     stand for the corner family (real fingers need more than 4px targets — the loop
+     brace's own 14px lesson). ⚠ They sit on the BOTTOM corners: the lane's TOP edge
+     wears the row-resize strip (.rzh, z-6), which eats any grip placed there — the
+     2.5 positionMainRz lesson, re-learned by elementFromPoint this round. Appended
+     BEFORE the node dots, so a node on the edge stays on top and its click still
+     means DELETE. The band itself stays pointer-events:none — an address; the
+     handles are the controls ON it. */
+  if(!_rng.def){
+   const mkH=(bt,y2,cur,tip,side,fn)=>{
+    const g=document.createElement('div');g.className='ahdl';
+    g.style.left=(bt*PPB)+'px';g.style.top=y2+'px';g.style.cursor=cur;g.title=tip;
+    g.onmousedown=ev=>{if(ev.button===0)fn(ev,lane,al,side);};
+    lane.appendChild(g);
+   };
+   const sTip=s2=>'Stretch — drag ↔ to stretch the envelope inside the brace from its '+s2+' edge (grid-snapped, one undo). The brace itself stays put — it is the loop.';
+   const kTip=s2=>'Skew — drag ↕ to tilt the values inside the brace: full effect at the '+s2+' edge, none at the far one (one undo).';
+   mkH(_rng.a,h/2,'ew-resize',sTip('left'),'L',alaneStretchTool);
+   mkH(_rng.b,h/2,'ew-resize',sTip('right'),'R',alaneStretchTool);
+   mkH(_rng.a,h-4,'ns-resize',kTip('left'),'L',alaneSkewTool);
+   mkH(_rng.b,h-4,'ns-resize',kTip('right'),'R',alaneSkewTool);
+  }
   nodes.forEach((n2,i)=>{
-   const el2=document.createElement('div');el2.className='apt'+(autoSel.id===id&&autoSel.set.has(i)?' sel':'');
+   const el2=document.createElement('div');el2.className='apt';
    el2.style.left=(n2[0]*PPB)+'px';el2.style.top=alaneValY(n2[1],h)+'px';
-   el2.title=n2[1].toFixed(2)+' at beat '+n2[0]+' — drag ↕↔ · click: select (Delete clears) · right-click: delete';
+   el2.title=n2[1].toFixed(2)+' at beat '+n2[0]+' — drag ↕↔ · click: delete (one undo) · right-click: Edit Value';
    el2.onmousedown=ev=>{if(ev.button===0)autoNodeDown(ev,lane,al,i);};
    el2.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();
-    snapshot();
-    project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:l.nodes.filter((_,j)=>j!==i)}:l);
-    noteEngine('auto-node',{op:'delete'});drawAutoLanes();};
+    /* 2.6 R2 (Q7): right-click on a point = Edit Value, not delete (click deletes) */
+    openAutoEditValue(ev.clientX,ev.clientY,al,i);};
    lane.appendChild(el2);
   });
  }
@@ -10427,9 +10532,11 @@ function autoNodeDown(e,lane,al,i){
  const up=()=>{
   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
   if(moved)alaneCommit(orig,'auto-node');
-  else{ /* click = node-select (Delete clears the selected nodes — §6 claim 6) */
-   if(autoSel.id!==al.id)autoSel={id:al.id,set:new Set()};
-   if(autoSel.set.has(i))autoSel.set.delete(i);else autoSel.set.add(i);
+  else{ /* 2.6 R2 (Q7): a click ON a point DELETES it — Ableton's model, one undo.
+           The old click-to-select + Delete-key clearing left with its store. */
+   snapshot();
+   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:deleteAutoNode(l.nodes,i)}:l);
+   noteEngine('auto-node',{op:'delete'});
    drawAutoLanes();
   }
  };
@@ -10490,7 +10597,7 @@ function bendLineDrag(e,lane,al,idxs){
 function wireAutoLane(lane,id){
  lane.addEventListener('mousedown',e=>{
   if(e.button!==0)return;
-  if(e.target.closest&&(e.target.closest('.apt')||e.target.closest('path[data-bn]')))return;
+  if(e.target.closest&&(e.target.closest('.apt')||e.target.closest('.ahdl')||e.target.closest('path[data-bn]')))return;
   const al=autoLaneById(id);if(!al)return;
   e.preventDefault();
   if(e.altKey)alaneBendTool(e,lane,al);   /* 2.6 R1 (Q3): ⌥ BENDS — the line tool moved into the menu */
@@ -10583,8 +10690,105 @@ function alaneBendTool(e,lane,al){
  };
  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
 }
+function alaneStretchTool(e,lane,al,side){
+ /* 2.6 R3 (B3/B4): the band's edge handle — drag ↔ stretches the envelope inside
+    the brace from this edge. Grid-snapped; one undo at release; a no-move drag or
+    an empty range leaves nothing behind (the R0 fader's no-op discipline). */
+ e.preventDefault();e.stopPropagation();
+ const rng=alaneRange((typeof loopSel!=='undefined')?loopSel:null,LOOP);
+ if(rng.def)return;
+ const nn0=(autoLaneById(al.id)||{nodes:[]}).nodes;
+ if(!nn0.some(n2=>n2[0]>=rng.a-1e-6&&n2[0]<=rng.b+1e-6)){flashHint('No nodes inside the brace — draw some first (the handles stretch what the band covers).');return;}
+ const r=lane.getBoundingClientRect();
+ const orig=JSON.parse(JSON.stringify(project.autoLanes));
+ const base=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes;
+ let last=null;
+ const mv=ev=>{
+  const st=gridStep();
+  let t2=Math.max(0,Math.min(LOOP,Math.round(((ev.clientX-r.left)/PPB)/st)*st));
+  t2=side==='L'?Math.min(t2,rng.b-st):Math.max(t2,rng.a+st);
+  last=t2;
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+   ?{...l,nodes:stretchAutoNodes(base,rng.a,rng.b,side==='L'?t2:rng.a,side==='L'?rng.b:t2)}:l);
+  drawAutoLanes();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(last!=null&&Math.abs(last-(side==='L'?rng.a:rng.b))>1e-6)alaneCommit(orig,'auto-stretch');
+  else{project.autoLanes=orig;drawAutoLanes();}
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function alaneSkewTool(e,lane,al,side){
+ /* 2.6 R3 (B3/B4): the band's corner handle — drag ↕ tilts the values inside the
+    brace, full effect at this edge, none at the far one. One undo at release. */
+ e.preventDefault();e.stopPropagation();
+ const rng=alaneRange((typeof loopSel!=='undefined')?loopSel:null,LOOP);
+ if(rng.def)return;
+ const nn0=(autoLaneById(al.id)||{nodes:[]}).nodes;
+ if(!nn0.some(n2=>n2[0]>=rng.a-1e-6&&n2[0]<=rng.b+1e-6)){flashHint('No nodes inside the brace — draw some first (the handles skew what the band covers).');return;}
+ const h=alaneH(),y0=e.clientY;
+ const orig=JSON.parse(JSON.stringify(project.autoLanes));
+ const base=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes;
+ let dv=0;
+ const mv=ev=>{
+  dv=Math.max(-1,Math.min(1,(y0-ev.clientY)/Math.max(8,h-8)));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+   ?{...l,nodes:skewAutoNodes(base,rng.a,rng.b,side==='L'?dv:0,side==='L'?0:dv)}:l);
+  drawAutoLanes();
+ };
+ const up=()=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(Math.abs(dv)>.005)alaneCommit(orig,'auto-skew');
+  else{project.autoLanes=orig;drawAutoLanes();}
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
 let autoMenuEl=null;
+let autoClip=null;   /* 2.6 R3: the copy/paste clipboard — SESSION state, like solo: never in the file, never in undo */
 function closeAutoMenu(){if(autoMenuEl){try{autoMenuEl.remove();}catch(e){}autoMenuEl=null;}}
+let autoEditEl=null;
+function closeAutoEdit(){if(autoEditEl){try{autoEditEl.remove();}catch(e){}autoEditEl=null;}}
+function openAutoEditValue(x,y,al,i){
+ /* 2.6 R2 (Q7): right-click on a breakpoint = EDIT VALUE — Ableton's context verb,
+    as the client decided. A small numeric popover at the pointer: Enter commits
+    (ONE undo, the alaneCommit swap), Esc or clicking away cancels and leaves no
+    trace. Accepts 0..1 or a percentage ("35%") via parseAutoValue. Same z-band as
+    the curve menu (140) — the two are mutually exclusive, never stacked. */
+ closeAutoMenu();closeAutoEdit();
+ const alNow=autoLaneById(al.id);
+ if(!alNow||!Array.isArray(alNow.nodes)||!alNow.nodes[i])return;
+ const n2=alNow.nodes[i];
+ const w=document.createElement('div');
+ w.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:5px;';
+ w.style.left=Math.min(x,window.innerWidth-190)+'px';
+ w.style.top=Math.max(8,Math.min(y,window.innerHeight-110))+'px';
+ const lb=document.createElement('div');
+ lb.textContent='Edit value — beat '+n2[0];
+ lb.style.cssText='font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);';
+ w.appendChild(lb);
+ const inp=document.createElement('input');
+ inp.type='text';inp.value=n2[1].toFixed(2);
+ inp.setAttribute('data-autoedit','1');
+ inp.title='0–1 (or a percentage like 35%) — Enter commits (one undo) · Esc cancels';
+ inp.style.cssText='width:76px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:12px;padding:3px 6px;outline:none;';
+ inp.onkeydown=ev=>{
+  ev.stopPropagation();
+  if(ev.key==='Escape'){closeAutoEdit();return;}
+  if(ev.key!=='Enter')return;
+  const v=parseAutoValue(inp.value);
+  if(v==null){flashHint('A value 0–1 (or a percentage like 35%).');return;}
+  const orig=JSON.parse(JSON.stringify(project.autoLanes));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:setAutoNodeValue(l.nodes,i,v)}:l);
+  closeAutoEdit();
+  alaneCommit(orig,'auto-edit-value');
+ };
+ w.appendChild(inp);
+ w.onmousedown=e2=>e2.stopPropagation();
+ document.body.appendChild(w);autoEditEl=w;
+ inp.focus();inp.select();
+ setTimeout(()=>{document.addEventListener('mousedown',closeAutoEdit,{once:true});},0);
+}
 function openAutoCurveMenu(x,y,lane,al){
  /* the curve menu — z-index 140, beside the tempo menu it is modelled on (§2e). Its
     vocabulary is the app's OWN (§5's recommendation (a): Ardour's menu entries were
@@ -10655,6 +10859,39 @@ function openAutoCurveMenu(x,y,lane,al){
   shGrid.appendChild(c2);
  }
  m.appendChild(shGrid);
+ /* ==== 2.6 R3 · the RANGE section (B6 time-to-time) ==== the sort's own cut:
+    parameter-to-parameter paste waits for R4's binding — but values are normalized
+    0..1 in every lane, so pasting into ANOTHER lane is already well-defined and
+    allowed. The clipboard is SESSION state (autoClip), like solo. The paste keeps
+    the clip's own length — scaling it is the stretch handle's one drag away. */
+ const sepRng=document.createElement('div');sepRng.style.cssText='border-top:1px solid var(--line);margin:2px 4px;';
+ m.appendChild(sepRng);
+ m.appendChild(mkLbl('Range — '+(rng.def?'the arrangement':'beats '+rng.a.toFixed(1)+'–'+rng.b.toFixed(1))));
+ const cpB=document.createElement('span');cpB.className='part';cpB.style.cssText='padding:4px 12px;font-size:11.5px;';
+ cpB.textContent='⧉ Copy the range';
+ cpB.title='Copy this lane’s envelope across '+rngTxt+' into the session clipboard (edge values sampled, so the paste reproduces the range’s sound) — then paste from this or any other automation lane’s menu';
+ cpB.onclick=()=>{
+  closeAutoMenu();
+  autoClip=copyAutoRange((autoLaneById(al.id)||{nodes:[]}).nodes,rng.a,rng.b);
+  if(autoClip)flashHint('Copied '+autoClip.len.toFixed(1)+' beats of '+al.name+' — ⧉ Paste from any lane’s menu.');
+ };
+ m.appendChild(cpB);
+ const psB=document.createElement('span');psB.className='part';
+ const canPaste=!!autoClip;
+ psB.style.cssText='padding:4px 12px;font-size:11.5px;'+(canPaste?'':'opacity:.45;cursor:default;');
+ psB.textContent='⧉ Paste at '+(rng.def?'beat 0':'the brace start');
+ psB.title=canPaste
+  ?'Paste the copied '+autoClip.len.toFixed(1)+'-beat envelope into THIS lane starting at beat '+(rng.def?0:rng.a).toFixed(1)+' (one undo). The paste keeps the clip’s own length — stretch it after with the band’s handles.'
+  :'Nothing copied yet — ⧉ Copy a range first (the clipboard lives for this session only)';
+ if(canPaste)psB.onclick=()=>{
+  closeAutoMenu();
+  const at=rng.def?0:rng.a;
+  const orig3=JSON.parse(JSON.stringify(project.autoLanes));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+   ?{...l,nodes:pasteAutoRange(l.nodes,at,autoClip).filter(n2=>n2[0]<=LOOP+1e-6)}:l);
+  alaneCommit(orig3,'auto-paste');
+ };
+ m.appendChild(psB);
  /* the rest of the client's screenshot (fixes-images/Ableton Grid Menu Dropdown.png):
     Delete + Clear Envelope are real here; Freeze Track is in Ableton's picture but
     freezing needs an audio-render substrate the app doesn't have — recorded as a
@@ -10667,13 +10904,8 @@ function openAutoCurveMenu(x,y,lane,al){
   if(!dis)b.onclick=()=>{closeAutoMenu();fn();};
   m.appendChild(b);
  };
- mk2('✕ Delete selected nodes','Clears the node-selected points (Delete does this too)',()=>{
-  if(!(autoSel.id===al.id&&autoSel.set.size))return;
-  snapshot();
-  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:l.nodes.filter((_,j)=>!autoSel.set.has(j))}:l);
-  autoSel={id:null,set:new Set()};
-  noteEngine('auto-node',{op:'delete-selected'});drawAutoLanes();
- },!(autoSel.id===al.id&&autoSel.set.size));
+ /* 2.6 R2 (Q7): the '✕ Delete selected nodes' item left with node selection itself —
+    a click on the point IS the delete now, so the menu verb would be a dead limb */
  mk2('⌫ Clear the lane','Empty every node in this lane (one undo) — the header’s ⌫ does this too',()=>{
   snapshot();
   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:[]}:l);
@@ -16655,16 +16887,8 @@ window.addEventListener('keydown',e=>{
   if(typeof selHead!=='undefined'&&selHead){deleteTrackFromUI(selHead);return;}
   /* MG round: a live cross-track capture deletes whole (one undo) */
   if(typeof xselActive==='function'&&xselActive()){xselDelete();return;}
-  /* 2.5 ①: selected automation nodes delete first (node-select + Delete, §6 claim 6) */
-  if(typeof autoSel!=='undefined'&&autoSel.id&&autoSel.set.size){
-   snapshot();
-   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===autoSel.id
-    ?{...l,nodes:l.nodes.filter((_,j)=>!autoSel.set.has(j))}:l);
-   autoSel={id:null,set:new Set()};
-   noteEngine('auto-node',{op:'delete-selected'});
-   if(typeof drawAutoLanes==='function')drawAutoLanes();
-   return;
-  }
+  /* 2.6 R2 (Q7): the automation-node branch is GONE — there is no node selection
+     any more; a click on the point deletes it directly (the full Ableton model) */
   /* July 30 client fix 1: a selected strip clip deletes its MIDI (the cell goes black) */
   if(selSurface==='strip'&&typeof stripDeleteSelected==='function'&&stripDeleteSelected())return;
   /* nothing else selected → Delete removes the loop region */
