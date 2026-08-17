@@ -418,7 +418,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-16b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-17b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -2552,18 +2552,24 @@ function tsigNextValue(num,den){
  return TSIG_CYCLE[(i+1)%TSIG_CYCLE.length];
 }
 /* ==== 2.5 ①② · AUTOMATION LANES (pure layer) ==== project.autoLanes =
-   [{id, track, kind:'auto'|'bend', name, nodes:[[beat,val]…], vis}] — PROJECT data
-   (nodes ride the file, §2d's four places). kind 'bend' carries NO nodes: the
+   [{id, track, kind:'auto'|'bend'|'param', name, nodes:[[beat,val]…], vis}] — PROJECT
+   data (nodes ride the file, §2d's four places). kind 'bend' carries NO nodes: the
    pitch-bend lane RENDERS n[7].pb and never grows a parallel store (§3 landmine ⑧ —
    one store; GEMS §11: this lane IS Melisma-round-3's queued pitch-bend lane).
-   val is normalized 0..1. Pure — unit-tested. */
+   val is normalized 0..1. Pure — unit-tested.
+   2.6 R0: kind 'param' is ACCEPTED AHEAD of anything writing it — AUTOMATION-SORTED
+   §9.2's forward-compat trap, closed on the sort's own instruction ("add the third
+   kind to the guard BEFORE anything writes one"): a guard that silently drops an
+   unknown kind would make an older build delete a newer file's automation without a
+   word. A 'param' lane carries a `param` binding string; the binding itself is 2.6 R4. */
 function normalizeAutoLanes(list,trackIds,loop){
  const seen=new Set();
  return (Array.isArray(list)?list:[]).filter(l=>l&&typeof l==='object'
    &&typeof l.id==='string'&&l.id&&!seen.has(l.id)&&(seen.add(l.id),true)
    &&typeof l.track==='string'&&trackIds.indexOf(l.track)>=0
-   &&(l.kind==='auto'||l.kind==='bend'))
+   &&(l.kind==='auto'||l.kind==='bend'||l.kind==='param'))
   .map(l=>({id:l.id,track:l.track,kind:l.kind,
+    ...(l.kind==='param'&&typeof l.param==='string'&&l.param?{param:String(l.param).slice(0,40)}:{}),
     name:(typeof l.name==='string'&&l.name)?String(l.name).slice(0,24):(l.kind==='bend'?'Pitch Bend':'Automation'),
     nodes:l.kind==='bend'?[]:(Array.isArray(l.nodes)?l.nodes:[])
      .filter(n=>Array.isArray(n)&&typeof n[0]==='number'&&isFinite(n[0])&&n[0]>=-1e-6&&n[0]<loop+1e-6
@@ -2575,8 +2581,95 @@ function normalizeAutoLanes(list,trackIds,loop){
 function validAutoLanes(list){
  return Array.isArray(list)&&list.every(l=>l&&typeof l==='object'
   &&typeof l.id==='string'&&typeof l.track==='string'
-  &&(l.kind==='auto'||l.kind==='bend')
+  &&(l.kind==='auto'||l.kind==='bend'||l.kind==='param')
   &&(l.nodes===undefined||Array.isArray(l.nodes)));
+}
+/* ==== 2.6 R0a · THE MIXER RIDES THE PROJECT FILE (Q2 — client answer, Aug 12:
+   "the mixer moves into the project file") ==== The file block is {track:{db,pan}} —
+   db −60..0 · pan −1..1. SOLO STAYS A SESSION TOGGLE: the shipped cp_mixer loader
+   restored db/pan only, and that semantic is kept — solo never rides the file or undo.
+   cp_mixer remains the DEVICE FALLBACK (the Q2 answer verbatim): parseProjectFile
+   accepts files with no mixer block and applyProjectFile re-seeds from cp_mixer, so
+   every existing saved project keeps working. Pure — unit-tested. */
+function validMixer(m){
+ return !!m&&typeof m==='object'&&!Array.isArray(m)
+  &&Object.keys(m).every(k=>{const e=m[k];
+   return !!e&&typeof e==='object'
+    &&typeof e.db==='number'&&isFinite(e.db)
+    &&typeof e.pan==='number'&&isFinite(e.pan);});
+}
+function normalizeMixer(m,trackIds){
+ const out={};MIX_TRACKS.forEach(t=>out[t]={db:0,pan:0,solo:false});
+ if(m&&typeof m==='object'&&!Array.isArray(m))for(const k of Object.keys(m)){
+  const e=m[k];
+  if(!e||typeof e!=='object'||trackIds.indexOf(k)<0)continue;
+  out[k]={db:Math.max(-60,Math.min(0,+e.db||0)),pan:Math.max(-1,Math.min(1,+e.pan||0)),solo:false};
+ }
+ return out;
+}
+/* ==== 2.6 R0b · THE LOOP BRACE IS THE LANE'S RANGE (Q5 — client answer, Aug 12) ====
+   One accessor, so every range verb (insert · stretch/skew · copy — the R1/R3 rounds)
+   asks the same question of the same object. def:true = the default whole-arrangement
+   brace (2.5 ⑪b's own language) — the lanes render NO band for it. Pure — unit-tested. */
+function alaneRange(sel,loop){
+ const r=(sel&&typeof sel.a==='number'&&typeof sel.b==='number')?sel:{a:0,b:loop};
+ return {a:Math.max(0,Math.min(loop,Math.min(r.a,r.b))),b:Math.max(0,Math.min(loop,Math.max(r.a,r.b))),def:!sel};
+}
+/* ==== 2.6 R1 · INSERT SHAPES + THE ⌥ BEND (Q3/Q3b/Q9 — client answers, Aug 12) ====
+   The curve menu grows a second, labelled section (Q9: reshape above the separator,
+   insert below). The insert content is CONTOUR_SHAPES — the Slide Workbench's twelve
+   authored shapes, already normalized 0..1 on both axes — sampled across alaneRange
+   (Q5: the brace is the range) by the same sample-at-a-step move curveToTempoMap
+   taught. ↗ Insert ramp is the freed ⌥ line tool's menu home (Q3b). ⌥-drag now
+   BENDS a segment (Q3 — Ableton's documented Option gesture, per the sort's §3
+   fact-check). Everything below is pure and unit-tested; the gestures wire later. */
+function alaneValueAt(nodes,t){
+ /* the lane's value at beat t — linear between nodes, flat outside them, .5 empty */
+ if(!Array.isArray(nodes)||!nodes.length)return .5;
+ if(t<=nodes[0][0])return nodes[0][1];
+ for(let i=1;i<nodes.length;i++)
+  if(t<=nodes[i][0]){
+   const a=nodes[i-1],b=nodes[i];
+   return b[0]===a[0]?b[1]:+(a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0])).toFixed(4);
+  }
+ return nodes[nodes.length-1][1];
+}
+function shapeToAutoNodes(pts,a,b,step){
+ /* sample a normalized [[x,y]…] shape into node rows across [a,b] at `step`
+    (endpoints exact, values clamped 0..1) — curveToTempoMap's own move, aimed
+    at an automation lane. Fresh rows. */
+ const out=[];
+ if(!(b>a)||!Array.isArray(pts)||!pts.length)return out;
+ const st=Math.max(.0625,+step||.25);
+ for(let t=a;t<b-1e-9;t+=st)
+  out.push([+t.toFixed(4),+Math.max(0,Math.min(1,curveYAt(pts,(t-a)/(b-a)))).toFixed(4)]);
+ out.push([+b.toFixed(4),+Math.max(0,Math.min(1,curveYAt(pts,1))).toFixed(4)]);
+ return out;
+}
+function spliceAutoNodes(nodes,a,b,ins){
+ /* replace everything inside [a,b] with `ins` — the keep-outside rule the old line
+    tool taught; sorted, deduped, fresh rows */
+ const keep=(Array.isArray(nodes)?nodes:[]).filter(n=>n[0]<a-1e-6||n[0]>b+1e-6).map(n=>n.slice());
+ return keep.concat((Array.isArray(ins)?ins:[]).map(n=>n.slice()))
+  .sort((x,y)=>x[0]-y[0]).filter((n,i,arr)=>!i||n[0]>arr[i-1][0]+1e-6);
+}
+function bendSegmentNodes(nodes,i0,i1,k,step){
+ /* bow the span between nodes i0,i1 along a power curve — k −1..1, 0 = straight
+    (the interior collapses back to the endpoints). The sign flip keeps drag ↑
+    bulging the line UP whichever way the segment leans. Fresh rows. */
+ if(!Array.isArray(nodes)||i0<0||i1<=i0||i1>=nodes.length)return nodes?nodes.map(n=>n.slice()):[];
+ const a=nodes[i0],b=nodes[i1],out=nodes.slice(0,i0+1).map(n=>n.slice());
+ const kk=Math.max(-1,Math.min(1,+k||0));
+ const span=b[0]-a[0],st=Math.max(.0625,+step||.25);
+ if(Math.abs(kk)>.02&&span>st*1.5){
+  const g=Math.pow(2,(b[1]>=a[1]?-1:1)*2.5*kk);
+  for(let t=a[0]+st;t<b[0]-1e-6;t+=st){
+   const x=(t-a[0])/span;
+   out.push([+t.toFixed(4),+Math.max(0,Math.min(1,a[1]+(b[1]-a[1])*Math.pow(x,g))).toFixed(4)]);
+  }
+ }
+ for(let j=i1;j<nodes.length;j++)out.push(nodes[j].slice());
+ return out;
 }
 /* the segment re-curve — the app's OWN curve vocabulary (§5's fact-check: Ardour's
    curve-menu entries are NOT verifiable, so the menu reuses the language the SLIDE
@@ -5278,8 +5371,8 @@ const undoStack=[];
    pop their snapshot via dropNoopSnapshot(), which also RESTORES the redo history the
    snapshot preemptively cleared — so a stray click never eats your redos. */
 let redoStack=[],_lastSnap=null,_redoStash=null;
-function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined),trips:(Array.isArray(project.trips)&&project.trips.length?JSON.parse(JSON.stringify(project.trips)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too · 4.7 R3: the trips itinerary rides it too */
-function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
+function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined),trips:(Array.isArray(project.trips)&&project.trips.length?JSON.parse(JSON.stringify(project.trips)):undefined),mixer:(typeof mixer==='object'&&mixer?JSON.parse(JSON.stringify(mixer)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too · 4.7 R3: the trips itinerary rides it too · 2.6 R0a: the mixer rides it too (db/pan restored; solo is a session toggle and applyState leaves it alone) */
+function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};if(s&&s.mixer&&typeof s.mixer==='object'&&typeof mixer==='object'&&mixer){for(const _mt in s.mixer){const _me=s.mixer[_mt];if(!_me)continue;const _m=mixer[_mt]||(mixer[_mt]={db:0,pan:0,solo:false});_m.db=_me.db;_m.pan=_me.pan;}if(typeof persistMixer==='function')persistMixer();if(typeof applyPans==='function')applyPans();if(typeof mixerOpen!=='undefined'&&mixerOpen&&typeof drawMixer==='function')drawMixer();}project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
 function snapshot(){
  if(typeof snv==='object'&&snv)snv.active=false;   /* any new edit ends an SNV cycling run */
  if(typeof aretha==='object'&&aretha)aretha.active=false;   /* …and an Aretha re-roll run */
@@ -6201,7 +6294,10 @@ function openSectionEditor(idx,cx,cy){
 
 /* ================= mixer (Ableton-style strips; opens from the Mixer button) ================= */
 const MIX_TRACKS=['melody','drums','bass','comping','pad'];
-let mixer=(()=>{
+function mixerFromDevice(){
+ /* 2.6 R0a: the DEVICE fallback — cp_mixer seeds a session with no project file, and
+    a loaded file that carries no mixer block (Q2's fallback clause). Loader semantics
+    unchanged since 2.3: db/pan restored, solo starts false. */
  const def={};MIX_TRACKS.forEach(t=>def[t]={db:0,pan:0,solo:false});
  try{
   const s=JSON.parse(localStorage.getItem('cp_mixer')||'{}');
@@ -6209,11 +6305,27 @@ let mixer=(()=>{
    def[t].db=Math.max(-60,Math.min(0,+s[t].db||0));
    def[t].pan=Math.max(-1,Math.min(1,+s[t].pan||0));}});
  }catch(e){}
- return def;})();
+ return def;}
+let mixer=mixerFromDevice();
 function persistMixer(){try{localStorage.setItem('cp_mixer',JSON.stringify(mixer));}catch(e){}}
+function mixerRecord(){
+ /* 2.6 R0a: the project-file block — non-default {db,pan} only (currentViewH's
+    discipline: untouched projects stay clean). Solo is a session toggle, never rides. */
+ const out={};
+ for(const t in mixer){const m=mixer[t];if(!m)continue;
+  if(Math.abs(+m.db||0)>1e-9||Math.abs(+m.pan||0)>1e-9)out[t]={db:+(+m.db).toFixed(2),pan:+(+m.pan).toFixed(3)};}
+ return Object.keys(out).length?out:undefined;}
+function mixerCommit(orig,tag){
+ /* 2.6 R0a: the mixer is PROJECT data now — one undo per mixer GESTURE (a fader drag,
+    a knob drag, a double-click reset), alaneCommit's swap idiom: snapshot the BEFORE,
+    land the after. cp_mixer stays mirrored as the device fallback. */
+ const now=mixer;mixer=orig;
+ snapshot();mixer=now;
+ persistMixer();noteEngine(tag,{});
+}
 function trackOn(track){return trackAudible(mutes,mixer,track);}
 function trackGain(track){return dbToLin(mixer[track]?mixer[track].db:0);}
-let panNodes={};   /* set in makeAudio: bass / pad / drums (melody+comping share the piano voice) */
+let panNodes={};   /* set in makeAudio: every MIX_TRACK has a real pan bus since 2.3 — the old "melody+comping share the piano voice" note here was stale (AUTOMATION-SORTED §9.11's one-line fix) */
 function applyPans(){for(const t in panNodes)if(panNodes[t]&&mixer[t])panNodes[t].pan.value=mixer[t].pan;}
 let mixerOpen=false;
 function toggleMixer(){
@@ -6240,10 +6352,14 @@ function drawMixer(){
   const setKnob=()=>{ind.style.transform='rotate('+(m.pan*135)+'deg)';};setKnob();
   if(canPan){
    knob.onmousedown=e=>{e.preventDefault();const x0=e.clientX,p0=m.pan;
+    const orig=JSON.parse(JSON.stringify(mixer));   /* 2.6 R0a: the BEFORE, for one undo per gesture */
     const mv=ev=>{m.pan=Math.max(-1,Math.min(1,p0+(ev.clientX-x0)/80));setKnob();applyPans();};
-    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);persistMixer();};
+    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+     if(Math.abs(m.pan-p0)>1e-9)mixerCommit(orig,'mixer-pan');else persistMixer();};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
-   knob.ondblclick=()=>{m.pan=0;setKnob();applyPans();persistMixer();};
+   knob.ondblclick=()=>{if(Math.abs(m.pan)<1e-9)return;
+    const orig=JSON.parse(JSON.stringify(mixer));
+    m.pan=0;setKnob();applyPans();mixerCommit(orig,'mixer-pan');};
   }
   const fw=document.createElement('div');fw.className='mxfader';
   const rail=document.createElement('div');rail.className='mxrail';
@@ -6255,11 +6371,16 @@ function drawMixer(){
   const dragDb=e=>{const r=rail.getBoundingClientRect();
    const y=Math.max(0,Math.min(FH,e.clientY-r.top));
    m.db=y>=FH-1?-60:-(y/FH)*60;setHandle();};
-  rail.onmousedown=e=>{e.preventDefault();dragDb(e);
+  rail.onmousedown=e=>{e.preventDefault();
+   const orig=JSON.parse(JSON.stringify(mixer)),db0=m.db;   /* 2.6 R0a: the BEFORE */
+   dragDb(e);
    const mv=ev=>dragDb(ev);
-   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);persistMixer();};
+   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+    if(Math.abs(m.db-db0)>1e-9)mixerCommit(orig,'mixer-vol');else persistMixer();};
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
-  rail.ondblclick=()=>{m.db=0;setHandle();persistMixer();};
+  rail.ondblclick=()=>{if(Math.abs(m.db)<1e-9)return;
+   const orig=JSON.parse(JSON.stringify(mixer));
+   m.db=0;setHandle();mixerCommit(orig,'mixer-vol');};
   setHandle();
   const act=document.createElement('div');act.className='mxbtn mxact'+(mutes[tk]?' off':'');
   act.textContent=String(ix+1);act.title='Track activator — click to switch the track on/off';
@@ -10168,7 +10289,7 @@ function mkAutoLaneRow(al){
  nm.textContent=al.name;
  nm.title=(al.kind==='bend'
   ?'The pitch-bend lane — centre line = no bend. Every slide/melisma on '+trackLabel(al.track)+' draws its real curve here; drag a node ↕ to re-bend, click a slide line to select the notes at both ends, pencil a shape over a note to re-draw its bend.'
-  :al.name+' — '+trackLabel(al.track)+'. Pencil: drag to draw nodes · ⌥-drag: straight ramp (⇧ = level) · ctrl+click: curve the segment · click a node to select, Delete clears it · drag a node ↕↔.');
+  :al.name+' — '+trackLabel(al.track)+'. Pencil: drag to draw nodes · ⌥-drag: straight ramp (⇧ = level) · ctrl+click: curve the segment · click a node to select, Delete clears it · drag a node ↕↔. The yellow band is the loop brace — this lane’s time range (no band = the range is the whole arrangement; inserts, stretch/skew and copy land on it in the next automation rounds).');
  hd.appendChild(nm);
  const clr=document.createElement('span');
  clr.textContent='⌫';clr.style.cssText='cursor:pointer;font-size:11px;color:var(--dim);';
@@ -10211,7 +10332,12 @@ function renderAutoLane(lane,id){
  lane.querySelectorAll('svg,.apt').forEach(x=>x.remove());
  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
  sv.setAttribute('width',LOOP*PPB);sv.setAttribute('height',h);
- let inner='';
+ /* 2.6 R0b: the loop brace IS this lane's range (Q5) — a real brace draws its band
+    behind the lane's own content; the default whole-arrangement brace draws nothing.
+    refresh(false) already redraws the lanes on every brace edit, so the band follows
+    the brace for free. pointer-events stays off: the band is an address, not a control. */
+ const _rng=alaneRange((typeof loopSel!=='undefined')?loopSel:null,LOOP);
+ let inner=_rng.def?'':`<rect class="alrng" x="${(_rng.a*PPB).toFixed(1)}" y="0" width="${Math.max(0,(_rng.b-_rng.a)*PPB).toFixed(1)}" height="${h}" fill="rgba(232,193,88,.08)" stroke="rgba(232,193,88,.4)" stroke-width="1" stroke-dasharray="3 3" style="pointer-events:none"/>`;
  if(al.kind==='bend'){
   sv.style.pointerEvents='auto';   /* the slide lines are clickable (select both end notes) */
   inner+=`<line x1="0" y1="${h/2}" x2="${LOOP*PPB}" y2="${h/2}" stroke="#3a3f4d" stroke-dasharray="4 3" stroke-width="1.2"/>`;
@@ -10367,7 +10493,7 @@ function wireAutoLane(lane,id){
   if(e.target.closest&&(e.target.closest('.apt')||e.target.closest('path[data-bn]')))return;
   const al=autoLaneById(id);if(!al)return;
   e.preventDefault();
-  if(e.altKey)alaneLineTool(e,lane,al);
+  if(e.altKey)alaneBendTool(e,lane,al);   /* 2.6 R1 (Q3): ⌥ BENDS — the line tool moved into the menu */
   else alanePencil(e,lane,al);
  });
  lane.addEventListener('contextmenu',e=>{
@@ -10424,34 +10550,36 @@ function alanePencil(e,lane,al){
  };
  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
 }
-function alaneLineTool(e,lane,al){
- /* ⌥-drag = the two-point line tool (Ableton's own modifier vocabulary, §5: Alt draws
-    along a straight line, adding ⇧ makes it horizontal) — nodes land at grid steps */
- if(al.kind==='bend')return alanePencil(e,lane,al);   /* the bend lane's pencil already rules lines fine */
- const h=alaneH(),r=lane.getBoundingClientRect();
+function alaneBendTool(e,lane,al){
+ /* 2.6 R1 (Q3): ⌥-drag BENDS the segment under the cursor — Ableton's documented
+    Option gesture ("hold Alt (Win) / Option (Mac) and drag a line segment to curve
+    the segment", Live manual, Editing Breakpoints — verified by AUTOMATION-SORTED
+    §3's fact-check; the OLD comment here claimed ⌥ was Ableton's straight-line
+    draw, which is the Velocity Editor's Ctrl/Alt, a different surface — corrected).
+    The straight-line verb lives on as ↗ Insert ramp in the curve menu (Q3b).
+    Drag ↕ bows the flanking pair's span (60px = full bow); one undo at release;
+    a no-drag ⌥-click leaves nothing behind. */
+ if(al.kind==='bend')return alanePencil(e,lane,al);   /* the bend lane's pencil still rules there */
+ const nodes=(autoLaneById(al.id)||{nodes:[]}).nodes;
+ if(nodes.length<2){flashHint('Draw two nodes first — ⌥ bends the segment between them.');return;}
+ const r=lane.getBoundingClientRect();
+ const beat=Math.max(0,Math.min(LOOP,(e.clientX-r.left)/PPB));
+ let i1=nodes.findIndex(n2=>n2[0]>beat);
+ if(i1<0)i1=nodes.length-1;if(i1===0)i1=1;
  const orig=JSON.parse(JSON.stringify(project.autoLanes));
- const st=gridStep();
- const b0=Math.max(0,Math.min(LOOP,Math.round((e.clientX-r.left)/PPB/st)*st));
- const v0=alaneYVal(e.clientY-r.top,h);
- const apply=ev=>{
-  const b1=Math.max(0,Math.min(LOOP,Math.round((ev.clientX-r.left)/PPB/st)*st));
-  const v1=ev.shiftKey?v0:alaneYVal(ev.clientY-r.top,h);   /* ⇧ = horizontal */
-  const lo=Math.min(b0,b1),hi=Math.max(b0,b1);
-  const line=[];
-  for(let b=lo;b<=hi+1e-9;b+=st){
-   const x=hi>lo?(b-lo)/(hi-lo):0;
-   const vv=b0<=b1?v0+(v1-v0)*x:v1+(v0-v1)*x;
-   line.push([+b.toFixed(4),+vv.toFixed(4)]);
-  }
-  const keep=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes.filter(n2=>n2[0]<lo-1e-6||n2[0]>hi+1e-6);
-  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:keep.concat(line).sort((a,b)=>a[0]-b[0])}:l);
+ const base=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes;
+ const y0=e.clientY,st=Math.max(.125,gridStep()/2);
+ let lastK=0;
+ const mv=ev=>{
+  lastK=Math.max(-1,Math.min(1,(y0-ev.clientY)/60));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+   ?{...l,nodes:bendSegmentNodes(base,i1-1,i1,lastK,st)}:l);
   drawAutoLanes();
  };
- apply(e);
- const mv=ev=>apply(ev);
  const up=()=>{
   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
-  alaneCommit(orig,'auto-line');
+  if(Math.abs(lastK)>.02)alaneCommit(orig,'auto-bend');
+  else{project.autoLanes=orig;drawAutoLanes();}
  };
  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
 }
@@ -10467,7 +10595,13 @@ function openAutoCurveMenu(x,y,lane,al){
  const beat=(x-r.left)/PPB;
  const m=document.createElement('div');
  m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:4px;min-width:190px;';
- m.style.left=Math.min(x,window.innerWidth-210)+'px';m.style.top=Math.min(y,window.innerHeight-190)+'px';
+ m.style.left=Math.min(x,window.innerWidth-260)+'px';m.style.top=Math.max(8,Math.min(y,window.innerHeight-470))+'px';
+ /* 2.6 R1 (Q9): ONE menu, TWO LABELLED SECTIONS — reshape above the separator
+    (the shipped five, untouched), insert below (the twelve CONTOUR_SHAPES + the
+    ramp). The label keeps "Ease in" (reshape) from ever reading as "Sine" (insert)
+    — the sort's §4.8 two-verbs warning, answered as the client decided. */
+ const mkLbl=t2=>{const d2=document.createElement('div');d2.textContent=t2;d2.style.cssText='font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);padding:3px 12px 1px;';return d2;};
+ m.appendChild(mkLbl('Reshape the segment'));
  const shapes=[['line','― Straight'],['easeIn','⟋ Ease in'],['easeOut','⟍ Ease out'],['sCurve','∫ S-curve'],['hold','⌐ Hold (step)']];
  for(const [id2,label] of shapes){
   const b=document.createElement('span');b.className='part';b.style.cssText='padding:4px 12px;font-size:11.5px;';
@@ -10486,6 +10620,41 @@ function openAutoCurveMenu(x,y,lane,al){
   };
   m.appendChild(b);
  }
+ /* ==== 2.6 R1 · the INSERT section (Q3b + Q9) ==== the range is alaneRange — the
+    brace when one is set, the whole arrangement otherwise (Q5's law, stated honestly
+    in every tooltip). One undo per insert, through the same alaneCommit swap. */
+ const sepIns=document.createElement('div');sepIns.style.cssText='border-top:1px solid var(--line);margin:2px 4px;';
+ m.appendChild(sepIns);
+ const rng=alaneRange((typeof loopSel!=='undefined')?loopSel:null,LOOP);
+ const rngTxt=rng.def?'the whole arrangement (set the loop brace to aim narrower)':'the brace — beats '+rng.a.toFixed(1)+'–'+rng.b.toFixed(1);
+ m.appendChild(mkLbl('Insert across '+(rng.def?'the arrangement':'the brace')));
+ const stIns=Math.max(.0625,gridStep()/2);
+ const doInsert=(ins,tag)=>{
+  closeAutoMenu();
+  const orig2=JSON.parse(JSON.stringify(project.autoLanes));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:spliceAutoNodes(l.nodes,rng.a,rng.b,ins)}:l);
+  alaneCommit(orig2,tag);
+ };
+ const rb=document.createElement('span');rb.className='part';rb.style.cssText='padding:4px 12px;font-size:11.5px;';
+ rb.textContent='↗ Insert ramp';
+ rb.title='A straight ramp between the lane\'s own values at the edges of '+rngTxt+' (one undo) — the old ⌥ line tool\'s new home (⌥ now bends a segment)';
+ rb.onclick=()=>{
+  const nn2=(autoLaneById(al.id)||{nodes:[]}).nodes;
+  doInsert([[+rng.a.toFixed(4),+alaneValueAt(nn2,rng.a).toFixed(4)],[+rng.b.toFixed(4),+alaneValueAt(nn2,rng.b).toFixed(4)]],'auto-insert-ramp');
+ };
+ m.appendChild(rb);
+ const shGrid=document.createElement('div');
+ shGrid.style.cssText='display:flex;flex-wrap:wrap;gap:3px;padding:3px 8px 2px;max-width:236px;';
+ for(const sh of CONTOUR_SHAPES){
+  const c2=document.createElement('span');c2.className='part';
+  c2.style.cssText='display:inline-flex;flex-direction:column;align-items:center;gap:1px;padding:3px 4px;border:1px solid var(--line);border-radius:6px;cursor:pointer;';
+  const pl=sh.pts.map(p2=>(p2[0]*26).toFixed(1)+','+((1-p2[1])*12+1).toFixed(1)).join(' ');
+  c2.innerHTML='<svg width="26" height="14" style="display:block" aria-hidden="true"><polyline points="'+pl+'" fill="none" stroke="var(--accent)" stroke-width="1.3"/></svg><span style="font-size:8.5px;color:var(--dim);">'+sh.name+'</span>';
+  c2.title='Insert '+sh.name+' across '+rngTxt+' (one undo) · '+sh.tags;
+  c2.onclick=()=>doInsert(shapeToAutoNodes(sh.pts,rng.a,rng.b,stIns),'auto-insert-shape');
+  shGrid.appendChild(c2);
+ }
+ m.appendChild(shGrid);
  /* the rest of the client's screenshot (fixes-images/Ableton Grid Menu Dropdown.png):
     Delete + Clear Envelope are real here; Freeze Track is in Ableton's picture but
     freezing needs an audio-render substrate the app doesn't have — recorded as a
@@ -16824,6 +16993,7 @@ function trackHead(t,inLane){
   if(e.button!==0)return;
   e.preventDefault();e.stopPropagation();
   const r=vol.getBoundingClientRect();
+  const orig=JSON.parse(JSON.stringify(mixer)),db0=(mixer[t]&&mixer[t].db)||0;   /* 2.6 R0a: the BEFORE */
   const set=ev=>{
    const p=Math.max(0,Math.min(1,(ev.clientX-r.left)/Math.max(1,r.width)));
    const m=mixer[t]||(mixer[t]={db:0,pan:0,solo:false});
@@ -16833,7 +17003,9 @@ function trackHead(t,inLane){
   };
   set(e);
   const mv=ev=>set(ev);
-  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);persistMixer();if(mixerOpen)drawMixer();};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+   if(mixer[t]&&Math.abs(mixer[t].db-db0)>1e-9)mixerCommit(orig,'mixer-vol');else persistMixer();
+   if(mixerOpen)drawMixer();};
   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
  };
  h.appendChild(vol);
@@ -18563,6 +18735,7 @@ function buildProjectRecord(p){
   groups:(Array.isArray(p.groups)&&p.groups.length?p.groups:undefined),   /* ⌘G track groups */
   shelf:(Array.isArray(p.shelf)&&p.shelf.length?p.shelf:undefined),   /* 5.1: the ESSENCE SHELF */
   trips:(Array.isArray(p.trips)&&p.trips.length?p.trips:undefined),   /* 4.7 R3: the Upcoming Trips itinerary */
+  mixer:(p.mixer&&typeof p.mixer==='object'&&Object.keys(p.mixer).length?p.mixer:undefined),   /* 2.6 R0a: the mix rides the file (Q2) */
   chords:p.chords,tracks:p.tracks,variations:p.variations||[]};}
 function validSectionRow(s){
  return !!(s&&typeof s==='object'&&typeof s.start==='number'&&isFinite(s.start)&&s.start>=0
@@ -18591,6 +18764,7 @@ function parseProjectFile(str){
   if(o.groups!==undefined&&!validGroups(o.groups))return null;   /* ⌘G track groups */
   if(o.shelf!==undefined&&!validShelf(o.shelf))return null;   /* 5.1: the ESSENCE SHELF */
   if(o.trips!==undefined&&!validTrips(o.trips))return null;   /* 4.7 R3: the Upcoming Trips itinerary */
+  if(o.mixer!==undefined&&!validMixer(o.mixer))return null;   /* 2.6 R0a: the mixer block (Q2) — absent stays valid, cp_mixer is the fallback */
   return o;
  }catch(e){return null;}}
 let SETTINGS=parseSettings(null);
@@ -18617,7 +18791,7 @@ function currentViewH(){
 function currentProjectRecord(){
  return buildProjectRecord({songId:project.song.id,mode:project.mode,tonic:project.tonic,base:project.base,
   bpm:+tempo.value,styleId:project.style.id,loop:LOOP,chords:project.chords,tracks:project.tracks,
-  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,trips:project.trips,variations,ts:Date.now()});}
+  sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,trips:project.trips,mixer:mixerRecord(),variations,ts:Date.now()});}
 function autosaveSoon(){
  projectDirty=true;
  if(!SETTINGS.autosave)return;
@@ -18656,6 +18830,8 @@ function applyProjectFile(o){
  project.groups=groupsNormalize(o.groups,MIX_TRACKS.concat(customTrackIds(project.tracks)));   /* ⌘G: groups ride them too */
  project.shelf=validShelf(o.shelf)?JSON.parse(JSON.stringify(o.shelf)):[];   /* 5.1: the Shelf rides project files */
  project.trips=normalizeTrips(o.trips);orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;   /* 4.7 R3: the itinerary rides project files; a load grounds the fleet */
+ mixer=(o.mixer&&typeof o.mixer==='object')?normalizeMixer(o.mixer,MIX_TRACKS.concat(Object.keys(o.tracks||{}))):mixerFromDevice();   /* 2.6 R0a: the file's mix wins; cp_mixer is the fallback for old files (Q2) */
+ persistMixer();if(typeof applyPans==='function')applyPans();if(mixerOpen)drawMixer();
  selHeads.clear();selHead=null;
  selSong.value=s.id;selStyle.value=project.style.id;selChords.value='none';
  setTempo(o.bpm);selNotes.clear();undoStack.length=0;redoStack.length=0;
