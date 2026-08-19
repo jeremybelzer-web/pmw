@@ -420,7 +420,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-17d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-19a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -837,7 +837,7 @@
        and the Local-Sample-Directory + DAW-routing info boxes moved behind it. Setup
        keeps the click track (and the Web MIDI plumbing lives in code, not a box). -->
   <div class="gridwrap" id="setupPanel" style="margin-top:12px;">
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:2px;">Setup · click track <span style="text-transform:none;letter-spacing:0;">(the sample-directory rules &amp; DAW-routing guides moved behind the ⇪ Import window)</span></div>
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:2px;">Setup · Web MIDI &amp; click track <span style="text-transform:none;letter-spacing:0;">(the sample-directory rules &amp; DAW-routing guides live behind the ⇪ Import window)</span></div>
 
     <details id="setupClick">
       <summary>🕰 Click track <span>— steady reference, transport-locked · drop any sample to personalize</span></summary>
@@ -846,11 +846,27 @@
           <div class="part" id="clickToggle"><span class="dot" style="background:#e8a33d"></span>click <b id="clickOnOff" style="margin-left:2px;">off</b></div>
           <button id="tapBtn" title="Tap the tempo with the mouse — steady clicks here set the BPM (resets after a 2s pause)" style="padding:7px 18px;font-size:13px;background:#3a3e4d;color:#e9eaef;border:1px solid var(--line);border-radius:6px;min-width:96px;">Tap</button>
           <label class="mini">Volume</label><input type="range" id="clickVol" min="0" max="100" value="80" style="width:110px;">
+          <label class="mini">Count-in</label><select id="clickCountIn" title="Play this many bars of click before the transport starts — the count-in counts the notational meter at the start beat (SETUP R1)"><option value="0">off</option><option value="1">1 bar</option><option value="2">2 bars</option></select>
           <button id="clickPrev" style="padding:5px 12px;font-size:12.5px;background:#3a3e4d;color:#e9eaef;">▶ preview</button>
           <div class="dropzone" id="clickDrop">🥁 drop a custom click sample here — current: <b id="clickName">woodblock (built-in)</b> <span id="clickReset" style="cursor:pointer;display:none;"> ✕ reset</span></div>
         </div>
         <div style="margin-top:8px;">Scheduled on the same Web Audio transport as the band (quarter notes, beat-1 accent each bar) — sample-accurate, no <i>setInterval</i> drift. The built-in sound is a synthesized woodblock (bright resonant tick); any dropped sample replaces it for this session, accents play it slightly louder &amp; brighter. Runs whenever the transport plays.</div>
       </div>
+    </details>
+
+    <details id="setupMidi">
+      <summary>🎹 Web MIDI <span>— device inputs · device outputs · connection status</span></summary>
+      <div class="body" id="midiBody"></div>
+    </details>
+
+    <details id="setupAudio">
+      <summary>🔊 Audio device <span>— output choice · sample rate · latency (the browser owns the driver)</span></summary>
+      <div class="body" id="audioBody"></div>
+    </details>
+
+    <details id="setupTempo">
+      <summary>𝅘𝅥 Tempo &amp; time signature <span>— BPM &amp; musical meter</span></summary>
+      <div class="body" id="tempoBody"></div>
     </details>
   </div>
 
@@ -5454,8 +5470,8 @@ const undoStack=[];
    pop their snapshot via dropNoopSnapshot(), which also RESTORES the redo history the
    snapshot preemptively cleared — so a stray click never eats your redos. */
 let redoStack=[],_lastSnap=null,_redoStash=null;
-function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined),trips:(Array.isArray(project.trips)&&project.trips.length?JSON.parse(JSON.stringify(project.trips)):undefined),mixer:(typeof mixer==='object'&&mixer?JSON.parse(JSON.stringify(mixer)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too · 4.7 R3: the trips itinerary rides it too · 2.6 R0a: the mixer rides it too (db/pan restored; solo is a session toggle and applyState leaves it alone) */
-function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};if(s&&s.mixer&&typeof s.mixer==='object'&&typeof mixer==='object'&&mixer){for(const _mt in s.mixer){const _me=s.mixer[_mt];if(!_me)continue;const _m=mixer[_mt]||(mixer[_mt]={db:0,pan:0,solo:false});_m.db=_me.db;_m.pan=_me.pan;}if(typeof persistMixer==='function')persistMixer();if(typeof applyPans==='function')applyPans();if(typeof mixerOpen!=='undefined'&&mixerOpen&&typeof drawMixer==='function')drawMixer();}project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}drawTrackSel();refresh(true);}
+function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined),trips:(Array.isArray(project.trips)&&project.trips.length?JSON.parse(JSON.stringify(project.trips)):undefined),mixer:(typeof mixer==='object'&&mixer?JSON.parse(JSON.stringify(mixer)):undefined),srcs:(Array.isArray(project.srcs)&&project.srcs.length?JSON.parse(JSON.stringify(project.srcs)):undefined),songId:(project.song&&typeof project.song.id==='string'?project.song.id:undefined),bpm:(typeof tempo!=='undefined'&&tempo&&isFinite(+tempo.value)?Math.round(+tempo.value):undefined),lin:(typeof lineage==='object'&&lineage?JSON.parse(JSON.stringify(lineage)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too · 4.7 R3: the trips itinerary rides it too · 2.6 R0a: the mixer rides it too (db/pan restored; solo is a session toggle and applyState leaves it alone) · SETUP R0: srcs ride it too (client call, Aug 19), and songId/bpm/lineage ride so a Keep-load is one whole undo step */
+function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};if(s&&s.mixer&&typeof s.mixer==='object'&&typeof mixer==='object'&&mixer){for(const _mt in s.mixer){const _me=s.mixer[_mt];if(!_me)continue;const _m=mixer[_mt]||(mixer[_mt]={db:0,pan:0,solo:false});_m.db=_me.db;_m.pan=_me.pan;}if(typeof persistMixer==='function')persistMixer();if(typeof applyPans==='function')applyPans();if(typeof mixerOpen!=='undefined'&&mixerOpen&&typeof drawMixer==='function')drawMixer();}project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}project.srcs=(s&&Array.isArray(s.srcs))?JSON.parse(JSON.stringify(s.srcs)):[];if(typeof srcOpen!=='undefined'&&srcOpen&&srcOpen.forEach){const _sids=new Set((project.srcs||[]).map(r=>r.id));for(const _sid of [...srcOpen])if(!_sids.has(_sid))srcOpen.delete(_sid);}if(typeof buildSources==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='importPanel')buildSources();if(s&&typeof s.songId==='string'&&typeof SONGS!=='undefined'&&(!project.song||project.song.id!==s.songId)){const _sg=SONGS.find(x=>x.id===s.songId);if(_sg){project.song=_sg;if(typeof selSong!=='undefined'&&selSong)selSong.value=_sg.id;}}if(s&&typeof s.bpm==='number'&&isFinite(s.bpm)&&typeof setTempo==='function'&&typeof tempo!=='undefined'&&tempo&&Math.round(+tempo.value)!==s.bpm){setTempo(s.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=s.bpm;}if(s&&s.lin&&typeof s.lin==='object'&&typeof lineage!=='undefined'&&lineage){lineage={parent:s.lin.parent||null,engine:s.lin.engine||null,params:s.lin.params===undefined?null:s.lin.params};if(typeof drawVars==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='varPanel')drawVars();}drawTrackSel();refresh(true);}   /* SETUP R0: srcs/song/bpm/lineage restore — srcs reset like trips; song+bpm only when they differ (a load's undo), so ordinary edits see no change; lineage rides so a Keep after an undo records honest provenance */
 function snapshot(){
  if(typeof snv==='object'&&snv)snv.active=false;   /* any new edit ends an SNV cycling run */
  if(typeof aretha==='object'&&aretha)aretha.active=false;   /* …and an Aretha re-roll run */
@@ -6552,7 +6568,15 @@ function drawPatchRow(){
 function persistHub(){try{localStorage.setItem('cp_hub',serializeHub(hub));}catch(e){}}
 let curatedApplied=false;
 async function ensureAudio(){
- if(!audioReady){await Tone.start();await makeAudio();}
+ if(!audioReady){
+  /* SETUP R1: the one latency knob the browser exposes — applied at context birth,
+     only when the user moved it off the default (the default path is byte-identical) */
+  try{if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.latencyPref&&SETTINGS.latencyPref!=='interactive'&&Tone.setContext&&Tone.Context)Tone.setContext(new Tone.Context({latencyHint:SETTINGS.latencyPref}));}catch(e){}
+  await Tone.start();await makeAudio();
+  /* SETUP R1: preferred output device (Chrome's setSinkId) — best-effort, never fatal */
+  try{if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.sinkId&&Tone.getContext().rawContext.setSinkId){const _p=Tone.getContext().rawContext.setSinkId(SETTINGS.sinkId);if(_p&&_p.catch)_p.catch(()=>{});}}catch(e){}
+  try{if(typeof syncSetupAudio==='function')syncSetupAudio();}catch(e){}
+ }
  applyCuratedDefaults();   /* fire-and-forget: empty slots fill with curated sounds */
 }
 function audNow(){
@@ -7293,9 +7317,9 @@ function srcBoxEl(rec){
   +'<span class="srcSub">'+srcEsc(song?((rec.label?song.name+' · ':'')+PCN[song.tonic]+' '+song.mode+' · '+song.bpm+' bpm'):'missing from the song list')+'</span>'
   +'<span class="srcSub srcExp" style="cursor:pointer;color:var(--accent);">'+(open?'▾ hide the tracks':'▸ show the tracks')+'</span>';
  d.querySelector('.srcX').onclick=()=>{
+  snapshot();noteEngine('source-remove',{ref:rec.ref});   /* SETUP R0: source edits are one undo each (client call, Aug 19) */
   project.srcs=srcRecs().filter(r=>r!==rec);srcOpen.delete(rec.id);
-  if(typeof autosaveSoon==='function')autosaveSoon();
-  buildSources();srcStatus('Source removed — nothing in the editor changed.');};
+  buildSources();srcStatus('Source removed — nothing in the editor changed. ⌘Z restores it.');};
  d.querySelector('.srcExp').onclick=()=>{if(open)srcOpen.delete(rec.id);else srcOpen.add(rec.id);buildSources();};
  const L=d.querySelector('.srcLbl');
  L.ondblclick=()=>srcRename(rec,L);
@@ -7327,8 +7351,8 @@ function srcRename(rec,el){
  let doneOnce=false;
  const done=commit=>{
   if(doneOnce)return;doneOnce=true;
-  if(commit){const v=inp.value.trim();rec.label=v?v.slice(0,60):null;
-   if(typeof autosaveSoon==='function')autosaveSoon();}
+  if(commit){const v=inp.value.trim();const nl=v?v.slice(0,60):null;
+   if(nl!==(rec.label||null)){snapshot();noteEngine('source-rename',{ref:rec.ref});rec.label=nl;}}   /* SETUP R0: a real rename is one undo; a no-change commit leaves nothing behind */
   buildSources();};
  inp.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')done(true);else if(e.key==='Escape')done(false);};
  inp.onblur=()=>done(true);
@@ -7341,11 +7365,11 @@ function srcMenuOpen(){
   const it=document.createElement('div');it.className='srcMenuIt';
   it.innerHTML=srcEsc(s.name)+' <span class="mini" style="color:var(--dim);">'+srcEsc(s.prov||'')+'</span>';
   it.onclick=()=>{
+   snapshot();noteEngine('source-add',{ref:s.id});   /* SETUP R0: source edits are one undo each (client call, Aug 19) */
    const recs=srcRecs();recs.push({ref:s.id});
    project.srcs=srcsNormalize(recs,SONGS.map(x=>x.id));
    const nr=project.srcs[project.srcs.length-1];
    if(nr)srcOpen.add(nr.id);
-   if(typeof autosaveSoon==='function')autosaveSoon();
    m.style.display='none';buildSources();
    srcStatus('Added '+s.name+' — its tracks are open below it. Unlimited songs; add as many as you like.');};
   m.appendChild(it);
@@ -7570,6 +7594,7 @@ async function runImport(){
 /* ================= onboarding UI (Module 5) ================= */
 /* -- click track: transport-locked quarter-note reference, custom sample via drop -- */
 const clickState={on:false,vol:.8,buf:null,schedId:null};
+let countInPend=[];   /* SETUP R1: sources of a scheduled count-in — ■ Stop silences them */
 /* tap-tempo: median interval of the recent taps → bpm — median shrugs off one bad tap.
    Pure, unit-tested. */
 function tapTempoBPM(taps){
@@ -7579,6 +7604,29 @@ function tapTempoBPM(taps){
  const med=iv.length%2?iv[(iv.length-1)/2]:(iv[iv.length/2-1]+iv[iv.length/2])/2;
  return med>0?Math.round(60000/med):null;
 }
+/* ==== SETUP R1 (client spec, Aug 19 — SETUP-MENU-SPEC-RAW-2026-08-19.md): the pure layer ==== */
+/* count-in: the pre-roll click plan — bars×num ticks, accent on each bar's ONE, spb seconds apart */
+function countInTicks(bars,num,spb){
+ const n2=Math.max(1,Math.round(num)),n=Math.max(0,Math.round(bars))*n2,out=[];
+ for(let i=0;i<n;i++)out.push({at:i*spb,accent:i%n2===0});
+ return out;
+}
+/* meter at a beat, read from the NOTATIONAL tsig map (default 4/4 — the lane's own rule) */
+function tsigNumAtBeat(map,beat){
+ let num=4;
+ for(const e of (Array.isArray(map)?map:[])){
+  if(e&&typeof e.beat==='number'&&e.beat<=beat+1e-6&&typeof e.num==='number')num=e.num;
+  else if(e&&typeof e.beat==='number'&&e.beat>beat)break;
+ }
+ return num;
+}
+/* the Setup meter select writes the beat-0 entry (notational, exactly like the lane).
+   Setting plain 4/4 with nothing after it clears the map back to the honest default. */
+function setMeterAtZero(map,num,den){
+ const rest=(Array.isArray(map)?map:[]).filter(e=>!(e&&typeof e.beat==='number'&&e.beat<1e-6));
+ if(num===4&&den===4&&!rest.length)return [];
+ return [{beat:0,num:num,den:den}].concat(rest);
+}
 function synthWoodblock(ctx,time,vel,accent){
  const o=ctx.createOscillator(),g=ctx.createGain();
  o.type='sine';
@@ -7587,8 +7635,9 @@ function synthWoodblock(ctx,time,vel,accent){
  g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(vel,time+.0015);
  g.gain.exponentialRampToValueAtTime(.0005,time+.06);
  o.connect(g);Tone.connect(g,Tone.getDestination());
- o.start(time);o.stop(time+.09);}
-function playClickAt(time,accent){
+ o.start(time);o.stop(time+.09);return o;}
+function playClickAt(time,accent,coll){
+ /* SETUP R1: the optional collector receives the source so a count-in can be silenced by ■ Stop */
  const ctx=Tone.getContext().rawContext;
  if(clickState.buf){
   const s=ctx.createBufferSource();s.buffer=clickState.buf;
@@ -7596,7 +7645,8 @@ function playClickAt(time,accent){
   const g=ctx.createGain();g.gain.value=clickState.vol*(accent?1:.6);
   s.connect(g);Tone.connect(g,Tone.getDestination());
   s.start(time);s.stop(time+Math.min(clickState.buf.duration,.5));
- }else synthWoodblock(ctx,time,clickState.vol*(accent?.9:.5),accent);}
+  if(coll)coll.push(s);
+ }else{const o=synthWoodblock(ctx,time,clickState.vol*(accent?.9:.5),accent);if(coll)coll.push(o);}}
 async function toggleClick(){
  await ensureAudio();
  clickState.on=!clickState.on;
@@ -7620,15 +7670,20 @@ async function toggleClick(){
     keeps the last 6 taps · sets the transport bpm live, clamped to the slider's range */
  const tapBtn=document.getElementById('tapBtn');
  let taps=[];
+ let tapSnapDone=false;   /* SETUP R0: one undo per tap TAKE, not per tap */
  tapBtn.onmousedown=e=>{
   e.preventDefault();
   const now=performance.now();
-  if(taps.length&&now-taps[taps.length-1]>2000)taps=[];
+  if(taps.length&&now-taps[taps.length-1]>2000){taps=[];tapSnapDone=false;}
   taps.push(now);if(taps.length>6)taps.shift();
   const bpm=tapTempoBPM(taps);
   if(bpm){
    const b=Math.round(Math.max(+tempo.min,Math.min(+tempo.max,bpm)));
-   setTempo(b);
+   if(!tapSnapDone&&typeof tempoCommitted!=='undefined'&&b!==tempoCommitted){
+    const _keep=tempo.value;tempo.value=tempoCommitted;snapshot();tempo.value=_keep;
+    noteEngine('tempo',{bpm:b,via:'tap'});tapSnapDone=true;   /* the take's first estimate snapshots the BEFORE */
+   }
+   setTempo(b);if(typeof tempoCommitted!=='undefined')tempoCommitted=b;
    tapBtn.textContent='Tap · '+b;
   }else tapBtn.textContent='Tap …';
   /* audible tick as feedback (first tap of a take accents) */
@@ -7693,6 +7748,11 @@ function midiMirrorDrum(piece,time,vel){
  try{midiState.out.send(midiNoteOnBytes(9,GM_DRUM_NOTES[piece],vel01to127(vel)),ts);
      midiState.out.send(midiNoteOffBytes(9,GM_DRUM_NOTES[piece]),ts+90);}catch(e){}}
 (function drawDawGuide(){
+ /* SETUP R0 (client spec, Aug 19 — SETUP-MENU-SPEC-RAW-2026-08-19.md): the Enable
+    Web MIDI strip moved HOME to the 🔧 Setup window (#setupMidi), where the window's
+    own tooltip always said it lived. The DAW guides stay here behind ⇪ Import and
+    point at it. Setup's strip adds the spec's two missing pieces: DEVICE INPUTS
+    (what the ⏺ Rec path listens to) and a live CONNECTION STATUS line. */
  const el=document.getElementById('dawBody');
  let html='Premium desktop instruments and this canvas, playing together — two one-time setups:';
  for(const g of DAW_ROUTING_GUIDES){
@@ -7700,24 +7760,35 @@ function midiMirrorDrum(piece,time,vel){
   for(const s of g.steps)html+='<li><b>'+s.t+'.</b> '+s.b+'</li>';
   html+='</ol></div></details>';
  }
- html+='<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+ html+='<div class="mini" style="margin-top:10px;">🎹 The <b>Enable Web MIDI</b> button lives in the 🔧 <b>Setup</b> window — enable it there, then follow the steps above.</div>';
+ el.innerHTML=html;
+})();
+(function drawMidiSetup(){
+ const el=document.getElementById('midiBody');if(!el)return;
+ el.innerHTML='Play the grid out to desktop instruments, and play your MIDI keyboard in (the ⏺ Rec path listens to every connected input).'
+  +'<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
   +'<button id="midiEnable" style="padding:6px 14px;font-size:13px;">Enable Web MIDI</button>'
-  +'<select id="midiOutSel" style="min-width:200px;display:none;"></select>'
+  +'<span id="midiStatus" class="mini">not enabled yet — the browser asks once, per site</span></div>'
+  +'<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<label class="mini">Output</label><select id="midiOutSel" style="min-width:200px;display:none;"></select>'
   +'<label class="part" id="midiMirrorChip" style="display:none;gap:5px;"><input type="checkbox" id="midiMirrorChk" style="accent-color:var(--accent);">mirror grid → MIDI</label>'
   +'<button id="midiTest" style="padding:6px 12px;font-size:12.5px;background:#3a3e4d;color:#e9eaef;display:none;">send test note (C3 · ch1)</button>'
-  +'<span id="midiMsg" class="mini"></span></div>';
- el.innerHTML=html;
- const msg=document.getElementById('midiMsg');
+  +'<span id="midiMsg" class="mini"></span></div>'
+  +'<div id="midiInList" class="mini" style="margin-top:6px;"></div>';
+ const msg=document.getElementById('midiMsg'),stat=document.getElementById('midiStatus'),inl=document.getElementById('midiInList');
  document.getElementById('midiEnable').onclick=async()=>{
-  if(!navigator.requestMIDIAccess){msg.textContent='Web MIDI unsupported in this browser (Chrome/Edge have it).';return;}
+  if(!navigator.requestMIDIAccess){stat.textContent='Web MIDI unsupported in this browser (Chrome/Edge have it).';return;}
   try{
    midiState.access=await navigator.requestMIDIAccess({sysex:false});
    const sel=document.getElementById('midiOutSel');
    const fill=()=>{sel.innerHTML='';
-    for(const o of midiState.access.outputs.values())sel.add(new Option(o.name,o.id));
+    const ins=[...midiState.access.inputs.values()],outs=[...midiState.access.outputs.values()];
+    for(const o of outs)sel.add(new Option(o.name,o.id));
     midiState.out=midiState.access.outputs.get(sel.value)||null;
-    msg.textContent=sel.options.length?sel.options.length+' output(s) — pick your IAC / loopMIDI port.':'no MIDI outputs — create an IAC / loopMIDI port first (step 1).';};
-   fill();midiState.access.onstatechange=fill;
+    stat.textContent='connected — '+ins.length+' input(s) · '+outs.length+' output(s)';
+    inl.innerHTML=ins.length?('Inputs (⏺ Rec listens to all): '+ins.map(i=>'<b>'+String(i.name||'?').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</b>').join(' · ')):'No MIDI inputs — plug a keyboard in (or create an IAC / loopMIDI port) and this list follows, live.';
+    msg.textContent=outs.length?'pick your IAC / loopMIDI port above.':'no MIDI outputs — create an IAC / loopMIDI port first (the ⇪ Import window\'s 🎛 guide has the steps).';};
+   fill();midiState.access.onstatechange=fill;   /* connection status follows plugs/unplugs, live */
    sel.onchange=()=>{midiState.out=midiState.access.outputs.get(sel.value)||null;};
    sel.style.display='inline-block';
    document.getElementById('midiMirrorChip').style.display='flex';
@@ -7728,7 +7799,7 @@ function midiMirrorDrum(piece,time,vel){
     midiState.out.send(midiNoteOnBytes(0,48,100));
     setTimeout(()=>{try{midiState.out.send(midiNoteOffBytes(0,48));}catch(e){}},300);
     msg.textContent='sent C3 on ch1 → if the DAW track is armed you just heard your VST.';};
-  }catch(e){msg.textContent='Web MIDI permission denied: '+(e&&e.message||e);}
+  }catch(e){stat.textContent='Web MIDI permission denied: '+(e&&e.message||e);}
  };})();
 
 /* ================= chord palette ================= */
@@ -17012,7 +17083,7 @@ function loadSong(id){
  activeTrack='melody';
  project.style=STYLES.find(x=>x.id===s.style);
  selStyle.value=s.style;selChords.value='none';
- setTempo(s.bpm);selNotes.clear();undoStack.length=0;
+ setTempo(s.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=Math.round(s.bpm);selNotes.clear();undoStack.length=0;   /* a SONG load still starts a fresh history — deliberate; only a KEEP-load rides undo (SETUP R0, client call Aug 19) */
  clearPsych();closeSectionEditor();closeVoicingEditor();
  hardResetViews();   /* 2.1b: song loads reset every view height (#12c) */
  if(typeof buildSources==='function')buildSources();   /* 4.4: sources SURVIVE song loads — only the working box re-labels */
@@ -18810,6 +18881,7 @@ function refresh(reschedule){
  /* 5.0 r5: the flip-book tracks selection + edits live while it's the open view */
  if(typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='melPanel'&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
  if(typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: ⟲ follow — the board tracks the playhead's key */
+ if(typeof syncSetupTempoBox==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='setupPanel')syncSetupTempoBox();   /* SETUP R1: the 🔧 BPM box + meter select follow edits/undo while the window is up */
  if(typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')orbTripsRefresh();   /* 4.7 R3: the itinerary follows undo/edits while Orbits is up */
  /* multi-track strips follow zoom / song length / paper toggles */
  if(typeof stripPPB!=='undefined'&&(stripPPB!==PPB||stripLOOP!==LOOP||stripPaper!==paperView))drawTrackSel();
@@ -18822,6 +18894,7 @@ async function togglePlay(){
  if(playing){
   if(typeof finalizeTake==='function')finalizeTake();   /* commit held notes BEFORE the transport resets */
   Tone.Transport.stop();playing=false;
+  for(const _ci of countInPend){try{_ci.stop();}catch(e){}}countInPend.length=0;   /* SETUP R1: ■ Stop silences a pending count-in */
   Tone.Transport.bpm.value=+tempo.value;      /* leave any Mode-1 tempo map behind */
   playBtn.textContent='▶ Play';playBtn.classList.remove('stop');
   document.querySelectorAll('.cb').forEach(e=>e.classList.remove('active'));
@@ -18835,7 +18908,20 @@ async function togglePlay(){
   const startBeat=(lr&&(playheadBeat<lr.a-1e-6||playheadBeat>=lr.b-1e-6))?lr.a:playheadBeat%LOOP;
   if(typeof followSusp!=='undefined')followSusp=false;   /* July 30 fix 5: ▶ Play re-arms follow */
   Tone.Transport.position=bbs(startBeat);
-  Tone.Transport.start('+0.05');playing=true;
+  /* SETUP R1 (client spec): count-in — pre-roll clicks on the raw clock, then the
+     transport starts. The count-in counts the NOTATIONAL meter at the start beat
+     (tsigNumAtBeat) — playback itself still counts 4/4, the lane's honest rule. */
+  let _lead=0.05;
+  if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.countIn>0){
+   try{
+    const _num=tsigNumAtBeat(project.tsigMap,startBeat),_spb=60/Math.max(40,+tempo.value||96);
+    const _t0=Tone.getContext().rawContext.currentTime+0.06;
+    countInPend.length=0;
+    for(const _tk of countInTicks(SETTINGS.countIn,_num,_spb))playClickAt(_t0+_tk.at,_tk.accent,countInPend);
+    _lead=0.06+SETTINGS.countIn*_num*_spb;
+   }catch(e){_lead=0.05;}
+  }
+  Tone.Transport.start('+'+_lead);playing=true;
   if(typeof recArmed!=='undefined'&&recArmed)beginTake();   /* ⏺ was primed: take starts with the transport */
   playBtn.textContent='■ Stop';playBtn.classList.add('stop');
   animatePlayhead();
@@ -18900,6 +18986,18 @@ selMode.onchange=()=>{
  if(s!==project)project.mode=selMode.value;
  selNotes.clear();refresh(true);selMode.blur();};
 tempo.oninput=()=>setTempo(+tempo.value);
+/* SETUP R0: tempo joins the undo set (the mixer precedent — one undo per committed
+   GESTURE, mixerCommit's swap idiom). oninput stays live; 'change' fires once at
+   release and commits the whole drag as one step. tempoCommitted is the baseline the
+   next commit snapshots against; applyState / loadVariation / loadSong / tap keep it
+   honest. var (not let) so applyState's typeof guard is safe at any load order. */
+var tempoCommitted=Math.round(+tempo.value)||96;
+tempo.onchange=()=>{
+ const _n=Math.round(+tempo.value);
+ if(!isFinite(_n)||_n===tempoCommitted)return;
+ tempo.value=tempoCommitted;snapshot();tempo.value=_n;   /* snapshot the BEFORE, land the after */
+ setTempo(_n);noteEngine('tempo',{bpm:_n});tempoCommitted=_n;
+};
 
 /* ==== SETTINGS & PROJECT FILE ==== */
 /* Phase 1.4/1.5 (roadmap): display settings (Roman↔numbers, function↔chord-name lane
@@ -18917,7 +19015,9 @@ function parseSettings(str){
  const def={numerals:'roman',laneLabel:'function',autosave:true,recordOver:false,clipAlign:'chords',clipDrop:'ask',clipChordNames:true,chordLaneCanHide:true,ragaFamFirst:'carnatic',ragaTerms:'',ragaMidiAud:true,
   /* 2.5: the transport-fold + chrome preferences — DEVICE data (§2d: these ride
      cp_settings, never the project file; the workspace-vs-device line for 1.7 R0) */
-  showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180};
+  showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,
+  /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
+  countIn:0,latencyPref:'interactive',sinkId:''};
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -18940,6 +19040,9 @@ function parseSettings(str){
    if(o.markerLines==='off'||o.markerLines==='all')def.markerLines=o.markerLines;   /* 2.5 ⑪f: three-state, 'active' is the default */
    if(o.continuous===true)def.continuous=true;   /* 2.5 ⑧: default OFF — the clip model rules */
    if(typeof o.lowerPx==='number'&&o.lowerPx>=100&&o.lowerPx<=600)def.lowerPx=Math.round(o.lowerPx);   /* 2.5 ⑦: view state, device side */
+   if(o.countIn===1||o.countIn===2)def.countIn=o.countIn;   /* SETUP R1: 0/1/2 bars */
+   if(o.latencyPref==='balanced'||o.latencyPref==='playback')def.latencyPref=o.latencyPref;   /* SETUP R1: 'interactive' is the default */
+   if(typeof o.sinkId==='string')def.sinkId=o.sinkId.slice(0,120);   /* SETUP R1 */
   }
  }catch(e){}
  return def;}
@@ -18995,6 +19098,94 @@ let SETTINGS=parseSettings(null);
 try{SETTINGS=parseSettings(localStorage.getItem('cp_settings'));}catch(e){}
 (function(){const cc=document.getElementById('chkCont');if(cc)cc.checked=SETTINGS.continuous===true;})();   /* 2.5 ⑧: the toggle reads its stored state here, past the TDZ */
 function persistSettings(){try{localStorage.setItem('cp_settings',JSON.stringify(SETTINGS));}catch(e){}}
+/* ==== SETUP R1 (client spec, Aug 19): the 🔧 window's Audio-device + Tempo/meter
+   sections, and the click track's count-in wiring. Placed AFTER SETTINGS exists —
+   the markup is static, the behavior wires here. ==== */
+function syncSetupAudio(){
+ const el=document.getElementById('audioReadout');if(!el)return;
+ try{
+  const ctx=Tone.getContext().rawContext;
+  if(typeof ctx.sampleRate!=='number')return;
+  const bl=(typeof ctx.baseLatency==='number'?Math.round(ctx.baseLatency*1000):null);
+  el.innerHTML='Running at <b>'+ctx.sampleRate+' Hz</b>'+(bl!=null?' · base latency ~<b>'+bl+' ms</b>':'')+' — set by the system; the browser picks the buffer size behind it.';
+ }catch(e){}
+}
+(function drawSetupAudio(){
+ const el=document.getElementById('audioBody');if(!el)return;
+ el.innerHTML='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<label class="mini">Output</label><select id="audioOutSel" style="min-width:220px;"><option value="">System default</option></select>'
+  +'<button id="audioOutScan" style="padding:5px 12px;font-size:12px;background:#3a3e4d;color:#e9eaef;">↻ scan outputs</button>'
+  +'<span id="audioOutMsg" class="mini"></span></div>'
+  +'<div id="audioReadout" class="mini" style="margin-top:8px;">sample rate &amp; latency appear when audio starts (press ▶ once).</div>'
+  +'<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<label class="mini">Latency preference</label><select id="audioLatPref">'
+  +'<option value="interactive">lowest (interactive — default)</option>'
+  +'<option value="balanced">balanced</option>'
+  +'<option value="playback">most stable (playback)</option></select>'
+  +'<span class="mini">applies when audio starts — set it before the first ▶, or reload</span></div>'
+  +'<div class="mini" style="margin-top:8px;">Honest limits: this canvas records <b>MIDI, not audio</b> — there is no audio input to configure. The <b>browser owns the audio driver and its buffer size</b>; the preference above is the one knob it exposes. Output switching needs Chrome/Edge.</div>';
+ const sel=document.getElementById('audioOutSel'),msg=document.getElementById('audioOutMsg');
+ const lp=document.getElementById('audioLatPref');
+ lp.value=(SETTINGS&&(SETTINGS.latencyPref==='balanced'||SETTINGS.latencyPref==='playback'))?SETTINGS.latencyPref:'interactive';
+ lp.onchange=e=>{SETTINGS.latencyPref=(e.target.value==='balanced'||e.target.value==='playback')?e.target.value:'interactive';persistSettings();e.target.blur();};
+ document.getElementById('audioOutScan').onclick=async()=>{
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices)){msg.textContent='device listing unsupported in this browser.';return;}
+  try{
+   const ds=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audiooutput');
+   sel.innerHTML='<option value="">System default</option>';
+   let unnamed=0;
+   ds.forEach((d,i)=>{sel.add(new Option(d.label||('Output '+(i+1)),d.deviceId));if(!d.label)unnamed++;});
+   if(SETTINGS.sinkId){for(const o of sel.options)if(o.value===SETTINGS.sinkId)sel.value=SETTINGS.sinkId;}
+   msg.textContent=ds.length+' output(s)'+(unnamed?' — names appear once the site holds a media permission':'');
+  }catch(e){msg.textContent='could not list outputs: '+(e&&e.message||e);}
+ };
+ sel.onchange=async()=>{
+  SETTINGS.sinkId=sel.value||'';persistSettings();
+  if(audioReady){
+   try{
+    const ctx=Tone.getContext().rawContext;
+    if(ctx.setSinkId){await ctx.setSinkId(SETTINGS.sinkId||'');msg.textContent='output switched.';}
+    else msg.textContent='this browser cannot switch outputs (Chrome/Edge can).';
+   }catch(e){msg.textContent='switch failed: '+(e&&e.message||e);}
+  }else msg.textContent='saved — applies when audio starts.';
+ };
+})();
+function syncSetupTempoBox(){
+ const b=document.getElementById('setupBpm');
+ if(b&&document.activeElement!==b)b.value=Math.round(+tempo.value);
+ const m=document.getElementById('setupMeter');
+ if(m&&document.activeElement!==m&&m.options.length){
+  const e0=(Array.isArray(project.tsigMap)&&project.tsigMap.length&&project.tsigMap[0].beat<1e-6)?project.tsigMap[0]:{num:4,den:4};
+  const v=e0.num+'/'+e0.den;
+  for(const o of m.options)if(o.value===v){m.value=v;break;}
+ }
+}
+(function drawSetupTempo(){
+ const el=document.getElementById('tempoBody');if(!el)return;
+ el.innerHTML='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<label class="mini">BPM</label><input type="number" id="setupBpm" step="1" style="width:70px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:12.5px;outline:none;">'
+  +'<span class="mini">the transport slider and this box are the same knob — one undo per change</span></div>'
+  +'<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<label class="mini">Time signature</label><select id="setupMeter"></select>'
+  +'<span class="mini">notational, like the ④ lane — it rides the file and the count-in counts it; playback still counts 4/4 (the lane’s honest rule)</span></div>';
+ const b=document.getElementById('setupBpm'),m=document.getElementById('setupMeter');
+ b.min=tempo.min;b.max=tempo.max;
+ for(const c of TSIG_CYCLE)m.add(new Option(c[0]+'/'+c[1],c[0]+'/'+c[1]));
+ syncSetupTempoBox();
+ b.oninput=()=>{const v=Math.round(+b.value);if(isFinite(v))setTempo(Math.max(+tempo.min,Math.min(+tempo.max,v)));};
+ b.onchange=()=>{const v=Math.round(+b.value);tempo.value=isFinite(v)?Math.max(+tempo.min,Math.min(+tempo.max,v)):tempoCommitted;tempo.onchange();b.value=Math.round(+tempo.value);b.blur();};   /* delegates to the transport's own commit — same knob, same one-undo */
+ m.onchange=()=>{
+  const mm=/^(\d+)\/(\d+)$/.exec(m.value);if(!mm)return;
+  snapshot();noteEngine('meter',{num:+mm[1],den:+mm[2]});
+  project.tsigMap=normalizeTsigMap(setMeterAtZero(project.tsigMap,+mm[1],+mm[2]),LOOP);   /* one undo; tsigMap rides captureState already */
+  refresh(true);m.blur();
+ };
+})();
+(function wireCountIn(){
+ const s=document.getElementById('clickCountIn');if(!s)return;
+ s.value=String((SETTINGS&&(SETTINGS.countIn===1||SETTINGS.countIn===2))?SETTINGS.countIn:0);
+ s.onchange=e=>{const v=+e.target.value;SETTINGS.countIn=(v===1||v===2)?v:0;persistSettings();e.target.blur();};
+})();
 function dispLbl(l){return SETTINGS.numerals==='numbers'?romanLblToNumbers(l):l;}
 let projectDirty=false,autosaveTimer=null;
 function currentViewH(){
@@ -19107,7 +19298,7 @@ const WINDOW_DEFS=[
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
  {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Lives between the Chord Palette and the Multi-Track Grid.'},
- {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & Web MIDI (the sample-directory and DAW-routing guides moved behind the ⇪ Import window)'}];
+ {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & count-in · Web MIDI (device inputs · outputs · connection status) · audio device (output choice · sample rate · latency) · tempo & time signature (the sample-directory and DAW-routing guides live behind the ⇪ Import window)'}];
 const RAIL_DEFS=[
  {icon:'📌',act:'pinBtn', tip:'Pin selection — Conform never moves pinned notes (P)'},
  {icon:'⇄', act:'negBtn', tip:'Negative harmony — reflect selected notes / chord / whole track around the tonic-dominant axis'},
@@ -19601,6 +19792,7 @@ function varSaveFly(rec){
  }catch(e){}}
 function loadVariation(i){
  const v=variations[i];const s=SONGS.find(x=>x.id===v.songId)||SONGS[0];
+ snapshot();noteEngine('keep-load',{id:v.id||null});   /* SETUP R0 (client call, Aug 19): loading a Keep is ONE undo step — captureState carries songId/bpm/lineage now, so ⌘Z restores the piece as it was before the click */
  project.song=s;project.tonic=s.tonic;project.base=s.base;
  LOOP=(typeof v.loop==='number'&&v.loop>=16&&v.loop<=256)?v.loop:32;syncBarsInp();
  project.mode=v.mode||(s.mode==='major'?'ionian':'aeolian');selMode.value=project.mode;
@@ -19611,7 +19803,7 @@ function loadVariation(i){
  activeTrack='melody';
  project.style=STYLES.find(x=>x.id===v.styleId)||STYLES[0];
  selSong.value=s.id;selStyle.value=project.style.id;selChords.value='none';
- setTempo(v.bpm);selNotes.clear();undoStack.length=0;
+ setTempo(v.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=Math.round(v.bpm);selNotes.clear();   /* SETUP R0: the stack SURVIVES a Keep-load now (was undoStack.length=0) */
  clearPsych();closeSectionEditor();closeVoicingEditor();
  selOwner='main';activeGridView=GRID_VIEWS.main;resetGridRange(GRID_VIEWS.main);   /* 2.1b: home view (heights persist — not a song load) */
  lineage={parent:v.id||null,engine:null,params:null}; /* future Keeps descend from this node */
