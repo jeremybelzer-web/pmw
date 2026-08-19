@@ -29,7 +29,7 @@
   #gridWrap{user-select:none;-webkit-user-select:none;}
   #gridWrap input,#gridWrap textarea,#gridWrap [contenteditable="true"]{user-select:text;-webkit-user-select:text;}
   .chordlane{display:flex;gap:2px;margin-top:6px;}
-  /* 3.2b multi-track view: header column + track strips (Ableton-style) */
+  /* 3.2b multi-track view: header column + track strips */
   /* MG round (client item 4): lanes STRETCH their children — the colored name box now
      grows and shrinks with its track (the name/S/R/On row stays its own size at the top,
      like #gridRow always did) */
@@ -204,7 +204,7 @@
   .cb .rn{color:#1a1408;} .cb .ab{color:rgba(26,20,8,.72);}
   .cb.chroma .rn{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65);} .cb.chroma .ab{color:rgba(255,255,255,.85);}
   .cb.active{outline:2px solid #fff;filter:brightness(1.28);}
-  /* mixer (Ableton-style strips) */
+  /* mixer (channel strips) */
   #mixerPop{position:fixed;left:16px;top:110px;z-index:40;background:#111318;border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.65);display:none;flex-direction:column;gap:8px;}
   #mixerBody{display:flex;gap:10px;}
   .mxstrip{display:flex;flex-direction:column;align-items:center;gap:5px;background:#191c22;border:1px solid var(--line);border-radius:8px;padding:8px 7px 6px;}
@@ -313,7 +313,7 @@
 .tpt:hover{background:#98a0b2;}
 .tpt.live{background:var(--accent);box-shadow:0 0 8px rgba(232,163,61,.8);cursor:grabbing;}
 .tbpm{position:absolute;top:1px;left:4px;font-size:9.5px;color:var(--dim);pointer-events:none;font-variant-numeric:tabular-nums;}
-/* ==== 2.5 ⑪f the Section Lane (Cubase presentation) + ④ the time-signature lane ==== */
+/* ==== 2.5 ⑪f the Section Lane + ④ the time-signature lane ==== */
 #sectionLaneRow,#tsigLaneRow{margin:0 0 4px 0;}
 #sectionlane{position:relative;height:22px;flex:0 0 auto;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;}
 #tsiglane{position:relative;height:20px;flex:0 0 auto;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:4px;box-sizing:border-box;cursor:copy;}
@@ -335,7 +335,7 @@
 .ahdl{position:absolute;width:7px;height:7px;background:rgba(232,193,88,.5);border:1px solid rgba(232,193,88,.9);border-radius:2px;box-sizing:border-box;margin:-3.5px 0 0 -3.5px;opacity:.5;}   /* 2.6 R3: the brace band's stretch/skew grips */
 .alane:hover .ahdl{opacity:1;}
 .ahdl:hover{background:rgba(232,193,88,.95);}
-/* Cubase-style marker LINES through the grid (the docked-lane compensation, T3) */
+/* marker LINES through the grid (the docked-lane compensation, T3) */
 .mkline{pointer-events:none;}
 .mreg{position:absolute;top:0;height:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.10);border-radius:4px;
  background:rgba(255,255,255,.025);overflow:hidden;pointer-events:none;}
@@ -420,7 +420,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-19a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-19c</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -614,7 +614,7 @@
     <!-- 2.5 ⑪e LANE 1 · THE SONG OVERVIEW (Q2/§9.5): a miniature of the whole
          arrangement with a viewport outline — drag ←→ scrolls, drag ↕ zooms,
          double-click inside the outline zooms out to the full arrangement (all three
-         are Ableton's own documented Overview gestures). It renders the same gridW()
+         checked against primary documentation — see the private record). It renders the same gridW()
          beat-space the grid views draw, squeezed through a viewBox — not a bespoke
          canvas — and it is CHROME: in-flow, no z-index. Height/visibility = DEVICE
          data (cp_settings), never the project file. position:sticky pins it while
@@ -639,19 +639,19 @@
       <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The global tempo lane (4.2): the tempo slider is the BASE — points override it from their beat onward. Double-click: add a point · drag a point ↕ = bpm, ↔ = beat · right-click: import the linked song's human timing, draw a curve, export a .mid tempo map, flatten.">Tempo</span></div>
       <div id="tempolane"></div>
     </div>
-    <!-- 2.5 ⑪f THE SECTION LANE (Q3, client verbatim: "Sections Markers Should be
-         around Song Structure and should follow the CUBASE DAW MODEL"): Cubase's
+    <!-- 2.5 ⑪f THE SECTION LANE (Q3 — the client's chosen marker-lane model; his
+         verbatim direction lives in the private record): that model's
          PRESENTATION and INTERACTIONS over the app's OWN data model — project.sections
          stays the keyed contiguous partition 2.2b shipped (§9.4's structural-mismatch
-         rule: a literal port of Cubase's gappable spans breaks keyFor/withKeyAt/
-         syncActiveKey). Sections render as named spans with their keys (Cubase cycle
+         rule: a literal port of gappable spans breaks keyFor/withKeyAt/
+         syncActiveKey). Sections render as named spans with their keys (cycle
          markers in all but name); double-click a span = set the loop brace to it
-         (Cubase's own cycle-marker gesture); click = the shipped section editor.
+         (the cycle-marker gesture — Q3); click = the shipped section editor.
          Position markers (the one genuinely NEW structure) are the free-standing
          points. ONE global lane — it does not dock per-track (T3, client-confirmed;
-         Cubase's marker LINES through the grid are the compensating half). -->
+         the marker LINES through the grid are the compensating half). -->
     <div id="sectionLaneRow" style="display:flex;align-items:stretch;">
-      <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The Section Lane (Cubase model): sections as named spans with their keys. Click a span: rename / change key / merge · double-click a span: loop it · ⌥-click empty space: drop a position marker · drag a marker ↔ to move it · double-click a marker: rename · right-click a marker: delete.">Sections</span></div>
+      <div class="thead" style="display:flex;align-items:center;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="The Section Lane: sections as named spans with their keys. Click a span: rename / change key / merge · double-click a span: loop it · ⌥-click empty space: drop a position marker · drag a marker ↔ to move it · double-click a marker: rename · right-click a marker: delete.">Sections</span></div>
       <div id="sectionlane"></div>
     </div>
     <!-- 2.5 ④ THE TIME-SIGNATURE LANE: a tempo-lane sibling (the tempo lane is the
@@ -678,7 +678,7 @@
       <div class="gvwrap"><svg id="grid" style="flex:0 0 auto;"></svg><div class="rzh" id="mainRzT" title="Drag to resize the Grid from its top edge"><div class="rzline"></div></div><div class="rzh" id="mainRz" title="Drag to resize the Grid — shrink it and a slim scrollbar appears when notes fall out of view"><div class="rzline"></div></div></div>
     </div>
     <div id="trackStripsB"></div><!-- July 27a: lanes ordered BELOW the Grid block land here -->
-    <!-- 2.5 ⑦ THE LOWER WINDOW: the Ableton-style zoomed edit pane, dragged down from
+    <!-- 2.5 ⑦ THE LOWER WINDOW: the zoomed edit pane, dragged down from
          the Grid block's bottom edge — between #trackStripsB and #chordRow, exactly
          "above the Chord Lane" (when the Chord Lane is tucked away, this handle IS the
          Grid's bottom line). A registered GRID_VIEWS entry ('lower') rendered through
@@ -2526,7 +2526,7 @@ function sectionsShiftFrom(secs,atBeat,delta){
  return secs.map((s,i)=>({...s,start:(i&&s.start>=atBeat-1e-6)?+(s.start+delta).toFixed(4):s.start}));}
 function sectionsTrimTo(secs,len){
  return secs.filter(s=>s.start<len-1e-6).map(s=>({...s}));}
-/* ==== 2.5 ⑪f · POSITION MARKERS (pure layer) ==== Cubase's other marker type: a
+/* ==== 2.5 ⑪f · POSITION MARKERS (pure layer) ==== the second marker type (2.5 ⑪f): a
    free-standing point with a name — NOT a section boundary, NO musical data. The one
    genuinely new persisted structure in the transport fold, shaped to mirror sections
    so normalizeSections' discipline copies wholesale: sorted, deduped, trimmed to the
@@ -2639,7 +2639,7 @@ function alaneRange(sel,loop){
    authored shapes, already normalized 0..1 on both axes — sampled across alaneRange
    (Q5: the brace is the range) by the same sample-at-a-step move curveToTempoMap
    taught. ↗ Insert ramp is the freed ⌥ line tool's menu home (Q3b). ⌥-drag now
-   BENDS a segment (Q3 — Ableton's documented Option gesture, per the sort's §3
+   BENDS a segment (Q3 — the documented Option gesture, per the sort's §3
    fact-check). Everything below is pure and unit-tested; the gestures wire later. */
 function alaneValueAt(nodes,t){
  /* the lane's value at beat t — linear between nodes, flat outside them, .5 empty */
@@ -2689,8 +2689,8 @@ function bendSegmentNodes(nodes,i0,i1,k,step){
  for(let j=i1;j<nodes.length;j++)out.push(nodes[j].slice());
  return out;
 }
-/* ==== 2.6 R2 · THE FULL ABLETON BREAKPOINT MODEL (Q7 — client answer, Aug 12) ====
-   Ableton's documented breakpoint grammar, adopted whole: a click ON a point DELETES
+/* ==== 2.6 R2 · THE FULL BREAKPOINT MODEL (Q7 — client answer, Aug 12) ====
+   the breakpoint grammar this app adopts whole (checked — see the private record): a click ON a point DELETES
    it, there is NO point selection, right-click on a point becomes Edit Value. The
    shipped click-to-select + Delete-key clearing is REMOVED, node-selection store and
    all 13 of its sites — the cost was measured at ZERO before the cut: no unit, no
@@ -2719,9 +2719,9 @@ function setAutoNodeValue(nodes,i,v){
  return nodes.map((n,j)=>j===i?[n[0],+Math.max(0,Math.min(1,v)).toFixed(4)]:n.slice());
 }
 /* ==== 2.6 R3 · STRETCH/SKEW + COPY/PASTE OVER THE BRACE (B3/B4 + B6-time) ====
-   Ableton's handle grammar, per AUTOMATION-SORTED §4.3's fact-check: "Dragging the
-   left and right center handles lets you stretch the automation along the horizontal
-   axis." / "Dragging any of the corner handles lets you skew the automation." — ONE
+   the handle grammar, per AUTOMATION-SORTED §4.3's fact-check: the edge handles
+   stretch the envelope along the horizontal
+   axis, the corner handles skew it — ONE
    feature, not two (the sort's own correction). Every verb reads alaneRange (Q5's
    law). THE BRACE NEVER MOVES: it is the loop, so the handles remap the ENVELOPE
    inside it, not the selection — the app-native reading, the build's call. Copy/
@@ -2742,7 +2742,7 @@ function stretchAutoNodes(nodes,a,b,a2,b2){
 }
 function skewAutoNodes(nodes,a,b,dv0,dv1){
  /* tilt the values inside [a,b] — a node at beat t gains dv0→dv1 by its position
-    in the range, clamped 0..1 (Ableton's corner-handle skew). Fresh rows. */
+    in the range, clamped 0..1 (the corner-handle skew — Q5's law). Fresh rows. */
  if(!Array.isArray(nodes))return [];
  if(!(b>a))return nodes.map(n=>n.slice());
  return nodes.map(n=>{
@@ -2795,8 +2795,66 @@ function autoCurveSegment(nodes,i0,i1,shape,step){
  for(let k=i1;k<nodes.length;k++)out.push(nodes[k].slice());
  return out;
 }
+/* ==== 2.6 R4 · THE BINDING — the pure layer (Q1 answered: the three-state model) ====
+   The parameter registry (two honest entries — sends, plugin and synth parameters are
+   ABSENT, not pending: every bus is n.connect(cmp)), the norm↔real-unit maps, the
+   registry-aware value parser (Q2: a WRAPPER that shadows parseAutoValue — the 0..1
+   parser is unit-tested and harness-grabbed, so it stays untouched), and the pan ramp
+   plan (pure rows; rebuild's scheduler consumes them). Values stay normalized 0..1 in
+   every lane — real units exist only at the display and playback EDGES, which is what
+   keeps cross-lane paste legal. Tempo is NOT here: project.tempoMap is its own model. */
+const PARAM_DEFS={
+ pan:{id:'pan',label:'Pan',unit:'L/R',min:-1,max:1,continuous:true},
+ volume:{id:'volume',label:'Volume',unit:'dB',min:-60,max:0,continuous:false}
+};
+function paramFromNorm(pid,v){
+ /* lane 0..1 → the parameter's real units */
+ const d=PARAM_DEFS[pid];if(!d)return v;
+ return d.min+(d.max-d.min)*Math.max(0,Math.min(1,v));
+}
+function paramToNorm(pid,x){
+ /* real units → lane 0..1, clamped */
+ const d=PARAM_DEFS[pid];if(!d)return x;
+ return +((Math.max(0,Math.min(1,(x-d.min)/(d.max-d.min)))).toFixed(4));
+}
+function paramFmt(pid,v){
+ /* a node's normalized value in real units, for tooltips and Edit Value */
+ if(pid==='pan'){const p=paramFromNorm('pan',v);return Math.abs(p)<.005?'C':(p<0?'L':'R')+Math.round(Math.abs(p)*100);}
+ if(pid==='volume')return paramFromNorm('volume',v).toFixed(1)+' dB';
+ return (+v).toFixed(2);
+}
+function parseParamValue(pid,s){
+ /* Q2: real units on a param lane — "L50" / "R25" / "C" / "-0.5" for pan, "-12" or
+    "-12dB" for volume. A bare percentage still means the normalized scale. Null on
+    junk. Non-param ids fall through to parseAutoValue unchanged. */
+ const d=PARAM_DEFS[pid];if(!d)return parseAutoValue(s);
+ if(typeof s!=='string')return null;
+ const t=s.trim();if(!t)return null;
+ if(/%$/.test(t))return parseAutoValue(t);
+ if(pid==='pan'){
+  if(/^[Cc]$/.test(t))return .5;
+  const m=t.match(/^([LlRr])\s*([0-9]*\.?[0-9]+)$/);
+  if(m)return paramToNorm('pan',(m[1].toLowerCase()==='l'?-1:1)*Math.min(100,parseFloat(m[2]))/100);
+ }
+ if(!/^-?[0-9]*\.?[0-9]+\s*(?:[dD][bB])?$/.test(t))return null;
+ const n=parseFloat(t);
+ if(!isFinite(n))return null;
+ return paramToNorm(pid,n);
+}
+function panRampPlan(nodes,loop){
+ /* pure rows the scheduler consumes — {beat,v,toV,beats}: set v at beat, then ramp
+    to toV over beats (toV null = hold). A row at beat 0 starts every loop pass
+    honestly. Empty lane → NO rows: finding ⑤'s rule (no nodes, no read). */
+ if(!Array.isArray(nodes)||!nodes.length)return [];
+ const out=[{beat:0,v:alaneValueAt(nodes,0),toV:nodes[0][1],beats:Math.max(0,+(+nodes[0][0]).toFixed(4))}];
+ for(let i=0;i<nodes.length;i++){
+  const nx=nodes[i+1];
+  out.push({beat:nodes[i][0],v:nodes[i][1],toV:nx?nx[1]:null,beats:nx?+(nx[0]-nodes[i][0]).toFixed(4):0});
+ }
+ return out;
+}
 /* ==== 2.5 ⑥ · QUANTIZE (pure layer) ==== starts pull toward the grid by `strength`
-   (Ableton's amount slider); durations optionally snap too. Fresh rows. Pure. */
+   (the Amount slider's law); durations optionally snap too. Fresh rows. Pure. */
 function quantizeRows(rows,idxs,step,strength,alsoDur){
  const set=new Set(idxs);
  return rows.map((n,i)=>{
@@ -2924,7 +2982,7 @@ let project={song:null,style:null,tonic:0,mode:'major',base:60,
   sections:[{start:0,name:'A',tonic:0,mode:'major',base:60}],
   tracks:{melody:[],bass:null,comping:null,pad:null},
   tempoMap:[],   /* 4.2: the global tempo lane's events [{beat,bpm}…] */
-  markers:[],    /* 2.5 ⑪f: position markers [{start,name}…] — Cubase's free-standing points */
+  markers:[],    /* 2.5 ⑪f: position markers [{start,name}…] — free-standing named points (2.5 ⑪f) */
   tsigMap:[],    /* 2.5 ④: the time-signature lane's events [{beat,num,den}…] (notational) */
   trips:[],      /* 4.7 R3: the UPCOMING TRIPS itinerary [{it,bars,lbl}…] — PROJECT data (GEMS ⑥; the from-scratch build, FINDING 1) */
   autoLanes:[],  /* 2.5 ①②: per-track automation lanes [{id,track,kind,name,nodes}…] */
@@ -3826,7 +3884,7 @@ function makeAudioLink(track,clip,anchors,clipDur,bpm){
   rootMidi:(clip.mode==='repitch'&&typeof clip.root==='number')?clip.root:null,
   anchors:anchors.slice(),clipDur,bpm,isLinkedToAudio:false,savedNotes:undefined,
   /* Module 6 */ mode:'raw',beatsPerClap:1,snapStep:.25,clapAudible:true,clapBuf:null,clapSkew:0,
-  /* Module 6b — Ableton model: warping ALWAYS preserves pitch; transposition is a
+  /* Module 6b — the warp law: warping ALWAYS preserves pitch; transposition is a
      separate, time-neutral operation. Rate-warp exists only as the instant preview
      while background renders land. */ keepPitch:true,
   /* Module 6c — whole-clip transpose in semitones (clip-panel control); stacks with
@@ -4018,7 +4076,7 @@ function stretchOLA(input,ratio,opts){
 }
 /* cache key: a render depends on the slice window, its warp rate AND its transposition */
 function stretchKey(n,semis){return (n[4]||0)+'|'+(n[5]||0)+'|'+((n&&n.length>=7&&n[6])?n[6]:1)+'|'+(semis||0);}
-/* Ableton-model math: play the render at p=2^(semis/12) for the pitch shift; pre-stretch
+/* Warp-law math: play the render at p=2^(semis/12) for the pitch shift; pre-stretch
    by ratio p/wr so the audible duration is EXACTLY the quantized slot — i.e. warping never
    moves pitch, transposing never moves time. wr=1 for m1/raw links (pure transposition). */
 function stretchRatioForNote(n,semis){
@@ -4471,7 +4529,7 @@ async function makeAudio(){
   /* a note carrying a slide object ([7]={sc,semis}): pitch follows the curve */
   slide(track,n,time,vel){
    if(!trackOn(track))return;
-   vel=Math.min(1,(vel==null?.8:vel)*trackGain(track));
+   vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain(track));
    if(vel<=0)return;
    const sl=n[7],dur=Math.max(.05,beatsToSec(n[1]));
    midiMirror(track,[n[2]],dur,time,vel);
@@ -4501,7 +4559,7 @@ async function makeAudio(){
   /* every timeline event lands here: hub clip first, built-in instrument as fallback */
   note(track,midis,dur,time,vel){
    if(!trackOn(track))return;                   /* mixer: activator + solo gate */
-   vel=Math.min(1,(vel==null?.8:vel)*trackGain(track));
+   vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain(track));
    if(vel<=0)return;                            /* fader at −Inf */
    const arr=Array.isArray(midis)?midis:[midis];
    midiMirror(track,arr,dur,time,vel);          /* Module 5: grid → DAW VSTs via Web MIDI */
@@ -4515,7 +4573,7 @@ async function makeAudio(){
      Vertical drags repitch the segment when the clip has a root (rate = 2^(Δ/12)). */
   segment(track,n,time){
    if(!trackOn(track))return;
-   const mxAmp=trackGain(track);if(mxAmp<=0)return;
+   const mxAmp=schedTrackGain(track);if(mxAmp<=0)return;
    midiMirror(track,[n[2]],beatsToSec(n[1]),time,.85*mxAmp);
    const L=audioLinks[track];if(!L)return;
    const buf=hubRt&&hubRt.buffers.get(L.clipId);
@@ -4530,7 +4588,7 @@ async function makeAudio(){
    let playBuf=buf;
    let off=Math.min(n[4]||0,Math.max(0,buf.duration-.01));
    let segDur=Math.max(.01,Math.min(n[5]||buf.duration-off,buf.duration-off));
-   /* Module 6b (Ableton model): warping keeps pitch, transposing keeps time. The
+   /* Module 6b (the warp law): warping keeps pitch, transposing keeps time. The
       pre-rendered WSOLA slice bakes stretch p/wr; playing it at rate p yields the exact
       quantized duration with a clean semitone shift. Until a render lands, the instant
       rate path above plays (and the render is requested in the background). */
@@ -4571,7 +4629,7 @@ async function makeAudio(){
   },
   drum(piece,time,vel){
    if(!trackOn('drums'))return;
-   vel=Math.min(1,(vel==null?.8:vel)*trackGain('drums'));
+   vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain('drums'));
    if(vel<=0)return;
    midiMirrorDrum(piece,time,vel);
    if(hubRt&&hubRt.trigger('drums',piece,time,null,vel))return;
@@ -4652,12 +4710,12 @@ function loopSlide(sel,delta,step,loop){
 }
 function loopEdgeBeats(){const s=braceRegion(loopSel,LOOP);return Math.min(14/PPB,(s.b-s.a)/3);}   /* July 30 fix 4: 8→14px — real fingers miss 8px edges · 2.5 ⑪b: measured against the effective brace */
 /* ==== 2.5 ⑪b (Q2 + T1, client-confirmed Aug 11): THE LOOP BRACE ALWAYS EXISTS ====
-   Ableton's model, from its own manual: "If no clip(s) or time is selected, the loop
-   brace will cover the entire Arrangement." loopSel stays {a,b}|null underneath — the
+   The adopted model (2.5 ⑪b Q2 + T1): with nothing selected, the loop
+   brace covers the whole arrangement. loopSel stays {a,b}|null underneath — the
    pure helpers and every unit assertion on them are untouched (a brace is still a
    region); braceRegion is the one accessor that says what the brace covers NOW. Pure. */
 function braceRegion(sel,loop){return sel||{a:0,b:loop};}
-/* ⌘/Ctrl+↑↓ (Ableton's modified pair — the bare arrows stay pitch/step): scale the
+/* ⌘/Ctrl+↑↓ (the MODIFIED pair, §9.3 — the bare arrows stay pitch/step): scale the
    brace's length about its start; floor = one grid step, clamped inside the loop. Pure. */
 function loopResize(sel,factor,step,loop){
  const w=Math.max(step,(sel.b-sel.a)*factor);
@@ -4665,7 +4723,7 @@ function loopResize(sel,factor,step,loop){
  return {a:+a.toFixed(4),b:+Math.min(loop,a+w).toFixed(4)};
 }
 /* ==== 2.5 ⑪d · THE SCRUB AREA (pure half) ==== the jump between triggered play
-   positions is quantized — Ableton quantizes to its global launch-quantization menu;
+   positions is quantized — the reference model uses a global launch-quantization menu;
    the app has no such menu (§9.7 landmine ⑮), so the scrub jump quantizes to the BAR
    as a hard default this round (item ⑥'s Quantize window is where a user-facing
    setting would eventually live). Pure. */
@@ -4680,10 +4738,10 @@ function laneDragMode(dx,dy){
  if(ax<5&&ay<5)return null;
  return ay>=ax?'zoom':'loop';
 }
-/* ==== July 30 client fix 5: ABLETON-STYLE PLAYHEAD FOLLOW (pure math) ====
+/* ==== July 30 client fix 5: PLAYHEAD FOLLOW (pure math) ====
    mode 'page' (zoomed out, PPB at/below the boot default): the playhead runs left to
    right; nearing the right edge the view JUMPS RIGHT 4 BARS and keeps going — the
-   client-specified Ableton behavior. mode 'center' (zoomed in even a little): the
+   client-specified page-flip behavior. mode 'center' (zoomed in even a little): the
    playhead pins to the view center and the material scrolls under it.
    phvx = playhead x in VIEW coords · returns the new scrollLeft, or null = stay. */
 function followScrollLeft(mode,phvx,scrollLeft,viewW,maxScroll,ppb){
@@ -4699,9 +4757,9 @@ function followScrollLeft(mode,phvx,scrollLeft,viewW,maxScroll,ppb){
 /* ==== 2.5 ⑪d · THE SCRUB AREA (gesture half) ==== click = launch playback from that
    bar (the jump quantized to the BAR — §9.7 landmine ⑮: the app has no global launch-
    quantization menu, so the bar is the hard default this round) · press-and-hold =
-   repeat that bar (Ableton documents press-and-hold repeating a portion) · drag ←→ =
-   scrub bar to bar (⚠ the DRAG half is the client's own ask — Ableton documents click,
-   hold and ⇧-click only; §9.3 — build as asked, do not attribute). Own listeners, own
+   repeat that bar (documented press-and-hold behaviour — see the private record) · drag ←→ =
+   scrub bar to bar (⚠ the DRAG half is the client's own ask, beyond the documented
+   set; §9.3 — build as asked, do not attribute). Own listeners, own
    state: `drag`, selBox, selNotes, selChordSet, PPB and every view scroll are untouched
    by construction. */
 let scrubHoldOn=false,scrubHoldTimer=null;
@@ -4809,23 +4867,51 @@ function scheduleTempoMap(){
  for(const ev of map)
   tempoEvents.push(Tone.Transport.schedule(t=>Tone.Transport.bpm.setValueAtTime(ev.bpm,t),bbs(ev.beat)));
 }
+function schedEv(beat,fn){
+ /* 2.6 R4c: every timeline callback runs with its BEAT in scope (schedBeatCtx), so
+    schedTrackGain can sample the volume envelope at the note's start. Synchronous —
+    the ctx never leaks past the callback. */
+ scheduled.push(Tone.Transport.schedule(t=>{schedBeatCtx=beat;try{fn(t);}finally{schedBeatCtx=null;}},bbs(beat)));
+}
 function rebuild(){
  scheduled.forEach(id=>Tone.Transport.clear(id));scheduled=[];
  scheduleTempoMap();
  const st=project.style,tr=project.tracks;
  const chView=effectiveChords(); /* psych-out overlay applies at playback level only */
  const ch=flatChords(chView);    /* 3.1: consolidated clips play their inner harmony */
- for(const e of renderDrums(st))scheduled.push(Tone.Transport.schedule(t=>inst.drum(e.piece,t,e.vel),bbs(sw(e.beat))));
+ for(const e of renderDrums(st))schedEv(sw(e.beat),t=>inst.drum(e.piece,t,e.vel));
  /* each part slot: user-authored (materialized) notes win over the style pattern */
- if(tr.bass)for(const n of tr.bass)scheduled.push(Tone.Transport.schedule(t=>playEditable('bass',n,t,.85),bbs(sw(n[0]))));
- else for(const e of renderBass(ch,st))scheduled.push(Tone.Transport.schedule(t=>inst.bassN(e.midi,beatsToSec(e.dur),t,e.vel),bbs(sw(e.beat))));
- if(tr.comping)for(const n of tr.comping)scheduled.push(Tone.Transport.schedule(t=>{if(!mutes.comping)playEditable('comping',n,t,.5);},bbs(sw(n[0]))));
- else for(const e of renderComp(ch,st,secStarts()))scheduled.push(Tone.Transport.schedule(t=>{if(!mutes.comping)inst.note('comping',e.midis,beatsToSec(e.dur),t,e.vel);},bbs(sw(e.beat))));
- if(tr.pad)for(const n of tr.pad)scheduled.push(Tone.Transport.schedule(t=>{if(!mutes.pad)playEditable('pad',n,t,.35);},bbs(n[0])));
- else if(st.pad)for(const e of renderPad(ch))scheduled.push(Tone.Transport.schedule(t=>inst.padN(e.midis,beatsToSec(e.dur),t,e.vel),bbs(e.beat)));
- for(const n of tr.melody)scheduled.push(Tone.Transport.schedule(t=>{if(!mutes.melody)playEditable('melody',n,t,.8);},bbs(sw(n[0]))));
+ if(tr.bass)for(const n of tr.bass)schedEv(sw(n[0]),t=>playEditable('bass',n,t,.85));
+ else for(const e of renderBass(ch,st))schedEv(sw(e.beat),t=>inst.bassN(e.midi,beatsToSec(e.dur),t,e.vel));
+ if(tr.comping)for(const n of tr.comping)schedEv(sw(n[0]),t=>{if(!mutes.comping)playEditable('comping',n,t,.5);});
+ else for(const e of renderComp(ch,st,secStarts()))schedEv(sw(e.beat),t=>{if(!mutes.comping)inst.note('comping',e.midis,beatsToSec(e.dur),t,e.vel);});
+ if(tr.pad)for(const n of tr.pad)schedEv(n[0],t=>{if(!mutes.pad)playEditable('pad',n,t,.35);});
+ else if(st.pad)for(const e of renderPad(ch))schedEv(e.beat,t=>inst.padN(e.midis,beatsToSec(e.dur),t,e.vel));
+ for(const n of tr.melody)schedEv(sw(n[0]),t=>{if(!mutes.melody)playEditable('melody',n,t,.8);});
  for(const k of customTrackIds(tr))                     /* Phase 2.1: user-added tracks */
-  for(const n of (tr[k]||[]))scheduled.push(Tone.Transport.schedule(t=>playEditable(k,n,t,.8),bbs(sw(n[0]))));
+  for(const n of (tr[k]||[]))schedEv(sw(n[0]),t=>playEditable(k,n,t,.8));
+ /* ==== 2.6 R4b · pan lanes drive the LIVE AudioParam (Q1 rule 1: the envelope is
+    ABSOLUTE while the transport runs) ==== One callback per panRampPlan row; every
+    loop pass re-emits its set+ramp, so the envelope self-heals across passes. The
+    override (Q1 rule 2) is honored INSIDE the callback, so the knob wins mid-play
+    and ▶ Re-enable resumes without a rebuild. Custom tracks have no pan bus (§4
+    finding ③) — the lane menu already greys them, and the bus check here is the
+    belt. Ramp seconds come from beatsToSec at fire time — under a mid-segment
+    tempo-map step the ramp end drifts slightly; the next row corrects it. */
+ for(const tk2 of MIX_TRACKS){
+  const al2=(project.autoLanes||[]).find(l=>l&&l.track===tk2&&l.kind==='param'&&l.param==='pan'&&Array.isArray(l.nodes)&&l.nodes.length);
+  if(!al2)continue;
+  for(const row of panRampPlan(al2.nodes,LOOP))
+   scheduled.push(Tone.Transport.schedule(((rw,tk3)=>t=>{
+    if(autoOverride.has(tk3+'|pan'))return;
+    const pn2=panNodes&&panNodes[tk3];if(!pn2)return;
+    try{
+     pn2.pan.cancelScheduledValues(t);
+     pn2.pan.setValueAtTime(paramFromNorm('pan',rw.v),t);
+     if(rw.toV!=null&&rw.beats>0)pn2.pan.linearRampToValueAtTime(paramFromNorm('pan',rw.toV),t+beatsToSec(rw.beats));
+    }catch(e2){}
+   })(row,tk2),bbs(row.beat)));
+ }
  let t=0;chView.forEach((c,i)=>{if(t<LOOP){const idx=i;   /* highlight follows the LANE view (merged blocks) */
    scheduled.push(Tone.Transport.schedule(time=>Tone.Draw.schedule(()=>hlChord(idx),time),bbs(t)));}t+=c.d;});
  Tone.Transport.loop=true;applyLoopToTransport();   /* full 8 bars, or the armed loop-select */
@@ -4838,7 +4924,7 @@ const CELLH=21,GUT=34,BARH=26;   /* lane grew (loop-select lives here) */
 const SCRUBH=12;
 function hdrH(){try{return (SETTINGS&&SETTINGS.showScrub===false)?BARH:BARH+SCRUBH;}catch(e){return BARH+SCRUBH;}}   /* try — SETTINGS is a let declared later; sizeSvg runs at parse (TDZ) */
 let scrubLive=null;   /* the bar being held/scrubbed, for the strip's highlight */
-/* the speaker cursor is the client's ask (no cursor is Ableton-documented — §9.9) */
+/* the speaker cursor is the client's ask (none is documented in the reference — §9.9) */
 const SCRUB_CURSOR="url(\"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27%3E%3Cpath d=%27M2 6v4h3l4 3V3L5 6H2z%27 fill=%27%23e8e8f0%27/%3E%3Cpath d=%27M11 5a4 4 0 0 1 0 6%27 stroke=%27%23e8e8f0%27 fill=%27none%27/%3E%3C/svg%3E\") 8 8, pointer";
 const NROWS0=18,ROWSTART0=-3,GRID_GROW_MAX=24;
 /* ==== GRID VIEWS (2.1b refactor) ==== per-view viewport state. The 19v globals
@@ -4867,7 +4953,7 @@ function gridViewForEvent(e){   /* "which grid am I in" — resolved ONCE per ge
 }
 /* ==== 2.1b VISIBLE FEATURE ==== strips grow into full Grid views; every view centers its
    MIDI and scrolls instead of growing taller (19v absorbed, decision #12a); an
-   Ableton-style slim scrollbar appears only when notes are out of view; per-track view
+   the slim overlay scrollbar appears only when notes are out of view; per-track view
    heights ride the project file + autosave (#12c). Pure helpers — unit-tested. */
 const STRIP_DEF=14,STRIP_MIN=8,GRIDVIEW_MAX=620,MAIN_MIN=4*CELLH,LATTICE_MAX=60;
 /* 2.1b-e LANE LAW v3 (client Q1): tracks NEVER collapse — the resize floor is the
@@ -5318,12 +5404,12 @@ function sizeSvg(){
    grids, and by the docked lane rows everywhere else. Same gestures in every home. */
 function barLaneMarkup(isMainLane){
  let out='';
- out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="#23252e" style="cursor:zoom-in"><title>Click: playhead · drag ↕: zoom · drag ←→: scroll (Ableton) · loop: ⌘L from a time selection, double-click-drag draws, edges resize · middle moves · double-click deletes · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
+ out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="#23252e" style="cursor:zoom-in"><title>Click: playhead · drag ↕: zoom · drag ←→: scroll · loop: ⌘L from a time selection, double-click-drag draws, edges resize · middle moves · double-click deletes · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
  out+=barLaneTicks(PPB,LOOP,GUT,BARH,gridTriplets);   /* 2026-08-11a FIX 4: bar/beat/subdivision delineation, zoom-adaptive */
  /* ⑪b (Q2 + T1, client-confirmed): THE BRACE ALWAYS EXISTS — with no region of its own
     it covers the whole arrangement, dimmer; a user-made region keeps the shipped look.
-    ⚠ the magnifying-glass cursor above is the CLIENT's ask, not Ableton's — no cursor
-    shape is documented anywhere in Ableton's Arrangement chapter (§9.9 correction 3). */
+    ⚠ the magnifying-glass cursor above is the CLIENT's ask, not the reference's — no such
+    cursor is documented there (§9.9 correction 3). */
  {const effB=braceRegion(loopSel,LOOP),defB=!loopSel;
   out+=`<rect x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="${BARH}" fill="#ffd23f" opacity="${defB?.05:loopOn?.4:.18}" pointer-events="none"/>`;
   out+=`<rect class="lbrace" x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="3.5" fill="#ffd23f" opacity="${defB?.35:loopOn?.95:.55}" pointer-events="none"/>`;
@@ -5339,7 +5425,7 @@ function barLaneMarkup(isMainLane){
  /* ⑪d LANE 3 · THE SCRUB AREA — a hollow strip under the ruler, every home. Click =
     launch playback from that bar · press-and-hold = repeat that bar · drag = scrub.
     It never touches selection or zoom (the client's explicit requirement). The speaker
-    cursor is the client's ask, not Ableton's (§9.9 correction 3). */
+    cursor is the client's ask, not the reference's (§9.9 correction 3). */
  if(!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showScrub===false)){
   out+=`<rect class="scrubStrip" x="0" y="${BARH}" width="${gridW()}" height="${SCRUBH}" fill="#1c1e26" style='cursor:${SCRUB_CURSOR}'><title>Scrub area — click: play from this bar · hold: repeat this bar · drag ←→: scrub. Never touches your selection or zoom.</title></rect>`;
   out+=`<line x1="0" y1="${BARH}" x2="${gridW()}" y2="${BARH}" stroke="#2e3342" stroke-width="1" pointer-events="none"/>`;
@@ -5400,7 +5486,7 @@ function midiToK(m,v){v=v||activeGridView;let bk=v.rowStart,bd=1e9;for(let k=v.r
 function degOfK(k){const L=curScale().pcs.length;return ((k%L)+L)%L;}
 
 let selNotes=new Set(),clipboard=null,pasteCount=0,rb=null;
-let zoomBackStack=[];   /* ⑪b: bare Z pushes {ppb,sl}; bare X pops (Ableton's zoom-to-selection pair) */
+let zoomBackStack=[];   /* ⑪b: bare Z pushes {ppb,sl}; bare X pops (the zoom-to-selection pair — §9.3) */
 /* ==== SELECTION MANAGER ==== one API over the existing selection stores. The stores
    themselves (selNotes, selChord/selChordSet) stay exactly where they are — rendering
    and editing code keep reading them directly (zero re-render / perf change); the
@@ -5527,13 +5613,13 @@ function drawGridView(v,svgEl){
   if(i)out+=`<line x1="${GUT+s.start*PPB}" y1="0" x2="${GUT+s.start*PPB}" y2="${vt+v.px}" stroke="#6fd08c" stroke-width="1.3" stroke-dasharray="5 4" opacity=".5" pointer-events="none"/>`;
  });
  }   /* /isMain — bar lane, boundary lines */
- /* ⑪f: Cubase-style MARKER LINES through the event display — the docked-lane
+ /* ⑪f: MARKER LINES through the event display — the docked-lane
     compensation (T3, client-confirmed): the section lane does NOT dock per-track;
-    these lines carry marker positions into every lane instead ("You can show vertical
-    marker lines that indicate marker positions on all tracks" — Steinberg's own
-    three-state preference: off / active track / all). With ONE global marker lane,
+    these lines carry marker positions into every lane instead (the documented
+    three-state preference — off / active track / all — checked against primary
+    documentation, see the private record). With ONE global marker lane,
     'active' and 'all' draw the same lines; the distinction is kept for the day a
-    second marker lane exists (Cubase allows ten). DEVICE data, in cp_settings. */
+    second marker lane exists (the reference allows ten). DEVICE data, in cp_settings. */
  if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.markerLines&&SETTINGS.markerLines!=='off'&&Array.isArray(project.markers)&&!v.laneOnly)
   for(const mk2 of project.markers){
    if(mk2.start<W.b0-1e-6||mk2.start>W.bEnd+1e-6)continue;
@@ -5674,7 +5760,7 @@ function drawGridView(v,svgEl){
   /* rubber band */
   if(rb)out+=`<rect x="${Math.min(rb.x0,rb.x1)}" y="${Math.min(rb.y0,rb.y1)}" width="${Math.abs(rb.x1-rb.x0)}" height="${Math.abs(rb.y1-rb.y0)}" fill="rgba(232,163,61,.12)" stroke="#e8a33d" stroke-dasharray="4 3" stroke-width="1"/>`;
  }
- /* 2.1b: Ableton-style slim scrollbar — appears the moment the lattice overflows the
+ /* 2.1b: the slim overlay scrollbar — appears the moment the lattice overflows the
     viewport (i.e. MIDI can be out of view), and only then */
  const ms=viewMaxScroll(v);
  if(ms>0){
@@ -6067,7 +6153,7 @@ function syncChordRowChrome(){
   ro=document.createElement('div');ro.id='chordReopen';
   ro.title='The Chord Lane is tucked into this grey boundary line — hover shows it, a click expands it. The green square marks the instrument acting as the Chord Lane.';
   /* 2.1b-e v3 (client §3): GREY-AT-REST — a collapsed lane reads as a natural border,
-     like Ableton's window edges; hover reveals it's expandable (row-resize cursor +
+     like a window edge; hover reveals it's expandable (row-resize cursor +
      brighter grey). Glowing yellow is reserved for MOTION (drags, docking) — the 27a
      solid-gold reopen line is superseded. */
   ro.style.cssText='display:none;height:7px;margin-left:'+GUT+'px;border-radius:3px;cursor:row-resize;position:relative;z-index:8;'
@@ -6307,7 +6393,7 @@ function drawParts(){
  /* per-track mutes moved into the Mixer (activator boxes) — client direction July 12 */
  const mx=document.createElement('div');mx.className='part';
  mx.innerHTML='🎚 Mixer';
- mx.title='Open the mixer — Ableton-style strips: volume fader (dB), pan, track activator, solo';
+ mx.title='Open the mixer — channel strips: volume fader (dB), pan, track activator, solo';
  mx.onclick=toggleMixer;
  el.appendChild(mx);
  const sl=document.createElement('div');sl.className='part';
@@ -6391,7 +6477,7 @@ function openSectionEditor(idx,cx,cy){
  secEd={el,away};
 }
 
-/* ================= mixer (Ableton-style strips; opens from the Mixer button) ================= */
+/* ================= mixer (channel strips; opens from the Mixer button) ================= */
 const MIX_TRACKS=['melody','drums','bass','comping','pad'];
 function mixerFromDevice(){
  /* 2.6 R0a: the DEVICE fallback — cp_mixer seeds a session with no project file, and
@@ -6425,7 +6511,20 @@ function mixerCommit(orig,tag){
 function trackOn(track){return trackAudible(mutes,mixer,track);}
 function trackGain(track){return dbToLin(mixer[track]?mixer[track].db:0);}
 let panNodes={};   /* set in makeAudio: every MIX_TRACK has a real pan bus since 2.3 — the old "melody+comping share the piano voice" note here was stale (AUTOMATION-SORTED §9.11's one-line fix) */
-function applyPans(){for(const t in panNodes)if(panNodes[t]&&mixer[t])panNodes[t].pan.value=mixer[t].pan;}
+function applyPans(){for(const t in panNodes)if(panNodes[t]&&mixer[t])panNodes[t].pan.value=mixer[t].pan;}   /* 2.6 R4 (Q1 rule 2): this direct .value write IS the manual override — with the lane marked overridden its callbacks stop firing, so the knob rules; the assignment stopped being a ramp-killer and became the design */
+let schedBeatCtx=null;   /* 2.6 R4c: the beat a scheduled event sounds at — set by rebuild's schedEv wrapper, null outside timeline playback (auditions read the plain fader) */
+function schedTrackGain(track){
+ /* Q1 rule 1 at the volume edge: a volume lane WITH NODES is ABSOLUTE — it replaces
+    the fader for notes scheduled while it is active. Sampled once at the note's
+    START (alaneValueAt): a note's level is set when it starts and does not change
+    while it rings — the honest limit, stated on the lane's own tooltip. No nodes,
+    an override, or no beat context → the plain fader (finding ⑤: no nodes, no read). */
+ if(schedBeatCtx!=null&&typeof activeParamLane==='function'){
+  const l=activeParamLane(track,'volume');
+  if(l)return dbToLin(paramFromNorm('volume',alaneValueAt(l.nodes,schedBeatCtx)));
+ }
+ return trackGain(track);
+}
 let mixerOpen=false;
 function toggleMixer(){
  mixerOpen=!mixerOpen;
@@ -6452,13 +6551,13 @@ function drawMixer(){
   if(canPan){
    knob.onmousedown=e=>{e.preventDefault();const x0=e.clientX,p0=m.pan;
     const orig=JSON.parse(JSON.stringify(mixer));   /* 2.6 R0a: the BEFORE, for one undo per gesture */
-    const mv=ev=>{m.pan=Math.max(-1,Math.min(1,p0+(ev.clientX-x0)/80));setKnob();applyPans();};
+    const mv=ev=>{m.pan=Math.max(-1,Math.min(1,p0+(ev.clientX-x0)/80));setKnob();applyPans();markParamOverride(tk,'pan');};   /* 2.6 R4 Q1 rule 2 */
     const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
      if(Math.abs(m.pan-p0)>1e-9)mixerCommit(orig,'mixer-pan');else persistMixer();};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
    knob.ondblclick=()=>{if(Math.abs(m.pan)<1e-9)return;
     const orig=JSON.parse(JSON.stringify(mixer));
-    m.pan=0;setKnob();applyPans();mixerCommit(orig,'mixer-pan');};
+    m.pan=0;setKnob();applyPans();markParamOverride(tk,'pan');mixerCommit(orig,'mixer-pan');};
   }
   const fw=document.createElement('div');fw.className='mxfader';
   const rail=document.createElement('div');rail.className='mxrail';
@@ -6469,7 +6568,7 @@ function drawMixer(){
   fw.appendChild(rail);fw.appendChild(scale);
   const dragDb=e=>{const r=rail.getBoundingClientRect();
    const y=Math.max(0,Math.min(FH,e.clientY-r.top));
-   m.db=y>=FH-1?-60:-(y/FH)*60;setHandle();};
+   m.db=y>=FH-1?-60:-(y/FH)*60;setHandle();markParamOverride(tk,'volume');};   /* 2.6 R4 Q1 rule 2 */
   rail.onmousedown=e=>{e.preventDefault();
    const orig=JSON.parse(JSON.stringify(mixer)),db0=m.db;   /* 2.6 R0a: the BEFORE */
    dragDb(e);
@@ -6479,7 +6578,7 @@ function drawMixer(){
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
   rail.ondblclick=()=>{if(Math.abs(m.db)<1e-9)return;
    const orig=JSON.parse(JSON.stringify(mixer));
-   m.db=0;setHandle();mixerCommit(orig,'mixer-vol');};
+   m.db=0;setHandle();markParamOverride(tk,'volume');mixerCommit(orig,'mixer-vol');};
   setHandle();
   const act=document.createElement('div');act.className='mxbtn mxact'+(mutes[tk]?' off':'');
   act.textContent=String(ix+1);act.title='Track activator — click to switch the track on/off';
@@ -7162,7 +7261,7 @@ function primePitchRenders(L){
  if(total)hubStatus('warp: rendering '+total+' pitch-true slice(s) in a background worker — instant preview plays until each render lands.');}
 
 /* ---- linked-clip panel: appears only when the ACTIVE track has a link (progressive
-   disclosure per client direction) — the Ableton-clip-view home for everything
+   disclosure per client direction) — the clip-view home for everything
    link-related: link toggle, mode, whole-clip Transpose (drag ↕ or type), anchors,
    clap layer, re-tap, remove. The 🔗 pills in the parts row stay minimal. ---- */
 function drawClipPanel(){
@@ -7189,7 +7288,7 @@ function drawClipPanel(){
   if(L.isLinkedToAudio){setTrackLinked(activeTrack,false);setTrackLinked(activeTrack,true);}
   else drawClipPanel();};
  mw.appendChild(ms);el.appendChild(mw);
- /* Transpose — Ableton-style: drag the ↕ or type semitones; pitch only, timing untouched */
+ /* Transpose — drag the ↕ or type semitones; pitch only, timing untouched */
  const tw=document.createElement('div');tw.className='part';
  tw.title='Transpose the whole linked clip (semitones, −48…+48) — pitch-true, timing unchanged. Drag the ↕ or type a value. Per-block vertical drags stack on top (block badges show those).';
  tw.append('transpose ');
@@ -7958,7 +8057,7 @@ function chordDown(ev,i){
    start:chordStartOf(i0)};
   return;
  }
- /* ⌘ on a chord EDGE = free (no-snap) boundary drag from the first pixel — Ableton
+ /* ⌘ on a chord EDGE = free (no-snap) boundary drag from the first pixel — the adopted
     convention; ⌘/⇧ on the body stays the selection toggle/sweep */
  if((ev.metaKey||ev.ctrlKey)&&!ev.shiftKey&&(edge==='L'||edge==='R')){
   selChordSet.clear();selChord=i;drawChordLane();
@@ -7974,7 +8073,7 @@ function chordDown(ev,i){
    base:new Set(selChord!=null?[selChord,...selChordSet]:[...selChordSet])};
   return;   /* selection-only: no snapshot */
  }
- /* ⌘-drag a clip body ↕ = VELOCITY of its captured MIDI (Ableton) — whole selected run */
+ /* ⌘-drag a clip body ↕ = VELOCITY of its captured MIDI — whole selected run */
  if((ev.metaKey||ev.ctrlKey)&&edge==='M'){
   if(!(selChord===i||selChordSet.has(i))){selChordSet.clear();selChord=i;drawChordLane();}
   const idxs=(selChordSet.size&&selChordSet.has(i))?[...selChordSet]:[i];
@@ -8072,7 +8171,7 @@ document.addEventListener('mousemove',ev=>{
   }
  }
  const step=gridStep();
- const freeC=ev.metaKey||ev.ctrlKey;   /* ⌘ live = no grid snap (Ableton) — mid-drag works */
+ const freeC=ev.metaKey||ev.ctrlKey;   /* ⌘ live = no grid snap — mid-drag works */
  const cstep=freeC?MIN_NOTE:step;
  const rawBC=(ev.clientX-cdrag.cx0)/PPB;
  const dBeat=freeC?rawBC:Math.round(rawBC/step)*step;
@@ -8630,7 +8729,7 @@ function openChordMenu(px,py,i){
   selChordSet.clear();selChord=null;closePalette();refresh(true);},true);
  mk(allOff?'⏻ Reactivate':'⏻ Deactivate',
   allOff?'Switch the selected clip(s) back on — bass/comping/pad play their span again.'
-   :'Silence the selected clip(s): style renderers skip their span (Ableton-style clip deactivate). Editing and labels stay.',
+   :'Silence the selected clip(s): style renderers skip their span (the clip stays, it just stops sounding). Editing and labels stay.',
   ()=>{
    snapshot();
    run.forEach(j=>{const x=project.chords[j];if(!x)return;if(allOff)delete x.off;else x.off=true;});
@@ -8770,7 +8869,7 @@ function renderVoicingEditor(){
  el.appendChild(ft);
  el.querySelector('#voEdX').onclick=closeVoicingEditor;}
 /* ==== /VOICING EDITOR ==== */
-/* ---- ⌘-hover velocity affordance (Ableton): small ▲▼ above and below the note or
+/* ---- ⌘-hover velocity affordance: small ▲▼ above and below the note or
    clip under the cursor while ⌘ is held — the hint that a ⌘-drag ↕ edits velocity ---- */
 const velHintEl=document.createElement('div');
 velHintEl.style.cssText='position:fixed;z-index:70;display:none;pointer-events:none;color:var(--accent);font-size:9px;line-height:1;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.9);';
@@ -10128,7 +10227,7 @@ function openTempoMenu(x,y){
  document.body.appendChild(m);tempoMenuEl=m;
  setTimeout(()=>{document.addEventListener('mousedown',closeTempoMenu,{once:true});},0);
 }
-/* ==== 2.5 ⑪f · THE SECTION LANE (renderer + gestures) ==== Cubase's presentation
+/* ==== 2.5 ⑪f · THE SECTION LANE (renderer + gestures) ==== the Q3 presentation
    over the app's own partition (§9.4's rule). Sections = spans (cycle markers in all
    but name): double-click a span sets the loop brace to it — the payoff that makes
    the always-on brace worth having. Position markers = the free-standing points.
@@ -10146,7 +10245,7 @@ function drawSectionLane(){
   const end=(i+1<secs.length)?secs[i+1].start:LOOP;
   const sp=document.createElement('div');sp.className='secspan';
   sp.style.left=(s.start*PPB)+'px';sp.style.width=Math.max(8,(end-s.start)*PPB-1)+'px';
-  sp.title='Section '+s.name+' — '+sectionKeyLabel(s)+' · click: rename / change key / merge · double-click: loop this section (the brace snaps to it — Cubase’s cycle-marker gesture)';
+  sp.title='Section '+s.name+' — '+sectionKeyLabel(s)+' · click: rename / change key / merge · double-click: loop this section (the brace snaps to it)';
   const lb=document.createElement('span');lb.className='slbl';lb.textContent=s.name+' · '+sectionKeyLabel(s);
   sp.appendChild(lb);
   let clkT=0;
@@ -10310,9 +10409,9 @@ function drawTsigLane(){
   refresh(false);
  };
 }
-/* ==== 2.5 ⑪e · THE SONG OVERVIEW (renderer + gestures) ==== Ableton's Overview,
-   from its own manual: "displays the Arrangement's entire layout … the black outline
-   represents the currently displayed part." Drag ←→ scrolls · drag ↕ zooms ·
+/* ==== 2.5 ⑪e · THE SONG OVERVIEW (renderer + gestures) ==== the whole arrangement
+   in one strip; the black outline
+   is the current viewport. Drag ←→ scrolls · drag ↕ zooms ·
    double-click inside the outline zooms out to the whole arrangement — all three are
    its documented gestures (§9.3). The svg squeezes the same gridW() beat-space the
    grid views draw through a viewBox — a scaled render of the one geometry, not a
@@ -10384,8 +10483,8 @@ function drawOverview(){
    host.style.cursor='grab';
    if(od&&!od.decided&&performance.now()-od.t0<300){
     /* a plain click jumps the view there (centered) — and double-click zooms out to
-       the whole arrangement (Ableton: "double-click anywhere within the black
-       outline" — free here since the whole strip is the outline's home) */
+       the whole arrangement (the documented double-click gesture — free here
+       since the whole strip is the outline's home) */
     const now=performance.now();
     if(host.__ovClk&&now-host.__ovClk<350){
      host.__ovClk=0;
@@ -10411,23 +10510,61 @@ function drawOverview(){
    n[7].pb against a centre line and never grows a second store (§3 landmine ⑧).
    One undo per gesture (§3 landmine ⑩ — a 40-node pencil run is ONE undo). */
 const ALANE_CENTS=600;   /* the bend lane's half-height, in cents */
-/* 2.6 R2 (Q7): there is NO node selection — the full Ableton model. Click deletes,
+/* 2.6 R2 (Q7): there is NO node selection — the full breakpoint model (Q7). Click deletes,
    drag moves, right-click edits the value. The old selection store is gone outright. */
 function autoLanesFor(t){return (Array.isArray(project.autoLanes)?project.autoLanes:[]).filter(l=>l&&l.track===t);}
 function autoLaneById(id){return (project.autoLanes||[]).find(l=>l.id===id);}
-function addAutoLane(t,kind){
+/* ==== 2.6 R4 · lane ↔ parameter plumbing ==== autoOverride is SESSION state, like
+   solo and autoClip — never in the file, never in undo (Q1 rule 2's non-destructive
+   override: the nodes are untouched, the lane is simply ignored until re-enabled). */
+let autoOverride=new Set();
+function paramLaneOf(track,param){return (Array.isArray(project.autoLanes)?project.autoLanes:[]).find(l=>l&&l.track===track&&l.kind==='param'&&l.param===param)||null;}
+function activeParamLane(track,param){
+ const l=paramLaneOf(track,param);
+ return (l&&Array.isArray(l.nodes)&&l.nodes.length&&!autoOverride.has(track+'|'+param))?l:null;
+}
+function trackHasPanBus(track){return MIX_TRACKS.indexOf(track)>=0;}   /* §4 finding ③: a custom track routes hubRt.out(prev), straight past the panner */
+function paramAvailable(track,param){return param==='pan'?trackHasPanBus(track):true;}
+function markParamOverride(track,param){
+ /* Q1 rule 2: touching the mixer control DURING PLAYBACK overrides the lane,
+    non-destructively — nodes untouched, lane greyed, reads stop. The knob's own
+    direct .value writes ARE the override (landmine ① dissolved, not fixed).
+    Q1 rule 3 lives by omission: no lane-editing gesture ever calls this. */
+ if(typeof playing==='undefined'||!playing)return;
+ const l=paramLaneOf(track,param);
+ if(!l||!Array.isArray(l.nodes)||!l.nodes.length)return;
+ const k=track+'|'+param;
+ if(autoOverride.has(k))return;
+ autoOverride.add(k);
+ if(param==='pan'&&panNodes&&panNodes[track])try{panNodes[track].pan.cancelScheduledValues(0);}catch(e2){}
+ drawAutoLanes();
+ if(typeof flashHint==='function')flashHint(trackLabel(track)+' '+(PARAM_DEFS[param]?PARAM_DEFS[param].label:param)+' automation overridden — the knob rules · right-click the lane: ▶ Re-enable.');
+}
+function reEnableParamAutomation(track,param){
+ /* the per-parameter re-enable — the ONLY one shipped (a deliberate departure from
+    the reference's global button, recorded in the R4 brief §7 Q1: this app has two
+    parameters per track and no Control Bar to put a global one in). */
+ if(!autoOverride.delete(track+'|'+param))return;
+ if(param==='pan'&&typeof applyPans==='function')applyPans();   /* the base holds until the next scheduled row re-asserts the envelope */
+ drawAutoLanes();
+}
+function addAutoLane(t,kind,param){
+ if(kind==='param'&&(!PARAM_DEFS[param]||paramLaneOf(t,param)))return;   /* Q4: ONE param lane per track per parameter — two lanes driving one AudioParam is a last-writer-wins race */
  snapshot();
  const n=(project.autoLanes||[]).filter(l=>l.track===t&&l.kind==='auto').length;
  project.autoLanes=[...(project.autoLanes||[]),{id:'al'+Date.now().toString(36)+Math.floor(Math.random()*1e4),
-  track:t,kind,name:kind==='bend'?'Pitch Bend':'Automation'+(n?' '+(n+1):''),nodes:[]}];
+  track:t,kind,...(kind==='param'?{param}:{}),
+  name:kind==='bend'?'Pitch Bend':kind==='param'?PARAM_DEFS[param].label:'Automation'+(n?' '+(n+1):''),nodes:[]}];
  noteEngine('auto-lane',{op:'add',kind});
  drawTrackSel();
 }
 function removeAutoLane(id){
  snapshot();
+ const wasParam=(project.autoLanes||[]).some(l=>l&&l.id===id&&l.kind==='param'&&Array.isArray(l.nodes)&&l.nodes.length);
  project.autoLanes=(project.autoLanes||[]).filter(l=>l.id!==id);
  noteEngine('auto-lane',{op:'remove'});
  drawTrackSel();
+ if(wasParam&&typeof playing!=='undefined'&&playing)rebuild();   /* 2.6 R4: closing a live param lane un-schedules its rows */
 }
 function alaneH(){return Math.max(30,typeof stripBoundaryH==='function'?stripBoundaryH():30);}   /* §3 landmine ⑦: heights go through the boundary law — no sliver lanes */
 function alaneValY(val,h){return h-4-Math.max(0,Math.min(1,val))*(h-8);}
@@ -10443,8 +10580,35 @@ function mkAutoLaneRow(al){
  nm.textContent=al.name;
  nm.title=(al.kind==='bend'
   ?'The pitch-bend lane — centre line = no bend. Every slide/melisma on '+trackLabel(al.track)+' draws its real curve here; drag a node ↕ to re-bend, click a slide line to select the notes at both ends, pencil a shape over a note to re-draw its bend.'
+  :al.kind==='param'&&al.param==='pan'
+  ?('Pan — '+trackLabel(al.track)+'. This lane DRIVES the pan bus: with nodes it replaces the mixer knob while the transport runs, and a held note pans while it sounds. Turning the knob during playback overrides the lane (it greys, nodes untouched) until ▶ Re-enable on right-click. Pencil, ⌥-bend, the curve menu and the brace handles all work as on any lane.')
+  :al.kind==='param'&&al.param==='volume'
+  ?('Volume — '+trackLabel(al.track)+'. With nodes this lane replaces the fader: each note\u2019s level is sampled at its START — it cannot fade inside a held note (an honest limit, stated on purpose). Moving the fader during playback overrides the lane until ▶ Re-enable on right-click.')
   :al.name+' — '+trackLabel(al.track)+'. Pencil: drag to draw nodes (a click adds one) · ⌥-drag: bend the segment · ctrl+click: the curve menu · drag a node ↕↔ · click a node: DELETE it · right-click a node: Edit Value. The yellow band is the loop brace — this lane’s time range: its ↔ edge handles stretch and its ↕ corner handles skew the envelope inside it, and the menu’s Range verbs copy/paste it (no band = the range is the whole arrangement).');
  hd.appendChild(nm);
+ if(al.kind==='param'&&typeof PARAM_DEFS==='object'){
+  /* 2.6 R4 (Q3 b): the binding lives on the HEADER — chosen at creation from the
+     track menu, changeable here. The curve menu stays about the CURVE (landmine ③). */
+  const bsel=document.createElement('select');
+  bsel.style.cssText='font-size:9px;background:var(--panel);color:var(--dim);border:1px solid var(--line);border-radius:4px;max-width:72px;';
+  for(const pid in PARAM_DEFS){
+   const o=new Option(PARAM_DEFS[pid].label,pid);
+   o.disabled=(pid!==al.param&&!!paramLaneOf(al.track,pid))||!paramAvailable(al.track,pid);
+   if(pid===al.param)o.selected=true;
+   bsel.appendChild(o);
+  }
+  bsel.title='What this lane drives. A parameter another lane already drives, or one this track has no bus for, is greyed (one lane per parameter).';
+  bsel.onmousedown=e2=>e2.stopPropagation();
+  bsel.onchange=()=>{
+   const v=bsel.value;
+   if(v===al.param||!PARAM_DEFS[v]||paramLaneOf(al.track,v)||!paramAvailable(al.track,v)){bsel.value=al.param;return;}
+   snapshot();
+   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,param:v,name:PARAM_DEFS[v].label}:l);
+   noteEngine('auto-lane',{op:'rebind'});
+   drawTrackSel();
+  };
+  hd.appendChild(bsel);
+ }
  const clr=document.createElement('span');
  clr.textContent='⌫';clr.style.cssText='cursor:pointer;font-size:11px;color:var(--dim);';
  clr.title=al.kind==='bend'?'Clear every bend on this track’s notes (one undo)':'Erase/Clear — empty this lane’s nodes (one undo)';
@@ -10457,6 +10621,7 @@ function mkAutoLaneRow(al){
    project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:[]}:l);
   }
   noteEngine('auto-lane',{op:'clear'});refresh(false);drawAutoLanes();
+  if(al.kind==='param'&&typeof playing!=='undefined'&&playing)rebuild();   /* 2.6 R4: clearing a live param lane un-schedules its rows */
  };
  hd.appendChild(clr);
  const x=document.createElement('span');
@@ -10536,11 +10701,16 @@ function renderAutoLane(lane,id){
   });
  }else{
   const nodes=al.nodes||[];
+  /* 2.6 R4 (Q1 rule 2): an overridden param lane draws GREYED — nodes untouched,
+     simply ignored until ▶ Re-enable (right-click). Only the mixer-control gesture
+     ever greys a lane; editing nodes never does (Q1 rule 3). */
+  const ovr=al.kind==='param'&&typeof autoOverride!=='undefined'&&autoOverride.has(al.track+'|'+al.param);
   let d='';
   for(const n2 of nodes)d+=(d?'L':'M')+(n2[0]*PPB).toFixed(1)+','+alaneValY(n2[1],h).toFixed(1)+' ';
-  if(nodes.length)inner+=`<path d="${d}" fill="none" stroke="#98a0b2" stroke-width="1.6"/>`;
+  if(nodes.length)inner+=`<path d="${d}" fill="none" stroke="${ovr?'#4a4f5c':'#98a0b2'}" stroke-width="1.6"${ovr?' stroke-dasharray="4 3"':''}/>`;
+  if(ovr)inner+=`<text x="8" y="12" fill="#6a7080" font-size="9" style="pointer-events:none">overridden — the knob rules · right-click: ▶ Re-enable</text>`;
   sv.innerHTML=inner;lane.appendChild(sv);
-  /* 2.6 R3: a real brace grows HANDLES on the band — Ableton's grammar (edge =
+  /* 2.6 R3: a real brace grows HANDLES on the band — the handle grammar (edge =
      stretch ↔ · corner = skew ↕) mapped onto a ~30px lane: the two top corner grips
      stand for the corner family (real fingers need more than 4px targets — the loop
      brace's own 14px lesson). ⚠ They sit on the BOTTOM corners: the lane's TOP edge
@@ -10566,7 +10736,8 @@ function renderAutoLane(lane,id){
   nodes.forEach((n2,i)=>{
    const el2=document.createElement('div');el2.className='apt';
    el2.style.left=(n2[0]*PPB)+'px';el2.style.top=alaneValY(n2[1],h)+'px';
-   el2.title=n2[1].toFixed(2)+' at beat '+n2[0]+' — drag ↕↔ · click: delete (one undo) · right-click: Edit Value';
+   if(ovr)el2.style.opacity='.35';
+   el2.title=(al.kind==='param'&&typeof paramFmt==='function'?paramFmt(al.param,n2[1]):n2[1].toFixed(2))+' at beat '+n2[0]+' — drag ↕↔ · click: delete (one undo) · right-click: Edit Value';
    el2.onmousedown=ev=>{if(ev.button===0)autoNodeDown(ev,lane,al,i);};
    el2.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();
     /* 2.6 R2 (Q7): right-click on a point = Edit Value, not delete (click deletes) */
@@ -10581,6 +10752,7 @@ function alaneCommit(orig,tag){
  snapshot();project.autoLanes=now;
  noteEngine(tag,{});
  drawAutoLanes();
+ if(typeof playing!=='undefined'&&playing&&(project.autoLanes||[]).some(l=>l&&l.kind==='param'&&Array.isArray(l.nodes)&&l.nodes.length))rebuild();   /* 2.6 R4: a param-lane edit re-schedules mid-play — pan ramps live on the transport */
 }
 function autoNodeDown(e,lane,al,i){
  e.preventDefault();e.stopPropagation();
@@ -10603,7 +10775,7 @@ function autoNodeDown(e,lane,al,i){
  const up=()=>{
   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
   if(moved)alaneCommit(orig,'auto-node');
-  else{ /* 2.6 R2 (Q7): a click ON a point DELETES it — Ableton's model, one undo.
+  else{ /* 2.6 R2 (Q7): a click ON a point DELETES it — the adopted grammar (Q7), one undo.
            The old click-to-select + Delete-key clearing left with its store. */
    snapshot();
    project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:deleteAutoNode(l.nodes,i)}:l);
@@ -10729,11 +10901,10 @@ function alanePencil(e,lane,al){
  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
 }
 function alaneBendTool(e,lane,al){
- /* 2.6 R1 (Q3): ⌥-drag BENDS the segment under the cursor — Ableton's documented
-    Option gesture ("hold Alt (Win) / Option (Mac) and drag a line segment to curve
-    the segment", Live manual, Editing Breakpoints — verified by AUTOMATION-SORTED
-    §3's fact-check; the OLD comment here claimed ⌥ was Ableton's straight-line
-    draw, which is the Velocity Editor's Ctrl/Alt, a different surface — corrected).
+ /* 2.6 R1 (Q3): ⌥-drag BENDS the segment under the cursor — the documented
+    Option gesture, corrected against primary documentation (AUTOMATION-SORTED
+    §3's fact-check — see the private record; the OLD comment here claimed ⌥
+    was a straight-line draw, which belongs to a different surface — corrected).
     The straight-line verb lives on as ↗ Insert ramp in the curve menu (Q3b).
     Drag ↕ bows the flanking pair's span (60px = full bow); one undo at release;
     a no-drag ⌥-click leaves nothing behind. */
@@ -10821,7 +10992,7 @@ function closeAutoMenu(){if(autoMenuEl){try{autoMenuEl.remove();}catch(e){}autoM
 let autoEditEl=null;
 function closeAutoEdit(){if(autoEditEl){try{autoEditEl.remove();}catch(e){}autoEditEl=null;}}
 function openAutoEditValue(x,y,al,i){
- /* 2.6 R2 (Q7): right-click on a breakpoint = EDIT VALUE — Ableton's context verb,
+ /* 2.6 R2 (Q7): right-click on a breakpoint = EDIT VALUE — the context verb,
     as the client decided. A small numeric popover at the pointer: Enter commits
     (ONE undo, the alaneCommit swap), Esc or clicking away cancels and leaves no
     trace. Accepts 0..1 or a percentage ("35%") via parseAutoValue. Same z-band as
@@ -10830,25 +11001,27 @@ function openAutoEditValue(x,y,al,i){
  const alNow=autoLaneById(al.id);
  if(!alNow||!Array.isArray(alNow.nodes)||!alNow.nodes[i])return;
  const n2=alNow.nodes[i];
+ const pd=(alNow.kind==='param'&&typeof PARAM_DEFS==='object'&&PARAM_DEFS[alNow.param])?PARAM_DEFS[alNow.param]:null;   /* 2.6 R4 Q2: real units at the display edge */
  const w=document.createElement('div');
  w.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:5px;';
  w.style.left=Math.min(x,window.innerWidth-190)+'px';
  w.style.top=Math.max(8,Math.min(y,window.innerHeight-110))+'px';
  const lb=document.createElement('div');
- lb.textContent='Edit value — beat '+n2[0];
+ lb.textContent='Edit value — beat '+n2[0]+(pd?' ('+pd.unit+')':'');
  lb.style.cssText='font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);';
  w.appendChild(lb);
  const inp=document.createElement('input');
- inp.type='text';inp.value=n2[1].toFixed(2);
+ inp.type='text';inp.value=pd?paramFmt(alNow.param,n2[1]):n2[1].toFixed(2);
  inp.setAttribute('data-autoedit','1');
- inp.title='0–1 (or a percentage like 35%) — Enter commits (one undo) · Esc cancels';
+ inp.title=pd?(pd.id==='pan'?'L50 / R25 / C — or a bare number −1..1 — Enter commits (one undo) · Esc cancels':'dB, −60..0 (e.g. "-12") — Enter commits (one undo) · Esc cancels')
+  :'0–1 (or a percentage like 35%) — Enter commits (one undo) · Esc cancels';
  inp.style.cssText='width:76px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:12px;padding:3px 6px;outline:none;';
  inp.onkeydown=ev=>{
   ev.stopPropagation();
   if(ev.key==='Escape'){closeAutoEdit();return;}
   if(ev.key!=='Enter')return;
-  const v=parseAutoValue(inp.value);
-  if(v==null){flashHint('A value 0–1 (or a percentage like 35%).');return;}
+  const v=pd?parseParamValue(alNow.param,inp.value):parseAutoValue(inp.value);
+  if(v==null){flashHint(pd?(pd.id==='pan'?'Pan takes L50 / R25 / C, or a number −1..1.':'Volume takes dB, −60..0 (e.g. "-12").'):'A value 0–1 (or a percentage like 35%).');return;}
   const orig=JSON.parse(JSON.stringify(project.autoLanes));
   project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id?{...l,nodes:setAutoNodeValue(l.nodes,i,v)}:l);
   closeAutoEdit();
@@ -10871,6 +11044,17 @@ function openAutoCurveMenu(x,y,lane,al){
  const m=document.createElement('div');
  m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:4px;min-width:190px;';
  m.style.left=Math.min(x,window.innerWidth-260)+'px';m.style.top=Math.max(8,Math.min(y,window.innerHeight-470))+'px';
+ /* 2.6 R4 (Q1 rule 2): a single CONDITIONAL verb, not a fourth standing section
+    (landmine ③) — shown only while this param lane is overridden by its control. */
+ if(al.kind==='param'&&typeof autoOverride!=='undefined'&&autoOverride.has(al.track+'|'+al.param)){
+  const re=document.createElement('span');re.className='part';re.style.cssText='padding:4px 12px;font-size:11.5px;color:var(--accent);';
+  re.textContent='▶ Re-enable this automation';
+  re.title='The mixer control overrode this lane (its nodes are untouched) — put the envelope back in charge.';
+  re.onclick=()=>{closeAutoMenu();reEnableParamAutomation(al.track,al.param);};
+  m.appendChild(re);
+  const sep0=document.createElement('div');sep0.style.cssText='border-top:1px solid var(--line);margin:2px 4px;';
+  m.appendChild(sep0);
+ }
  /* 2.6 R1 (Q9): ONE menu, TWO LABELLED SECTIONS — reshape above the separator
     (the shipped five, untouched), insert below (the twelve CONTOUR_SHAPES + the
     ramp). The label keeps "Ease in" (reshape) from ever reading as "Sine" (insert)
@@ -10963,8 +11147,8 @@ function openAutoCurveMenu(x,y,lane,al){
   alaneCommit(orig3,'auto-paste');
  };
  m.appendChild(psB);
- /* the rest of the client's screenshot (fixes-images/Ableton Grid Menu Dropdown.png):
-    Delete + Clear Envelope are real here; Freeze Track is in Ableton's picture but
+ /* the rest of the client's screenshot (in the private record's fixes-images):
+    Delete + Clear Envelope are real here; Freeze Track is in the picture but
     freezing needs an audio-render substrate the app doesn't have — recorded as a
     FINDING in the session entry, not silently faked with a dead menu row. */
  const sep=document.createElement('div');sep.style.cssText='border-top:1px solid var(--line);margin:2px 4px;';
@@ -10991,7 +11175,7 @@ function openAutoCurveMenu(x,y,lane,al){
    an in-flow column that pushes the grid right. ⑤ is Ardour-parity in intent (pencil
    chords from a list · Move Up/Down inversions · Drop 2 / Drop 3 / Drop 2+4 ·
    select-all-then-click-new-root · per-tool hover directions); ⑥ is the note-quantize
-   window (Ableton parity: grid + amount) — the app's first, distinct from the Orbit
+   window (grid + amount — the 2.5 parity list) — the app's first, distinct from the Orbit
    tuplet chooser which is deliberately never called Quantize (§2g). */
 let flyOpen=false;
 function openFlyCol(){
@@ -11147,7 +11331,7 @@ function renderQuantWin(){
   +'<option value="4">1 bar</option><option value="2">1/2</option><option value="1">1/4</option>'
   +'<option value="0.5">1/8</option><option value="0.25" selected>1/16</option><option value="0.125">1/32</option></select></label>'
   +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Scale the grid by 2/3 — triplet feel"><input type="checkbox" id="qzTrip" style="accent-color:var(--accent);"> Triplet</label>'
-  +'<label style="display:flex;gap:6px;align-items:center;" title="100% lands exactly on the grid; less pulls part-way (Ableton’s Amount)">Amount <input type="range" id="qzAmt" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);"><span id="qzAmtV" style="min-width:30px;color:var(--dim);">100%</span></label>'
+  +'<label style="display:flex;gap:6px;align-items:center;" title="100% lands exactly on the grid; less pulls part-way">Amount <input type="range" id="qzAmt" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);"><span id="qzAmtV" style="min-width:30px;color:var(--dim);">100%</span></label>'
   +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Snap durations to the grid too (starts always quantize)"><input type="checkbox" id="qzDur" style="accent-color:var(--accent);"> Also durations</label>';
  el.appendChild(row);
  const btn=document.createElement('button');
@@ -11196,7 +11380,7 @@ function gridCtxMenu(e){
  document.body.appendChild(m);gridBgMenuEl=m;
  setTimeout(()=>{document.addEventListener('mousedown',closeGridBgMenu,{once:true});},0);
 }
-/* ==== 2.5 ⑦ · THE LOWER WINDOW (runtime) ==== an Ableton-style zoomed edit pane for
+/* ==== 2.5 ⑦ · THE LOWER WINDOW (runtime) ==== a zoomed edit pane for
    the selected clip/track: a REGISTERED GRID_VIEWS ENTRY ('lower') with its own
    {rows,rowStart,px,scroll} and a beat WINDOW (v.b0/v.bN — the July-24 windowed-view
    substrate), rendered through drawGridView and reached by gridViewForEvent. The
@@ -11269,7 +11453,7 @@ function qeOwnerTrack(){
 }
 function buildLowerBar(bar){
  /* the QUICK-EDIT STRIP: +2 · ×2 · reverse · invert · legato · duplicate · randomize ·
-    velocity · velocity-range (the client's list — NOT Ableton's note context menu;
+    velocity · velocity-range (the client's list — NOT the reference's note context menu;
     §5's correction: the screenshots are the authority, the prose was wrong). ×2,
     invert and velocity reuse the shipped implementations; the rest are the new pure
     layer. One undo per press. +Chord Editor and +Quantize sit on its left (⑦'s spec). */
@@ -11551,7 +11735,7 @@ function gridMouseDown(e){
    return;
   }
   /* ⑪b: the hit test speaks the EFFECTIVE brace — with no region of its own the brace
-     covers the whole arrangement (Ableton's model), so its two edge handles are always
+     covers the whole arrangement (⑪b's law), so its two edge handles are always
      grabbable. The default brace's MIDDLE stays pass-through (plain click = playhead,
      ↔ = scroll) — only a user-made region slides/toggles from its middle. */
   const effB=braceRegion(loopSel,LOOP);
@@ -11642,7 +11826,7 @@ function gridMouseDown(e){
    selNotes.clear();selNotes.add(i);
    snapshot();drag={mode:'resizeR',i};
   }else if((e.metaKey||e.ctrlKey)&&!e.shiftKey){
-   /* ⌘-drag a note body ↕ = VELOCITY (Ableton) — applies to the whole selection;
+   /* ⌘-drag a note body ↕ = VELOCITY — applies to the whole selection;
     brightness renders it live. (⌘ pressed MID-drag still means free/no-snap move.) */
    if(!Sel.isSelected('note',i)){Sel.select('note',i);selChordSet.clear();}
    snapshot();
@@ -11693,7 +11877,7 @@ function gridWheel(e){
  if(typeof paperView!=='undefined'&&paperView)return;
  /* 2.5 ⑩ fix 1 (+ ⑪'s ⇧+scroll row): shift+scroll = HORIZONTAL timeline scroll, over
     regions, even with notes selected — the selection never eats the gesture. Also
-    Ableton's own documented Scroll Left/Right binding (§9.3's shortcut table). */
+    the documented Scroll Left/Right binding (§9.3's shortcut table). */
  if(e.shiftKey&&!(e.ctrlKey||e.metaKey)){
   const w=document.getElementById('gridWrap');
   if(w){e.preventDefault();w.scrollLeft+=(e.deltaY||e.deltaX||0);}
@@ -11854,8 +12038,8 @@ document.addEventListener('mousemove',e=>{
  }else if(drag.mode==='lanepend'){
   /* July 30 fix 4: the lane drag declares itself — ↕ promotes to zoom (as ever).
      2.5 ⑪a (Q2, client verbatim: "Yes. It becomes scroll."): ↔ now SCROLLS the view —
-     Ableton's own documented ruler drag ("drag left or right to scroll through the
-     timeline"). The old draw-a-loop ↔ path is RETIRED; loops are created by ⌘/Ctrl+L
+     the documented ruler drag (checked against primary documentation — see the
+     private record). The old draw-a-loop ↔ path is RETIRED; loops are created by ⌘/Ctrl+L
      from a time selection, by double-click-drag (the app's own kept gesture, T2), or
      by grabbing the always-on brace's edges (⑪b). */
   const m=laneDragMode(pt.x-drag.x0,pt.y-drag.y0);
@@ -11897,7 +12081,7 @@ document.addEventListener('mousemove',e=>{
   /* proportional time-stretch about the opposite edge — recomputed from drag-start
      originals every frame (anti-jitter); pitch/order/extra note fields untouched.
      Notes keep their RELATIVE lengths (floor = a 64th, never the grid step).
-     Hold ⌘ (or Ctrl) while dragging = no grid snap, Ableton-style — checked live,
+     Hold ⌘ (or Ctrl) while dragging = no grid snap — checked live,
      so pressing/releasing it mid-drag works. */
   const wbS=viewBeatWindow(activeGridView,LOOP);
   const st=gridStep(),raw=wbS.b0+(pt.x-GUT)/PPB;
@@ -11931,7 +12115,7 @@ document.addEventListener('mousemove',e=>{
    n[8]=Math.max(.05,Math.min(1,+(o.v+dv).toFixed(3)));}
   if(typeof syncVelControl==='function')syncVelControl();
  }else if(drag.mode==='resizeL'){
-  /* 19u (client, Ableton feel): note-length drags move FREELY and magnetically CLICK
+  /* 19u (client — the magnetic feel): note-length drags move FREELY and magnetically CLICK
      onto a grid line only when the cursor gets very close; ⌘ kills the magnetism */
   const n=project.melody[drag.i];
   const rawL=viewBeatWindow(activeGridView,LOOP).b0+(pt.x-GUT)/PPB;
@@ -11984,7 +12168,7 @@ document.addEventListener('mousemove',e=>{
    document.querySelectorAll('.tstrip').forEach(x=>x.style.outline=(overStrip&&x.dataset.trk===overStrip)?'2px dashed var(--accent)':'');
   }
   if(drag.toStrip)return;
-  const freeG=e.metaKey||e.ctrlKey;   /* ⌘ live = no grid snap (Ableton) — mid-drag works */
+  const freeG=e.metaKey||e.ctrlKey;   /* ⌘ live = no grid snap — mid-drag works */
   const dB=freeG&&drag.b0raw!==undefined?((pt.x-GUT)/PPB-drag.b0raw):(pt.beat-drag.b0),
    dRow=pt.row-drag.row0;
   /* ⌥ (or ⇧) = chromatic override: full 12-note movement instead of scale-degree rows */
@@ -14304,7 +14488,7 @@ function buildWanPanel(){
    gravity and walk on the surface of a new world. Travel by click, arrow keys or a
    MIDI-controller grid — the chord changes on the NEXT quantize boundary (default one
    bar, the Performance speed menu offers 4 bars … 8ths with dotted + triplet cuts) and
-   audio NEVER stops (the #15 Ableton law: travels write section keys live, playback
+   audio NEVER stops (the #15 never-stop law: travels write section keys live, playback
    reschedules in place). The app RECORDS the journey (v1 of 6.7's any-variable-records
    law: every travel lands as a real section-key event — the 4.1 Keys lane shows the
    voyage; one undo per journey). PER-SONG MAPS: the ORBIT MAP draws the song's own
@@ -14683,7 +14867,7 @@ function orbTripsBindRows(box){
  };});
 }
 function orbNextBoundary(beat,q,loop){
- /* the next quantize landing after `beat` — pure (the Ableton law's arithmetic).
+ /* the next quantize landing after `beat` — pure (the never-stop law's arithmetic).
     q === -1 is the GEMS "instantaneous" sentinel: the landing is NOW (q=0 keeps the
     shipped zero-fallback meaning "a bar" — FINDING 5, so instantaneous is NOT 0) */
  if(q===-1)return beat>=loop?null:+(+beat).toFixed(6);
@@ -16899,8 +17083,8 @@ window.addEventListener('keydown',e=>{
    refresh(false);
   }
  }
- /* ==== 2.5 ⑪b · THE ABLETON LOOP/ZOOM KEYBOARD SET (§9.3 — five bindings, all
-    verified free, all Ableton's own documented commands) ==== */
+ /* ==== 2.5 ⑪b · THE LOOP/ZOOM KEYBOARD SET (§9.3 — five bindings, all
+    verified free, all checked against primary documentation — see the private record) ==== */
  else if(mod&&e.shiftKey&&(e.key==='l'||e.key==='L')){
   /* ⌘⇧L — Select Material in Loop: the brace's contents become the note selection */
   e.preventDefault();
@@ -16910,8 +17094,7 @@ window.addEventListener('keydown',e=>{
   refresh(false);
  }
  else if(mod&&(e.key==='l'||e.key==='L')){
-  /* ⌘L — Ableton documents TWO names for this one key ("Loop Selection" in the
-     Arrangement chapter, "Toggle Loop Brace" in the shortcut chapter — §9.3): with a
+  /* ⌘L — one key, two documented names (§9.3 records both): with a
      time selection it sets the brace to it and arms the loop; set to the same
      selection again (or with nothing selected) it toggles the loop on/off. */
   e.preventDefault();
@@ -16924,7 +17107,7 @@ window.addEventListener('keydown',e=>{
   drawLoopBtn();if(playing)applyLoopToTransport();refresh(false);
  }
  else if(mod&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
-  /* ⌘↑/↓ — Halve / Double Loop Length (Ableton's MODIFIED pair; the bare arrows keep
+  /* ⌘↑/↓ — Halve / Double Loop Length (the MODIFIED pair; the bare arrows keep
      their shipped pitch/step meanings — §9.3's collision table). ↑ doubles, ↓ halves. */
   e.preventDefault();
   loopSel=loopResize(braceRegion(loopSel,LOOP),e.key==='ArrowUp'?2:.5,gridStep(),LOOP);
@@ -16932,7 +17115,7 @@ window.addEventListener('keydown',e=>{
   if(playing)applyLoopToTransport();refresh(false);
  }
  else if(!mod&&!e.altKey&&!e.shiftKey&&(e.key==='z'||e.key==='Z')){
-  /* bare Z — Zoom to Arrangement Time Selection (Ableton's own; bare z was unbound) */
+  /* bare Z — Zoom to Arrangement Time Selection (§9.3; bare z was unbound) */
   if(selBox&&typeof selBox.b0==='number'&&selBox.b1-selBox.b0>1e-6){
    e.preventDefault();
    const w=document.getElementById('gridWrap');
@@ -16959,7 +17142,7 @@ window.addEventListener('keydown',e=>{
   /* MG round: a live cross-track capture deletes whole (one undo) */
   if(typeof xselActive==='function'&&xselActive()){xselDelete();return;}
   /* 2.6 R2 (Q7): the automation-node branch is GONE — there is no node selection
-     any more; a click on the point deletes it directly (the full Ableton model) */
+     any more; a click on the point deletes it directly (the full breakpoint model, Q7) */
   /* July 30 client fix 1: a selected strip clip deletes its MIDI (the cell goes black) */
   if(selSurface==='strip'&&typeof stripDeleteSelected==='function'&&stripDeleteSelected())return;
   /* nothing else selected → Delete removes the loop region */
@@ -17118,7 +17301,7 @@ function regenTrack(){
  project.tracks[activeTrack]=materialize(activeTrack);
  selNotes.clear();refresh(true);
 }
-/* ==== MULTI-TRACK VIEW (client restructure, July 19) ==== Ableton-style: the Grid is
+/* ==== MULTI-TRACK VIEW (client restructure, July 19) ==== the Grid is
    the MIDI EDITING LANE for the active track; every other track renders as a slim strip
    above it (one long clip, 1/3 the chord lane's height, mini-MIDI inside, no chord
    text). A header column runs down the left of everything — grid included — carrying
@@ -17194,7 +17377,7 @@ function startInlineRename(el,t){
  };
 }
 function trackHead(t,inLane){
- /* 2.1b-e LANE LAW v3: the COLORED NAME BOX (Ableton language, oriented left) — the
+ /* 2.1b-e LANE LAW v3: the COLORED NAME BOX (oriented left) — the
     track's whole control surface. inLane adds the lane-only chrome: name-box resize
     lines (Q3), ▸ expand + corner big/small toggle, drag-to-re-order (Q2 second grip),
     click-select (+ Delete key), ctrl+click menu with the color palette. */
@@ -17253,7 +17436,7 @@ function trackHead(t,inLane){
   ar.onclick=()=>{armedTrack=(armedTrack===t?null:t);drawTrackSel();};
  }
  ctl.appendChild(ar);
- /* v3: an explicit track ON/OFF button (Ableton's activator) — same mute the name
+ /* v3: an explicit track ON/OFF button (the activator) — same mute the name
     click toggles, readable at a glance */
  const oo=document.createElement('span');
  oo.className='tonoff'+(mutes[t]?' off':'');
@@ -17293,6 +17476,7 @@ function trackHead(t,inLane){
    const p=Math.max(0,Math.min(1,(ev.clientX-r.left)/Math.max(1,r.width)));
    const m=mixer[t]||(mixer[t]={db:0,pan:0,solo:false});
    m.db=Math.round((-24+p*30)*2)/2;
+   markParamOverride(t,'volume');   /* 2.6 R4 Q1 rule 2: the header bar is a fader too */
    const f=vol.querySelector('.tvf');if(f)f.style.width=Math.round(p*100)+'%';
    vol.title=trackLabel(t)+' volume: '+(typeof fmtDb==='function'?fmtDb(m.db):m.db+' dB')+' — drag ↔ to set (the Mixer window mirrors this)';
   };
@@ -17416,6 +17600,17 @@ function openTrackMenu(t,px,py,nmEl){
   'Opens a MIDI automation lane below '+trackLabel(t)+' — pencil draws nodes, ⌥-drag rules a straight ramp (⇧ holds it level), ctrl+click curves a segment, ⌫ clears. Add as many as you need — they stack.');
  mk('〜 Pitch-bend lane',()=>addAutoLane(t,'bend'),t==='drums'||(project.autoLanes||[]).some(l=>l.track===t&&l.kind==='bend'),
   'Opens the pitch-bend lane below '+trackLabel(t)+' — the centre line is no bend; every slide and melisma on the track draws its real n[7] curve here (one store, never two).');
+ /* 2.6 R4 (Q3): param lanes are minted HERE — one per track per parameter (Q4), pan
+    greyed where the track has no pan bus (§4 finding ③ — a custom track routes past
+    the panner, so a pan lane would drive nothing). drums HAS a real pan bus, so pan
+    and volume are allowed there — only bend stays gated (Q6). */
+ mk('◐ Pan lane',()=>addAutoLane(t,'param','pan'),!!paramLaneOf(t,'pan')||!paramAvailable(t,'pan'),
+  !paramAvailable(t,'pan')?'Custom tracks have no pan bus yet — their sound routes past the panner, so a pan lane would drive nothing (a real bus is its own build).'
+  :paramLaneOf(t,'pan')?'This track already has a pan lane — one lane per parameter (two lanes driving one control is a race with no UI to explain it).'
+  :'Opens a PAN lane below '+trackLabel(t)+' — the envelope DRIVES the pan bus during playback (a held note pans while it sounds). Turning the mixer knob live overrides it until ▶ Re-enable.');
+ mk('◫ Volume lane',()=>addAutoLane(t,'param','volume'),!!paramLaneOf(t,'volume'),
+  paramLaneOf(t,'volume')?'This track already has a volume lane — one lane per parameter.'
+  :'Opens a VOLUME lane below '+trackLabel(t)+' — each note\u2019s level is sampled at its start (it cannot fade inside a held note). Moving the fader live overrides it until ▶ Re-enable.');
  /* ⌘G round: grouping lives in the menu too (the keyboard path is ⇧-click + ⌘G) */
  const gHere=groupOf(t,projGroups());
  if(gHere)
@@ -17615,7 +17810,7 @@ function drawTrackSel(){
  const gh=document.getElementById('gridHead');
  if(gh){
   gh.innerHTML='';const th=trackHead(activeTrack);while(th.firstChild)gh.appendChild(th.firstChild);
-  /* v3: the active track's header wears its colored name box too (Ableton language) */
+  /* v3: the active track's header wears its colored name box too */
   gh.style.background=hexA(trackColorOf(activeTrack),.24);
   gh.style.borderLeft='3px solid '+trackColorOf(activeTrack);
   gh.style.borderRadius='5px';gh.style.position='relative';
@@ -18898,7 +19093,7 @@ async function togglePlay(){
   Tone.Transport.bpm.value=+tempo.value;      /* leave any Mode-1 tempo map behind */
   playBtn.textContent='▶ Play';playBtn.classList.remove('stop');
   document.querySelectorAll('.cb').forEach(e=>e.classList.remove('active'));
-  updatePlayheadLine();   /* stop returns the playhead to the start marker (Ableton-style) */
+  updatePlayheadLine();   /* stop returns the playhead to the start marker */
   if(syncActiveKey())refresh(false);   /* …and the key context settles back on the marker */
  }else{
   rebuild();
@@ -18964,7 +19159,7 @@ const loopBtn=document.getElementById('loopBtn');
 function drawLoopBtn(){loopBtn.classList.toggle('on',loopOn);}
 loopBtn.onclick=e=>{
  /* ⑪b: the brace always exists now — with no region of its own the toggle loops the
-    whole arrangement (Ableton's model: an empty brace covers everything) */
+    whole arrangement (⑪b's law: an empty brace covers everything) */
  loopOn=!loopOn;drawLoopBtn();
  applyLoopToTransport();
  refresh(false);e.target.blur();
@@ -19972,11 +20167,11 @@ const HELP_HTML=`
  <h3>Grid</h3><ul>
  <li><b>Double-click</b> empty grid: add a note — <b>hold the 2nd click and drag</b> to draw it at any length · <b>double-click</b> a note: delete it</li>
  <li><b>Drag</b> empty grid: rubber-band select — reach the bottom rows and the box also captures <b>chords</b> (notes + chords together) · <b>⇧-drag</b> adds to the existing selection</li>
- <li><b>⇧-click</b> any note or chord: add/remove it from the selection (mix notes + chords freely) · <b>⇧-drag</b> a marquee adds to it · <b>⌘A selects All on the surface you last touched</b>: a grid view → every note there (inside the clip-editor pop-up, just that clip), the chord lane or its background → every chord, a strip cell → every cell of that strip. <b>⌘ is never a selection key</b> — it's the Ableton modifier: velocity on bodies, free/no-snap on drags</li>
+ <li><b>⇧-click</b> any note or chord: add/remove it from the selection (mix notes + chords freely) · <b>⇧-drag</b> a marquee adds to it · <b>⌘A selects All on the surface you last touched</b>: a grid view → every note there (inside the clip-editor pop-up, just that clip), the chord lane or its background → every chord, a strip cell → every cell of that strip. <b>⌘ is never a selection key</b> — it's the everything-else modifier: velocity on bodies, free/no-snap on drags</li>
  <li><b>Drag any selected element</b>: the whole selection moves together, relative distances preserved — chords carve into the timeline where they land and the gap they leave heals</li>
- <li><b>Selection box</b> (2+ selected): drag its <b>center</b> to move everything · drag its <b>edge handles</b> ⟷ to time-stretch/compress proportionally (pitch untouched, notes keep their relative lengths) — hold <b>⌘</b> while dragging for free movement with no grid snap (Ableton-style) · <b>right-click</b> it for 2× / ½× / Fit-to-loop-selection</li>
+ <li><b>Selection box</b> (2+ selected): drag its <b>center</b> to move everything · drag its <b>edge handles</b> ⟷ to time-stretch/compress proportionally (pitch untouched, notes keep their relative lengths) — hold <b>⌘</b> while dragging for free movement with no grid snap · <b>right-click</b> it for 2× / ½× / Fit-to-loop-selection</li>
  <li><b>↑/↓</b>: selected notes step through the scale (⌥ = semitones, <b>⇧ = octaves</b>); selected chords step the diatonic ladder (I→ii→iii…) · <b>←/→</b>: nudge the whole selection one grid step · <b>Dur</b> dropdown sets every selected note's length · <b>Vel</b> slider sets the selection's velocity (quieter notes render dimmer) · <b>right-click</b> a 2+ selection: ♻ Invert ↑/↓ cycles the chord voicing on the grid</li>
- <li><b>Click/press</b> a note: it plays through its track voice (velocity honored) · <b>drag</b> its body: slide it (snaps to grid) · <b>edges</b> show [ ] cursors — drag to adjust start/end · the <b>⌘ key is the Ableton modifier</b>: ⌘-drag a note body ↕ = <b>velocity</b> (whole selection; brightness shows it; hover with ⌘ held for the ▲▼ hint) · ⌘-grab an edge = free no-snap resize · press/release ⌘ <i>mid-drag</i> = free no-snap movement</li>
+ <li><b>Click/press</b> a note: it plays through its track voice (velocity honored) · <b>drag</b> its body: slide it (snaps to grid) · <b>edges</b> show [ ] cursors — drag to adjust start/end · the <b>⌘ key is the everything-else modifier</b>: ⌘-drag a note body ↕ = <b>velocity</b> (whole selection; brightness shows it; hover with ⌘ held for the ▲▼ hint) · ⌘-grab an edge = free no-snap resize · press/release ⌘ <i>mid-drag</i> = free no-snap movement</li>
  <li><b>Drag</b> a chord: moves it to a new spot, gap heals behind it (a multi-selection moves as a run) · <b>edges</b> resize · <b>click</b> = select + play · <b>⌘-drag a clip body ↕</b> = velocity of its captured MIDI (▲▼ hint on ⌘-hover) · ⌘-grab an edge = free boundary drag · ⌘ mid-drag = no grid snap (moves, boundary drags, grid drops) · <b>⇧-drag</b> across the lane sweep-selects the chords you cross (⇧-click toggles one; a marquee from the grid captures chords too)</li>
  <li><b>⌥-drag ↕</b> (or ⇧): chromatic movement — off-scale notes show stripes + ♯/♭</li>
  <li><b>⌥-drag</b> a note or chord: duplicates it — the copy rides the cursor and lands where you release (works on whole selections too)</li>
@@ -19998,7 +20193,7 @@ const HELP_HTML=`
  <li>The <b>palette dock below the grid</b> shows three aligned rows per key — <b>In key</b> (ø7 replaces the bare °), <b>V of x</b> (secondary dominants), <b>V of V</b> — for the current key AND its parallel major/minor. <b>▸ passing °7</b> reveals the passing diminished chords at every whole step · <b>🎸 Jimi</b> turns every dominant into a 7♯9 · <b>Make</b> rebuilds the selected chord's quality (Major / Minor / m7♭5 / Augmented) · <b>(Show) Harmonic minor</b> adds its grid · the <b>mode chips</b> switch the active section's scale and name each mode's relative &amp; parallel key (melodic-minor modes: three shown, all seven behind the link). The popup palette's <b>Borrow from</b> menu still opens full parallel modes</li>
  <li>Conform follows the degree checkboxes (dominants also accept ♭9·♯9·♭13) · ⇄ Negative harmony works on selected notes / selected chord / whole track</li>
  <li><b>The background scale follows the music</b>: select a chord that's outside its section's key and the rows, labels and colors re-key to the scale that chord implies (dominant → Mixolydian, minor → Dorian…) — deselect and it reverts. While playing with nothing selected, the background follows the playhead into each section's key</li>
- <li><b>Chords are MIDI clips</b>: <b>right-click</b> a chord block for the clip menu — rename, cut/copy, duplicate, delete, <b>deactivate</b> (silences its span, Ableton-style), <b>consolidate</b> 2+ selected chords into one clip (inner harmony keeps playing), split it back open, <b>export as .mid</b>, and a color row at the bottom · <b>double-click</b> a block: rename it</li>
+ <li><b>Chords are MIDI clips</b>: <b>right-click</b> a chord block for the clip menu — rename, cut/copy, duplicate, delete, <b>deactivate</b> (silences its span — the clip keeps its notes, it just stops sounding), <b>consolidate</b> 2+ selected chords into one clip (inner harmony keeps playing), split it back open, <b>export as .mid</b>, and a color row at the bottom · <b>double-click</b> a block: rename it</li>
  <li><b>🎹 Voicing</b> (right-click a plain chord): comping &amp; pad voice-lead automatically — nearest voicing chord to chord, re-centering at every 4-bar system and section start. The voicing editor shows what a chord actually plays; move notes by octaves, cycle inversions, <b>◇ Open</b> (drop-2), double the root, or <b>⇥ copy the voicing into the grid</b>. A custom voicing wears a small 🎹 badge, later chords voice-lead from it, and <b>⟳ Auto</b> returns it to the chain</li>
  <li><b>Drag a chord block up into the grid</b>: it expands to MIDI in the active track (a captured clip expands verbatim; a plain chord drops its voicing) — the block stays put. <b>Straight up = the notes land in exactly the block's own rhythmic spot</b>; drag sideways to shift them by grid steps. Palette chords drag onto the grid too (one-bar voicing at the cursor)</li>
  <li><b>Drag selected notes down onto the chord lane</b>: they're captured as a chord clip there — the analyzer names it against the key ("?" when nothing fits), a mini-MIDI thumbnail shows the payload, the notes stay where they were</li>
@@ -20181,7 +20376,7 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
  <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
- <p><b>Marker lines</b> — vertical lines through the tracks at each position marker (the Cubase preference):<br>
+ <p><b>Marker lines</b> — vertical lines through the tracks at each position marker (off by default):<br>
  <select id="setMkLines">
   <option value="off" ${SETTINGS.markerLines==='off'?'selected':''}>Off — markers show only in the section lane</option>
   <option value="active" ${SETTINGS.markerLines!=='off'&&SETTINGS.markerLines!=='all'?'selected':''}>From the marker lane (default)</option>
