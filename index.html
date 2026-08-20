@@ -420,7 +420,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-19c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -436,7 +436,7 @@
       <input type="range" id="tempo" min="50" max="180" value="117"><span class="tval" id="tval">117 bpm</span></div></div>
     <div class="ctl"><label>&nbsp;</label><div style="display:flex;gap:8px;">
       <button id="play">▶ Play</button>
-      <button id="recBtn" title="Record MIDI — arm a track (the ● under its name), turn this red, hit Play, and play your MIDI keyboard. New notes ADD to what's there; flip “Record over existing MIDI” in ⚙ Settings to replace instead.">⏺ Rec</button>
+      <button id="recBtn" title="Record — arm a destination first: the R under a track name records notes from your MIDI keyboard, the ● on a parameter lane's header records automation from the knob or fader (or both at once). Turn this red, hit Play. New notes ADD to what's there; flip “Record over existing MIDI” in ⚙ Settings to replace instead.">⏺ Rec</button>
       <button id="loopBtn" title="Loop the selected section (⌘L from a time selection · double-click-drag the bar lane · or grab the always-on brace's edges)">⟳ Loop</button>
       <button id="zimBtn" title="Zoomed In Midi — the in-place track renders exactly like the Lower Window (the SAME view object, one code path). Click again to go back. Both workflows ship; keep your habit.">⌕ Zoomed In Midi</button></div></div>
     <!-- Phase 1.1: these four moved to the transform rail left of the grid; hidden buttons keep their handlers -->
@@ -2852,6 +2852,36 @@ function panRampPlan(nodes,loop){
   out.push({beat:nodes[i][0],v:nodes[i][1],toV:nx?nx[1]:null,beats:nx?+(nx[0]-nodes[i][0]).toFixed(4):0});
  }
  return out;
+}
+/* ==== 2.7 R5a · SIMPLIFY (pure layer) ==== Ramer–Douglas–Peucker over [x,value]
+   rows: keep the fewest points whose polyline stays within `eps` of the original,
+   endpoints always kept, fresh rows, input untouched. The distance is VERTICAL
+   (value at the same x), not perpendicular — x is beats (or normalized time) and
+   y is the lane's units, so a slant-distance would mix units and make the
+   tolerance meaningless. Works unchanged on lane nodes ([beat,0..1]) and on
+   melisma ornament curves ([t,cents]) — pass eps in the SAME units as y.
+   2.7 Q6: the tolerance is an ARGUMENT and each call site names its own value —
+   a dial later is a UI change, never a refactor. */
+function simplifyAutoNodes(nodes,eps){
+ if(!Array.isArray(nodes))return [];
+ if(nodes.length<3)return nodes.map(n=>n.slice());
+ const e=Math.max(1e-9,+eps||0);
+ const keep=new Array(nodes.length).fill(false);
+ keep[0]=keep[nodes.length-1]=true;
+ const stack=[[0,nodes.length-1]];
+ while(stack.length){
+  const seg=stack.pop(),a=seg[0],b=seg[1];
+  if(b-a<2)continue;
+  const ax=nodes[a][0],ay=nodes[a][1],bx=nodes[b][0],by=nodes[b][1],dx=bx-ax;
+  let mi=-1,md=-1;
+  for(let i=a+1;i<b;i++){
+   const t2=dx?(nodes[i][0]-ax)/dx:0;
+   const d=Math.abs(nodes[i][1]-(ay+(by-ay)*t2));
+   if(d>md){md=d;mi=i;}
+  }
+  if(mi>=0&&md>e){keep[mi]=true;stack.push([a,mi],[mi,b]);}
+ }
+ return nodes.filter((n,i)=>keep[i]).map(n=>n.slice());
 }
 /* ==== 2.5 ⑥ · QUANTIZE (pure layer) ==== starts pull toward the grid by `strength`
    (the Amount slider's law); durations optionally snap too. Fresh rows. Pure. */
@@ -6551,13 +6581,13 @@ function drawMixer(){
   if(canPan){
    knob.onmousedown=e=>{e.preventDefault();const x0=e.clientX,p0=m.pan;
     const orig=JSON.parse(JSON.stringify(mixer));   /* 2.6 R0a: the BEFORE, for one undo per gesture */
-    const mv=ev=>{m.pan=Math.max(-1,Math.min(1,p0+(ev.clientX-x0)/80));setKnob();applyPans();markParamOverride(tk,'pan');};   /* 2.6 R4 Q1 rule 2 */
+    const mv=ev=>{m.pan=Math.max(-1,Math.min(1,p0+(ev.clientX-x0)/80));setKnob();applyPans();markParamOverride(tk,'pan',m.pan);};   /* 2.6 R4 Q1 rule 2 · 2.7 R5b: the value rides along */
     const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
      if(Math.abs(m.pan-p0)>1e-9)mixerCommit(orig,'mixer-pan');else persistMixer();};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
    knob.ondblclick=()=>{if(Math.abs(m.pan)<1e-9)return;
     const orig=JSON.parse(JSON.stringify(mixer));
-    m.pan=0;setKnob();applyPans();markParamOverride(tk,'pan');mixerCommit(orig,'mixer-pan');};
+    m.pan=0;setKnob();applyPans();markParamOverride(tk,'pan',0);mixerCommit(orig,'mixer-pan');};
   }
   const fw=document.createElement('div');fw.className='mxfader';
   const rail=document.createElement('div');rail.className='mxrail';
@@ -6568,7 +6598,7 @@ function drawMixer(){
   fw.appendChild(rail);fw.appendChild(scale);
   const dragDb=e=>{const r=rail.getBoundingClientRect();
    const y=Math.max(0,Math.min(FH,e.clientY-r.top));
-   m.db=y>=FH-1?-60:-(y/FH)*60;setHandle();markParamOverride(tk,'volume');};   /* 2.6 R4 Q1 rule 2 */
+   m.db=y>=FH-1?-60:-(y/FH)*60;setHandle();markParamOverride(tk,'volume',m.db);};   /* 2.6 R4 Q1 rule 2 · 2.7 R5b: the value rides along */
   rail.onmousedown=e=>{e.preventDefault();
    const orig=JSON.parse(JSON.stringify(mixer)),db0=m.db;   /* 2.6 R0a: the BEFORE */
    dragDb(e);
@@ -6578,7 +6608,7 @@ function drawMixer(){
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
   rail.ondblclick=()=>{if(Math.abs(m.db)<1e-9)return;
    const orig=JSON.parse(JSON.stringify(mixer));
-   m.db=0;setHandle();markParamOverride(tk,'volume');mixerCommit(orig,'mixer-vol');};
+   m.db=0;setHandle();markParamOverride(tk,'volume',0);mixerCommit(orig,'mixer-vol');};
   setHandle();
   const act=document.createElement('div');act.className='mxbtn mxact'+(mutes[tk]?' off':'');
   act.textContent=String(ix+1);act.title='Track activator — click to switch the track on/off';
@@ -10518,19 +10548,72 @@ function autoLaneById(id){return (project.autoLanes||[]).find(l=>l.id===id);}
    solo and autoClip — never in the file, never in undo (Q1 rule 2's non-destructive
    override: the nodes are untouched, the lane is simply ignored until re-enabled). */
 let autoOverride=new Set();
+/* ==== 2.7 R5b · AUTOMATION RECORDING (the mouse stream) ==== ONE armed parameter
+   lane at a time — armedTrack's own shape, deliberately NOT a general arm registry
+   (that refactor is owed to 1.7 R0 / 5.14, not to a 2.x round). Both are SESSION
+   state, like solo. The take accumulates OUTSIDE the undo stream and lands through
+   ONE alaneCommit at its end — the pencil's own idiom (mutate live from the take's
+   BEFORE, commit once), never a snapshot per mousemove. */
+let armedALane=null,recAutoTake=null;
 function paramLaneOf(track,param){return (Array.isArray(project.autoLanes)?project.autoLanes:[]).find(l=>l&&l.track===track&&l.kind==='param'&&l.param===param)||null;}
 function activeParamLane(track,param){
  const l=paramLaneOf(track,param);
+ /* 2.7 R5b: a lane mid-take stops being READ — the control rules while it writes
+    (the same read-stop as override, keyed on the take, not the flag: Q5 says an
+    armed parameter never overrides, so the flag stays clean). */
+ if(l&&recAutoTake&&recAutoTake.laneId===l.id)return null;
  return (l&&Array.isArray(l.nodes)&&l.nodes.length&&!autoOverride.has(track+'|'+param))?l:null;
+}
+function recAutoTaking(){return typeof playing!=='undefined'&&playing&&recArmed&&!!recAutoTake&&armedALane===recAutoTake.laneId&&!!autoLaneById(recAutoTake.laneId);}
+function beginAutoTake(){
+ if(!recArmed||!armedALane)return;
+ const l=autoLaneById(armedALane);
+ if(!l||l.kind!=='param')return;
+ recAutoTake={laneId:l.id,samples:[],orig:JSON.parse(JSON.stringify(project.autoLanes))};
+ /* already-scheduled rows would fight the control until the pass ends — the same
+    cancel the override does, for the same reason */
+ if(l.param==='pan'&&typeof panNodes!=='undefined'&&panNodes[l.track])try{panNodes[l.track].pan.cancelScheduledValues(0);}catch(e2){}
+}
+function recAutoWrite(l,v){
+ /* one sample: latest-wins at a beat (Q4 — a loop's later pass overwrites the
+    earlier one inside the take itself, recordOver's law applied to nodes), painted
+    live by splicing the take over the BEFORE (the recorded span replaces what was
+    there — the same law at the lane level). */
+ const b=+transportBeat().toFixed(4);
+ const vv=+Math.max(0,Math.min(1,v)).toFixed(4);
+ const at=recAutoTake.samples.findIndex(p=>Math.abs(p[0]-b)<1e-6);
+ if(at>=0)recAutoTake.samples[at]=[b,vv];else recAutoTake.samples.push([b,vv]);
+ const rows=recAutoTake.samples.slice().sort((x,y)=>x[0]-y[0]);
+ const base=(recAutoTake.orig.find(x=>x.id===l.id)||{nodes:[]}).nodes;
+ project.autoLanes=(project.autoLanes||[]).map(x=>x.id===l.id
+  ?{...x,nodes:spliceAutoNodes(base,rows[0][0],rows[rows.length-1][0],rows)}:x);
+ drawAutoLanes();
+}
+function finalizeAutoTake(){
+ const take=recAutoTake;recAutoTake=null;
+ if(!take)return;
+ if(!take.samples.length)return;   /* a no-sample take leaves nothing behind */
+ const l=autoLaneById(take.laneId);
+ if(!l){project.autoLanes=take.orig;drawAutoLanes();return;}
+ alaneCommit(take.orig,'auto-record');   /* ONE undo for the whole take (landmine ①) */
+ flashHint('Recorded '+take.samples.length+' point'+(take.samples.length===1?'':'s')+' onto '+trackLabel(l.track)+' '+l.name+' — right-click the lane: ✂ Simplify the range thins it to breakpoints (offered, never automatic).');
 }
 function trackHasPanBus(track){return MIX_TRACKS.indexOf(track)>=0;}   /* §4 finding ③: a custom track routes hubRt.out(prev), straight past the panner */
 function paramAvailable(track,param){return param==='pan'?trackHasPanBus(track):true;}
-function markParamOverride(track,param){
+function markParamOverride(track,param,val){
  /* Q1 rule 2: touching the mixer control DURING PLAYBACK overrides the lane,
     non-destructively — nodes untouched, lane greyed, reads stop. The knob's own
     direct .value writes ARE the override (landmine ① dissolved, not fixed).
     Q1 rule 3 lives by omission: no lane-editing gesture ever calls this. */
  if(typeof playing==='undefined'||!playing)return;
+ /* 2.7 R5b (Q5): an ARMED parameter never overrides — it RECORDS. This branch sits
+    ABOVE the empty-lane guard on purpose (the first thing you record into is an
+    empty lane), and it never touches autoOverride. `val` is the control's REAL
+    value (m.pan, m.db) — the lane keeps normalized 0..1, so it converts at this
+    one seam. Unarmed (or val-less legacy) calls fall through unchanged: after 2.7,
+    override is the correct behaviour for an UNARMED parameter, not a placeholder. */
+ const l0=paramLaneOf(track,param);
+ if(l0&&armedALane===l0.id&&typeof val==='number'&&recAutoTaking()){recAutoWrite(l0,paramToNorm(param,val));return;}
  const l=paramLaneOf(track,param);
  if(!l||!Array.isArray(l.nodes)||!l.nodes.length)return;
  const k=track+'|'+param;
@@ -10608,6 +10691,19 @@ function mkAutoLaneRow(al){
    drawTrackSel();
   };
   hd.appendChild(bsel);
+  /* 2.7 R5b (Q1): the LANE carries its own arm, exactly as the track does — one
+     armed lane at a time, session state (no snapshot, like solo). In the HEADER,
+     never on the lane's top edge (landmine ④: the .rzh strip eats it). */
+  const arm=document.createElement('span');
+  const armed=(typeof armedALane!=='undefined')&&armedALane===al.id;
+  arm.textContent='●';arm.className='alarm'+(armed?' on':'');
+  arm.style.cssText='cursor:pointer;font-size:10px;line-height:1;color:'+(armed?'#e05555':'var(--dim)')+';'+(armed?'text-shadow:0 0 6px rgba(224,85,85,.8);':'');
+  arm.title=armed
+   ?'Armed for recording — ⏺ + ▶: moving the '+(al.param==='pan'?'pan knob':'fader')+' WRITES this envelope (an armed parameter records, never overrides). Click to disarm.'
+   :'Arm this lane for recording — then ⏺ + ▶: sweep the '+(al.param==='pan'?'pan knob':'fader')+' and the envelope draws itself. One lane armed at a time.';
+  arm.onmousedown=e2=>e2.stopPropagation();
+  arm.onclick=()=>{armedALane=(armedALane===al.id?null:al.id);drawTrackSel();};
+  hd.appendChild(arm);
  }
  const clr=document.createElement('span');
  clr.textContent='⌫';clr.style.cssText='cursor:pointer;font-size:11px;color:var(--dim);';
@@ -10852,6 +10948,24 @@ function wireAutoLane(lane,id){
   e.preventDefault();e.stopPropagation();
   const al=autoLaneById(id);if(!al||al.kind==='bend')return;
   openAutoCurveMenu(e.clientX,e.clientY,lane,al);
+ });
+ lane.addEventListener('dblclick',e=>{
+  /* 2.7 R5b ride-along (client's call, 52nd): ⌥-double-click STRAIGHTENS across
+     alaneRange — a straight line between the lane's values at the range edges,
+     the shipped ↗ Insert ramp move as a gesture (Q5's law: every verb reads the
+     brace). The two no-drag ⌥-clicks it rides on already leave nothing behind. */
+  if(!e.altKey)return;
+  const al=autoLaneById(id);if(!al||al.kind==='bend')return;
+  e.preventDefault();e.stopPropagation();
+  const rng=alaneRange((typeof loopSel!=='undefined')?loopSel:null,LOOP);
+  const nn=(autoLaneById(al.id)||{nodes:[]}).nodes;
+  const inside=nn.filter(n2=>n2[0]>rng.a+1e-6&&n2[0]<rng.b-1e-6);
+  if(!inside.length){flashHint('Already straight across '+(rng.def?'the arrangement':'the brace')+' — nothing between the edges to remove.');return;}
+  const orig=JSON.parse(JSON.stringify(project.autoLanes));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+   ?{...l,nodes:spliceAutoNodes(l.nodes,rng.a,rng.b,[[+rng.a.toFixed(4),+alaneValueAt(nn,rng.a).toFixed(4)],[+rng.b.toFixed(4),+alaneValueAt(nn,rng.b).toFixed(4)]])}:l);
+  alaneCommit(orig,'auto-straighten');
+  flashHint('Straightened '+(rng.def?'the whole arrangement':'the brace — beats '+rng.a.toFixed(1)+'–'+rng.b.toFixed(1))+' (one undo).');
  });
 }
 function alanePencil(e,lane,al){
@@ -11147,6 +11261,32 @@ function openAutoCurveMenu(x,y,lane,al){
   alaneCommit(orig3,'auto-paste');
  };
  m.appendChild(psB);
+ /* 2.7 R5a: Simplify is a RANGE verb — it is scoped to alaneRange (Q5's law), so it
+    lives IN the Range section, never a fourth one (landmine ③). The tolerance is
+    named HERE (Q6: fixed for the first ship, the pure function takes it as an
+    argument — a dial is a later UI change): .02 of the lane's height for value
+    lanes, 5 cents for the bend lane's units. On-demand only, never silent (Q2). */
+ const SIMPLIFY_EPS=al.kind==='bend'?5:.02;
+ const inRng=((autoLaneById(al.id)||{nodes:[]}).nodes||[]).filter(n2=>n2[0]>=rng.a-1e-6&&n2[0]<=rng.b+1e-6);
+ const canSimp=inRng.length>2;
+ const smB=document.createElement('span');smB.className='part';
+ smB.style.cssText='padding:4px 12px;font-size:11.5px;'+(canSimp?'':'opacity:.45;cursor:default;');
+ smB.textContent='✂ Simplify the range';
+ smB.title=canSimp
+  ?'Keep only the breakpoints that matter across '+rngTxt+' — the fewest nodes whose line stays within tolerance of what you hear now ('+inRng.length+' nodes in range, one undo)'
+  :'Fewer than three nodes in '+rngTxt+' — nothing to simplify yet';
+ if(canSimp)smB.onclick=()=>{
+  closeAutoMenu();
+  const before=inRng.length;
+  const slim=simplifyAutoNodes(inRng,SIMPLIFY_EPS);
+  if(slim.length>=before){flashHint('Already simple — every node in the range is doing work.');return;}
+  const orig4=JSON.parse(JSON.stringify(project.autoLanes));
+  project.autoLanes=(project.autoLanes||[]).map(l=>l.id===al.id
+   ?{...l,nodes:spliceAutoNodes(l.nodes,rng.a,rng.b,slim)}:l);
+  alaneCommit(orig4,'auto-simplify');
+  flashHint('Simplified '+before+' → '+slim.length+' nodes — the line stays within tolerance of the original.');
+ };
+ m.appendChild(smB);
  /* the rest of the client's screenshot (in the private record's fixes-images):
     Delete + Clear Envelope are real here; Freeze Track is in the picture but
     freezing needs an audio-render substrate the app doesn't have — recorded as a
@@ -17476,7 +17616,7 @@ function trackHead(t,inLane){
    const p=Math.max(0,Math.min(1,(ev.clientX-r.left)/Math.max(1,r.width)));
    const m=mixer[t]||(mixer[t]={db:0,pan:0,solo:false});
    m.db=Math.round((-24+p*30)*2)/2;
-   markParamOverride(t,'volume');   /* 2.6 R4 Q1 rule 2: the header bar is a fader too */
+   markParamOverride(t,'volume',m.db);   /* 2.6 R4 Q1 rule 2: the header bar is a fader too · 2.7 R5b: the value rides along */
    const f=vol.querySelector('.tvf');if(f)f.style.width=Math.round(p*100)+'%';
    vol.title=trackLabel(t)+' volume: '+(typeof fmtDb==='function'?fmtDb(m.db):m.db+' dB')+' — drag ↔ to set (the Mixer window mirrors this)';
   };
@@ -19029,15 +19169,21 @@ function drawRecBtn(){
 }
 async function toggleRecord(){
  if(!recArmed){
-  if(!armedTrack){flashHint('Arm a track first — click the ● under a track name (it turns red).');return;}
-  if(!(await ensureMidiIn()))return;
+  /* 2.7 R5b (Q1): ⏺ stays the single transport-level "record" — an armed TRACK
+     records notes, an armed LANE records automation, both records both. MIDI-in is
+     only the NOTE destination's requirement; a mouse take needs no device. */
+  const laneArm=(typeof armedALane!=='undefined')&&armedALane&&autoLaneById(armedALane);
+  if(!armedTrack&&!laneArm){flashHint('Arm a destination first — the R under a track name records notes, the ● on a parameter lane records automation.');return;}
+  if(armedTrack&&!(await ensureMidiIn()))return;
   recArmed=true;
-  if(playing)beginTake();
-  flashHint(playing?'Recording onto “'+trackLabel(armedTrack)+'” — play your keyboard.'
-   :'Record is on — hit ▶ Play and everything you play lands on “'+trackLabel(armedTrack)+'”.');
+  if(playing){beginTake();beginAutoTake();}
+  const dest=[armedTrack?'“'+trackLabel(armedTrack)+'”':null,laneArm?trackLabel(laneArm.track)+' '+laneArm.name:null].filter(Boolean).join(' + ');
+  flashHint(playing?'Recording onto '+dest+'.'
+   :'Record is on — hit ▶ Play and it lands on '+dest+'.');
  }else{
   recArmed=false;
   finalizeTake();
+  if(typeof finalizeAutoTake==='function')finalizeAutoTake();
  }
  drawRecBtn();
 }
@@ -19088,6 +19234,7 @@ async function togglePlay(){
  if(!audioReady){playBtn.disabled=true;playBtn.textContent='Loading…';await ensureAudio();playBtn.disabled=false;}
  if(playing){
   if(typeof finalizeTake==='function')finalizeTake();   /* commit held notes BEFORE the transport resets */
+  if(typeof finalizeAutoTake==='function')finalizeAutoTake();   /* 2.7 R5b: the automation take lands the same way */
   Tone.Transport.stop();playing=false;
   for(const _ci of countInPend){try{_ci.stop();}catch(e){}}countInPend.length=0;   /* SETUP R1: ■ Stop silences a pending count-in */
   Tone.Transport.bpm.value=+tempo.value;      /* leave any Mode-1 tempo map behind */
@@ -19117,7 +19264,7 @@ async function togglePlay(){
    }catch(e){_lead=0.05;}
   }
   Tone.Transport.start('+'+_lead);playing=true;
-  if(typeof recArmed!=='undefined'&&recArmed)beginTake();   /* ⏺ was primed: take starts with the transport */
+  if(typeof recArmed!=='undefined'&&recArmed){beginTake();if(typeof beginAutoTake==='function')beginAutoTake();}   /* ⏺ was primed: both takes start with the transport (2.7 Q1: ⏺ + armed track = notes · ⏺ + armed lane = automation · both = both) */
   playBtn.textContent='■ Stop';playBtn.classList.add('stop');
   animatePlayhead();
  }
