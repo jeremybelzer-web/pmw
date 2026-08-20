@@ -420,7 +420,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20c</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -2085,22 +2085,22 @@ function letterSegments(segs,opts){
  /* similarity-lettering: letters in order of first appearance — A, then same-enough
     = A again, close = A′, full-length match that continues = A-tag, new = B … */
  const o=opts||{},same=(o.same==null?.25:o.same),vari=(o.vari==null?.45:o.vari);
- const reps=[],letters=[];
- for(const s of segs){
+ const reps=[],letters=[],matches=[];   /* EN4 (20c): matches[i]={letter,kind,rep,dIv,dRy} — what the letterer knew; letters/form unchanged */
+ segs.forEach((s,gi)=>{
   const iv=prismIntervals(s),ry=s.map(r=>+(+r[1]).toFixed(2));
-  let hit=null,kind=null;
+  let hit=null,kind=null,hd=null;
   for(const rep of reps){
    if(iv.length>rep.iv.length&&rep.iv.length
      &&prismEditDist(iv.slice(0,rep.iv.length),rep.iv)<=same
-     &&prismEditDist(ry.slice(0,rep.ry.length),rep.ry)<=same){hit=rep;kind='tag';break;}
+     &&prismEditDist(ry.slice(0,rep.ry.length),rep.ry)<=same){hit=rep;kind='tag';hd=[prismEditDist(iv,rep.iv),prismEditDist(ry,rep.ry)];break;}
    const dIv=prismEditDist(iv,rep.iv),dRy=prismEditDist(ry,rep.ry);
-   if(dIv<=same&&dRy<=same){hit=rep;kind='same';break;}
-   if(dIv<=vari&&dRy<=vari&&!hit){hit=rep;kind='vari';}
+   if(dIv<=same&&dRy<=same){hit=rep;kind='same';hd=[dIv,dRy];break;}
+   if(dIv<=vari&&dRy<=vari&&!hit){hit=rep;kind='vari';hd=[dIv,dRy];}
   }
-  if(!hit){const letter=String.fromCharCode(65+Math.min(25,reps.length));reps.push({letter,iv,ry});letters.push(letter);}
-  else letters.push(kind==='same'?hit.letter:kind==='tag'?hit.letter+'-tag':hit.letter+'′');
- }
- return {letters,form:letters.join(' ')};}
+  if(!hit){const letter=String.fromCharCode(65+Math.min(25,reps.length));reps.push({letter,iv,ry,idx:gi});letters.push(letter);matches.push({letter,kind:'new',rep:gi,dIv:0,dRy:0});}
+  else{letters.push(kind==='same'?hit.letter:kind==='tag'?hit.letter+'-tag':hit.letter+'′');matches.push({letter:hit.letter,kind,rep:hit.idx,dIv:hd[0],dRy:hd[1]});}
+ });
+ return {letters,form:letters.join(' '),matches};}
 function percContour(rows,kitMap){
  /* the percussion code path: rows [[beat,dur,role]…] — rise/fall by kit-role height */
  const km=kitMap||KIT_LADDER;
@@ -2251,10 +2251,10 @@ function contourToSamples(contour){
    data: contour = the symbol string · dna = midis · rhythm = [[rel,d]…]. Rides undo,
    project files and autosave like groups. */
 function validShelf(a){
- /* 30r: 'chords' joined the strand kinds — an Orbits journey keeps its whole
-    re-harmonization (chords + sections) as ONE shelf object */
+ /* 30r: 'chords' joined the strand kinds — an Orbits journey keeps its whole re-harmonization (chords + sections) as ONE shelf object.
+    EN4 (build 2026-08-20c): 'form' is the FIFTH kind and the first with a SHAPE guard — admitted only through validFormData (the strand rule: the whitelist entry ships with the extractor) */
  return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
-  &&['contour','dna','rhythm','chords'].includes(x.strand)&&typeof x.name==='string'&&x.data!==undefined);}
+  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
 function shelfNextId(shelf){
  let n=1;
  const ids=new Set((shelf||[]).map(x=>x.id));
@@ -2883,6 +2883,71 @@ function simplifyAutoNodes(nodes,eps){
  }
  return nodes.filter((n,i)=>keep[i]).map(n=>n.slice());
 }
+/* ==== 5.1 · EN4 FORM PERSISTENCE (pure layer) ==== (build 2026-08-20c — the essence
+   master's §4 build-order #3: E-115 similarity lettering · E-112 song form · E-057
+   repetition scheme, PERSISTED). letterSegments computed the lettering and DISCARDED
+   it every render. formMap turns one analysis pass into a plain-JSON record that
+   rides the Essence Shelf as the 'form' strand (validShelf admits it through
+   validFormData), and so rides the project file, autosave and undo like every strand.
+   ⛔ THE LEGAL GATE (master §3) IS BUILT IN: the record carries NO note rows — letters,
+   spans, per-strand fingerprint HASHES and normalized distances only. A form strand
+   cannot rebuild one bar of its source, by construction, and validFormData REFUSES a
+   record that smuggles rows. Placed below the automation pure region so the
+   validShelf / normalizeAutoLanes anchors hold (the 50th/52nd precedent). Pure. */
+function formMap(sections,opts){
+ /* sections [{name,start,end,rows:[[beat,dur,midi]…]}] → {v, sections:[{name,start,end,
+    form,letters,segs:[{start,end,n,letter,kind,rep,fp}]}], songForm, songLetters,
+    pairs:[{letter,kind,a:[sec,seg],b:[sec,seg],d:{iv,ry,ct},changed:[strand…]}]} */
+ const o=opts||{};
+ const out={v:1,sections:[],songForm:'',songLetters:[],pairs:[]};
+ const secRows=[];
+ (sections||[]).forEach((sec,si)=>{
+  const rows=((sec&&sec.rows)||[]).map(r=>[+r[0],+r[1],+r[2]]).sort((a,b)=>a[0]-b[0]);
+  secRows.push(rows);
+  const segs=segmentSection(rows,o);
+  const ls=letterSegments(segs,o);
+  const recSegs=segs.map((s,gi)=>{
+   const m=ls.matches[gi],last=s[s.length-1];
+   return {start:+s[0][0].toFixed(4),end:+(last[0]+last[1]).toFixed(4),n:s.length,
+    letter:ls.letters[gi],kind:m.kind,rep:m.rep,fp:prismFingerprint(s).hashes};
+  });
+  out.sections.push({name:String(sec&&sec.name!=null?sec.name:si+1),start:+(sec&&sec.start)||0,
+   end:(sec&&sec.end!=null)?+sec.end:null,form:ls.form,letters:ls.letters,segs:recSegs});
+  /* THE PAIRS — every phrase that echoes an earlier one (same · ′ · -tag) against the
+     phrase that first bore the letter: the labelled theme-and-variation data the
+     development diff (5.13) and the variation ladder (4.7 ⑤) both want. `changed`
+     names the strands that moved between the two. */
+  segs.forEach((s,gi)=>{
+   const m=ls.matches[gi];
+   if(m.kind==='new')return;
+   const ct=prismEditDist(prismStrands(s).contour.split(''),prismStrands(segs[m.rep]).contour.split(''));
+   const changed=[];
+   if(m.dIv>0)changed.push('dna');
+   if(m.dRy>0)changed.push('rhythm');
+   if(ct>0)changed.push('contour');
+   out.pairs.push({letter:m.letter,kind:m.kind,a:[si,m.rep],b:[si,gi],
+    d:{iv:+m.dIv.toFixed(4),ry:+m.dRy.toFixed(4),ct:+ct.toFixed(4)},changed});
+  });
+ });
+ /* SONG FORM (E-112) — the sections themselves through the same letterer, each
+    section one "segment". Empty sections read '—' and take no letter. */
+ const live=secRows.map((r,i)=>r.length?i:-1).filter(i=>i>=0);
+ const sl=letterSegments(live.map(i=>secRows[i]),o);
+ out.songLetters=secRows.map(()=>'—');
+ live.forEach((si,k)=>{out.songLetters[si]=sl.letters[k];});
+ out.songForm=out.songLetters.join(' ');
+ return out;}
+function validFormData(d){
+ /* the 'form' strand's shape guard — and the legal gate's enforcer: a segment that
+    carries `rows` (or any note array) is REFUSED, so a form strand can never become a
+    copy of the music it describes */
+ return !!d&&typeof d==='object'&&Array.isArray(d.sections)&&typeof d.songForm==='string'
+  &&Array.isArray(d.songLetters)&&Array.isArray(d.pairs)
+  &&d.sections.every(s=>s&&typeof s==='object'&&typeof s.form==='string'&&Array.isArray(s.letters)
+   &&Array.isArray(s.segs)&&s.rows===undefined&&s.notes===undefined
+   &&s.segs.every(g=>g&&typeof g==='object'&&typeof g.letter==='string'&&g.rows===undefined&&g.notes===undefined))
+  &&d.pairs.every(p=>p&&typeof p==='object'&&Array.isArray(p.a)&&Array.isArray(p.b)&&Array.isArray(p.changed));}
+/* ==== /5.1 · EN4 FORM PERSISTENCE (pure layer) ==== */
 /* ==== 2.5 ⑥ · QUANTIZE (pure layer) ==== starts pull toward the grid by `strength`
    (the Amount slider's law); durations optionally snap too. Fresh rows. Pure. */
 function quantizeRows(rows,idxs,step,strength,alsoDur){
@@ -9333,7 +9398,38 @@ function setPrzStatus(msg){
  przStatusEl.textContent=msg;
  clearTimeout(przStatusTimer);przStatusTimer=setTimeout(()=>{przStatusEl.textContent='';},6000);
 }
-const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES'};
+const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES',form:'THE FORM'};
+/* EN4 PERSISTENCE (build 2026-08-20c) — the beam's lettering as a RECORD: one formMap
+   pass over the track's sections (the same segmentSection/letterSegments the chips
+   show), no note rows inside (the legal gate is in the pure layer). */
+function prismFormRecord(track){
+ const notes=(project.tracks[track]||[]).map(n=>[n[0],n[1],n[2]]).sort((a,b)=>a[0]-b[0]);
+ const ss=project.sections;
+ const secs=[];
+ for(let i=0;i<ss.length;i++){
+  const a=ss[i].start,b=i+1<ss.length?ss[i+1].start:LOOP;
+  secs.push({name:ss[i].name,start:a,end:b,rows:notes.filter(r=>r[0]>=a-1e-6&&r[0]<b-1e-6)});
+ }
+ return formMap(secs);
+}
+function przKeepForm(){
+ /* ★ Keep form — the whole beam's lettering lands on the Essence Shelf as ONE 'form'
+    strand (level L1, above the segment's L2): song form · per-section forms · every
+    A/A′ echo pair with what changed. Project data, one undo, rides the file. */
+ const rec=prismFormRecord(przState.track);
+ if(!rec||!rec.sections.some(s2=>s2.segs.length)){setPrzStatus('Nothing to keep — this beam has no phrases yet. Draw or import some notes first.');return false;}
+ snapshot();
+ noteEngine('prism-keep',{strand:'form'});
+ const tl=(typeof trackLabel==='function'?trackLabel(przState.track):przState.track);
+ const name=('form · '+tl+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled')).slice(0,60);
+ const fp=prismHash(rec.songForm+'|'+rec.sections.map(s2=>s2.form).join('/'));
+ project.shelf.push({id:shelfNextId(project.shelf),strand:'form',name,level:'L1',data:rec,fp});
+ autosaveSoon();
+ buildPrism();
+ const np=rec.pairs.length;
+ setPrzStatus('The form is on the Essence Shelf — '+rec.songForm+' · '+np+' echo pair'+(np===1?'':'s')+' recorded · it rides the project file · ⌘Z undoes.');
+ return true;
+}
 function przTracks(){
  return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length&&!hiddenTracks.has(t));
 }
@@ -9359,7 +9455,18 @@ function przThumb(strand,data){
  /* tiny SVG per strand — contour polyline · DNA dots · one-tone rhythm bars */
  const W=180,H=40;
  let inner='';
- if(strand==='chords'){
+ if(strand==='form'){
+  /* EN4: one block per section, the section's song-form letter inside, its phrase
+     form beneath — a map, drawn as a map */
+  const secs=(data&&data.sections)||[],sl=(data&&data.songLetters)||[];
+  const n=Math.max(1,secs.length),bw=W/n;
+  secs.forEach((sc,i)=>{
+   const x=i*bw,hue=(String(sl[i]||'').charCodeAt(0)*47)%360;
+   inner+='<rect x="'+(x+1).toFixed(1)+'" y="3" width="'+Math.max(2,bw-2).toFixed(1)+'" height="34" rx="3" fill="hsl('+hue+',40%,'+(sl[i]==='—'?'22':'48')+'%)" opacity=".85"/>'
+    +'<text x="'+(x+bw/2).toFixed(1)+'" y="19" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">'+String(sl[i]||'—')+'</text>'
+    +'<text x="'+(x+bw/2).toFixed(1)+'" y="32" text-anchor="middle" font-size="7.5" fill="#fff" opacity=".8">'+String(sc.form||'').slice(0,Math.max(1,Math.floor(bw/5)))+'</text>';
+  });
+ }else if(strand==='chords'){
   /* 30r: an Orbits-journey keep — one tinted block per chord, hue from the root */
   const chs=(data&&data.chords)||[];
   const end=chs.reduce((a,c)=>a+c.d,0)||1;
@@ -9387,6 +9494,7 @@ function przThumb(strand,data){
  return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+inner+'</svg>';
 }
 function przAudition(strand,data,startMidi,atBeat){
+ if(strand==='form'){setPrzStatus('A form is a map, not a sound — '+((data&&data.songForm)||'')+' · press a phrase chip above to hear its three strands.');return;}
  const go=()=>{try{
   if(!audioReady||!inst)return;
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
@@ -9421,6 +9529,10 @@ function przSelRows(){
  return {idxs,rows:idxs.map(i=>{const n=project.melody[i];return [n[0],n[1],n[2]];})};
 }
 function przApply(strand,data){
+ /* EN4 (20c): a 'form' strand is a RECORD — ✓ has nothing to write yet. Said plainly,
+    nothing faked: the apply verb for forms (re-order the sections to this letter scheme,
+    E-112's Form LEGO) is its own round. No snapshot, nothing changes. */
+ if(strand==='form'){setPrzStatus('The form is a map, not a pattern — ✓ Apply for forms (build a song to this scheme) is its own round. It lives on the Shelf and rides the file today.');return false;}
  /* 30r: a 'chords' keep needs no note selection — ✓ writes the whole journey back
     (chord lane + its key sections, one undo) */
  if(strand==='chords'){
@@ -9558,6 +9670,20 @@ function buildPrism(reanalyze){
  /* per-section lettering + segments */
  const body=document.getElementById('przBody');
  body.innerHTML='';
+ /* EN4 (20c): the SONG FORM row — the sections themselves lettered (E-112), and the
+    ★ Keep form chip that persists the whole beam's lettering as one 'form' strand */
+ try{
+  const rec=prismFormRecord(przState.track);
+  przState.formRec=rec;
+  const fr=document.createElement('div');
+  fr.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;';
+  const np=rec.pairs.length;
+  fr.innerHTML='<span style="font-size:11px;color:var(--dim);" title="The sections themselves through the same letterer the phrases get: a section that repeats another is its letter again, close is ′, new is the next letter. — means the section has no notes on this beam.">Song form: <b id="przSongForm" style="color:var(--text);">'+(rec.songForm||'—')+'</b></span>'
+   +'<span class="cpchip przKeepFormB" title="Keep the whole lettering on the Essence Shelf as ONE form strand — the song form, every section’s phrase form, and every echo pair (A → A′) with which strands changed. No notes travel with it; it is a map. Rides the project file · one undo.">★ Keep form</span>'
+   +'<span style="font-size:10.5px;color:var(--dim);" title="Phrases that echo an earlier phrase — exact repeats, ′ variants and -tags — paired with the phrase they echo. These pairs are what the development map and the variation ladder learn from.">'+np+' echo pair'+(np===1?'':'s')+'</span>';
+  fr.querySelector('.przKeepFormB').onclick=()=>przKeepForm();
+  body.appendChild(fr);
+ }catch(e){}
  (przState.analysis||[]).forEach((secA,si)=>{
   const row=document.createElement('div');
   row.style.cssText='margin-bottom:8px;';
@@ -15689,7 +15815,7 @@ function renderOrb(){
     toggle (the silent-drop landmine stays unarmed). Docking each variable's own
     solar system is the R4 round; pivot moons rest while the variables are up. */
  const shelfV=Array.isArray(project.shelf)?project.shelf:[];
- const VARS=[['contour','〰','Contour'],['dna','🧶','DNA'],['rhythm','𝄴','Rhythm'],['chords','𝄞','Chords']];
+ const VARS=[['contour','〰','Contour'],['dna','🧶','DNA'],['rhythm','𝄴','Rhythm'],['chords','𝄞','Chords'],['form','𝄆','Form']];   /* EN4 (20c): the fifth strand kind gets its moon */
  VARS.forEach((v,i)=>{
   const cnt=shelfV.filter(s2=>s2&&s2.strand===v[0]).length;
   const a=-Math.PI/2+(i/VARS.length)*Math.PI*2;
