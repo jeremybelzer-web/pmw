@@ -425,7 +425,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20e</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -15304,7 +15304,12 @@ function orbJourneyStart(){
  if(!orbJourney.active){snapshot();orbJourney={active:true,log:[]};}
 }
 function orbLandBeat(){
- const at=orbNextBoundary(orbBeatNow(),orbQ(),LOOP);
+ /* ORBIT FEEDBACK R2: while the map has gone AHEAD to a committed trip (orbState.peek),
+    the next landing is the one after THAT trip's — so a second click from the new world
+    lands in the new world, never on top of the trip that took you there */
+ const pk=orbState.peek;
+ const b0=(pk&&orbBeatNow()<pk.at)?pk.at:orbBeatNow();
+ const at=orbNextBoundary(b0,orbQ(),LOOP);
  if(at==null)setOrbStatus('No room — the next landing falls past the song’s end. Pull the speed in or rewind.');
  return at;
 }
@@ -15330,6 +15335,11 @@ function orbPivotGo(pv){
  const at=orbLandBeat();if(at==null)return false;
  const cur=orbCurrentKey();
  const tpl=pv.tplId&&(typeof MODULATION_DB!=='undefined')&&MODULATION_DB.find(t=>t.id===pv.tplId);
+ /* ORBIT FEEDBACK R2 — read the doorway's LIVE position and its far world BEFORE the
+    map changes: that is the direction the flight takes (client: "based on where the
+    moon is at that moment"). landed/landAt name the world and beat the map goes ahead to. */
+ const from=(pv.dest&&!pv.dest.psych)?orbTripFrom(pv.dest.tonic,pv.dest.minor,false):null;
+ let landed=null,landAt=at;
  orbJourneyStart();
  if(tpl&&!tpl.interval){
   const idx=chordIdxAtBeat(project.chords,at);
@@ -15348,6 +15358,7 @@ function orbPivotGo(pv){
   project.chords=res.chords;
   orbJourney.log.push({beat:at,tonic:res.tgtTonic,minor:tpl.tgtMode==='aeolian'});
   noteEngine('orbit-travel',{tpl:tpl.id,beat:at});
+  landed={tonic:((res.tgtTonic%12)+12)%12,minor:tpl.tgtMode==='aeolian'};landAt=res.tailStart;
  }else if(pv.bridge&&pv.dest&&!pv.dest.psych&&(function(){
   /* ORBIT FEEDBACK R1 — a grey doorway fires its WHOLE road: the bridge (ii–V by
      default) is carved leftward into the old key so the new key lands exactly ON the
@@ -15360,6 +15371,7 @@ function orbPivotGo(pv){
   for(const s of project.sections)if(s.start>=at-1e-6){s.tonic=pv.dest.tonic;s.mode=pv.dest.minor?'aeolian':'ionian';}
   orbJourney.log.push({beat:at,tonic:pv.dest.tonic,minor:pv.dest.minor,via:pv.bridge});
   noteEngine('orbit-doorway',{bridge:pv.bridge,beat:at,added:res.added});
+  landed={tonic:pv.dest.tonic,minor:!!pv.dest.minor};
   return true;})()){
   /* handled above */
  }else{
@@ -15373,20 +15385,38 @@ function orbPivotGo(pv){
    if(after<LOOP-1e-6){
     project.sections=splitSectionAt(project.sections,after,LOOP);
     for(const s of project.sections)if(s.start>=after-1e-6){s.tonic=pv.dest.tonic;s.mode=pv.dest.minor?'aeolian':'ionian';}
+    landed={tonic:pv.dest.tonic,minor:!!pv.dest.minor};landAt=after;
    }
    orbJourney.log.push({beat:at,tonic:pv.dest.tonic,minor:pv.dest.minor});
   }else orbJourney.log.push({beat:at,psych:'user'});
   noteEngine('orbit-pivot',{lbl:hit.c.lbl,beat:at});
  }
- refresh(true);renderOrb();
+ refresh(true);
+ /* ORBIT FEEDBACK R2 — the click transition: the map goes AHEAD to the new world now
+    (orbState.peek, until the playhead gets there) and the camera flies — the old system
+    out along the far side, the new one in from the doorway's side. A psych-out never
+    changes the key, so it stays a plain redraw. */
+ if(landed&&landAt<LOOP-1e-6)orbState.peek={tonic:landed.tonic,minor:landed.minor,at:landAt};
+ if(landed)orbTripAnim(from,renderOrb);else renderOrb();
  setOrbStatus((pv.dest&&!pv.dest.psych)
-  ?(pv.bridge?'The '+(pv.bridge==='iiV'?'ii–V':pv.bridge==='IVV'?'IV–V':'V7')+' road runs into beat '+at+' → '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major')+' lands there — the journey is being recorded (↩ one undo returns the whole voyage).'
-   :'Pivot fires at beat '+at+' → '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major')+' — the journey is being recorded (↩ one undo returns the whole voyage).')
+  ?(pv.bridge?'The '+(pv.bridge==='iiV'?'ii–V':pv.bridge==='IVV'?'IV–V':'V7')+' road runs into beat '+at+' → '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major')+' lands there — the map has flown ahead; the song arrives at beat '+landAt+'. The journey is being recorded (↩ one undo returns the whole voyage).'
+   :'Pivot fires at beat '+at+' → '+PCN[pv.dest.tonic]+(pv.dest.minor?' minor':' major')+' — the map has flown ahead; the song arrives at beat '+landAt+'. The journey is being recorded (↩ one undo returns the whole voyage).')
   :'Psych! The feint lands at beat '+at+' and the song walks straight back home.');
  return true;
 }
 function orbCurrentKey(){
  const b=(playing&&typeof transportBeat==='function')?transportBeat():((typeof playheadBeat==='number')?playheadBeat:0);
+ const pk=orbState.peek;
+ if(pk){
+  /* ORBIT FEEDBACK R2 — the map has already travelled: a doorway click commits the trip
+     at the next landing and the camera flies NOW, so until the playhead reaches that
+     landing the map shows the world it is arriving in. The peek drops the moment the
+     landing passes, or the trip is no longer written there (undo, a re-key) — then the
+     key under the playhead is the truth again and orbKeyTick() follows it. */
+  const ps=keyFor(pk.at);
+  if(b+1e-6>=pk.at||!ps||(((ps.tonic||0)%12+12)%12)!==pk.tonic||orbMinor(ps.mode)!==pk.minor)orbState.peek=null;
+  else return {tonic:pk.tonic,minor:pk.minor,mode:pk.minor?'aeolian':'ionian'};
+ }
  const st=keyFor(b);
  return {tonic:st.tonic||0,minor:orbMinor(st.mode),mode:st.mode};
 }
@@ -15394,16 +15424,19 @@ function orbTravelTo(tonic,minor){
  /* the escape route fires: the key changes ON the next quantize boundary — a REAL
     section-key event (the journey is recorded; one undo per journey, SNV convention) */
  const b=(playing&&typeof transportBeat==='function')?transportBeat():((typeof playheadBeat==='number')?playheadBeat:0);
- const at=orbNextBoundary(b,orbQ(),LOOP);
+ const pk0=orbState.peek;
+ const at=orbNextBoundary((pk0&&b<pk0.at)?pk0.at:b,orbQ(),LOOP);   /* ORBIT FEEDBACK R2: chained trips land AFTER the trip the map went ahead to */
  if(at==null){setOrbStatus('No room — the next landing falls past the song\'s end. Pull the speed in or rewind.');return false;}
  if(!orbJourney.active){snapshot();orbJourney={active:true,log:[]};}
+ const from=orbTripFrom(tonic,minor,false);   /* ORBIT FEEDBACK R2: read the world's live position BEFORE the redraw */
  project.sections=splitSectionAt(project.sections,at,LOOP);
  for(const s of project.sections)if(s.start>=at-1e-6){s.tonic=((tonic%12)+12)%12;s.mode=minor?'aeolian':'ionian';}
  orbJourney.log.push({beat:at,tonic:((tonic%12)+12)%12,minor:!!minor});
  noteEngine('orbit-travel',{tonic,minor,beat:at});
  refresh(true);   /* live: playback reschedules in place — the audio never stops */
- renderOrb();
- setOrbStatus('→ '+PCN[((tonic%12)+12)%12]+' '+(minor?'Minor':'Major')+' lands at beat '+at+' — the journey is being recorded (↩ one undo returns the whole voyage).');
+ orbState.peek={tonic:((tonic%12)+12)%12,minor:!!minor,at};   /* ORBIT FEEDBACK R2: the map goes ahead */
+ orbTripAnim(from,renderOrb);
+ setOrbStatus('→ '+PCN[((tonic%12)+12)%12]+' '+(minor?'Minor':'Major')+' lands at beat '+at+' — the map has flown ahead; the song arrives there. The journey is being recorded (↩ one undo returns the whole voyage).');
  return true;
 }
 function orbEndJourney(){
@@ -15674,6 +15707,100 @@ function orbFarHide(){
  const road=document.getElementById('orbRoad');if(road)road.classList.remove('on');
  orbState.hoverFar=null;
 }
+function orbTripFrom(tonic,minor,psych){
+ /* ORBIT FEEDBACK R2 — where a trip DEPARTS from, read off the live map: the doorway
+    moon's position right now (orbMoonNow — the rotation included) and the far world it
+    opens, placed by orbFarAim() exactly as a hover would place it. Solar view only: the
+    client's Circles view "is fine" and keeps its plain redraw. Returns null when the map
+    has no such world (a Weber ← → step to a world with no doorway, the 🧭 buttons). */
+ if(orbState.view==='circles'||!orbState.geo)return null;
+ const key=(((tonic%12)+12)%12)+':'+(minor?1:0)+':'+(psych?1:0);
+ const moon=document.querySelector('#orbMoonG .orbPvN[data-far="'+key+'"]');
+ const far=document.querySelector('#orbFarG .orbFar[data-far="'+key+'"]');
+ if(!moon&&!far)return null;
+ let x=null,y=null,fp=null;
+ if(moon){const m=orbMoonNow(moon);x=m.x;y=m.y;}
+ if(far){
+  orbFarAim(key,false);   /* places it (attribute only) without showing it */
+  const m=/translate\(\s*([-\d.]+)[ ,]+([-\d.]+)/.exec(far.getAttribute('transform')||'');
+  if(m)fp={x:+m[1],y:+m[2],pr:+far.getAttribute('data-pr')||42};
+ }
+ if(x==null&&fp){x=fp.x;y=fp.y;}
+ if(x==null)return null;
+ return {x,y,far:fp};
+}
+function orbTripAnim(from,done){
+ /* ORBIT FEEDBACK R2 — THE CLICK TRANSITION (client, Aug 20, verbatim: "the current
+    planet and moons rotate to the left of the screen and get smaller while the new
+    planet to the right of the screen rotates to the center and gets bigger … based on
+    where the moon is at that moment"). Two layers: the OLD system is a clone of the
+    outgoing SVG, laid over the box and flown out AWAY from the doorway — smaller,
+    turning, partly out of frame (the box clips); the NEW system is the re-rendered SVG,
+    which starts where the far world stood (its size, its side) and flies to the centre
+    as it grows. Transforms only, on the SVG elements — #orbMapIn is left to the 🚀
+    Pilot camera and orbZoomAnim(), which this does not touch. With no direction (the
+    map had no world for the key) it is a plain cross-fade. */
+ const mi=document.getElementById('orbMapIn');
+ const old=mi&&mi.querySelector('svg');
+ if(!old||orbState.tripAnim||orbState.view==='circles'){if(done)done();return;}   /* Circles "is fine" — a plain redraw there */
+ const geo=orbState.geo||{cx:350,cy:282,r:118};
+ const sc=orbShipScale();
+ const ghost=old.cloneNode(true);
+ ghost.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+ ghost.querySelectorAll('.orbFar.on,.orbRoad').forEach(e=>e.remove());   /* the far world is not leaving — it is arriving */
+ orbState.tripAnim=true;
+ if(done)done();
+ const mi2=document.getElementById('orbMapIn');
+ const wrap=document.getElementById('orbMapWrap');
+ const nu=mi2&&mi2.querySelector('svg');
+ if(!nu||!wrap){orbState.tripAnim=false;return;}
+ let ux=1,uy=0;
+ if(from){const dx=from.x-geo.cx,dy=from.y-geo.cy,L=Math.hypot(dx,dy);if(L>1){ux=dx/L;uy=dy/L;}}
+ const fx=from?(from.far?from.far.x:geo.cx+ux*(geo.r+150)):geo.cx;
+ const fy=from?(from.far?from.far.y:geo.cy+uy*(geo.r+150)):geo.cy;
+ const s0=from?Math.max(.28,Math.min(.6,((from.far?from.far.pr:42)+13)/geo.r)):.85;
+ const D=geo.r+190;   /* how far the old world flies: its edge ends past the frame */
+ const org=(geo.cx*sc).toFixed(1)+'px '+(geo.cy*sc).toFixed(1)+'px';
+ const lay=document.createElement('div');
+ lay.className='orbTripGhost';
+ lay.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+ ghost.style.cssText='display:block;width:100%;max-width:840px;transform-origin:'+org+';transition:none;';
+ lay.appendChild(ghost);
+ wrap.appendChild(lay);
+ const ship=document.getElementById('orbShip');if(ship)ship.style.opacity='0';
+ nu.style.transition='none';
+ nu.style.transformOrigin=org;
+ nu.style.transform='translate('+((fx-geo.cx)*sc).toFixed(1)+'px,'+((fy-geo.cy)*sc).toFixed(1)+'px) rotate('+(from?16:0)+'deg) scale('+s0.toFixed(3)+')';
+ nu.style.opacity=from?'.55':'0';
+ void nu.getBoundingClientRect();   /* commit the start pose before the flight */
+ const ease='cubic-bezier(.4,.05,.3,1)';
+ nu.style.transition='transform .78s '+ease+', opacity .5s ease';
+ ghost.style.transition='transform .78s '+ease+', opacity .7s ease';
+ requestAnimationFrame(()=>{
+  nu.style.transform='none';nu.style.opacity='1';
+  ghost.style.transform=from?('translate('+(-ux*D*sc).toFixed(1)+'px,'+(-uy*D*sc).toFixed(1)+'px) rotate(-22deg) scale(.4)'):'scale(.9)';
+  ghost.style.opacity=from?'.25':'0';
+ });
+ setTimeout(()=>{
+  lay.remove();
+  const n3=document.querySelector('#orbMapIn>svg');if(n3){n3.style.transition='';n3.style.transform='';n3.style.opacity='';n3.style.transformOrigin='';}
+  const sh=document.getElementById('orbShip');if(sh)sh.style.opacity='';
+  orbState.tripAnim=false;
+ },820);
+}
+function orbKeyTick(){
+ /* ORBIT FEEDBACK R2 — the map follows the song: when the key under the playhead stops
+    being the key the map shows (a section boundary passing, the loop wrapping home, an
+    undo), it flies there — from the new key's world if the map has one, else a plain
+    cross-fade. Before this the planet only changed on a click (a stale planet whenever
+    playback crossed a key change). Rides the one 150ms tick. */
+ if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ if(orbState.tripAnim||orbTrips.drag)return;
+ const sh=orbState.shown;if(!sh)return;
+ const k=orbCurrentKey();
+ if(k.tonic===sh.tonic&&k.minor===sh.minor)return;
+ orbTripAnim(orbTripFrom(k.tonic,k.minor,false),renderOrb);
+}
 function orbWheelSVG(tonic,minor,size,opts){
  /* a key as a planet/wheel: the ring, its scale tones as surface dots, the label */
  opts=opts||{};
@@ -15720,6 +15847,7 @@ function renderOrb(){
  const cx=solar?350:280,cy=solar?282:262,R=solar?118:152;
  const bodyR=58,sunX=112,sunY=100,sunR=40;
  orbState.geo={cx,cy,r:R};
+ orbState.shown={tonic:cur.tonic,minor:cur.minor};   /* ORBIT FEEDBACK R2: what the map shows — orbKeyTick() compares the playhead's key against it */
  const clicks=[];let lines='',nodes='',sunS='',moonS='',laneS='';
  const chipLbl=(root,iv)=>PCN[T(root)]+(iv[1]===3?(iv[2]===6?'°':'m'):(iv[2]===8?'+':''));
  if(!solar){
@@ -16489,7 +16617,7 @@ function buildOrbPanel(){
  renderOrb();
  document.addEventListener('keydown',orbKeydown);
  document.addEventListener('fullscreenchange',()=>{if(typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')renderOrb();});
- setInterval(()=>{try{orbBotTick();orbRotTick();orbShipTick();orbTripsTick();}catch(e){}},150);   /* 4.7 R3: the itinerary rides the same tick — one clock source */
+ setInterval(()=>{try{orbBotTick();orbRotTick();orbShipTick();orbTripsTick();orbKeyTick();}catch(e){}},150);   /* 4.7 R3: the itinerary rides the same tick — one clock source */
 }
 /* ==== /4.7 INTERPLANETARY ORBITS ==== */
 
