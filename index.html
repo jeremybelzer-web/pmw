@@ -421,6 +421,8 @@
 #orbFarG .orbFar{opacity:.78;transition:opacity .28s ease;}
 #orbFarG .orbFar.on{opacity:1;}
 .orbRoad{opacity:.5;transition:opacity .22s ease;pointer-events:none;}
+@keyframes orbRoadFlow{from{stroke-dashoffset:10}to{stroke-dashoffset:0}} svg.orbRoadsFlow .orbRoad,svg.orbRoadsFlow .orbRoadIn{animation:orbRoadFlow 1.1s linear infinite;} /* R7 [40]: 🔄 Orbiting OFF = the roads' dashes flow round the moons and out toward their planets */
+.orbFar.orbGoing{opacity:1!important;} /* R7 [41]: the arriving world is whole and opaque over everything */
 .orbRoad.on{opacity:1;} .orbRoadIn{opacity:.32;pointer-events:none;} .orbRoadIn.on{opacity:.7;} #orbFarG .orbFar.orbFarMinor{opacity:.5;} #orbFarG .orbFar.orbFarMinor.on{opacity:1;} #orbToast{position:absolute;left:50%;top:10px;transform:translateX(-50%);max-width:76%;padding:5px 12px;border-radius:10px;background:rgba(20,22,28,.94);border:1px solid var(--accent);color:var(--accent);font-size:11.5px;pointer-events:none;opacity:0;transition:opacity .25s ease;z-index:2;} #orbToast.on{opacity:1;} .orbVarSat{cursor:pointer;} /* R5 (20g): the inner road planet→moon · the minor far worlds · the click toast · the Form satellites */
 /* R4 — level of detail: the grey moons' "ii–V" and their 🔍 search button appear when the
    camera is zoomed in (🚀 Pilot view) — the client's "if we zoom in, it should reveal more detail" */
@@ -428,12 +430,17 @@
 #orbMapWrap.orbZoomed .orbLod{opacity:1;pointer-events:auto;}
 #orbMapWrap.orbZoomed .orbLodOff{opacity:0;}
 #orbMapWrap .orbLodOff{transition:opacity .3s ease;}
+/* R6 — the Limitation = Creativity per-scale switch */
+.orbSw{display:inline-block;width:24px;height:13px;border-radius:7px;background:#3a3e4d;position:relative;transition:background .2s;}
+.orbSw::after{content:'';position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#c8cde0;transition:left .2s;}
+.orbSw.on{background:var(--accent);}
+.orbSw.on::after{left:13px;background:#0a0c12;}
 #orbBody:fullscreen #orbMapWrap svg{max-width:min(94vw,150vh)!important;margin:0 auto;}
 </style>
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20k</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -14818,6 +14825,8 @@ var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
  varMoons:false,ecoSrc:'own',djMute:false,
  chromOn:false,bridgeKinds:{},hoverFar:null,
  fit:true,cam:{x:0,y:0,s:1},
+ moonLay:'ring',   /* R7 [45] (20k): the moon layout — ring · rings · free */
+ lim:{open:false,on:{},scale:{home:1,rel:1}},   /* R6 (20j): LIMITATION = CREATIVITY — which scale degrees grow a moon (7 booleans per scale, all on) and a MASTER switch per scale (client, Aug 21: "default to both scales having an ON toggle switch to the right of the scale name. If it is turned off then that scale no longer generates moons") */
  speed:'normal',farOrbit:true,farDeg:0,varHover:null};   /* ORBIT FEEDBACK R5 (20g): speed = the 🔄 pace (slow · normal · fast, orbRotSpeed) · farOrbit = the far worlds orbit the planet too (client, Aug 20, twelfth sitting — reversible, his call) · farDeg their angle · varHover the 🧬 moon whose satellites are up */   /* ORBIT FEEDBACK R4 (20f): "Transform multi-tracks to fit chords" — default ON · cam = the pan/zoom camera (client, Aug 20, ninth and eleventh messages) */   /* ORBIT FEEDBACK R1 (20d): the 🎨 Chromatic ring (default OFF) · per-destination bridge choice (V / ii–V / IV–V, session) · the far world a hover is showing */   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round). R2 adds varMoons (⑦, default OFF) + ecoSrc (the 🌌 relative pairing, mirrored here so a re-render stops resetting the select — and so the twin planets survive one). R3 adds djMute (⑧, default OFF — the audience hears everything until the DJ says otherwise) */
 var orbJourney={active:false,log:[]};
 var orbBot={next:0};
@@ -14827,6 +14836,20 @@ function orbCircleSlots(pcs){
     clockwise (the client call: 1 at 12 · 4 near 6 o'clock) — pure */
  const n=(pcs||[]).length;if(!n)return [];
  return pcs.map((pc,k)=>({deg:k,pc,angle:-Math.PI/2+(k/n)*Math.PI*2}));
+}
+function orbLimScales(cur,pcs){
+ /* R6 — the scales the LIMITATION = CREATIVITY lane lists: the song's own, then every "relative"
+    with a DIFFERENT chord set — the Chord Palette's default pair is the key and its same-root
+    relative (C major ↔ C Aeolian, 4.6), so that is the second row. Pure. */
+ const relPcs=(SCALE_DB[cur.minor?'ionian':'aeolian']||SCALE_DB.ionian).pcs;
+ return [{id:'home',name:PCN[cur.tonic]+(cur.minor?' minor':' major'),sub:'this song',tonic:cur.tonic,pcs:pcs},
+         {id:'rel',name:PCN[cur.tonic]+(cur.minor?' major':' minor'),sub:'same-root relative',tonic:cur.tonic,pcs:relPcs}];
+}
+function orbLimOn(id,k){
+ const on=orbState.lim.on;
+ if(!on[id])on[id]=[1,1,1,1,1,1,1];
+ if(!orbState.lim.scale)orbState.lim.scale={home:1,rel:1};
+ return !!orbState.lim.scale[id]&&!!on[id][k];
 }
 function orbPivotAngle(pcs,rootRel){
  /* where an inserted pivot chord sits on the ring: same root as a diatonic degree →
@@ -15816,6 +15839,68 @@ function orbRotFrame(ts){
  requestAnimationFrame(orbRotFrame);
 }
 const ORB_ROT_STEP=0.35;   /* degrees per 150ms tick — R4: back to the pre-R1 pace ("moving by default just how it was before", client, Aug 20, tenth message); R1's 0.18 read as frozen to him. 🔄 off = the stationary option. */
+/* ORBIT FEEDBACK R7 [45] (20k) — THE MOON LAYOUT (client, Aug 21, verbatim: "the moons around the
+   central planet, including the greyed out moons, should have 3 toggle options. Either: 1: they are
+   in a perfect circle … 2: the normal moons are in a tighter orbit and the greyed out moons are in
+   an outer orbit, but still in sync with the inner orbit … you could draw a straight (invisible)
+   line from the planet, through the normal ii chord and reach the II chord. 3: It's all random, and
+   the orbit of the moons are even independent of each other on their own ellipses orbits around the
+   planet which differ in their planes"). orbState.moonLay ∈ ring · rings · free. renderOrb still
+   writes every moon's RESTING data-x/y exactly as before; orbMoonLayout() then stamps the layout's
+   rest place (data-lx/ly) — or, for free, the moon's own ellipse (data-f*) — once per rebuild, and
+   orbMoonPos() is the ONE reader of a moon's live place (orbApplyRot, orbMoonNow, the roads). */
+const ORB_MOON_LAYS=[['ring','⭕ one ring'],['rings','◎ two rings in sync'],['free','🌀 free orbits']];
+function orbMoonLayout(){
+ const g=document.getElementById('orbMoonG');if(!g)return;
+ const geo=orbState.geo||{cx:350,cy:282,r:118};const cx=geo.cx,cy=geo.cy,R=geo.r;
+ const ms=[...g.querySelectorAll('.orbMoonN')];if(!ms.length)return;
+ const lay=orbState.moonLay||'ring';
+ const ang=n=>Math.atan2(+n.getAttribute('data-y')-cy,+n.getAttribute('data-x')-cx);
+ const norm=a=>((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+ const grey=n=>n.classList.contains('orbPvN')||n.classList.contains('orbRelN');
+ ms.forEach(n=>{['data-lx','data-ly','data-frx','data-fry','data-fphi','data-fa','data-frate'].forEach(k=>n.removeAttribute(k));});
+ if(lay==='ring'){
+  /* ① every moon evenly spaced on ONE perfect circle, in its present clockwise order from 12 o'clock */
+  const ord=ms.slice().sort((a,b)=>norm(ang(a)+Math.PI/2)-norm(ang(b)+Math.PI/2));
+  const R1=Math.max(R,ord.length*42/(2*Math.PI));   /* the ring widens so no two moons touch (≈42px of arc each) */
+  ord.forEach((n,i)=>{const a=-Math.PI/2+i/ord.length*2*Math.PI;n.setAttribute('data-lx',(cx+Math.cos(a)*R1).toFixed(1));n.setAttribute('data-ly',(cy+Math.sin(a)*R1).toFixed(1));});
+ }else if(lay==='rings'){
+  /* ② the normal moons on the tight ring (evenly), every greyed-out moon OUTSIDE on the ray of its nearest normal moon — stacked outward when several share one */
+  const inner=ms.filter(n=>!grey(n)),outer=ms.filter(grey);
+  const ordI=inner.slice().sort((a,b)=>norm(ang(a)+Math.PI/2)-norm(ang(b)+Math.PI/2));
+  const rays=ordI.map((n,i)=>{const a=-Math.PI/2+i/ordI.length*2*Math.PI;n.setAttribute('data-lx',(cx+Math.cos(a)*R).toFixed(1));n.setAttribute('data-ly',(cy+Math.sin(a)*R).toFixed(1));return a;});
+  const used={};
+  outer.forEach(n=>{
+   const a0=ang(n);let best=0,bd=1e9;rays.forEach((a,i)=>{const d=Math.abs(norm(a-a0+Math.PI)-Math.PI);if(d<bd){bd=d;best=i;}});
+   const k=used[best]=(used[best]||0)+1;const a=rays.length?rays[best]:a0;const r=R+40+(k-1)*34;
+   n.setAttribute('data-lx',(cx+Math.cos(a)*r).toFixed(1));n.setAttribute('data-ly',(cy+Math.sin(a)*r).toFixed(1));
+  });
+ }else{
+  /* ③ free: each moon on its OWN ellipse about the planet — own axes, own tilt, own pace, own phase (deterministic per slot, so a rebuild never shuffles them) */
+  ms.forEach((n,i)=>{
+   const h=k=>{const x=Math.sin((i+1)*12.9898+k*78.233)*43758.5453;return x-Math.floor(x);};
+   const rx=R*(0.78+0.5*h(1)),ry=rx*(0.42+0.5*h(2)),phi=h(3)*Math.PI,rate=0.7+0.9*h(4);
+   const a0=ang(n);   /* start near where it rests today */
+   n.setAttribute('data-frx',rx.toFixed(1));n.setAttribute('data-fry',ry.toFixed(1));n.setAttribute('data-fphi',phi.toFixed(4));n.setAttribute('data-fa',(a0-phi).toFixed(4));n.setAttribute('data-frate',rate.toFixed(3));
+  });
+ }
+}
+function orbMoonPos(n,deg){
+ /* a moon's live place for the current layout, at rotation deg — pure in (n's data, deg). Returns {x,y,th,r}: th/r polar about the planet. */
+ const geo=orbState.geo||{cx:350,cy:282};const cx=geo.cx,cy=geo.cy;
+ const d=(deg||0)*Math.PI/180;
+ if(n.hasAttribute('data-frx')){
+  const rx=+n.getAttribute('data-frx'),ry=+n.getAttribute('data-fry'),phi=+n.getAttribute('data-fphi'),a=+n.getAttribute('data-fa'),rate=+n.getAttribute('data-frate');
+  const th=a+d*rate;const ex=rx*Math.cos(th),ey=ry*Math.sin(th);
+  const x=cx+ex*Math.cos(phi)-ey*Math.sin(phi),y=cy+ex*Math.sin(phi)+ey*Math.cos(phi);
+  return {x,y,th:Math.atan2(y-cy,x-cx),r:Math.hypot(x-cx,y-cy)};
+ }
+ const lx=n.hasAttribute('data-lx')?+n.getAttribute('data-lx'):+n.getAttribute('data-x');
+ const ly=n.hasAttribute('data-ly')?+n.getAttribute('data-ly'):+n.getAttribute('data-y');
+ const dx=lx-cx,dy=ly-cy;
+ const x=cx+dx*Math.cos(d)-dy*Math.sin(d),y=cy+dx*Math.sin(d)+dy*Math.cos(d);
+ return {x,y,th:Math.atan2(dy,dx)+d,r:Math.hypot(dx,dy)};
+}
 function orbApplyRot(){
  /* apply the current rotation to the moon ring — a cheap attribute update, never a
     re-render (landmine 2: renderOrb() would destroy the animation state, so the angle
@@ -15831,7 +15916,8 @@ function orbApplyRot(){
   const ms=[...g.querySelectorAll('.orbMoonN')];
   ms.forEach(n=>{
    const x=+n.getAttribute('data-x'),y=+n.getAttribute('data-y');
-   const p=orbDepthPos(Math.atan2(y-geo.cy,x-geo.cx),d,geo.cx,geo.cy,Math.hypot(x-geo.cx,y-geo.cy),ORB_3D_KY);
+   const lp=orbMoonPos(n,d);   /* R7 [45]: the layout's live polar place, then the tilt */
+   const p=orbDepthPos(lp.th,0,geo.cx,geo.cy,lp.r,ORB_3D_KY);
    n.setAttribute('transform','translate('+p.x.toFixed(2)+' '+p.y.toFixed(2)+') scale('+p.s.toFixed(3)+') translate('+(-x).toFixed(2)+' '+(-y).toFixed(2)+')');
    n.setAttribute('data-z',p.z.toFixed(3));
    n.style.opacity=p.o.toFixed(2);
@@ -15841,9 +15927,10 @@ function orbApplyRot(){
    g.setAttribute('data-sorted','1');
   }
  }else{
- g.setAttribute('transform','rotate('+d.toFixed(2)+' '+geo.cx+' '+geo.cy+')');
+ g.removeAttribute('transform');   /* R7 [45]: no group rotation any more — every moon is carried to its layout's live place (upright, as the old rotate/counter-rotate pair left it) */
  g.querySelectorAll('.orbMoonN').forEach(n=>{
-  n.setAttribute('transform','rotate('+(-d).toFixed(2)+' '+n.getAttribute('data-x')+' '+n.getAttribute('data-y')+')');
+  const p=orbMoonPos(n,d);
+  n.setAttribute('transform','translate('+(p.x-(+n.getAttribute('data-x'))).toFixed(2)+' '+(p.y-(+n.getAttribute('data-y'))).toFixed(2)+')');
  });
  }
  orbFarApplyRot();   /* R5: the far worlds ride their own slow orbit (🛰, reversible) */
@@ -15857,31 +15944,53 @@ function orbFarPos(a,rx,ry,deg,cx,cy){
  if(orb3dOn()){const p=orbDepthPos(0,th*180/Math.PI,cx,cy,rx,ORB_FAR_KY);return {x:p.x,y:p.y,s:p.s,o:p.o,z:p.z};}
  return {x:cx+Math.cos(th)*rx,y:cy+Math.sin(th)*ry,s:1,o:1,z:0};
 }
-const ORB_SUN_RX=300,ORB_SUN_RY=150;   /* the sun's sky ellipse about the planet — fits the 840×520 box (a circle would leave it) */
+/* ORBIT FEEDBACK R6 (20j) — KEPLER ORBITS (client, Aug 21, verbatim: "each of the planets including
+   the central planet are orbiting the sun in a unique, lopsided ellipses. Since the central planet is
+   fixed in the center, it will look like … that the sun is orbiting (the slowest orbit of all) in a
+   lopsided ellipses in a tighter ellipses than the other orbits … There should be no constraint
+   about the planets other than the central one to not go off-screen"). orbKepler puts the FOCUS at
+   the origin: the sun rides a small lopsided ellipse with the still planet at its focus; every far
+   world rides its own bigger lopsided ellipse with the SUN at the focus — unique axes, tilt, phase
+   and pace per world, unclamped (the camera zooms). Pure. */
+const ORB_SUN_ORBIT={rx:190,ry:128,phi:-0.35,rate:0.22};   /* the sun's orbit about the planet — the tightest and the slowest */
+function orbKepler(rx,ry,phi,th){
+ /* a point on the ellipse (rx,ry) rotated by phi whose NEAR focus sits at the origin */
+ const c=Math.sqrt(Math.max(0,rx*rx-ry*ry));
+ const ex=rx*Math.cos(th)-c,ey=ry*Math.sin(th);
+ return {x:ex*Math.cos(phi)-ey*Math.sin(phi),y:ex*Math.sin(phi)+ey*Math.cos(phi)};
+}
 function orbSunPos(a,deg,cx,cy){
- /* the sun's LIVE place: its rest angle a turned by the far worlds' angle, on the sky ellipse — pure */
- const th=a+deg*Math.PI/180;
- return {x:cx+Math.cos(th)*ORB_SUN_RX,y:cy+Math.sin(th)*ORB_SUN_RY};
+ /* the sun's LIVE place: its rest angle turned by the far worlds' angle at the sun's own slow rate, on its lopsided ellipse about the planet — pure */
+ const k=orbKepler(ORB_SUN_ORBIT.rx,ORB_SUN_ORBIT.ry,ORB_SUN_ORBIT.phi,a+deg*ORB_SUN_ORBIT.rate*Math.PI/180);
+ return {x:cx+k.x,y:cy+k.y};
+}
+function orbFarKepler(i,n,a){
+ /* world i of n: its own unique lopsided orbit about the SUN — axes grow with i, the tilt is its doorway's direction, the pace falls with size (Kepler-ish) */
+ const rx=210+i*42,ry=rx*(0.55+0.1*(i%4)),phi=a+0.45*i,rate=1.4/Math.sqrt(1+i*0.6);
+ return {rx,ry,phi,rate};
 }
 function orbSunApply(){
- const sun=document.getElementById('orbSunG');if(!sun)return;
+ const sun=document.getElementById('orbSunG');if(!sun)return null;
  const geo=orbState.geo||{cx:350,cy:282};
  const d=orbState.farOrbit?(orbState.farDeg||0):0;
  const p=orbSunPos(+sun.getAttribute('data-a')||0,d,geo.cx,geo.cy);
  sun.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')');
  const sp=sun.querySelector('.orbSunSpin');if(sp)sp.setAttribute('transform','rotate('+((orbState.rotDeg||0)*1.6).toFixed(2)+')');   /* the face turns with the moons' angle — visible even when the far worlds are fixed */
+ const og=document.getElementById('orbOrbitsG');if(og)og.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')');   /* the worlds' orbit paths ride with the sun */
+ return p;
 }
 function orbFarApplyRot(){
- orbSunApply();   /* R5b: the sun rides the same motion as the far worlds */
- const geo=orbState.geo||{};
+ const geo=orbState.geo||{cx:350,cy:282};
+ const sunP=orbSunApply()||{x:geo.cx,y:geo.cy};   /* R6: the far worlds orbit the SUN */
+ const d=orbState.farOrbit?(orbState.farDeg||0):0;
  document.querySelectorAll('#orbFarG .orbFar').forEach(f=>{
-  const a=+f.getAttribute('data-a'),rx=+f.getAttribute('data-rx'),ry=+f.getAttribute('data-ry');
-  if(!isFinite(a)||!isFinite(rx))return;
-  const p=orbFarPos(a,rx,ry,orbState.farOrbit?(orbState.farDeg||0):0,geo.cx,geo.cy);
-  f.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')'+(p.s!==1?' scale('+p.s.toFixed(3)+')':''));
+  const a=+f.getAttribute('data-a'),rx=+f.getAttribute('data-rx'),ry=+f.getAttribute('data-ry'),phi=+f.getAttribute('data-phi')||0,rate=+f.getAttribute('data-rate')||1;
+  if(!isFinite(a)||!isFinite(rx)||f.classList.contains('orbGoing'))return;   /* R7: the arriving world belongs to orbTripAnim */
+  const k=orbKepler(rx,ry,phi,a+d*rate*Math.PI/180);
+  const p={x:sunP.x+k.x,y:sunP.y+k.y,s:1,o:1};
+  f.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')');
   if(f.hasAttribute('data-hold'))return;   /* the flight owns this world's opacity until it lands */
-  if(orb3dOn()){f.style.opacity=(p.o*(f.classList.contains('orbFarMinor')?.6:1)).toFixed(2);f.setAttribute('data-dz','1');}
-  else if(f.hasAttribute('data-dz')){f.style.opacity='';f.removeAttribute('data-dz');}
+  if(f.hasAttribute('data-dz')){f.style.opacity='';f.removeAttribute('data-dz');}
  });
 }
 function orb3dOn(){
@@ -15907,14 +16016,13 @@ function orbDepthPos(a,rotDeg,cx,cy,rr,ky){
 function orbMoonNow(el){
  /* a moon's CURRENT map position — its resting data-x/y turned by the live rotation */
  const geo=orbState.geo||{cx:0,cy:0};
- const x=+el.getAttribute('data-x'),y=+el.getAttribute('data-y');
- const dx=x-geo.cx,dy=y-geo.cy;
+ if(orbState.view==='circles')return {x:+el.getAttribute('data-x'),y:+el.getAttribute('data-y')};
+ const lp=orbMoonPos(el,orbState.rotDeg||0);   /* R7 [45]: the layout's live place */
  if(orb3dOn()){   /* R3: on the tilted orbit */
-  const p=orbDepthPos(Math.atan2(dy,dx),orbState.rotDeg||0,geo.cx,geo.cy,Math.hypot(dx,dy),ORB_3D_KY);
+  const p=orbDepthPos(lp.th,0,geo.cx,geo.cy,lp.r,ORB_3D_KY);
   return {x:p.x,y:p.y};
  }
- const d=(orbState.view!=='circles'?(orbState.rotDeg||0):0)*Math.PI/180;
- return {x:geo.cx+dx*Math.cos(d)-dy*Math.sin(d),y:geo.cy+dx*Math.sin(d)+dy*Math.cos(d)};
+ return {x:lp.x,y:lp.y};
 }
 function orbRoadPath(sx,sy,ex,ey){
  /* the dotted road is SLIGHTLY CURVED SPACE (client, Aug 20): one quadratic bow whose
@@ -16018,90 +16126,70 @@ function orbTripFrom(tonic,minor,psych){
  if(x==null)return null;
  return {x,y,far:fp,key};
 }
+function orbRoadsFlowSync(){
+ /* R7 [40] (client, Aug 21: "When the user turns off 'orbiting' that should turn on the dotted
+    lines slowly moving around the moons and towards the new planet where they lead"): 🔄 off =
+    the roads' dashes flow (a CSS dash-offset animation, toward the planet each road leads to). */
+ const svg=document.querySelector('#orbMapIn svg');if(!svg)return;
+ svg.classList.toggle('orbRoadsFlow',orbState.view!=='circles'&&!orbState.rotate);
+}
 function orbTripAnim(from,done){
- /* ORBIT FEEDBACK R2 — THE CLICK TRANSITION (client, Aug 20, verbatim: "the current
-    planet and moons rotate to the left of the screen and get smaller while the new
-    planet to the right of the screen rotates to the center and gets bigger … based on
-    where the moon is at that moment"). Two layers: the OLD system is a clone of the
-    outgoing SVG, laid over the box and flown out AWAY from the doorway — smaller,
-    turning, partly out of frame (the box clips); the NEW system is the re-rendered SVG,
-    which starts where the far world stood (its size, its side) and flies to the centre
-    as it grows. Transforms only, on the SVG elements — #orbMapIn is left to the 🚀
-    Pilot camera and orbZoomAnim(), which this does not touch. With no direction (the
-    map had no world for the key) it is a plain cross-fade. */
+ /* ORBIT FEEDBACK R7 [41] — THE ARRIVAL (client, Aug 21, verbatim: "just that planet should
+    drift towards the center, getting larger until it's the same size as the current planet.
+    If it overlaps anything on the way it should be opaque so we can't see behind it. Once it
+    is right in the center, eclipsing the previous planet, only then should the new moons and
+    new dotted lines and new planets populate the window"). So: the REAL far world <g> is
+    lifted to the top of the old SVG, given an opaque backing disc, and driven by rAF from its
+    place to (cx,cy) while it scales to bodyR/pr — nothing else moves or fades. ONLY when it
+    sits dead centre does done() (renderOrb) run; the new map's moons, roads, far worlds and
+    orbit paths then fade in around the planet that is already there. Replaces the two-system
+    fly-out of R2–R5 (the ship no longer rides the flight — it simply reappears on the new map).
+    With no world to arrive from (the map had none for the key) it is a plain cross-fade. */
  const mi=document.getElementById('orbMapIn');
  const old=mi&&mi.querySelector('svg');
  if(!old||orbState.tripAnim||orbState.view==='circles'){if(done)done();return;}   /* Circles "is fine" — a plain redraw there */
  const geo=orbState.geo||{cx:350,cy:282,r:118};
- const sc=orbShipScale();
- const oldSh=orbState.shown?{tonic:orbState.shown.tonic,minor:orbState.shown.minor}:null;
- const ghost=old.cloneNode(true);
- ghost.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
- ghost.querySelectorAll('.orbFurn,.orbFx,#orbVarSat').forEach(e=>e.remove());   /* R5: the sun, the lane, the tip and the rings stay where they are — only the SYSTEM flies */
- if(from&&from.key)ghost.querySelectorAll('.orbFar[data-far="'+from.key+'"],.orbRoad[data-far="'+from.key+'"],.orbRoadIn[data-far="'+from.key+'"]').forEach(e=>e.remove());   /* the world being flown to is not leaving — it is arriving; the other far worlds leave with the old system (R4: they are all on the map now) */
+ const bodyR=orbState.bodyR||58;
+ const far=from&&from.key?old.querySelector('#orbFarG .orbFar[data-far="'+from.key+'"]'):null;
+ const populate=()=>{
+  /* the new map: the planet is already in place — everything AROUND it populates now */
+  if(done)done();
+  const nu=document.querySelector('#orbMapIn svg');
+  if(nu){const parts=nu.querySelectorAll('#orbMoonG,#orbRoadG,#orbFarG,#orbOrbitsG,.orbFurn,.orbCap');
+   parts.forEach(e=>{e.style.transition='none';e.style.opacity='0';});
+   void nu.getBoundingClientRect();
+   parts.forEach(e=>{e.style.transition='opacity .55s ease';e.style.opacity='1';});
+   setTimeout(()=>{parts.forEach(e=>{if(e.isConnected){e.style.transition='';e.style.opacity='';}});},620);}
+ };
+ if(!far){
+  orbState.tripAnim=true;
+  old.style.transition='opacity .3s ease';old.style.opacity='0';
+  setTimeout(()=>{orbState.tripAnim=false;populate();},320);
+  return;
+ }
+ const m=/translate\(\s*([-\d.]+)[ ,]+([-\d.]+)/.exec(far.getAttribute('transform')||'');
+ const x0=m?+m[1]:from.x,y0=m?+m[2]:from.y;
+ const pr=+far.getAttribute('data-pr')||42;
+ const sEnd=bodyR/pr;
  orbState.tripAnim=true;
- if(done)done();
- const mi2=document.getElementById('orbMapIn');
- const wrap=document.getElementById('orbCam')||document.getElementById('orbMapWrap');   /* R4: inside the pan/zoom camera, so the flight pans and zooms with the map */
- const nu=mi2&&mi2.querySelector('svg');
- if(!nu||!wrap){orbState.tripAnim=false;return;}
- let ux=1,uy=0;
- if(from){const dx=from.x-geo.cx,dy=from.y-geo.cy,L=Math.hypot(dx,dy);if(L>1){ux=dx/L;uy=dy/L;}}
- const fx=from?(from.far?from.far.x:geo.cx+ux*(geo.r+150)):geo.cx;
- const fy=from?(from.far?from.far.y:geo.cy+uy*(geo.r+150)):geo.cy;
- const s0=from?Math.max(.28,Math.min(.6,((from.far?from.far.pr:42)+13)/geo.r)):.85;
- const D=geo.r+190;   /* how far the old world flies when it has no world to shrink into: its edge ends past the frame */
- /* R5: where the OLD system lands — its own far world on the new map, if the new key has one */
- let homeFar=null;
- if(oldSh){const hk=oldSh.tonic+':'+(oldSh.minor?1:0)+':0';const hf=nu.querySelector('#orbFarG .orbFar[data-far="'+hk+'"]');
-  if(hf){const m=/translate\(\s*([-\d.]+)[ ,]+([-\d.]+)/.exec(hf.getAttribute('transform')||'');if(m)homeFar={el:hf,x:+m[1],y:+m[2],pr:+hf.getAttribute('data-pr')||50};}}
- if(homeFar){homeFar.el.style.opacity='0';homeFar.el.setAttribute('data-hold','1');}   /* the ghost IS that world until it lands */
- nu.querySelectorAll('.orbFurn').forEach(e=>{e.style.transition='none';e.style.opacity='0';});
- const org=(geo.cx*sc).toFixed(1)+'px '+(geo.cy*sc).toFixed(1)+'px';
- const lay=document.createElement('div');
- lay.className='orbTripGhost';
- lay.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
- ghost.style.cssText='display:block;width:100%;max-width:840px;transform-origin:'+org+';transition:none;';
- lay.appendChild(ghost);
- wrap.appendChild(lay);
- /* R5 (20g) — THE SHIP IS THE FLIGHT (client, Aug 20: "the spaceship riding the road should be the
-    flight... all the while the spaceship is front and center"): it rides a curved road from where
-    it is to the centre of the arriving planet for the whole 860ms, above both systems, while the
-    old one shrinks away and the new one grows in. (20e hid it for the flight.) */
- const ship=document.getElementById('orbShip');
- if(ship){ship.style.opacity='';ship.style.zIndex='3';orbShipRideTo(geo.cx,geo.cy,860,null);}
- nu.style.transition='none';
- nu.style.transformOrigin=org;
- nu.style.transform='translate('+((fx-geo.cx)*sc).toFixed(1)+'px,'+((fy-geo.cy)*sc).toFixed(1)+'px) rotate('+(from?16:0)+'deg) scale('+s0.toFixed(3)+')';
- nu.style.opacity=from?'.55':'0';
- void nu.getBoundingClientRect();   /* commit the start pose before the flight */
- const ease='cubic-bezier(.4,.05,.3,1)';
- nu.style.transition='transform .78s '+ease+', opacity .5s ease';
- ghost.style.transition='transform .78s '+ease+', opacity .7s ease';
- requestAnimationFrame(()=>{
-  nu.style.transform='none';nu.style.opacity='1';
-  if(homeFar){
-   const gs=Math.max(.22,Math.min(.5,homeFar.pr/(geo.r+22)));
-   ghost.style.transform='translate('+((homeFar.x-geo.cx)*sc).toFixed(1)+'px,'+((homeFar.y-geo.cy)*sc).toFixed(1)+'px) rotate(-10deg) scale('+gs.toFixed(3)+')';
-   ghost.style.opacity='.85';
-  }else{
-   ghost.style.transform=from?('translate('+(-ux*D*sc).toFixed(1)+'px,'+(-uy*D*sc).toFixed(1)+'px) rotate(-22deg) scale(.4)'):'scale(.9)';
-   ghost.style.opacity=from?'.25':'0';
-  }
-  nu.querySelectorAll('.orbFurn').forEach(e=>{e.style.transition='opacity .5s ease .3s';e.style.opacity='1';});
- });
- setTimeout(()=>{
-  /* the hand-over: the ghost fades into the world it became */
-  ghost.style.transition='opacity .22s ease';ghost.style.opacity='0';
-  if(homeFar&&homeFar.el&&homeFar.el.isConnected){homeFar.el.style.transition='opacity .22s ease';homeFar.el.style.opacity='';}
- },640);
- setTimeout(()=>{
-  lay.remove();
-  const n3=document.querySelector('#orbMapIn svg');if(n3){n3.style.transition='';n3.style.transform='';n3.style.opacity='';n3.style.transformOrigin='';n3.querySelectorAll('.orbFurn').forEach(e=>{e.style.transition='';e.style.opacity='';});}
-  if(homeFar&&homeFar.el&&homeFar.el.isConnected){homeFar.el.style.transition='';homeFar.el.style.opacity='';homeFar.el.removeAttribute('data-hold');}
-  const sh=document.getElementById('orbShip');if(sh){sh.style.opacity='';}
-  orbState.tripAnim=false;
- },880);
+ /* lift it above everything in the old map; make it opaque */
+ far.classList.add('orbGoing');
+ far.removeAttribute('opacity');
+ const back=document.createElementNS('http://www.w3.org/2000/svg','circle');
+ back.setAttribute('r',pr);back.setAttribute('fill','#0b0d14');back.setAttribute('class','orbGoingBack');
+ far.insertBefore(back,far.firstChild);
+ const road=old.querySelector('#orbRoadG .orbRoad[data-far="'+from.key+'"]');if(road)road.style.opacity='0';
+ old.appendChild(far);
+ const T0=performance.now(),DUR=900;
+ const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+ const step=now=>{
+  const t=Math.min(1,(now-T0)/DUR),e=ease(t);
+  const x=x0+(geo.cx-x0)*e,y=y0+(geo.cy-y0)*e,sc=1+(sEnd-1)*e;
+  far.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+') scale('+sc.toFixed(3)+')');
+  if(t<1&&far.isConnected)requestAnimationFrame(step);
+  else{orbState.tripAnim=false;populate();}
+ };
+ requestAnimationFrame(step);
 }
 function orbKeyTick(){
  /* ORBIT FEEDBACK R2 — the map follows the song: when the key under the playhead stops
@@ -16134,10 +16222,18 @@ function orbCamApply(){
 function orbCamZoomAt(k,mx,my){
  /* zoom by k about the point (mx,my) — box pixels — pure arithmetic on the camera */
  const c=orbState.cam||(orbState.cam={x:0,y:0,s:1});
- const s1=Math.max(.45,Math.min(4.5,c.s*k));
+ const s1=Math.max(orbCamMinZoom(),Math.min(4.5,c.s*k));   /* R7 [44]: the floor comes from the widest orbit */
  const r=s1/c.s;
  c.x=mx-(mx-c.x)*r;c.y=my-(my-c.y)*r;c.s=s1;
  orbCamApply();
+}
+function orbCamMinZoom(){
+ /* R7 [44] (client, Aug 21: "when the user is the most zoomed out they can be, it's ok if a planet
+    goes 60% outside of the frame of the viewing window but no more than that"): the floor is the
+    zoom at which the farthest-ranging world is 60% out of the box at its farthest — never further. */
+ const reach=orbState.farReach||0;if(!(reach>0))return .45;
+ const half=Math.min(420,260);   /* the box is 840×520 */
+ return Math.min(.45,Math.max(.12,half/(reach-0.2*58)));
 }
 function orbCamReset(){orbState.cam={x:0,y:0,s:1};orbCamApply();}
 function orbParseKey(txt){
@@ -16285,7 +16381,7 @@ function renderOrb(){
     worlds' own angle (orbSunApply from orbFarApplyRot), its face turning; the guide is its path. */
  const sunA=Math.atan2(sunY-cy,sunX-cx);
  const sunP=orbSunPos(sunA,0,cx,cy);
- sunS+='<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+ORB_SUN_RX+'" ry="'+ORB_SUN_RY+'" fill="none" stroke="rgba(255,255,255,.045)"/>'
+ sunS+='<g transform="translate('+cx+' '+cy+') rotate('+(ORB_SUN_ORBIT.phi*180/Math.PI).toFixed(2)+')"><ellipse cx="'+(-Math.sqrt(ORB_SUN_ORBIT.rx*ORB_SUN_ORBIT.rx-ORB_SUN_ORBIT.ry*ORB_SUN_ORBIT.ry)).toFixed(1)+'" cy="0" rx="'+ORB_SUN_ORBIT.rx+'" ry="'+ORB_SUN_ORBIT.ry+'" fill="none" stroke="rgba(255,255,255,.05)"/></g>'
   +(twin?'':d3?'<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+R+'" ry="'+(R*ORB_3D_KY).toFixed(1)+'" fill="none" stroke="rgba(255,255,255,.06)"/>':'<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.05)"/>');
  if(d3&&!deep)sunS+='<defs><radialGradient id="orbPlanetGrad" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="#4a3c22"/><stop offset="55%" stop-color="#1d1a17"/><stop offset="100%" stop-color="#07080c"/></radialGradient><clipPath id="orbCapClip"><rect x="'+(cx-bodyR-3)+'" y="'+(cy-bodyR-3)+'" width="'+(bodyR*2+6)+'" height="'+(bodyR+3)+'"/></clipPath></defs>';   /* 🌐 3D — the 20f skin, preserved */
  if(deep){
@@ -16316,11 +16412,11 @@ function renderOrb(){
  }
  const planetFill=d3?'url(#orbPlanetGrad)':null;
  const ringBack=deep?'<path d="M'+(cx-bodyR*1.75)+' '+cy+' A'+(bodyR*1.75)+' '+(bodyR*.5)+' 0 0 1 '+(cx+bodyR*1.75)+' '+cy+'" fill="none" stroke="rgba(226,200,150,.28)" stroke-width="5" pointer-events="none"/>':'';   /* R5: the planet's ring, the half behind it */
- const capFor=(lbl,sub)=>deep?'<g clip-path="url(#orbCapClip)" pointer-events="none"><circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="url(#orbPlanetGrad)" stroke="rgba(232,163,61,.55)" stroke-width="1.6"/></g>'
+ const capFor=(lbl,sub,lblSvg)=>deep?'<g clip-path="url(#orbCapClip)" pointer-events="none"><circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="url(#orbPlanetGrad)" stroke="rgba(232,163,61,.55)" stroke-width="1.6"/></g>'
   +'<path d="M'+(cx-bodyR*1.75)+' '+cy+' A'+(bodyR*1.75)+' '+(bodyR*.5)+' 0 0 0 '+(cx+bodyR*1.75)+' '+cy+'" fill="none" stroke="rgba(226,200,150,.42)" stroke-width="5" pointer-events="none"/>'
-  +'<g pointer-events="none"><text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="#fff3d0" style="text-shadow:0 0 6px rgba(0,0,0,.9);">'+lbl+'</text></g>'
+  +'<g pointer-events="none">'+(lblSvg?lblSvg.replace(/fill="var\(--accent\)"/g,'fill="#fff3d0" style="text-shadow:0 0 6px rgba(0,0,0,.9);"'):'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="#fff3d0" style="text-shadow:0 0 6px rgba(0,0,0,.9);">'+lbl+'</text>')+'</g>'
   :d3?'<g clip-path="url(#orbCapClip)" pointer-events="none"><circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="url(#orbPlanetGrad)" stroke="var(--accent)" stroke-width="2.2"/></g>'
-  +'<g pointer-events="none"><text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+lbl+'</text></g>':'';
+  +'<g pointer-events="none">'+(lblSvg||'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+lbl+'</text>')+'</g>':'';
  /* ☀ the sun — the essence aboard (Keys &amp; Chords is the only essence docked so far;
     the essence selector rides the R4 round) */
  sunS+='<g id="orbSunG" data-a="'+sunA.toFixed(4)+'" transform="translate('+sunP.x.toFixed(1)+' '+sunP.y.toFixed(1)+')"><title>The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤). From the still planet it seems to wheel slowly round the sky, turning as it goes.</title>'
@@ -16441,12 +16537,19 @@ function renderOrb(){
  });
  }else{
  /* ============ KEY LEVEL — the R1 layout (moons = parts, or 🧬 variables) ============ */
- /* the planet — the current object (translucent in cinematic Orbit Mode) */
+ /* the planet — the current object (translucent in cinematic Orbit Mode). R6 (20j): with BOTH
+    Limitation = Creativity scales ON the planet is named for both (client, Aug 21: "the planet
+    will just say both keys for its name. For example: C lydian / A melodic minor") — two lines. */
+ const limSc=orbLimScales(cur,pcs),limNames=limSc.map(x=>x.name);
+ const bothOn=!!(orbState.lim.scale&&orbState.lim.scale.home&&orbState.lim.scale.rel);
+ const planetLbl=bothOn
+  ?'<text x="'+cx+'" y="'+(cy-7)+'" text-anchor="middle" font-size="12.5" font-weight="800" fill="var(--accent)">'+limNames[0]+' /</text><text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-size="12.5" font-weight="800" fill="var(--accent)">'+limNames[1]+'</text>'
+  :'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>';
  nodes+=ringBack+'<g'+(equal||d3?'':' opacity=".72"')+'><title>The planet is the CURRENT OBJECT — the key the song is in right now. Its diatonic chords orbit as moons'+(d3?' — back to front on the 3D skin, passing behind it and in front':'')+'; its parts ride the planet lane below.</title>'
   +'<circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="'+(planetFill||('rgba(232,163,61,'+(equal?'.09':'.05')+')'))+'" stroke="'+(deep?'rgba(232,163,61,.55)':'var(--accent)')+'" stroke-width="'+(deep?1.6:2.2)+'"/>'
-  +'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>'
-  +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+(cur.minor?'minor':'major')+' — you are here</text></g>';
- capS=capFor(PCN[cur.tonic]+(cur.minor?'m':''));
+  +planetLbl
+  +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+(bothOn?'both scales':(cur.minor?'minor':'major'))+' — you are here</text></g>';
+ capS=capFor(bothOn?limNames[0]+' / '+limNames[1]:PCN[cur.tonic]+(cur.minor?'m':''),null,planetLbl);
  const pivotPts=[];
  if(varM){
  /* GEMS R2 ⑦ — “Use variables as the moons”: the ring swaps from the planet's PARTS
@@ -16473,6 +16576,7 @@ function renderOrb(){
  /* the moons — the 7 diatonic chords orbit the planet (Equal Orbit Mode: one size) */
  slots.forEach((s,k)=>{
   const tri=scaleDegreeTriad(pcs,k);if(!tri)return;
+  if(!orbLimOn('home',k))return;   /* R6: LIMITATION = CREATIVITY — an unticked degree grows no moon */
   const root=T(cur.tonic+s.pc);
   const roman=degRomanW(k,tri.iv,n);
   const x=cx+Math.cos(s.angle)*R,y=cy+Math.sin(s.angle)*R;
@@ -16485,6 +16589,29 @@ function renderOrb(){
    +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="700" fill="'+(isUsed?(deep?'#fff3d0':'var(--accent)'):(deep?'#f4f6fb':'#c8cde0'))+'"'+(deep?' style="text-shadow:0 0 5px rgba(0,0,0,.95);"':'')+'>'+roman+'</text>'
    +'<text x="'+x.toFixed(1)+'" y="'+(y+11.5).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+(deep?'#e2e6f2':'#8b93a7')+'"'+(deep?' style="text-shadow:0 0 4px rgba(0,0,0,.95);"':'')+'>'+chipLbl(root,tri.iv)+'</text></g>';
  });
+ /* R6 (20j) — the same-root relative's TICKED degrees grow moons too (LIMITATION = CREATIVITY):
+    borrowed chords, dashed, at their pitch's angle — a shared root sits just outside its
+    diatonic twin (R+30) so both stay clickable. They are clicks[] chords like any other. */
+ {
+  const relSc=orbLimScales(cur,pcs)[1];
+  relSc.pcs.forEach((pc,k)=>{
+   const tri=scaleDegreeTriad(relSc.pcs,k);if(!tri)return;
+   if(!orbLimOn('rel',k))return;
+   const root=T(relSc.tonic+pc);
+   const roman=degRomanW(k,tri.iv,relSc.pcs.length);
+   const di=pcs.indexOf(pc);
+   const ang=di>=0?slots[di].angle:orbPivotAngle(pcs,pc);
+   const rr=di>=0?R+30:R;
+   const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;
+   const idx=clicks.length;
+   clicks.push({k:'chord',r:root,iv:tri.iv.slice(),lbl:roman,deg:-1});
+   const sel=orbState.sel===idx;
+   moonS+='<g class="orbNode orbMoonN orbRelN" data-orb="'+idx+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'"><title>'+PCN[root]+' ('+roman+' of '+relSc.name+', the same-root relative) — a borrowed colour you switched on in Limitation = Creativity. Click = the chord under the landing is replaced with it.</title>'
+    +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(equal?15:13)+'" fill="rgba(20,22,28,.92)" stroke="'+(sel?'var(--accent)':'#7b8194')+'" stroke-width="'+(sel?2.6:1.2)+'" stroke-dasharray="4 3"/>'
+    +'<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#c8cde0">'+roman+'</text>'
+    +'<text x="'+x.toFixed(1)+'" y="'+(y+10.5).toFixed(1)+'" text-anchor="middle" font-size="7" fill="#8b93a7">'+chipLbl(root,tri.iv)+'</text></g>';
+  });
+ }
  /* pivot moons — dashed, on the same ring (the alternatives&#8217; doorways). ORBIT
     FEEDBACK R1: the GREY DOORWAYS sit BETWEEN the moons — a diatonic ii–V just before
     the moon it leads into; the 🎨 chromatic ones on an outer ring at their pitch;
@@ -16537,7 +16664,7 @@ function renderOrb(){
     redrawn every tick so it follows its moon round (orbRoadsRefresh). Each <g> still
     carries translate(px py), which is what orbTripFrom() reads for the flight; hover and
     selection only BRIGHTEN (.on). They stay in clicks[] in the same slot as ever. */
- let farS='',roadS='';
+ let farS='',farReach=0,roadS='',orbitS='';
  /* ORBIT FEEDBACK R5 (20g) — THE PROPORTIONS OF HIS PICTURE (client, Aug 20, with the screenshot
     "This is what it used to look like"): the FOUR Weber neighbours are the big far worlds again
     (50 · psych 38, out at R+140, their tag beneath — Parallel · Dominant · Relative ·
@@ -16548,22 +16675,30 @@ function renderOrb(){
     flight and the roads; data-a/rx/ry let orbFarApplyRot move it. 🧬 variables up = no
     roads, no worlds ("When I select Variables As Moons, I still see dotted paths to key
     changes. This doesn't make sense"). */
- const placed=[{x:sunX,y:sunY}];
+ const placed=[{x:sunP.x,y:sunP.y}];
  const farList=varM?[]:ana.planets;
  farList.forEach((pl,i)=>{
   const pvp=pivotPts.find(p=>p.pv.dest&&p.pv.dest.tonic===pl.tonic&&p.pv.dest.minor===pl.minor&&!!p.pv.dest.psych===!!pl.psych);
   const big=pl.kind==='weber'||pl.psych||pl.kind==='ghost'||pl.kind==='user';
-  const rx=big?R+140:R+190,ry=big?(d3?(R+140)*ORB_FAR_KY:Math.min(R+140,cy-110)):(d3?(R+190)*ORB_FAR_KY:Math.min(R+190,cy-70));   /* the ellipses clear the moon ring; at the very bottom a world may dip behind the planet lane, as in his picture */
-  let a=pvp?pvp.a:(-Math.PI/2+((i+0.5)/Math.max(4,farList.length))*Math.PI*2);
-  let px=0,py=0,tries=0;
+  /* R6 (20j): KEPLER — world i rides its own lopsided ellipse about the SUN (orbFarKepler), its
+     phase chosen so it starts out along its doorway's direction from the planet; unclamped. */
+  const dirA=pvp?pvp.a:(-Math.PI/2+((i+0.5)/Math.max(4,farList.length))*Math.PI*2);
+  const kep=orbFarKepler(i,farList.length,dirA);
+  const rx=kep.rx,ry=kep.ry,phi=kep.phi,rate=kep.rate;
   const fd=orbState.farOrbit?(orbState.farDeg||0):0;
-  for(;;){
-   const p0=orbFarPos(a,rx,ry,fd,cx,cy);px=p0.x;py=p0.y;
-   if(!placed.some(q=>(q.x-px)*(q.x-px)+(q.y-py)*(q.y-py)<(big?92:48)*(big?92:48))||++tries>16)break;
-   a+=0.3;
+  let a=0,px=0,py=0,best=1e18;
+  for(let t=0;t<48;t++){   /* the phase that puts the world nearest its doorway's ray at t=0 */
+   const th=t/48*Math.PI*2;const k=orbKepler(rx,ry,phi,th);const x=sunP.x+k.x,y=sunP.y+k.y;
+   const ang=Math.atan2(y-cy,x-cx);let dA=Math.abs(((ang-dirA)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI);
+   const dist=Math.hypot(x-cx,y-cy);const score=dA*300+Math.abs(dist-(R+150))*.6+(placed.some(q=>Math.hypot(q.x-x,q.y-y)<80)?400:0);
+   if(score<best){best=score;a=th;px=x;py=y;}
   }
+  a-=fd*rate*Math.PI/180;   /* so that at the CURRENT far angle it sits where we just chose */
+  const kk=orbKepler(rx,ry,phi,a+fd*rate*Math.PI/180);px=sunP.x+kk.x;py=sunP.y+kk.y;
+  orbitS+='<g transform="rotate('+(phi*180/Math.PI).toFixed(2)+')"><ellipse cx="'+(-Math.sqrt(rx*rx-ry*ry)).toFixed(1)+'" cy="0" rx="'+rx+'" ry="'+ry+'" fill="none" stroke="rgba(255,255,255,'+(big?'.05':'.035')+')"/></g>';
   placed.push({x:px,y:py});
-  const pr=pl.psych?38:big?50:20;
+  const pr=pl.psych?38:big?50:26;   /* R7 [42]: every far world smaller than the planet (58), bigger than any moon (≤19) */
+  farReach=Math.max(farReach,rx+Math.sqrt(Math.max(0,rx*rx-ry*ry))+ORB_SUN_ORBIT.rx+Math.sqrt(ORB_SUN_ORBIT.rx**2-ORB_SUN_ORBIT.ry**2)+pr);   /* R7 [44]: the widest any world ranges from the planet (its aphelion about the sun + the sun's aphelion about the planet) */
   const grey=pl.kind==='user';
   const col=grey?'#5a6070':pl.psych?'#c77dff':'#8b93a7';
   const idx=clicks.length;
@@ -16582,7 +16717,7 @@ function renderOrb(){
   roadS+='<path class="orbRoad'+(sel?' on':'')+'" data-far="'+farKey+'" d="'+orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr)+'" fill="none" stroke="'+col+'" stroke-width="'+(big?1.5:1.1)+'" stroke-dasharray="5 5"/>'
    +(pvp?'<path class="orbRoadIn'+(sel?' on':'')+'" data-far="'+farKey+'" d="M'+(cx+Math.cos(Math.atan2(sy-cy,sx-cx))*(bodyR+3)).toFixed(1)+' '+(cy+Math.sin(Math.atan2(sy-cy,sx-cx))*(bodyR+3)).toFixed(1)+' L'+sx.toFixed(1)+' '+sy.toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="1.2" stroke-dasharray="5 5"/>':'');
   const fill3=deep?(pl.psych?'url(#orbPsychGrad)':'url(#orbFarGrad)'):'rgba(20,22,28,.55)';
-  farS+='<g class="orbNode orbFar'+(big?'':' orbFarMinor')+(sel?' on':'')+'" data-orb="'+idx+'" data-far="'+farKey+'" data-a="'+a.toFixed(4)+'" data-rx="'+rx.toFixed(1)+'" data-ry="'+ry.toFixed(1)+'" data-pr="'+pr+'" data-col="'+col+'" transform="translate('+px.toFixed(1)+' '+py.toFixed(1)+')"'+(grey?' opacity=".62"':'')+'><title>'+PCN[pl.tonic]+' '+(pl.minor?'Minor':'Major')+(pl.psych?' — a Psych-out world: the song only visits for a moment':' — a destination planet with its own diatonic ring')+(pl.tag?' · Weber: '+pl.tag:'')+'. Click = it zooms to the centre and takes this planet&#8217;s place (song stopped: at the playhead · song playing: through 🧳 Upcoming Trips).</title>'
+  farS+='<g class="orbNode orbFar'+(big?'':' orbFarMinor')+(sel?' on':'')+'" data-orb="'+idx+'" data-far="'+farKey+'" data-a="'+a.toFixed(4)+'" data-rx="'+rx.toFixed(1)+'" data-ry="'+ry.toFixed(1)+'" data-phi="'+phi.toFixed(4)+'" data-rate="'+rate.toFixed(3)+'" data-pr="'+pr+'" data-col="'+col+'" transform="translate('+px.toFixed(1)+' '+py.toFixed(1)+')"'+(grey?' opacity=".62"':'')+'><title>'+PCN[pl.tonic]+' '+(pl.minor?'Minor':'Major')+(pl.psych?' — a Psych-out world: the song only visits for a moment':' — a destination planet with its own diatonic ring')+(pl.tag?' · Weber: '+pl.tag:'')+'. Click = it zooms to the centre and takes this planet&#8217;s place (song stopped: at the playhead · song playing: through 🧳 Upcoming Trips).</title>'
    +'<circle cx="0" cy="0" r="'+pr+'" fill="'+fill3+'" stroke="'+(sel?'var(--accent)':col)+'" stroke-width="'+(sel?2.4:big?1.5:1.1)+'" stroke-dasharray="6 4"'+(deep?' stroke-opacity=".55"':'')+'/>'
    +dots
    +'<text x="0" y="'+(big?4.5:3.5)+'" text-anchor="middle" font-size="'+(big?14:9.5)+'" font-weight="700" fill="'+(sel?'var(--accent)':'#e9eaef')+'"'+(deep?' style="text-shadow:0 0 5px rgba(0,0,0,.95);"':'')+'>'+PCN[pl.tonic]+(pl.minor?'m':'')+'</text>'
@@ -16591,7 +16726,9 @@ function renderOrb(){
    +'</g>';
  });
  lines+='<g id="orbRoadG">'+roadS+'</g>';
+ sunS+='<g id="orbOrbitsG" transform="translate('+sunP.x.toFixed(1)+' '+sunP.y.toFixed(1)+')">'+orbitS+'</g>';   /* R6: the worlds' orbit paths, riding the sun */
  nodes+='<g id="orbFarG">'+farS+'</g>';
+ orbState.farReach=farReach;
  }
  /* the PLANET LANE — the mini edit lane the design law asks for: the current object&#8217;s
     parts as chips; clicking one GLIDES the selection (and, since R2, the camera) to
@@ -16673,6 +16810,22 @@ function renderOrb(){
   })()
   +'</div>'
   +'<div style="flex:1;min-width:520px;">'
+  /* R6 (20j) — LIMITATION = CREATIVITY (client, Aug 21): the title, a ▶/▼ triangle, and a small lane
+     listing the song's scale and its same-root relative, one toggle per degree; only the toggled
+     degrees grow a moon. */
+  +'<div id="orbLimHead" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none;" title="Limitation = Creativity — choose which chords of this song&#8217;s scale (and its same-root relative) become moons. Fewer moons, sharper choices.">'
+  +'<span style="font-size:14px;font-weight:800;letter-spacing:.4px;color:var(--accent);">Limitation = Creativity</span>'
+  +'<span id="orbLimTri" style="font-size:12px;color:var(--accent);transition:transform .2s;display:inline-block;'+(orbState.lim.open?'transform:rotate(90deg);':'')+'">▶</span>'
+  +'<span style="font-size:10px;color:var(--dim);">'+(orbState.lim.open?'the chords that grow moons':'click to choose which chords grow moons')+'</span></div>'
+  +(orbState.lim.open?'<div id="orbLimLane" style="border:1px dashed var(--line);border-radius:8px;padding:6px 8px;margin-bottom:8px;display:flex;flex-direction:column;gap:5px;">'
+   +orbLimScales(cur,pcs).map(sc=>'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+     +'<span style="min-width:150px;font-size:11px;font-weight:700;color:'+(orbState.lim.scale[sc.id]?'var(--text)':'var(--dim)')+';">'+sc.name+' <span style="font-weight:400;color:var(--dim);font-size:9.5px;">'+sc.sub+'</span></span>'
+     +'<label class="orbLimScale" data-sc="'+sc.id+'" title="'+sc.name+' generates moons — switch off and this whole scale grows none" style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--dim);cursor:pointer;margin-right:6px;"><span class="orbSw'+(orbState.lim.scale[sc.id]?' on':'')+'"></span>'+(orbState.lim.scale[sc.id]?'ON':'OFF')+'</label>'
+     +sc.pcs.map((pc,k)=>{const tri=scaleDegreeTriad(sc.pcs,k);if(!tri)return '';orbLimOn(sc.id,k);const on=!!orbState.lim.on[sc.id][k];const root=T(sc.tonic+pc);
+       return '<label class="orbLimTog" data-sc="'+sc.id+'" data-k="'+k+'" style="display:flex;align-items:center;gap:3px;font-size:10.5px;color:'+(on?'var(--text)':'var(--dim)')+';cursor:pointer;padding:2px 6px;border:1px solid '+(on?'var(--accent)':'var(--line)')+';border-radius:10px;" title="'+PCN[root]+' — '+degRomanW(k,tri.iv,sc.pcs.length)+' of '+sc.name+'. On = it is a moon.">'
+        +'<input type="checkbox"'+(on?' checked':'')+(orbState.lim.scale[sc.id]?'':' disabled')+' style="accent-color:var(--accent);margin:0;width:11px;height:11px;">'+degRomanW(k,tri.iv,sc.pcs.length)+' <span style="color:var(--dim);font-size:9px;">'+chipLbl(root,tri.iv)+'</span></label>';}).join('')
+     +'</div>').join('')
+   +'</div>':'')
   +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
   +'<span class="cpchip'+(solar?' on':'')+'" id="orbView" title="Two views of the same worlds — 🪐 Solar System (GEMS: the sun is the essence, the planet the current object, the moons its parts; the 🌐 3D chip beside it is its depth skin) ↔ ⭕ the Circles wheel, exactly as it shipped. Nothing is thrown away; switching is free.">'+(solar?'🪐 Solar':'⭕ Circles')+'</span>'
   +(solar?'<span class="cpchip'+(orbState.view==='3d'?' on':'')+'" id="orb3d" title="🌐 3D — the Solar System as a different skin (ORBIT FEEDBACK R3, the 20f skin, kept as it shipped): the moons circle the planet back to front. Passing IN FRONT only their tops overlap the planet&#8217;s bottom; passing BEHIND only their bottoms hide under its top — and every moon stays clickable either way. Click again for the flat Solar view.">🌐 3D</span>'
@@ -16684,7 +16837,8 @@ function renderOrb(){
   +(solar?'<span class="cpchip'+(equal?' on':'')+'" id="orbEq" title="⚪ Equal orbit — every moon the SAME SIZE (the glowing played chords no longer larger, the doorways no larger or smaller): easier clicking, better live. It changes sizes only — the sky keeps turning if 🔄 is on. Off = the cinematic sizes (played chords bigger, a translucent planet).">⚪ Equal orbit</span>':'')
   +(solar?'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="🔄 Orbiting (default ON — the moons orbit the planet, the roads follow; the menu beside it sets the pace). Untick for the STATIONARY map — nothing animates."><input type="checkbox" id="orbRotate"'+(orbState.rotate?' checked':'')+' style="accent-color:var(--accent);">🔄 Orbiting</label>'
    +'<select id="orbRotSpeed" style="font-size:10.5px;padding:2px 4px;" title="The pace of the orbit — slow (one turn in ~2½ minutes) · normal (~1¾ minutes) · fast (~40 seconds). The far worlds turn at a third of it.">'+[['slow','🐢 slow'],['normal','🔄 normal'],['fast','🐇 fast']].map(o=>'<option value="'+o[0]+'"'+(orbState.speed===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'
-   +'<select id="orbMotion" style="font-size:10.5px;padding:2px 4px;" title="What moves (client, Aug 20: \'an option to have other planets orbit, or be fixed, or have everything be fixed\'): everything orbits — the moons AND the far worlds (the worlds at a third of the pace, as if very far away) · moons only — the worlds hold their places at the ends of their roads · everything fixed — a stationary map.">'+[['all','🛰 moons + worlds orbit'],['moons','🪐 moons orbit · worlds fixed'],['none','⏸ everything fixed']].map(o=>'<option value="'+o[0]+'"'+((orbState.rotate?(orbState.farOrbit?'all':'moons'):'none')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>':'')
+   +'<select id="orbMotion" style="font-size:10.5px;padding:2px 4px;" title="What moves (client, Aug 20: \'an option to have other planets orbit, or be fixed, or have everything be fixed\'): everything orbits — the moons AND the far worlds (the worlds at a third of the pace, as if very far away) · moons only — the worlds hold their places at the ends of their roads · everything fixed — a stationary map.">'+[['all','🛰 moons + worlds orbit'],['moons','🪐 moons orbit · worlds fixed'],['none','⏸ everything fixed']].map(o=>'<option value="'+o[0]+'"'+((orbState.rotate?(orbState.farOrbit?'all':'moons'):'none')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'
+   +'<select id="orbMoonLay" style="font-size:10.5px;padding:2px 4px;" title="The moon layout (client, Aug 21): ⭕ one ring — every moon, the greyed-out doorways included, evenly on one perfect circle · ◎ two rings in sync — the chords on the tight ring, each greyed-out moon outside on the ray of its chord (planet → ii → II on one straight line), turning together · 🌀 free orbits — every moon on its own ellipse about the planet, its own tilt and pace.">'+ORB_MOON_LAYS.map(o=>'<option value="'+o[0]+'"'+((orbState.moonLay||'ring')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>':'')
   +'<span class="cpchip" id="orbFull" title="Full Screen Animation Mode — the map fills the screen for stage projection. Esc returns (the browser&#8217;s own exit IS the spec). MIDI pads and arrow keys keep working.">⛶ Full screen</span>'
   +'<span class="cpchip'+(orbState.chromOn?' on':'')+'" id="orbChrom" title="Chromatic doorways (default OFF) — the grey moons between the moons are ii–V doorways into each diatonic chord&#8217;s key; switch this on and five more appear on the outer ring, one on every note the key leaves out (&#9837;2 · &#9837;3 · &#9837;5/&#9839;4 · &#9837;6 · &#9837;7), each a ii–V into the key rooted there. Hover any doorway to see its road; right-click to change its pivot chords.">🎨 Chromatic</span>'
   +'<span class="cpchip'+(orbState.fit?' on':'')+'" id="orbFit" title="Transform multi-tracks to fit chords (default ON) — when a click lands a chord, the melody notes under it snap to the nearest chord tone; the chord tones are the transform menu&#8217;s extension set (the Conform checkboxes in the palette toolbar: 1 · 9 · 3 · 11 · 5 · 13 · 7, ticked or not). Off = the chord changes and the notes stay as written.">🎯 Fit to chords</span>'
@@ -16706,7 +16860,7 @@ function renderOrb(){
   +'<div id="orbMapWrap" class="'+((orbState.pilot||(orbState.cam&&orbState.cam.s>=ORB_LOD_ZOOM))?'orbZoomed':'')+'" style="position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 30% 25%,#131722 0%,#0a0c12 70%);">'
   +'<div id="orbMapIn" style="transition:transform .9s ease;transform-origin:'+cx+'px '+cy+'px;position:relative;">'
   +'<div id="orbCam" style="position:relative;transform-origin:0 0;transform:'+orbCamCss()+';">'
-  +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;max-width:'+W+'px;">'
+  +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" class="'+(solar&&!orbState.rotate?'orbRoadsFlow':'')+'" style="display:block;max-width:'+W+'px;overflow:visible;">'
   +(solar?'<g class="orbFurn">'+sunS+'</g>'+lines+nodes+'<g id="orbMoonG">'+moonS+'</g>'+capS+'<g class="orbFurn">'+laneS+'</g>':lines+nodes)
   +'</svg>'
   +'<div id="orbShip" style="position:absolute;z-index:3;left:'+(cx-11)+'px;top:'+(cy-R+18)+'px;width:22px;height:26px;pointer-events:none;transition:left .35s,top .35s;transform-origin:50% 50%;filter:drop-shadow(0 0 6px rgba(232,163,61,.75));">'+ORB_SHIP_SVG+'</div>'
@@ -16754,6 +16908,17 @@ function renderOrb(){
   +'<button id="orbRec" style="padding:5px 10px;font-size:11.5px;margin-top:4px;'+(orbState.rec?'background:#8a2f3a;color:#fff;':'background:#3a3e4d;color:#e9eaef;')+'" title="Record your performance of this game — stopping drops the whole multi-track re-harmonization as ONE chords object on the Essence Shelf (△ Prism window)">'+(orbState.rec?'⏺ Recording… press to keep':'⏺ Record journey → Shelf')+'</button>'
   +'</div>'
   +'</div>';
+ /* R6 — LIMITATION = CREATIVITY: the triangle opens/closes the lane; a toggle re-grows the moons */
+ const lh=document.getElementById('orbLimHead');if(lh)lh.onclick=()=>{orbState.lim.open=!orbState.lim.open;renderOrb();};
+ B.querySelectorAll('.orbLimScale').forEach(l=>{l.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();const id=l.getAttribute('data-sc');orbState.lim.scale[id]=orbState.lim.scale[id]?0:1;orbState.sel=0;renderOrb();
+  const n=orbState.clicks.filter(c=>c.k==='chord').length;setOrbStatus('Limitation = Creativity — '+(orbState.lim.scale[id]?'':'no ')+'moons from '+orbLimScales(orbCurrentKey(),orbPcsNow()).find(x=>x.id===id).name+' · '+n+' chord'+(n===1?'':'s')+' now grow'+(n===1?'s':'')+' a moon.');});});
+ B.querySelectorAll('.orbLimTog input').forEach(cb=>{cb.addEventListener('change',ev=>{
+  const lab=cb.closest('.orbLimTog');const id=lab.getAttribute('data-sc'),k=+lab.getAttribute('data-k');
+  orbLimOn(id,k);orbState.lim.on[id][k]=cb.checked?1:0;
+  orbState.sel=0;renderOrb();
+  const n=orbState.clicks.filter(c=>c.k==='chord').length;
+  setOrbStatus('Limitation = Creativity — '+n+' chord'+(n===1?'':'s')+' now grow'+(n===1?'s':'')+' a moon.');
+ });cb.addEventListener('click',ev=>ev.stopPropagation());});
  /* pilot camera */
  const mi=document.getElementById('orbMapIn');
  if(mi&&orbState.pilot){requestAnimationFrame(()=>{mi.style.transform='scale(1.9)';});}
@@ -16902,9 +17067,10 @@ function renderOrb(){
  const d3B=document.getElementById('orb3d');if(d3B)d3B.onclick=()=>{orbState.view=orbState.view==='3d'?'solar':'3d';renderOrb();};   /* ORBIT FEEDBACK R3: the depth skin, a toggle beside the view chip */
  const dpB=document.getElementById('orbDeep');if(dpB)dpB.onclick=()=>{orbState.view=orbState.view==='deep'?'solar':'deep';renderOrb();};   /* ORBIT FEEDBACK R5: the painted 3D skin — "these things are skins of the same functionality" */
  const eB=document.getElementById('orbEq');if(eB)eB.onclick=()=>{orbState.orbitMode=equal?'orbit':'equal';renderOrb();};   /* R5: sizes only — the sky keeps turning */
- const rC=document.getElementById('orbRotate');if(rC)rC.onchange=e=>{orbState.rotate=!!e.target.checked;};
+ const rC=document.getElementById('orbRotate');if(rC)rC.onchange=e=>{orbState.rotate=!!e.target.checked;orbRoadsFlowSync();};
  const rS=document.getElementById('orbRotSpeed');if(rS)rS.onchange=e=>{orbState.speed=e.target.value||'normal';setOrbStatus('🔄 '+orbState.speed+' — '+orbRotSpeed()+'° a second; the far worlds at a third of it.');};
- const mo=document.getElementById('orbMotion');if(mo)mo.onchange=e=>{const v=e.target.value;orbState.rotate=v!=='none';orbState.farOrbit=v==='all';if(!orbState.farOrbit)orbState.farDeg=0;const rc=document.getElementById('orbRotate');if(rc)rc.checked=orbState.rotate;orbApplyRot();setOrbStatus(v==='all'?'🛰 Everything orbits — the moons, and the far worlds at a third of their pace.':v==='moons'?'🪐 The moons orbit; the far worlds hold their places at the ends of their roads.':'⏸ Everything is fixed — a stationary map.');};
+ const mo=document.getElementById('orbMotion');if(mo)mo.onchange=e=>{const v=e.target.value;orbState.rotate=v!=='none';orbState.farOrbit=v==='all';if(!orbState.farOrbit)orbState.farDeg=0;orbRoadsFlowSync();const rc=document.getElementById('orbRotate');if(rc)rc.checked=orbState.rotate;orbApplyRot();setOrbStatus(v==='all'?'🛰 Everything orbits — the moons, and the far worlds at a third of their pace.':v==='moons'?'🪐 The moons orbit; the far worlds hold their places at the ends of their roads.':'⏸ Everything is fixed — a stationary map.');};
+ const ml=document.getElementById('orbMoonLay');if(ml)ml.onchange=e=>{orbState.moonLay=e.target.value;renderOrb();setOrbStatus(e.target.value==='ring'?'⭕ One ring — every moon evenly on one perfect circle.':e.target.value==='rings'?'◎ Two rings in sync — the chords inside, each greyed-out moon outside on its chord\'s ray.':'🌀 Free orbits — every moon on its own ellipse, its own tilt and pace.');};
  if(rC)rC.addEventListener('change',()=>{const m2=document.getElementById('orbMotion');if(m2)m2.value=orbState.rotate?(orbState.farOrbit?'all':'moons'):'none';});   /* the 🔄 box and the motion menu agree */
  const fB=document.getElementById('orbFull');if(fB)fB.onclick=()=>{
   if(document.fullscreenElement){if(document.exitFullscreen)document.exitFullscreen();}
@@ -16930,7 +17096,7 @@ function renderOrb(){
    setOrbStatus('Glided to the '+(orbState.clicks[gi].lbl||'')+' moon — Enter fires it on the ⏱ boundary. Sketching in the lane never creates a new planet.');
   });
  });
- if(solar)orbApplyRot();
+ if(solar){orbMoonLayout();orbApplyRot();}   /* R7 [45]: stamp the moon layout once per rebuild, then place */
  /* GEMS R2 controls */
  const bB=document.getElementById('orbBack');if(bB)bB.onclick=()=>{if(!orbNavGo(-1))setOrbStatus('⬅ Nothing further back — this is the key level, where the fractal starts.');};
  const fB2=document.getElementById('orbFwd');if(fB2)fB2.onclick=()=>{if(!orbNavGo(1))setOrbStatus('➡ Nothing further forward — double-click a moon to zoom somewhere new.');};
