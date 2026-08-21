@@ -433,7 +433,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20h</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -15794,7 +15794,7 @@ function orbRotActive(){
  return true;
 }
 const ORB_ROT_SPEEDS={slow:2.34,normal:3.6,fast:9};   /* degrees per SECOND — the 🔄 pace menu. slow = exactly the 150ms tick's 0.35°; the others let the rAF smoother add the rest (R5, client: visible, but "even slower") */
-const ORB_FAR_RATE=0.38;
+const ORB_FAR_RATE=0.5;   /* R5b (20h): half the moons' pace — 0.38 read as still to the client ("movement only in the moons") */
 const ORB_FAR_KY=0.46;   /* the far worlds' orbit tilt on the 3D skin — flatter than the moons' so the front worlds clear the planet lane */   /* the far worlds turn at this share of the moons' pace — slower, "as if very far away" */
 function orbRotSpeed(){return ORB_ROT_SPEEDS[orbState.speed]||ORB_ROT_SPEEDS.normal;}
 function orbRotFrame(ts){
@@ -15856,7 +15856,22 @@ function orbFarPos(a,rx,ry,deg,cx,cy){
  if(orb3dOn()){const p=orbDepthPos(0,th*180/Math.PI,cx,cy,rx,ORB_FAR_KY);return {x:p.x,y:p.y,s:p.s,o:p.o,z:p.z};}
  return {x:cx+Math.cos(th)*rx,y:cy+Math.sin(th)*ry,s:1,o:1,z:0};
 }
+const ORB_SUN_RX=300,ORB_SUN_RY=150;   /* the sun's sky ellipse about the planet — fits the 840×520 box (a circle would leave it) */
+function orbSunPos(a,deg,cx,cy){
+ /* the sun's LIVE place: its rest angle a turned by the far worlds' angle, on the sky ellipse — pure */
+ const th=a+deg*Math.PI/180;
+ return {x:cx+Math.cos(th)*ORB_SUN_RX,y:cy+Math.sin(th)*ORB_SUN_RY};
+}
+function orbSunApply(){
+ const sun=document.getElementById('orbSunG');if(!sun)return;
+ const geo=orbState.geo||{cx:350,cy:282};
+ const d=orbState.farOrbit?(orbState.farDeg||0):0;
+ const p=orbSunPos(+sun.getAttribute('data-a')||0,d,geo.cx,geo.cy);
+ sun.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+')');
+ const sp=sun.querySelector('.orbSunSpin');if(sp)sp.setAttribute('transform','rotate('+((orbState.rotDeg||0)*1.6).toFixed(2)+')');   /* the face turns with the moons' angle — visible even when the far worlds are fixed */
+}
 function orbFarApplyRot(){
+ orbSunApply();   /* R5b: the sun rides the same motion as the far worlds */
  const geo=orbState.geo||{};
  document.querySelectorAll('#orbFarG .orbFar').forEach(f=>{
   const a=+f.getAttribute('data-a'),rx=+f.getAttribute('data-rx'),ry=+f.getAttribute('data-ry');
@@ -16263,8 +16278,13 @@ function renderOrb(){
  /* ================= SOLAR SYSTEM VIEW — the GEMS default (design law #17) ================= */
  sunS+='<defs><radialGradient id="orbSunGrad"><stop offset="0%" stop-color="#ffe9b0"/><stop offset="55%" stop-color="#e8a33d"/><stop offset="100%" stop-color="rgba(232,163,61,0)"/></radialGradient></defs>';
  /* orbit guides: the planet&#8217;s path around the sun, the moons&#8217; path around the planet */
- const sunDist=Math.hypot(cx-sunX,cy-sunY);
- sunS+='<circle cx="'+sunX+'" cy="'+sunY+'" r="'+sunDist.toFixed(1)+'" fill="none" stroke="rgba(255,255,255,.045)"/>'
+ /* R5b (20h) — THE SUN WHEELS TOO (client, Aug 20: "the sun is in the middle looking like it too
+    is rotating … if the planet is still, it appears to the planet that the sun is rotating around
+    it"): the sun is a movable group on the sky ellipse about the still planet, carried by the far
+    worlds' own angle (orbSunApply from orbFarApplyRot), its face turning; the guide is its path. */
+ const sunA=Math.atan2(sunY-cy,sunX-cx);
+ const sunP=orbSunPos(sunA,0,cx,cy);
+ sunS+='<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+ORB_SUN_RX+'" ry="'+ORB_SUN_RY+'" fill="none" stroke="rgba(255,255,255,.045)"/>'
   +(twin?'':d3?'<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+R+'" ry="'+(R*ORB_3D_KY).toFixed(1)+'" fill="none" stroke="rgba(255,255,255,.06)"/>':'<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.05)"/>');
  if(d3&&!deep)sunS+='<defs><radialGradient id="orbPlanetGrad" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="#4a3c22"/><stop offset="55%" stop-color="#1d1a17"/><stop offset="100%" stop-color="#07080c"/></radialGradient><clipPath id="orbCapClip"><rect x="'+(cx-bodyR-3)+'" y="'+(cy-bodyR-3)+'" width="'+(bodyR*2+6)+'" height="'+(bodyR+3)+'"/></clipPath></defs>';   /* 🌐 3D — the 20f skin, preserved */
  if(deep){
@@ -16302,12 +16322,14 @@ function renderOrb(){
   +'<g pointer-events="none"><text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+lbl+'</text></g>':'';
  /* ☀ the sun — the essence aboard (Keys &amp; Chords is the only essence docked so far;
     the essence selector rides the R4 round) */
- sunS+='<g><title>The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤).</title>'
-  +(deep?'<circle cx="'+sunX+'" cy="'+sunY+'" r="'+(sunR*2.4)+'" fill="url(#orbSunGrad3)" opacity=".9"/><circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(sunR*.7)+'" fill="#fff1c2" filter="url(#orbSoft)"/><circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(sunR*.58)+'" fill="#ffe7a8"/>'
-   :'<circle cx="'+sunX+'" cy="'+sunY+'" r="'+(sunR*1.85)+'" fill="url(#orbSunGrad)" opacity=".8"/>'
-  +'<circle cx="'+sunX+'" cy="'+sunY+'" r="'+Math.round(sunR*.62)+'" fill="#ffdf9e" stroke="#e8a33d" stroke-width="1.5"/>')
-  +'<text x="'+sunX+'" y="'+(sunY+sunR+18)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#e8a33d">KEYS &amp; CHORDS</text>'
-  +'<text x="'+sunX+'" y="'+(sunY+sunR+30)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">the essence aboard</text></g>';
+ sunS+='<g id="orbSunG" data-a="'+sunA.toFixed(4)+'" transform="translate('+sunP.x.toFixed(1)+' '+sunP.y.toFixed(1)+')"><title>The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤). From the still planet it seems to wheel slowly round the sky, turning as it goes.</title>'
+  +(deep?'<circle cx="0" cy="0" r="'+(sunR*2.4)+'" fill="url(#orbSunGrad3)" opacity=".9"/><circle cx="0" cy="0" r="'+Math.round(sunR*.7)+'" fill="#fff1c2" filter="url(#orbSoft)"/><circle cx="0" cy="0" r="'+Math.round(sunR*.58)+'" fill="#ffe7a8"/>'
+   :'<circle cx="0" cy="0" r="'+(sunR*1.85)+'" fill="url(#orbSunGrad)" opacity=".8"/>'
+  +'<circle cx="0" cy="0" r="'+Math.round(sunR*.62)+'" fill="#ffdf9e" stroke="#e8a33d" stroke-width="1.5"/>')
+  +'<g class="orbSunSpin"><circle cx="0" cy="0" r="'+Math.round(sunR*.78)+'" fill="none" stroke="rgba(232,163,61,.55)" stroke-width="1.2" stroke-dasharray="3 9"/>'
+  +'<circle cx="'+Math.round(sunR*.3)+'" cy="'+(-Math.round(sunR*.18))+'" r="3.2" fill="#e8a33d" opacity=".55"/><circle cx="'+(-Math.round(sunR*.22))+'" cy="'+Math.round(sunR*.3)+'" r="2.4" fill="#e8a33d" opacity=".5"/><circle cx="'+(-Math.round(sunR*.12))+'" cy="'+(-Math.round(sunR*.38))+'" r="1.8" fill="#e8a33d" opacity=".45"/></g>'
+  +'<text x="0" y="'+(sunR+18)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#e8a33d">KEYS &amp; CHORDS</text>'
+  +'<text x="0" y="'+(sunR+30)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">the essence aboard</text></g>';
  if(zoomed){
  /* ============ CHORD LEVEL (GEMS R2 ④) — the moon became the planet ============ */
  const zr=frame.r,ziv=frame.iv&&frame.iv.length?frame.iv:[0,4,7];
