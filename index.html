@@ -190,6 +190,14 @@
   .cpg .cpPlay{justify-self:center;align-self:center;width:auto;height:16px;padding:0 4px;font-size:11px;line-height:16px;background:none;color:var(--dim);border:0;box-shadow:none;cursor:pointer;} .cpg .cpPlay:hover,.cpg .cpPlay.on{color:var(--accent);background:none;}   /* 20l [57] [58]: the column Play — a bare ▶, no box (client: "just a triangle") */
   .cpg .cpl{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);align-self:center;white-space:nowrap;padding-right:2px;}
   .cp-par .cpb{opacity:.88;}
+  #cpModes{display:none;}   /* 20n [61] (client, Aug 21): the mode-chip row is REPLACED by the per-matrix scale drop-down */
+  .cpMatHead{display:flex;align-items:center;gap:8px;margin:10px 0 4px;flex-wrap:wrap;}   /* 20n [62]: each scale's name sits just above its own matrix */
+  .cpMatHead .cpMatName{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);}
+  .cpMatHead .cpMatName b{color:var(--text);}
+  .cpMatHead .cpMatSel{font-size:11px;min-width:150px;}
+  .cpMatHead .cpMatX{font-size:11px;color:var(--dim);cursor:pointer;user-select:none;} .cpMatHead .cpMatX:hover{color:var(--accent);}
+  #cpAddMat{display:inline-block;width:auto;margin:6px 0 2px;font-size:12px;line-height:1;padding:3px 12px;background:none;color:var(--dim);border:1px dashed var(--line);border-radius:6px;box-shadow:none;cursor:pointer;} #cpAddMat:hover{color:var(--accent);border-color:var(--accent);background:none;}   /* 20n [63]: the [+] under the bottom matrix adds another relative scale + matrix */
+  .cpg .cpl.lane{color:var(--accent);}
   .cpb{border-radius:6px;padding:5px 2px;cursor:grab;user-select:none;text-align:center;font-weight:700;font-size:12px;color:#1a1408;border:1px solid rgba(0,0,0,.35);line-height:1.2;overflow:hidden;}
   .cpb .abs{display:block;font-size:9px;font-weight:600;opacity:.8;white-space:nowrap;}
   .cpb:hover{filter:brightness(1.15);}
@@ -443,7 +451,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20m</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20n</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -752,6 +760,7 @@
           <span class="cpchip" id="cpDimsChip" title="Reveal the passing diminished chords that live a semitone above every degree a whole step from its neighbor">▸ passing °7</span>
           <span class="cpchip" id="cpJimiChip" title="Jimi chord: every dominant in the palette renders and plays as a 7♯9 — the Hendrix chord">🎸 Jimi</span>
           <label class="cpchip" id="cpFollowSel" title="When switched on, any chord in the chord lane will become the new key of the Chord Pallet." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpFollowSelBox" style="accent-color:var(--accent);margin:0;">Switch Chord Pallet to Selected chord</label><!-- 20l [54] (client, Aug 21): default OFF -->
+          <label class="cpchip" id="cpLaneTop" title="Chord lane as the top row: each matrix hides its In-key row and takes the chord lane instead — the columns follow the lane's rate of chord change, so V of x and V of V line up under every lane chord, and each column's ▶ ends on the lane's chord." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpLaneTopBox" style="accent-color:var(--accent);margin:0;">Chord lane as top row</label><!-- 20n [65] (client, Aug 21): default OFF -->
           <span class="cp-mklab">Make:</span><span class="cpchip cpmod" data-kind="maj" title="Rebuild the selected chord as a major triad (root stays)">Major</span><span class="cpchip cpmod" data-kind="min" title="Rebuild the selected chord as a minor triad (root stays)">Minor</span><span class="cpchip cpmod" data-kind="hdim" title="Rebuild the selected chord as a half-diminished 7th (root stays)">m7♭5</span><span class="cpchip cpmod" data-kind="aug" title="Rebuild the selected chord as an augmented triad (root stays)">Augmented</span>
           <span class="cplink" id="cpHmLink">(Show) Harmonic minor</span>
           <span class="cplink" id="cpCadLink" title="Open the 𝄂 Cadence Window — it opens between the Chord Palette and the Multi-Track Grid (client spec). A cadence: the chords at the end of a musical phrase. Nothing more or less.">𝄂 Cadences</span>
@@ -772,9 +781,10 @@
         <div id="confDet" style="display:flex;gap:4px;font-size:11px;align-items:center;"></div>
       </div>
       <div id="cpModes"></div>
+      <div class="cpMatHead" id="cpMainHead"></div><!-- 20n [61] [62]: the song scale's name + its drop-down (Search → the Browser; then its mode family) -->
       <div id="cpMain" class="cpg"></div>
-      <div class="cp-title" id="cpParTitle"></div>
-      <div id="cpPar" class="cpg cp-par"></div>
+      <div id="cpRel"></div><!-- 20n [63] [64]: the relative matrices — default ONE, a third from the song's scale (major → its relative melodic minor; minor → its relative major a third up); each with its own name + drop-down; the fixed "Parallel" title is gone -->
+      <button id="cpAddMat" type="button" title="Add another relative scale and its matrix below this one">+</button>
       <div class="cp-title" id="cpHmTitle" style="display:none;"></div>
       <div id="cpHm" class="cpg cp-par" style="display:none;"></div>
     </div>
@@ -8560,8 +8570,57 @@ function applyPanelChord(i,ch){
 }
 /* ---- dock state (persisted per browser) ---- */
 const palState=(()=>{try{const o=JSON.parse(localStorage.getItem('cp_pal')||'{}');
- return {dims:!!o.dims,jimi:!!o.jimi,hm:!!o.hm,mmAll:!!o.mmAll};}
- catch(e){return {dims:false,jimi:false,hm:false,mmAll:false};}})();
+ return {dims:!!o.dims,jimi:!!o.jimi,hm:!!o.hm,mmAll:!!o.mmAll,followSel:!!o.followSel,laneTop:!!o.laneTop,
+  mats:Array.isArray(o.mats)?o.mats.map(m=>(m&&typeof m==='object'&&typeof m.id==='string')?{tonic:((+m.tonic||0)%12+12)%12,id:m.id}:null):[null]};}
+ catch(e){return {dims:false,jimi:false,hm:false,mmAll:false,followSel:false,laneTop:false,mats:[null]};}})();
+/* 20n THE CHORD PALETTE ROUND (client, Aug 21 — ORBIT-FEEDBACK-RAW [61]–[65]). palState.mats = the relative
+   matrices under the song's matrix: null = AUTOMATIC (a third from the song's scale, following the key),
+   {tonic,id} = a scale the drop-down or the Browser put there. laneTop = [65], the chord lane as top row. */
+let palSearchFor=null;   /* which matrix's "Search" opened the Browser (0 = the song's); cleared when the Browser closes */
+function palFamilyOf(id){
+ /* the MODE FAMILY a scale belongs to — the seven standard rotations, the seven melodic-minor modes, the
+    harmonic-minor pair; any other scale (jazz, raga) is a family of one. Pure over SCALE_DB. */
+ if(MODE_ROT[id]!==undefined)return MODE_ROT_IDS.slice();
+ if(MM_INFO[id])return ['melMin','dorb2','lydAug','lydDom','mixb6','locNat2','altDom'];
+ if(id==='harmonicMinor'||id==='phrygDom')return ['harmonicMinor','phrygDom'];
+ return SCALE_DB[id]?[id]:[];
+}
+function palRelativeOf(tonic,id){
+ /* [64] the default second matrix, a THIRD apart: a major-third scale → its relative melodic minor (a minor third
+    below = the parallel Lydian Augmented); a minor-third scale → the relative major a minor third UP (his answer,
+    Aug 21). A scale with no third (blues…) reads its ♭3 if it has one. */
+ const sc=SCALE_DB[id]||SCALE_DB.ionian,pcs=sc.pcs||[];
+ const minor=pcs[2]===3||(pcs[2]!==4&&pcs.indexOf(3)>=0);
+ return minor?{tonic:((tonic+3)%12+12)%12,id:'ionian',rel:'relative major'}:{tonic:((tonic+9)%12+12)%12,id:'melMin',rel:'relative melodic minor'};
+}
+function palMatrices(tonic,id,mats){
+ /* the palette's matrices in order: the song's, then every relative — automatic ones re-derived from the song's
+    scale every draw, chosen ones kept as they are (a junk id falls back to automatic). Pure. */
+ const out=[{tonic:((tonic%12)+12)%12,id:SCALE_DB[id]?id:'ionian',auto:false}];
+ (Array.isArray(mats)?mats:[null]).forEach(m=>{
+  if(m&&SCALE_DB[m.id])out.push({tonic:((+m.tonic||0)%12+12)%12,id:m.id,auto:false});
+  else{
+   /* an automatic matrix is the relative of the matrix ABOVE it; if that one is already in the stack, it steps a
+      further minor third down instead (so [+] keeps walking, never duplicates) */
+   const prev=out[out.length-1];let r=palRelativeOf(prev.tonic,prev.id);
+   if(out.some(x=>x.tonic===r.tonic&&x.id===r.id))r={tonic:((prev.tonic+9)%12+12)%12,id:r.id,rel:'a third below'};
+   out.push({tonic:r.tonic,id:r.id,auto:true,rel:r.rel});
+  }
+ });
+ return out;
+}
+function palLaneCols(chords,tonic){
+ /* [65] the chord lane as the palette's top row: one column per lane chord, its width the chord's duration (the
+    lane's rate of chord change), with the V of x / V of V of that chord beneath. The labels read in the MATRIX's
+    key (tonic given) — the same lane chord is vi in A and i in F♯ minor. Pure over the lane (+ romanFor). */
+ const t0=project.tonic;if(typeof tonic==='number')project.tonic=((tonic%12)+12)%12;
+ try{return (Array.isArray(chords)?chords:[]).filter(c=>c&&Array.isArray(c.iv)).map(c=>{
+  const r=((c.r||0)%12+12)%12,lbl=(typeof tonic==='number'?romanFor(r,c.iv):c.lbl)||c.lbl||PCN[r];
+  const core=String(lbl).replace('ø7','').replace('°','').replace('+','').replace(/7.*$/,'')||PCN[r];
+  return {t:'lane',d:Math.max(.5,+c.d>0?+c.d:2),c:{r,iv:c.iv.slice(),lbl},
+   v1:{r:(r+7)%12,iv:DOM7.slice(),lbl:'V7/'+core,sec:1},v2:{r:(r+2)%12,iv:DOM7.slice(),lbl:'V7/V/'+core,sec:2}};
+ });}finally{project.tonic=t0;}
+}
 function persistPal(){try{localStorage.setItem('cp_pal',JSON.stringify(palState));}catch(e){}}
 function mkPalCell(ch,opts){
  const b=document.createElement('div');b.className='cpb'+(opts&&opts.dim?' dimx':'')+(opts&&opts.far?' farkey':'');
@@ -8650,6 +8709,29 @@ function blankPalCell(){const b=document.createElement('div');b.className='cpb b
    invisible spacers under the °7 columns */
 function buildPaletteGrid(el,scale,tonic){
  el.innerHTML='';
+ if(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length){
+  /* 20n [65] (client, Aug 21): the matrix's top row IS the chord lane — each column a lane chord, as wide as the
+     chord's duration, the V of x / V of V rows lined up under it; the ▶ plays V of V → V of x and ENDS on the
+     lane's chord. The In-key row is hidden in this mode. */
+  const cols=palLaneCols(project.chords,tonic);
+  el.style.gridTemplateColumns='46px '+cols.map(c=>'minmax(56px,'+c.d+'fr)').join(' ');
+  const row=(label,pick,cls)=>{
+   const lab=document.createElement('div');lab.className='cpl'+(cls?' '+cls:'');lab.textContent=label;el.appendChild(lab);
+   cols.forEach(col=>el.appendChild(pick(col)||blankPalCell()));
+  };
+  const J=c=>palState.jimi?jimiCell(c):c;
+  row('',col=>{
+   const chs=[J(col.v2),J(col.v1),col.c];
+   const b=document.createElement('button');b.className='cpPlay';b.type='button';b.textContent='▶';
+   b.title='Play this column — '+chs.map(c=>dispLbl(c.lbl)).join(' → ')+' — ending on the lane\u2019s chord, at the song\u2019s rate of chord change';
+   b.onmousedown=ev=>{ev.preventDefault();ev.stopPropagation();palPlayColumn(chs,b);};
+   return b;
+  });
+  row('Lane',col=>mkPalCell(col.c,{tip:'The chord lane\u2019s chord — this column\u2019s dominants resolve to it'}),'lane');
+  row('V of x',col=>mkPalCell(J(col.v1),{tip:'Secondary dominant — the V7 of the lane chord above'}));
+  row('V of V',col=>mkPalCell(J(col.v2),{tip:'Chained dominant — the V7 of this column\u2019s V7'}));
+  return;
+ }
  const dia=paletteDiaRow(scale,tonic),v1=paletteVRow(scale,tonic,1),v2=paletteVRow(scale,tonic,2);
  const dims=palState.dims?passingDims(scale,tonic):[];
  const cols=[];
@@ -8738,20 +8820,66 @@ function palFollowTarget(){
  const id=(iv[1]===3&&iv[2]===6)?'locrian':iv[1]===3?'aeolian':'ionian';
  return {tonic:((c.r||0)%12+12)%12,scale:SCALE_DB[id]||SCALE_DB.ionian};
 }
+function palMatHead(el,m,i){
+ /* 20n [61] [62]: a matrix's heading — its scale's NAME, then the drop-down: "Search" first (→ the Scale/Raga Browser;
+    the pick replaces THIS matrix's scale), then the scale's mode family. Matrix 0 is the song's (the pick sets the
+    active section's scale, as the mode chips did); the relatives carry a ✕. */
+ el.innerHTML='';
+ const sc=SCALE_DB[m.id];
+ const name=document.createElement('span');name.className='cpMatName';
+ name.innerHTML='<b>'+PCN[m.tonic]+' '+sc.name+'</b>'+(i===0?' · the song':m.auto?' · '+(m.rel||'relative'):' · relative');
+ el.appendChild(name);
+ const sel=document.createElement('select');sel.className='cpMatSel';sel.dataset.mat=i;
+ sel.appendChild(new Option('⌕ Search…','__search'));
+ const fam=palFamilyOf(m.id);if(fam.indexOf(m.id)<0)fam.unshift(m.id);
+ fam.forEach(id=>{if(SCALE_DB[id])sel.appendChild(new Option(PCN[m.tonic]+' '+SCALE_DB[id].name,id));});
+ sel.value=m.id;
+ sel.title=i===0?'This matrix\u2019s scale — Search opens the Browser (its pick replaces this scale); the rest are the scale\u2019s mode family. Sets the active section\u2019s scale.':'This matrix\u2019s scale — Search opens the Browser (its pick replaces this scale); the rest are the scale\u2019s mode family.';
+ sel.onchange=()=>{palMatPick(i,sel.value,m);sel.blur();};
+ el.appendChild(sel);
+ if(i>0){
+  const x=document.createElement('span');x.className='cpMatX';x.textContent='✕';x.title='Remove this matrix';
+  x.onclick=()=>{palState.mats.splice(i-1,1);persistPal();drawChordPanel();};
+  el.appendChild(x);
+ }
+}
+function palMatPick(i,id,m){
+ if(id==='__search'){
+  palSearchFor=i;
+  if(typeof uiState==='object'&&uiState&&uiState.open!=='ragaPanel')uiDispatch({type:'toggle',id:'ragaPanel'});
+  if(typeof ragaStatus==='function')ragaStatus('Pick a scale — it replaces the '+(i===0?'song\u2019s':PCN[m.tonic]+' '+SCALE_DB[m.id].name)+' matrix in the Chord Palette.');
+  drawChordPanel();
+  return;
+ }
+ if(!SCALE_DB[id])return;
+ if(i===0){
+  const sec=keyFor(activeKeyBeat());
+  sec.mode=id;if(sec!==project)project.mode=id;
+  if(typeof ensureModeOption==='function')ensureModeOption(id);
+  selMode.value=id;selNotes.clear();refresh(true);
+ }else{
+  palState.mats[i-1]={tonic:m.tonic,id};persistPal();drawChordPanel();
+ }
+}
 function drawChordPanel(){
  const fo=palFollowTarget();
  const cs=fo?fo.scale:curScale(),t=fo?fo.tonic:project.tonic;
  const fb=document.getElementById('cpFollowSelBox');if(fb)fb.checked=!!palState.followSel;
  const fl=document.getElementById('cpFollowSel');if(fl)fl.classList.toggle('on',!!palState.followSel);
+ const lb=document.getElementById('cpLaneTopBox');if(lb)lb.checked=!!palState.laneTop;
+ const ll=document.getElementById('cpLaneTop');if(ll)ll.classList.toggle('on',!!palState.laneTop);
  document.getElementById('cpKey').textContent=PCN[t]+' '+cs.name;
- drawPaletteModes();
+ /* 20n [61]–[64]: the song's matrix, then the relative matrices (default one, a third away), each under its own
+    name + drop-down; a [+] under the bottom one adds another. The fixed "Parallel" grid is gone. */
+ if(!Array.isArray(palState.mats))palState.mats=[null];
+ const mats=palMatrices(t,cs.id,palState.mats);
+ palMatHead(document.getElementById('cpMainHead'),mats[0],0);
  buildPaletteGrid(document.getElementById('cpMain'),cs,t);
- /* the parallel set: same tonic, the mode five rotations up (client mapping July 19 —
-    Ionian↔Aeolian, Aeolian→Lydian, Dorian→Locrian, Locrian→Mixolydian…); scales off
-    the rotation circle (jazz/mm) fall back to the opposite-tonality partner */
- const parId=parallelModeOf(cs.id)||defaultBorrowTarget();
- document.getElementById('cpParTitle').textContent='Parallel · '+PCN[t]+' '+(MODE_SHORT[parId]||parId);
- buildPaletteGrid(document.getElementById('cpPar'),SCALE_DB[parId],t);
+ const rel=document.getElementById('cpRel');rel.innerHTML='';
+ mats.slice(1).forEach((m,k)=>{
+  const h=document.createElement('div');h.className='cpMatHead';palMatHead(h,m,k+1);rel.appendChild(h);
+  const g=document.createElement('div');g.className='cpg cp-par';g.dataset.mat=k+1;buildPaletteGrid(g,SCALE_DB[m.id],m.tonic);rel.appendChild(g);
+ });
  const hmT=document.getElementById('cpHmTitle'),hmE=document.getElementById('cpHm');
  hmT.style.display=palState.hm?'':'none';hmE.style.display=palState.hm?'':'none';
  if(palState.hm){
@@ -8787,6 +8915,8 @@ document.getElementById('cpDimsChip').onclick=()=>{palState.dims=!palState.dims;
 document.getElementById('cpJimiChip').onclick=()=>{palState.jimi=!palState.jimi;persistPal();drawChordPanel();};
 document.getElementById('cpFollowSelBox').onchange=e=>{palState.followSel=!!e.target.checked;persistPal();drawChordPanel();};   /* 20l [54] */
 document.getElementById('cpHmLink').onclick=()=>{palState.hm=!palState.hm;persistPal();drawChordPanel();};
+document.getElementById('cpLaneTopBox').onchange=e=>{palState.laneTop=!!e.target.checked;persistPal();drawChordPanel();};   /* 20n [65] */
+document.getElementById('cpAddMat').onclick=()=>{if(!Array.isArray(palState.mats))palState.mats=[null];palState.mats.push(null);persistPal();drawChordPanel();};   /* 20n [63] */
 document.querySelectorAll('.cpmod').forEach(m=>m.onclick=()=>{
  if(selChord==null){flashHint('Select a chord first — Make rebuilds its quality in place');return;}
  const nc=quickModChord(project.chords[selChord],m.dataset.kind);
@@ -14310,6 +14440,16 @@ function rebuildScaleMenuExtras(){
 function ragaApply(sid){
  /* same path as the Scale menu: the ACTIVE SECTION reinterprets (notes stay put) */
  if(!SCALE_DB[sid])return;
+ /* 20n [61]: opened from a RELATIVE matrix's "Search" → the pick replaces THAT matrix's scale (its tonic kept),
+    the section untouched */
+ if(typeof palSearchFor==='number'&&palSearchFor>0&&typeof palState==='object'&&Array.isArray(palState.mats)){
+  const i=palSearchFor;palSearchFor=null;
+  const mats=palMatrices(project.tonic,curScale().id,palState.mats),m=mats[i]||mats[mats.length-1];
+  palState.mats[Math.min(i,mats.length-1)-1]={tonic:m.tonic,id:sid};persistPal();drawChordPanel();
+  ragaStatus('Applied '+SCALE_DB[sid].name+' to the '+PCN[m.tonic]+' matrix of the Chord Palette — the section\u2019s own scale is unchanged.');
+  renderRagaInfo();return;
+ }
+ palSearchFor=null;
  ensureModeOption(sid);
  scaleRecents=pushScaleRecent(scaleRecents,sid);
  persistScaleFavs();rebuildScaleMenuExtras();
@@ -21092,6 +21232,7 @@ function uiDispatch(action){
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'center'});}catch(e){}
  }}
 function applyUiState(){
+ if(typeof palSearchFor!=='undefined'&&palSearchFor!=null&&uiState.open!=='ragaPanel')palSearchFor=null;   /* 20n: a closed Browser forgets which matrix asked */
  for(const d of WINDOW_DEFS){
   const p=document.getElementById(d.id);if(!p)continue;
   p.style.display=uiState.open===d.id?'':'none';
