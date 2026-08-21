@@ -433,7 +433,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20i</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -15741,7 +15741,8 @@ function orbShipTick(){
  const sc=orbShipScale();
  const cur=orbCurrentKey();
  const pcs=orbPcsNow();
- const c=chordAt(effectiveChords(),orbBeatNow()).c;if(!c)return;
+ const fcS=effectiveChords();if(!fcS||!fcS.length)return;   /* 20i: an EMPTY lane (boot before loadSong, with the Orbit restored open from cp_ui) used to THROW here and abort the whole boot script — no song, no ticks, "nothing works" */
+ const c=chordAt(fcS,orbBeatNow()).c;if(!c)return;
  const rel=(((c.r||0)-cur.tonic)%12+12)%12;
  const di=pcs.indexOf(rel);
  const rot=(orbState.view!=='circles'?(orbState.rotDeg||0):0)*Math.PI/180;   /* GEMS: the 🚀 turns WITH the moons — one tick source, no drift */
@@ -21592,7 +21593,7 @@ buildMelismaPanel();
 buildRagaPanel();   /* 3.5: the Browser builds at boot like Melisma */
 openSharedScale();  /* 0.2 (#13c): a ?scale= link opens the browser pre-selected */
 buildWanPanel();    /* 4.6: the Chord Wanderer builds at boot too */
-buildOrbPanel();    /* 4.7: Interplanetary Orbits builds at boot too */
+try{buildOrbPanel();}catch(e){console.error('Orbit panel failed to build at boot',e);}    /* 4.7: Interplanetary Orbits builds at boot too — 20i: and a fault in it must never abort the boot (loadSong follows) */
 loadSong('bj');drawParts();drawVars();drawPatchRow();
 document.getElementById('patchKit').onclick=e=>{
  patchSel=Object.assign(defaultPatchSel(),PATCH_KIT);
