@@ -412,6 +412,22 @@
 .winCollapsed{padding:3px 16px !important;background:#22242c !important;
  border:1px solid #3c4252 !important;border-radius:7px;cursor:row-resize;transition:border-color .12s,background .12s;}
 .winCollapsed:hover{background:#262a34 !important;border-color:#4a5060 !important;}
+/* WINDOW-SHELL · Weber map in the Wanderer (RAW [8] [68] [79]) — aged cartography */
+.wanMapWrap{background:linear-gradient(165deg,#c9b896 0%,#b8a078 40%,#a89068 100%);border:2px solid #6b5428;border-radius:4px;padding:14px 16px;box-shadow:inset 0 0 40px rgba(80,50,10,.25),0 2px 8px rgba(0,0,0,.35);position:relative;}
+.wanMapWrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,transparent 40%,rgba(90,60,20,.12) 100%);pointer-events:none;border-radius:4px;}
+.wanMapTitle{font-family:Georgia,'Times New Roman',serif;font-size:13px;letter-spacing:1.2px;color:#3a2a10;text-align:center;margin-bottom:10px;text-transform:uppercase;font-weight:700;text-shadow:0 1px 0 rgba(255,255,255,.35);}
+.wanMapWrap table{border-collapse:collapse;margin:0 auto;position:relative;z-index:1;}
+.wanWb{font-family:Georgia,'Times New Roman',serif!important;padding:10px 16px!important;border:1px solid #6b5428!important;cursor:pointer;text-align:center;background:rgba(255,248,230,.55)!important;color:#2a1c08!important;font-size:13px!important;min-width:52px;}
+.wanWb:hover{background:rgba(232,163,61,.35)!important;}
+.wanWb.wanWbCur{background:rgba(232,163,61,.55)!important;color:#1a1005!important;font-weight:700!important;box-shadow:inset 0 0 0 2px #8a6020;}
+.wanWb.wanWbDim{color:#7a6848!important;font-weight:400!important;}
+/* Upcoming Trips chord lane */
+.tripsLane{display:flex;gap:2px;align-items:stretch;min-height:36px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:6px;padding:4px;overflow-x:auto;}
+.tripsLane .tripsCell{flex:1 1 0;min-width:48px;border-radius:4px;background:rgba(232,163,61,.18);border:1px solid var(--line);padding:4px 6px;font-size:11px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;}
+.tripsLane .tripsCell.hot{background:rgba(232,163,61,.35);border-color:var(--accent);}
+.tripsLane.tripsExpanded .tripsCell{min-height:72px;font-size:12px;}
+#tripsPanel.winCollapsed #tripsBody .tripsOnlyFull{display:none!important;}
+
 .winCollapsed>*:not(.winHead){display:none !important;}
 .winCollapsed .winHead{margin:0;}
 .winBody-limit{overflow-y:auto;}
@@ -451,7 +467,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-20n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-22a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -533,6 +549,15 @@
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Interplanetary Orbits — the planet is the key you are in; break its gravity and walk on the surface of a new world</div>
     <div id="orbBody"></div>
     <div id="orbStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Click any chord on the circle while the song plays — the landing waits for the next boundary. Pick a Ghost Song and its pivot chords open dotted roads to new planets. The treasure is what the journey sounds like.</div>
+  </div>
+
+  <!-- WINDOW-SHELL · Upcoming Trips — its own window (RAW [69]–[72] [75] [76]). Opens as a
+       bridge between the top window and the one below; minimized auto-launches under
+       Wanderer / Orbits. -->
+  <div class="gridwrap" id="tripsPanel" style="margin:12px 0;">
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Itinerary · Upcoming Trips — the chord and key changes waiting to enter the song</div>
+    <div id="tripsBody"></div>
+    <div id="tripsStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Drag a moon or planet in (or ⇧-click) — ▶ starts the next trip at the chosen time.</div>
   </div>
 
   <!-- 4.4: the Import & cross-pollination sources window — a TOP pop-up from the ⇪ icon
@@ -14950,6 +14975,27 @@ function renderWan(){
   +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">← → walk the degrees · ↑ ↓ flip between the two worlds · every landing auditions (nothing written) · <b style="color:var(--text);">Enter / ✓ writes the highlighted chord to the selected lane chord</b></div>'
   +matrix
   +'<div style="display:flex;gap:8px;align-items:center;margin-top:4px;"><button id="wanUseBtn" style="padding:6px 14px;font-size:12.5px;">✓ Use this chord</button><span style="font-size:10.5px;color:var(--dim);">writes to the selected chord in the lane (or the one under the playhead) — one undo</span></div>'
+  +'</div>'
+  /* WINDOW-SHELL · RAW [8][68][79]: Weber\'s table — Orbit-sized map in the Wanderer alone */
+  +'<div class="wanMapWrap" style="flex:1 1 100%;min-width:520px;margin-top:4px;">'
+  +'<div class="wanMapTitle">Weber\'s table of key centers</div>'
+  +(function(){
+   const homeT=wanState.tonic;
+   const homeMin=wanScale().pcs.indexOf(3)>=0&&wanScale().pcs.indexOf(4)<0;
+   let weber='<table>';
+   for(let k=2;k>=-2;k--){
+    const Tt=((homeT+7*k)%12+12)%12;
+    const rel=((Tt+9)%12+12)%12;
+    const cell=(tt,minor)=>{
+     const isC=homeT===tt&&homeMin===minor;
+     const dim=Math.abs(k)>1;
+     return '<td class="wanWb'+(isC?' wanWbCur':'')+(dim?' wanWbDim':'')+'" data-t="'+tt+'" data-m="'+(minor?1:0)+'" title="'+PCN[tt]+' '+(minor?'Minor':'Major')+' — click to wander (Weber&#8217;s table: fifths vertical, relative left, parallel right)">'+(minor?PCN[tt].toLowerCase():PCN[tt])+'</td>';
+    };
+    weber+='<tr>'+cell(rel,true)+cell(Tt,false)+cell(Tt,true)+'</tr>';
+   }
+   return weber+'</table>';
+  })()
+  +'<div style="font-size:10px;color:#5a4828;text-align:center;margin-top:8px;font-family:Georgia,serif;">fifths ↑↓ · relative ← · parallel → — the map that left Orbit (RAW [68])</div>'
   +'</div></div>';
  /* wiring */
  B.querySelectorAll('.wanCell').forEach(el=>{
@@ -14961,6 +15007,13 @@ function renderWan(){
  });
  B.querySelectorAll('.wanNb').forEach(el=>{
   el.onclick=()=>{const o=nb[+el.dataset.i];wanWander(o.tonic,o.minor,o.tag);};
+ });
+ B.querySelectorAll('.wanWb').forEach(el=>{
+  el.onclick=()=>{
+   const tt=+el.dataset.t, minor=el.dataset.m==='1';
+   const tag=minor?'Weber relative/parallel':'Weber fifths';
+   wanWander(tt,minor,tag);
+  };
  });
  B.querySelectorAll('.wanGrp').forEach(el=>{
   el.onclick=ev=>{
@@ -15261,7 +15314,7 @@ function orbDepartures(tonic,pcs){
    orbActivate, the same seam every other travel uses. The run state below is device/
    session data, like the rest of the view state. Spec: the union of ROADMAP 4.6's
    paragraph and GEMS-RAW 1612–1615. Pure layer first — unit-tested. */
-var orbTrips={run:false,idx:0,next:null,sync:4,syncOn:false,drag:null,dragDid:false};
+var orbTrips={run:false,idx:0,next:null,sync:4,syncOn:true,timing:'chord',drag:null,dragDid:false};
 function validTrips(a){
  return Array.isArray(a)&&a.every(function(tr){
   if(!tr||typeof tr!=='object')return false;
@@ -15306,10 +15359,54 @@ function orbTripsNow(){
     longer than the loop still departs; the modulo clock would wait forever) */
  try{return beatFromBBS(Tone.Transport.position);}catch(e){return 0;}
 }
+function tripsNextChordBeat(b){
+ /* RAW [76] default — land at the NEXT chord boundary after beat b */
+ var ch=typeof effectiveChords==='function'?effectiveChords():(project.chords||[]);
+ var t=0;
+ for(var i=0;i<ch.length;i++){
+  var end=t+(ch[i].d||0);
+  if(end>b+1e-6)return end;
+  t=end;
+ }
+ return null;
+}
+function tripsSyncQ(){
+ /* timing menu → quantize length in beats. 'wait' never releases (null sentinel via syncOn false + wait). */
+ if(orbTrips.timing==='wait')return null;
+ if(orbTrips.timing==='chord')return -2;   /* sentinel: next chord */
+ if(orbTrips.timing==='bar')return 4;
+ if(orbTrips.timing==='rhythm')return orbTrips.sync>0?orbTrips.sync:(orbTrips.sync===-1?-1:4);
+ return 4;
+}
+function tripsEtaMusical(){
+ /* musical time until the next trip lands — shown under ▶ Start next trip in: */
+ if(orbTrips.timing==='wait')return 'just waiting…';
+ var b=orbTripsNow();
+ var at=orbTrips.next;
+ if(at==null){
+  var q=tripsSyncQ();
+  if(q===null)return 'just waiting…';
+  if(q===-2)at=tripsNextChordBeat(b);
+  else if(q===-1)at=b;
+  else at=(typeof orbNextBoundary==='function')?orbNextBoundary(b,q,typeof LOOP==='number'?LOOP:1e9):null;
+ }
+ if(at==null)return '—';
+ var d=Math.max(0,at-b);
+ var bars=Math.floor(d/4+1e-9);
+ var beats=Math.floor(d-bars*4+1e-9);
+ var six=Math.round((d-bars*4-beats)*4);
+ var parts=[];
+ if(bars)parts.push(bars+(bars===1?' bar':' bars'));
+ if(beats)parts.push(beats+(beats===1?' beat':' beats'));
+ if(six&&!bars)parts.push(six+'/16');
+ return parts.length?parts.join(' · '):'now';
+}
+
 function orbTripsTick(){
  /* rides the SAME 150ms interval as the bot, the 🚀 and the rotation — one tick source */
  if(!orbTrips.run||!playing)return;
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ /* RAW [76] bottom: "just wait…" stockpiles — never releases */
+ if(orbTrips.timing==='wait')return;
  var list=(project.trips||[]);
  if(orbTrips.idx>=list.length){
   orbTrips.run=false;orbTrips.next=null;orbTripsRefresh();
@@ -15320,9 +15417,14 @@ function orbTripsTick(){
  if(orbTrips.next!=null&&b+1e-6<orbTrips.next)return;
  var tr=list[orbTrips.idx];
  orbActivate(JSON.parse(JSON.stringify(tr.it)));
- var q=orbQ();
- var land=q>0?(Math.floor(b/q+1e-9)*q+q):b;
- orbTrips.next=orbTripNextBeat(land,tr.bars,orbTrips.syncOn?orbTrips.sync:0);
+ var land;
+ var sq=tripsSyncQ();
+ if(sq===-2){land=tripsNextChordBeat(b);if(land==null)land=b;}
+ else if(sq===-1)land=b;
+ else if(sq>0)land=Math.floor(b/sq+1e-9)*sq+sq;
+ else land=b;
+ var nextQ=(orbTrips.timing==='rhythm'&&orbTrips.syncOn)?orbTrips.sync:(orbTrips.timing==='bar'?4:0);
+ orbTrips.next=orbTripNextBeat(land,tr.bars,nextQ>0?nextQ:0);
  orbTrips.idx++;
  orbTripsRefresh();
 }
@@ -15380,12 +15482,16 @@ function orbTripsPlayAll(){
   :'🧳 The itinerary is armed — press ⏵ Play and the first trip departs with the transport.');
 }
 function orbTripsRefresh(){
- /* a targeted rebuild of the trips box only — renderOrb() is a full innerHTML rebuild
-    (landmine 2) and would eat a bars field mid-type, so the rows keep their own path */
- var box=document.getElementById('orbTripsBox');
+ /* a targeted rebuild of the trips box only — renderTrips()/renderOrb() full rebuilds
+    would eat a bars field mid-type, so the rows keep their own path */
+ var box=document.getElementById('orbTripsBox')||document.getElementById('tripsBox');
  if(box){box.innerHTML=orbTripRowsHTML();orbTripsBindRows(box);}
- var pa=document.getElementById('orbTripsPlayAll');
- if(pa){pa.textContent=orbTrips.run?'⏸ Pause all':'▶ Play all';pa.style.background=orbTrips.run?'rgba(232,163,61,.16)':'';}
+ var pa=document.getElementById('orbTripsPlayAll')||document.getElementById('tripsPlayAll');
+ if(pa){pa.textContent=orbTrips.run?'⏸ Pause':'▶ Start next trip in:';pa.style.background=orbTrips.run?'rgba(232,163,61,.16)':'';}
+ var eta=document.getElementById('tripsEta');
+ if(eta)eta.textContent=typeof tripsEtaMusical==='function'?tripsEtaMusical():'—';
+ var lane=document.getElementById('tripsLane');
+ if(lane&&typeof tripsLaneHTML==='function'){lane.innerHTML=tripsLaneHTML();tripsBindLane(lane);}
 }
 function orbTripRowsHTML(){
  var list=project.trips||[];
@@ -15447,6 +15553,87 @@ function orbTripsBindRows(box){
   orbTripEdit(i,function(tr,list){if(i<list.length-1){list[i]=list[i+1];list[i+1]=tr;}});
  };});
 }
+function tripsLaneHTML(){
+ var list=project.trips||[];
+ if(!list.length)return '<div style="font-size:10.5px;color:var(--dim);padding:6px;">(empty — drag a moon, pivot or planet onto this window, or ⇧-click one on the map)</div>';
+ var exp=uiState&&uiState.trips==='full'&&!(uiState.collapsed&&uiState.collapsed.tripsPanel);
+ return list.map(function(tr,i){
+  var hot=orbTrips.run&&orbTrips.idx===i;
+  return '<div class="tripsCell'+(hot?' hot':'')+'" data-i="'+i+'" title="'+String(orbTripLabel(tr)).replace(/"/g,'&quot;')+' — click to edit in the list below">'
+   +'<div style="font-weight:700;">'+String(orbTripLabel(tr)).replace(/</g,'&lt;')+'</div>'
+   +(exp?'<div style="color:var(--dim);font-size:10px;margin-top:2px;">'+tr.bars+' bar'+(tr.bars===1?'':'s')+'</div>':'')
+   +'</div>';
+ }).join('');
+}
+function tripsBindLane(lane){
+ lane.querySelectorAll('.tripsCell').forEach(function(el){
+  el.onclick=function(){
+   var row=document.querySelector('.orbTripRow[data-i="'+el.getAttribute('data-i')+'"] .orbTripLbl');
+   if(row){row.focus();row.select&&row.select();}
+  };
+ });
+}
+function renderTrips(){
+ const B=document.getElementById('tripsBody');if(!B)return;
+ const jl=(typeof orbJourney!=='undefined'&&orbJourney.log&&orbJourney.log.length)
+  ?orbJourney.log.map(e=>'b'+e.beat+' → '+(e.psych?'Psych!':e.chord?e.chord:PCN[e.tonic]+(e.minor?'m':''))).join(' · ')
+  :'(no travels yet — click any chord or planet while the song plays)';
+ const timingOpts=[
+  ['chord','the next chord'],
+  ['bar','the next bar'],
+  ['rhythm','a rhythm…'],
+  ['wait','just wait…']
+ ].map(o=>'<option value="'+o[0]+'"'+(orbTrips.timing===o[0]?' selected':'')+'>'+o[1]+'</option>').join('');
+ const rhythmOpts=[[128,'32 bars'],[64,'16 bars'],[32,'8 bars'],[16,'4 bars'],[8,'2 bars'],[4,'1 bar'],[2,'1/2'],[1,'1/4'],[0.6667,'1/4T'],[0.5,'1/8'],[0.3333,'1/8T'],[0.25,'1/16'],[0.1667,'1/16T'],[-1,'immediately']]
+  .map(o=>'<option value="'+o[0]+'"'+(Math.abs(orbTrips.sync-o[0])<1e-3?' selected':'')+'>'+o[1]+'</option>').join('');
+ const exp=uiState.trips==='full';
+ B.innerHTML='<div id="tripsCol" style="display:flex;flex-direction:column;gap:8px;">'
+  +'<div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">'
+  +'<div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start;">'
+  +'<button id="tripsPlayAll" style="padding:6px 14px;font-size:12.5px;'+(orbTrips.run?'background:rgba(232,163,61,.16);':'')+'" title="Start the itinerary — the next trip lands at the time chosen below.">'+(orbTrips.run?'⏸ Pause':'▶ Start next trip in:')+'</button>'
+  +'<div id="tripsEta" style="font-size:11px;color:var(--accent);min-height:14px;padding-left:2px;">'+tripsEtaMusical()+'</div>'
+  +'</div>'
+  +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+  +'<label style="font-size:10.5px;color:var(--dim);">lands at</label>'
+  +'<select id="tripsTiming" style="font-size:11px;" title="RAW [76]: default the next chord · then the next bar · then rhythms · bottom just wait (stockpile, never release).">'+timingOpts+'</select>'
+  +(orbTrips.timing==='rhythm'?'<select id="tripsSync" style="font-size:10.5px;">'+rhythmOpts+'<option value="type">Type Here…</option></select>':'')
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:10.5px;color:var(--dim);cursor:not-allowed;" title="Audition Upcoming Trips — hear the itinerary through outputs 3 &amp; 4 while the audience hears 1 &amp; 2 (outputs configurable in Settings). Greyed honestly: the app&#8217;s audio path addresses ONE stereo pair today'+((function(){try{return ' (this browser reports '+(Tone&&Tone.getContext&&Tone.getContext().destination&&Tone.getContext().destination.maxChannelCount||2)+' output channels)';}catch(e){return '';}})())+' — the checkbox enables when the multi-output substrate lands (recorded with 6.2b&#8217;s offline-render engine)."><input type="checkbox" id="orbTripsAud" disabled style="accent-color:var(--accent);">Audition 3&amp;4</label>'
+  +'</div></div>'
+  +'<div id="tripsLane" class="tripsLane'+(exp?' tripsExpanded':'')+'" title="Small = the chord lane of the trips; expanded = fuller cells (RAW [71]).">'+tripsLaneHTML()+'</div>'
+  +'<div class="tripsOnlyFull" style="'+(exp?'':'display:none;')+'">'
+  +'<div id="tripsBox" style="display:flex;flex-direction:column;max-height:280px;overflow:auto;">'+orbTripRowsHTML()+'</div>'
+  +'<div id="orbJourneyBox" style="border-top:1px dashed var(--line);margin-top:4px;padding-top:6px;display:flex;flex-direction:column;gap:5px;">'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">🧭 The journey so far</label>'
+  +'<div style="font-size:11px;color:var(--text);line-height:1.5;">'+jl+'</div>'
+  +'<button id="orbEnd" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;align-self:flex-start;"'+(orbJourney.active?'':' disabled')+'>⏹ End the journey</button>'
+  +'</div>'
+  +'<button id="orbRec" style="padding:5px 10px;font-size:11.5px;margin-top:4px;'+(orbState.rec?'background:#8a2f3a;color:#fff;':'background:#3a3e4d;color:#e9eaef;')+'" title="Record your performance of this game — stopping drops the whole multi-track re-harmonization as ONE chords object on the Essence Shelf">'+(orbState.rec?'⏺ Recording… press to keep':'⏺ Record journey → Shelf')+'</button>'
+  +'</div></div>';
+ const pa=document.getElementById('tripsPlayAll');if(pa)pa.onclick=orbTripsPlayAll;
+ const tm=document.getElementById('tripsTiming');
+ if(tm)tm.onchange=e=>{
+  orbTrips.timing=e.target.value;
+  orbTrips.syncOn=orbTrips.timing!=='wait';
+  renderTrips();
+ };
+ const sy=document.getElementById('tripsSync');
+ if(sy)sy.onchange=e=>{
+  if(e.target.value==='type'){
+   const v=parseFloat(prompt('Start next trip in how many beats? (e.g. 6 = a bar and a half)')||'');
+   if(isFinite(v)&&v>0)orbTrips.sync=v;
+   renderTrips();return;
+  }
+  orbTrips.sync=+e.target.value||4;
+ };
+ const tbox=document.getElementById('tripsBox');if(tbox)orbTripsBindRows(tbox);
+ const lane=document.getElementById('tripsLane');if(lane)tripsBindLane(lane);
+ const endB=document.getElementById('orbEnd');
+ if(endB)endB.onclick=orbEndJourney;
+ const recB=document.getElementById('orbRec');
+ if(recB)recB.onclick=orbRecToggle;
+}
+
+
 function orbNextBoundary(beat,q,loop){
  /* the next quantize landing after `beat` — pure (the never-stop law's arithmetic).
     q === -1 is the GEMS "instantaneous" sentinel: the landing is NOW (q=0 keeps the
@@ -15753,7 +15940,8 @@ function orbTravelTo(tonic,minor){
 }
 function orbEndJourney(){
  orbJourney={active:false,log:[]};
- renderOrb();
+ if(typeof renderOrb==='function')renderOrb();
+ if(typeof renderTrips==='function'&&typeof uiState==='object'&&uiState&&uiState.trips)renderTrips();
  setOrbStatus('Journey closed — the next travel starts a fresh one (its own undo).');
 }
 function orbNavFrame(){return orbNav.stack[orbNav.pos]||{kind:'key'};}
@@ -17083,22 +17271,7 @@ function renderOrb(){
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Autonomous modulators wander the maze while the song plays — the treasure is what the journey sounds like"><input type="checkbox" id="orbAuto"'+(orbState.auto?' checked':'')+' style="accent-color:var(--accent);">🤖 Modulator wanders the maze</label>'
   +'<select id="orbShape" '+(orbState.auto?'':'disabled')+'><option value="drunkard"'+(orbState.shape==='drunkard'?' selected':'')+'>Drunkard walk</option><option value="loop"'+(orbState.shape==='loop'?' selected':'')+'>Orbit loop</option><option value="pendulum"'+(orbState.shape==='pendulum'?' selected':'')+'>Pendulum (home ↔ away)</option></select>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="A MIDI-controller grid travels too — pads index the map (recording always wins)"><input type="checkbox" id="orbMidi"'+(orbState.midi?' checked':'')+' style="accent-color:var(--accent);">🎹 MIDI pads travel</label>'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:2px;">Weber grid — this song</label>'
-  +(function(){
-   const visited=t=>orbPlanets(regs).some(p=>p.tonic===T(t)&&!orbMinor(p.mode));
-   const visitedMin=t=>orbPlanets(regs).some(p=>p.tonic===T(t)&&orbMinor(p.mode));
-   let weber='<table style="border-collapse:collapse;font-size:11px;">';
-   for(let k=2;k>=-2;k--){
-    const Tt=T(home.tonic+7*k);
-    const rel=T(Tt+9);
-    const cell=(t,minor,vis)=>{
-     const isC=cur.tonic===t&&cur.minor===minor;
-     return '<td class="orbWb" data-t="'+t+'" data-m="'+(minor?1:0)+'" title="'+PCN[t]+' '+(minor?'Minor':'Major')+' — click to travel (Weber&#8217;s table: fifths run vertically, relative left, parallel right)" style="padding:4px 9px;border:1px solid var(--line);cursor:pointer;text-align:center;'+(isC?'background:rgba(232,163,61,.2);color:var(--accent);font-weight:700;':vis?'color:var(--text);font-weight:600;':'color:var(--dim);')+'">'+(minor?PCN[t].toLowerCase():PCN[t])+'</td>';
-    };
-    weber+='<tr>'+cell(rel,true,visitedMin(rel))+cell(Tt,false,visited(Tt))+cell(Tt,true,visitedMin(Tt))+'</tr>';
-   }
-   return weber+'</table>';
-  })()
+  +'<div style="font-size:10.5px;color:var(--dim);line-height:1.45;margin-top:4px;" title="Weber&#8217;s table lives in the Wanderer now (RAW [68] [79]) — open 🧭 for the map.">🧭 Weber&#8217;s map → Wanderer</div>'
   +'</div>'
   +'<div style="flex:1;min-width:520px;">'
   /* R6 (20j) — LIMITATION = CREATIVITY (client, Aug 21): the title, a ▶/▼ triangle, and a small lane
@@ -17174,31 +17347,6 @@ function renderOrb(){
   +'<button id="orbEcoUse" style="padding:4px 10px;font-size:11.5px;">✓ Replace the lane</button>'
   +'<span id="orbEcoSel" style="font-size:10.5px;color:var(--dim);"></span></div>'
   +'</details></div>'
-  /* ==== 4.7 R3 · the UPCOMING TRIPS column (GEMS ⑥) — near the sun, per the RAW ==== */
-  +'<div id="orbTripsCol" style="flex:0 0 234px;display:flex;flex-direction:column;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:8px;">'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="The itinerary: drag any moon, pivot or planet in (or ⇧-click one) — each trip flies, stays for its bars, then the next departs. The list is PROJECT data: it saves, autosaves and rides undo (one undo per edit).">🧳 Upcoming Trips</label>'
-  +'<div style="display:flex;gap:6px;align-items:center;">'
-  +'<button id="orbTripsPlayAll" style="padding:4px 10px;font-size:11.5px;'+(orbTrips.run?'background:rgba(232,163,61,.16);':'')+'" title="Play the whole itinerary in order — the big Play button at the top of the column, per the spec.">'+(orbTrips.run?'⏸ Pause all':'▶ Play all')+'</button>'
-  +'<label style="display:flex;gap:4px;align-items:center;font-size:10.5px;color:var(--dim);cursor:not-allowed;" title="Audition Upcoming Trips — hear the itinerary through outputs 3 &amp; 4 while the audience hears 1 &amp; 2 (outputs configurable in Settings). Greyed honestly: the app&#8217;s audio path addresses ONE stereo pair today'+((function(){try{return ' (this browser reports '+(Tone&&Tone.getContext&&Tone.getContext().destination&&Tone.getContext().destination.maxChannelCount||2)+' output channels)';}catch(e){return '';}})())+' — the checkbox enables when the multi-output substrate lands (recorded with 6.2b&#8217;s offline-render engine)."><input type="checkbox" id="orbTripsAud" disabled style="accent-color:var(--accent);">Audition 3&amp;4</label>'
-  +'</div>'
-  +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
-  +'<label style="display:flex;gap:4px;align-items:center;font-size:10.5px;color:var(--text);cursor:pointer;" title="Start next trip in ___ — when checked, each next trip departs automatically at the chosen synchronization point (bar, half note, beat, 8th, 16th… or immediately)."><input type="checkbox" id="orbTripsSyncOn"'+(orbTrips.syncOn?' checked':'')+' style="accent-color:var(--accent);">Start next trip in</label>'
-  +'<select id="orbTripsSync" style="font-size:10.5px;">'
-  +[[128,'32 bars',''],[64,'16 bars',''],[32,'8 bars',''],[16,'4 bars',''],[8,'2 bars',''],[4,'1 bar',''],[2,'1/2',''],[1,'1/4',''],[0.6667,'1/4T','1/4 Triplet'],[0.5,'1/8',''],[0.3333,'1/8T','1/8 Triplet'],[0.25,'1/16',''],[0.1667,'1/16T','1/16 Triplet'],[-1,'immediately','']]
-   .map(o=>'<option value="'+o[0]+'"'+(Math.abs(orbTrips.sync-o[0])<1e-3?' selected':'')+(o[2]?' title="'+o[2]+'"':'')+'>'+o[1]+'</option>').join('')
-  +'<option value="type" title="Type your own value, in beats (e.g. 6 = a bar and a half)">Type Here…</option>'
-  +'</select></div>'
-  +'<div id="orbTripsBox" style="display:flex;flex-direction:column;max-height:300px;overflow:auto;">'+orbTripRowsHTML()+'</div>'
-  /* ORBIT FEEDBACK R1 — THE JOURNEY lives INSIDE Upcoming Trips (client, Aug 20): the trips
-     ahead on top, the road travelled so far beneath — one window. */
-  +'<div id="orbJourneyBox" style="border-top:1px dashed var(--line);margin-top:4px;padding-top:6px;display:flex;flex-direction:column;gap:5px;">'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="The journey so far — every landing this voyage has made, in order. One undo returns the whole voyage; ⏹ closes it so the next travel starts a fresh one.">🧭 The journey so far</label>'
-  +'<div style="font-size:11px;color:var(--text);line-height:1.5;">'+jl+'</div>'
-  +'<button id="orbEnd" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;align-self:flex-start;"'+(orbJourney.active?'':' disabled')+'>⏹ End the journey</button>'
-  +'</div>'
-  /* ORBIT FEEDBACK R4 — ⏺ Record journey sits RIGHT UNDER Upcoming Trips (client, Aug 20) */
-  +'<button id="orbRec" style="padding:5px 10px;font-size:11.5px;margin-top:4px;'+(orbState.rec?'background:#8a2f3a;color:#fff;':'background:#3a3e4d;color:#e9eaef;')+'" title="Record your performance of this game — stopping drops the whole multi-track re-harmonization as ONE chords object on the Essence Shelf (△ Prism window)">'+(orbState.rec?'⏺ Recording… press to keep':'⏺ Record journey → Shelf')+'</button>'
-  +'</div>'
   +'</div>';
  /* R6 — LIMITATION = CREATIVITY: the triangle opens/closes the lane; a toggle re-grows the moons */
  const lh=document.getElementById('orbLimHead');if(lh)lh.onclick=()=>{orbState.lim.open=!orbState.lim.open;renderOrb();};
@@ -17444,12 +17592,12 @@ function renderOrb(){
  document.getElementById('orbUser').onclick=orbUserPrompt;
  document.getElementById('orbPilot').onclick=()=>{orbState.pilot=!orbState.pilot;renderOrb();};
  const fitB=document.getElementById('orbFit');if(fitB)fitB.onclick=()=>{orbState.fit=!orbState.fit;renderOrb();setOrbStatus(orbState.fit?'🎯 Fit to chords ON — a landed chord snaps the melody under it to its chord tones.':'🎯 Fit to chords OFF — chords change, the melody stays as written.');};
- document.getElementById('orbRec').onclick=orbRecToggle;
+ const _orbRec=document.getElementById('orbRec');if(_orbRec)_orbRec.onclick=orbRecToggle;
  document.getElementById('orbSpeed').onchange=e=>{orbState.q=+e.target.value||4;};
  document.getElementById('orbAuto').onchange=e=>{orbState.auto=!!e.target.checked;orbBot.next=0;renderOrb();};
  const sh=document.getElementById('orbShape');if(sh)sh.onchange=e=>{orbState.shape=e.target.value;};
  document.getElementById('orbMidi').onchange=e=>{orbState.midi=!!e.target.checked;if(orbState.midi&&typeof ensureMidiIn==='function')ensureMidiIn();};
- document.getElementById('orbEnd').onclick=orbEndJourney;
+ const _orbEnd=document.getElementById('orbEnd');if(_orbEnd)_orbEnd.onclick=orbEndJourney;
  B.querySelectorAll('.orbDeg').forEach(el=>{
   el.onclick=()=>{
    orbState.ecoDeg=+el.dataset.k;
@@ -17490,7 +17638,7 @@ function renderOrb(){
    }
    const g=document.getElementById('orbTripGhost');
    if(g){g.style.left=(e.clientX+12)+'px';g.style.top=(e.clientY-8)+'px';}
-   const col=document.getElementById('orbTripsCol');
+   const col=document.getElementById('tripsCol')||document.getElementById('tripsPanel');
    if(col){const r=col.getBoundingClientRect();
     col.style.outline=(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom)?'1px dashed var(--accent)':'';}
   });
@@ -17498,7 +17646,7 @@ function renderOrb(){
    const d=orbTrips.drag;if(!d)return;
    orbTrips.drag=null;
    const g=document.getElementById('orbTripGhost');if(g)g.remove();
-   const col=document.getElementById('orbTripsCol');
+   const col=document.getElementById('tripsCol')||document.getElementById('tripsPanel');
    if(!d.on)return;
    orbTrips.dragDid=true;setTimeout(()=>{orbTrips.dragDid=false;},0);
    if(!col)return;
@@ -20734,7 +20882,7 @@ function refresh(reschedule){
  if(typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='melPanel'&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
  if(typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: ⟲ follow — the board tracks the playhead's key */
  if(typeof syncSetupTempoBox==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='setupPanel')syncSetupTempoBox();   /* SETUP R1: the 🔧 BPM box + meter select follow edits/undo while the window is up */
- if(typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')orbTripsRefresh();   /* 4.7 R3: the itinerary follows undo/edits while Orbits is up */
+ if(typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.trips)orbTripsRefresh();   /* WINDOW-SHELL: itinerary follows undo while Trips is up */
  /* multi-track strips follow zoom / song length / paper toggles */
  if(typeof stripPPB!=='undefined'&&(stripPPB!==PPB||stripLOOP!==LOOP||stripPaper!==paperView))drawTrackSel();
  const st=project.style;
@@ -21149,6 +21297,7 @@ const WINDOW_DEFS=[
  {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'CHOOSE YOUR OWN ADVENTURE',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
  {id:'wanPanel',   name:'Wanderer',icon:'🧭',tip:'Chord Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers on Weber\'s table (4.6): arrow keys walk the chords of your scale and its parallel relative, every landing plays, ✓ writes it to the lane'},
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
+ {id:'tripsPanel', name:'Trips',   icon:'🧳',tip:'Upcoming Trips — the itinerary of chord and key changes waiting to enter the song. Opens as a bridge between the window above and the one below. ▶ Start next trip in: the musical time until insert. Small = a chord lane of the trips · expanded = a full editable track.'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
  {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Lives between the Chord Palette and the Multi-Track Grid.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & count-in · Web MIDI (device inputs · outputs · connection status) · audio device (output choice · sample rate · latency) · tempo & time signature (the sample-directory and DAW-routing guides live behind the ⇪ Import window)'}];
@@ -21162,6 +21311,7 @@ const RAIL_DEFS=[
  {icon:'➿', win:'melPanel',tip:'Open the Melody Melisma Machine — vocal ornaments by tradition and era'},
  {icon:'⌕', win:'ragaPanel',tip:'Open the Scale/Raga Browser — CHOOSE YOUR OWN ADVENTURE'},
  {icon:'🧭', win:'wanPanel',tip:'Open the Chord Wanderer — wander related key centers on Weber\'s table (4.6)'},
+ {icon:'🧳', win:'tripsPanel',tip:'Open Upcoming Trips — the itinerary that feeds the song · a bridge between the window above and the one below'},
  {icon:'🪐', win:'orbPanel',tip:'Open Interplanetary Orbits — the planet is the key you are in, pivot chords open roads to new worlds (4.7 rework)'},
  {icon:'△', win:'prismPanel',tip:'Open THE SONG PRISM — split any track into contour · Note DNA · rhythm, letter the phrases, keep essences on the Shelf (5.1)'},
  {icon:'𝄂', win:'cadPanel',tip:'Open the Cadence Window — the chords at the end of a musical phrase. Nothing more or less. (5.3)'},
@@ -21169,7 +21319,7 @@ const RAIL_DEFS=[
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
    unchanged, it simply starts as the open one. A saved state (incl. an explicit close)
    always wins over the default. */
-function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false};}
+function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false,trips:null};}
 function parseUiState(str,defs){
  const def=uiDefault(),ids=(defs||WINDOW_DEFS).map(d=>d.id);
  try{
@@ -21182,24 +21332,43 @@ function parseUiState(str,defs){
    if(o.heights&&typeof o.heights==='object')
     for(const k of ids)if(typeof o.heights[k]==='number')def.heights[k]=Math.max(120,Math.min(1000,o.heights[k]));
    if(o.iconsHidden===true)def.iconsHidden=true;
+   /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
+   if(o.trips==='min'||o.trips==='full')def.trips=o.trips;
+   if(def.open==='tripsPanel'){def.open=null;if(!def.trips)def.trips='full';}
   }
  }catch(e){}
  return def;}
 function uiReduce(state,action,defs){
  const ids=(defs||WINDOW_DEFS).map(d=>d.id);
  const s={open:state.open,collapsed:Object.assign({},state.collapsed),
-  heights:Object.assign({},state.heights),iconsHidden:state.iconsHidden};
+  heights:Object.assign({},state.heights),iconsHidden:state.iconsHidden,
+  trips:state.trips===undefined?null:state.trips};
  if(!action||typeof action!=='object')return s;
- if(action.type==='toggle'&&ids.indexOf(action.id)>=0){
-  s.open=state.open===action.id?null:action.id;      /* one window at a time */
+ /* WINDOW-SHELL · RAW [69][72][75]: Trips is the one-window-law EXCEPTION — a companion
+    that opens BETWEEN the top window and the one below. Toggle never steals `open`. */
+ if(action.type==='toggle'&&action.id==='tripsPanel'){
+  /* chip: closed/min → full; full → closed. Collapse (▂) still flips min ↔ full. */
+  s.trips=(state.trips==='full')?null:'full';
+  if(s.trips==='full')delete s.collapsed.tripsPanel;
+ }
+ else if(action.type==='toggle'&&ids.indexOf(action.id)>=0){
+  s.open=state.open===action.id?null:action.id;      /* one window at a time (Trips excepted) */
   if(s.open)delete s.collapsed[s.open];              /* opening un-collapses */
+  /* [75] opening Wanderer or Orbits auto-launches minimized Trips under them */
+  if((s.open==='wanPanel'||s.open==='orbPanel')&&!s.trips)s.trips='min';
+ }
+ else if(action.type==='collapse'&&action.id==='tripsPanel'){
+  /* collapse on Trips = min ↔ full (the slim strip ↔ the full itinerary) */
+  if(s.trips==='full')s.trips='min';
+  else if(s.trips==='min')s.trips='full';
+  s.collapsed.tripsPanel=(s.trips==='min');
  }
  else if(action.type==='collapse'&&ids.indexOf(action.id)>=0)
   s.collapsed[action.id]=!state.collapsed[action.id];
  else if(action.type==='height'&&ids.indexOf(action.id)>=0&&typeof action.px==='number')
   s.heights[action.id]=Math.max(120,Math.min(1000,Math.round(action.px)));
  else if(action.type==='icons')s.iconsHidden=!state.iconsHidden;
- else if(action.type==='expandAll')s.collapsed={};   /* v3: one rail icon expands every collapsed window */
+ else if(action.type==='expandAll'){s.collapsed={};if(s.trips==='min')s.trips='full';}
  return s;}
 let uiState=uiDefault();
 try{uiState=parseUiState(localStorage.getItem('cp_ui'));}catch(e){}
@@ -21216,6 +21385,7 @@ function uiDispatch(action){
  applyUiState();
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
+ if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
  if(action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel')){
   const p=document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
@@ -21235,15 +21405,28 @@ function applyUiState(){
  if(typeof palSearchFor!=='undefined'&&palSearchFor!=null&&uiState.open!=='ragaPanel')palSearchFor=null;   /* 20n: a closed Browser forgets which matrix asked */
  for(const d of WINDOW_DEFS){
   const p=document.getElementById(d.id);if(!p)continue;
-  p.style.display=uiState.open===d.id?'':'none';
-  p.classList.toggle('winCollapsed',!!uiState.collapsed[d.id]);
+  if(d.id==='tripsPanel'){
+   /* companion: visible when trips is min or full — independent of uiState.open */
+   p.style.display=uiState.trips?'':'none';
+   p.classList.toggle('winCollapsed',uiState.trips==='min'||!!uiState.collapsed.tripsPanel);
+  }else{
+   p.style.display=uiState.open===d.id?'':'none';
+   p.classList.toggle('winCollapsed',!!uiState.collapsed[d.id]);
+  }
   const body=p.querySelector('.winBodyWrap');
   if(body){
    if(uiState.heights[d.id]){body.style.maxHeight=uiState.heights[d.id]+'px';body.classList.add('winBody-limit');}
    else{body.style.maxHeight='';body.classList.remove('winBody-limit');}
   }
   const chip=document.getElementById('pchip_'+d.id);
-  if(chip)chip.classList.toggle('on',uiState.open===d.id);
+  if(chip)chip.classList.toggle('on',d.id==='tripsPanel'?!!uiState.trips:uiState.open===d.id);
+ }
+ /* RAW [72]: Trips stacks BETWEEN the open top window and whatever follows it */
+ const tripsEl=document.getElementById('tripsPanel');
+ if(tripsEl&&uiState.trips&&uiState.open){
+  const main=document.getElementById(uiState.open);
+  if(main&&main.parentNode&&main.parentNode===tripsEl.parentNode)
+   main.parentNode.insertBefore(tripsEl,main.nextSibling);
  }
  const rail=document.getElementById('rail');
  if(rail)rail.style.display=uiState.iconsHidden?'none':'flex';
@@ -21253,6 +21436,7 @@ function applyUiState(){
  }
  const eye=document.getElementById('pchip_eye');
  if(eye){eye.textContent=uiState.iconsHidden?'👁 Show icons':'👁 Hide icons';eye.classList.toggle('on',uiState.iconsHidden);}
+ if(uiState.trips&&typeof renderTrips==='function')try{renderTrips();}catch(e){}
 }
 function initUiShell(){
  /* icon bar chips */
