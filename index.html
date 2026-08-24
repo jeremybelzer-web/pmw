@@ -406,6 +406,8 @@
 #modPrevRuler{display:flex;height:14px;font-size:8.5px;color:var(--dim);border-bottom:1px solid var(--line);}
 #modPrevRuler .mprTick{border-left:1px solid var(--line);padding-left:2px;box-sizing:border-box;overflow:hidden;white-space:nowrap;}
 #modPrevRuler .mprTick.bar{border-left-color:var(--dim);color:var(--text);font-weight:700;}
+#modPrevScroll{overflow-x:auto;overflow-y:hidden;}
+#modPrevRuler{cursor:ns-resize;}
 #modPrevLaneWrap{position:relative;}
 #modPrevLane{display:flex;height:34px;position:relative;}
 #modPrevGrid{position:absolute;left:0;top:0;bottom:0;right:0;pointer-events:none;z-index:2;}
@@ -498,7 +500,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24d</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -863,11 +865,13 @@
     <div id="modPrevRow">
       <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written.">▶</span>
       <div style="flex:1;min-width:0;">
-        <div id="modPrevRuler"></div>
-        <div id="modPrevLaneWrap">
-          <div id="modPrevLane"></div>
-          <div id="modPrevGrid"></div>
-          <div id="modPrevPh"></div>
+        <div id="modPrevScroll">
+          <div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click + drag ⬍ to zoom; nothing else ever moves this grid."></div>
+          <div id="modPrevLaneWrap">
+            <div id="modPrevLane"></div>
+            <div id="modPrevGrid"></div>
+            <div id="modPrevPh"></div>
+          </div>
         </div>
         <div id="modPrevExp" style="display:none;"></div>
       </div>
@@ -9614,39 +9618,98 @@ function modAnimalSVG(id,cx,cy,s){
  const a=modAnimalFor(id);
  return a==='owl'?modOwlSVG(cx,cy,s):a==='bird'?modBirdSVG(cx,cy,s):a==='dog'?modDogSVG(cx,cy,s):modFoxSVG(cx,cy,s);
 }
+function modMeshAngles(n){
+ /* [M8d]: the tumble's chord angles — where each logical face FULLY FACES the user.
+    His cylinder walkthrough is the law: circle (0°) → square, the side view (90°) →
+    the back circle (180°); the turn then completes to 360 by the audition's end. */
+ if(n<=1)return [0];
+ if(n===2)return [0,90];
+ const out=[];for(let k=0;k<n;k++)out.push(k*180/(n-1));return out;
+}
+function modMeshRender(n,theta,lit){
+ /* [M8d]: A REAL 3D TUMBLE — the shape is a tiny mesh, rotated about the horizontal
+    axis by theta (plus a fixed 14° turn for depth) and flat-shaded by each face's
+    normal, so it remains the 3D shape FROM ANY ANGLE. Faces fronting the user (normal
+    toward the eye) go bright — brighter still while `lit` (the chord's flash). Pure:
+    returns the <g> innerHTML for the badge's mesh layer. */
+ const hue=(n*47)%360;
+ const CX=23,CY=21,SC=15.5;
+ const tr=theta*Math.PI/180,ty=14*Math.PI/180;
+ const rot=v=>{const y=v[1]*Math.cos(tr)-v[2]*Math.sin(tr),z=v[1]*Math.sin(tr)+v[2]*Math.cos(tr);
+  const x=v[0]*Math.cos(ty)+z*Math.sin(ty),z2=-v[0]*Math.sin(ty)+z*Math.cos(ty);
+  return [x,y,z2];};
+ if(n<=1){ /* the sphere — a circle from every angle; a turning meridian carries the motion */
+  const rx=Math.abs(Math.cos(tr))*13;
+  return '<circle cx="'+CX+'" cy="'+CY+'" r="14" fill="hsl('+hue+',55%,'+(lit?62:50)+'%)" stroke="rgba(0,0,0,.4)" stroke-width="0.8"/>'
+   +'<ellipse cx="'+CX+'" cy="'+CY+'" rx="'+rx.toFixed(1)+'" ry="14" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="0.8"/>';
+ }
+ const V=[],F=[];
+ const ring=(m,z,r)=>{const s0=V.length;for(let i=0;i<m;i++){const a=i*2*Math.PI/m;V.push([r*Math.cos(a),r*Math.sin(a),z]);}return s0;};
+ const M=14;
+ if(n===2){ /* cone: the base circle + the smooth side (his own example) */
+  const b=ring(M,.55,.95);V.push([0,0,-1.05]);const ap=V.length-1;
+  F.push({v:Array.from({length:M},(_,i)=>b+i)});
+  for(let i=0;i<M;i++)F.push({v:[b+i,b+(i+1)%M,ap]});
+ }else if(n===3){ /* cylinder: two caps + the side */
+  const a=ring(M,.65,.85),b=ring(M,-.65,.85);
+  F.push({v:Array.from({length:M},(_,i)=>a+i)});
+  F.push({v:Array.from({length:M},(_,i)=>b+M-1-i)});
+  for(let i=0;i<M;i++)F.push({v:[a+i,a+(i+1)%M,b+(i+1)%M,b+i]});
+ }else if(n===4){ /* tetrahedron */
+  V.push([0,-1,.35],[-.95,.6,.35],[.95,.6,.35],[0,0,-1.05]);
+  F.push({v:[0,1,2]},{v:[0,3,1]},{v:[1,3,2]},{v:[2,3,0]});
+ }else if(n===5){ /* square pyramid */
+  V.push([-.85,-.85,.55],[.85,-.85,.55],[.85,.85,.55],[-.85,.85,.55],[0,0,-1.05]);
+  F.push({v:[0,1,2,3]},{v:[1,0,4]},{v:[2,1,4]},{v:[3,2,4]},{v:[0,3,4]});
+ }else if(n===6){ /* cube */
+  V.push([-.75,-.75,.75],[.75,-.75,.75],[.75,.75,.75],[-.75,.75,.75],
+   [-.75,-.75,-.75],[.75,-.75,-.75],[.75,.75,-.75],[-.75,.75,-.75]);
+  F.push({v:[0,1,2,3]},{v:[5,4,7,6]},{v:[4,5,1,0]},{v:[3,2,6,7]},{v:[1,5,6,2]},{v:[4,0,3,7]});
+ }else{ /* n-gon prism: two (n-2)-gon caps + the sides */
+  const g=Math.max(3,n-2);
+  const a=ring(g,.6,.9),b=ring(g,-.6,.9);
+  F.push({v:Array.from({length:g},(_,i)=>a+i)});
+  F.push({v:Array.from({length:g},(_,i)=>b+g-1-i)});
+  for(let i=0;i<g;i++)F.push({v:[a+i,a+(i+1)%g,b+(i+1)%g,b+i]});
+ }
+ const P=V.map(rot);
+ const faces=F.map(f=>{
+  const pts=f.v.map(i=>P[i]);
+  const ux=pts[1][0]-pts[0][0],uy=pts[1][1]-pts[0][1],uz=pts[1][2]-pts[0][2];
+  const vx=pts[2][0]-pts[0][0],vy=pts[2][1]-pts[0][1],vz=pts[2][2]-pts[0][2];
+  let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz2=ux*vy-uy*vx;
+  const nl=Math.hypot(nx,ny,nz2)||1;const nz=-nz2/nl;   /* toward the eye = −z */
+  const zavg=pts.reduce((acc,p)=>acc+p[2],0)/pts.length;
+  return {pts,nz,zavg};
+ }).sort((x,y)=>y.zavg-x.zavg);   /* painter: far first */
+ let out='';
+ for(const f of faces){
+  const front=Math.max(0,f.nz);
+  const L=30+30*front+((lit&&f.nz>.72)?16:0);
+  out+='<polygon points="'+f.pts.map(p=>((CX+p[0]*SC).toFixed(1))+','+((CY+p[1]*SC).toFixed(1))).join(' ')+'" fill="hsl('+hue+',55%,'+L.toFixed(0)+'%)" stroke="rgba(0,0,0,.4)" stroke-width="0.7" stroke-linejoin="round"/>';
+ }
+ return out;
+}
 function modShapeSVG(tpl){
- /* [M6a]: the 3D shape by FACE COUNT = the moment's chord count. Flat-shaded like his
-    chart; the animal ([M7a] — per-moment, from the menagerie) sits on a circular
-    backdrop (.modAnBg) whose fill is the audition's per-chord colour ([M6d]). */
+ /* [M6a]: the 3D shape by FACE COUNT = the moment's chord count — rendered by the mesh
+    engine at rest (θ=0, face 0 front), so the badge and the tumble are ONE drawing.
+    The animal ([M7a]) rides on top throughout ([M8d]: "the whole time we will see the
+    animal picture inside"); its backdrop (.modAnBg) recolours per chord ([M6d]). */
  const n=tpl.bridge.length+(tpl.interval?1:0);
  const name=modShapeFor(n);
- const hue=(n*47)%360,base='hsl('+hue+',55%,52%)',dark='hsl('+hue+',55%,38%)',lite='hsl('+hue+',60%,66%)';
- const K='stroke="rgba(0,0,0,.4)" stroke-width="0.8" stroke-linejoin="round"';
- let body='';
- if(name==='sphere')body='<circle cx="23" cy="23" r="19" fill="'+base+'" '+K+'/>';
- else if(name==='cone')body='<ellipse cx="23" cy="38" rx="17" ry="6" fill="'+dark+'" '+K+'/><path d="M6 38 L23 3 L40 38 A17 6 0 0 1 6 38 Z" fill="'+base+'" '+K+'/>';
- else if(name==='cylinder')body='<path d="M6 10 L6 36 A17 6 0 0 0 40 36 L40 10 Z" fill="'+base+'" '+K+'/><ellipse cx="23" cy="10" rx="17" ry="6" fill="'+lite+'" '+K+'/>';
- else if(name==='tetrahedron')body='<path d="M23 3 L4 38 L23 30 Z" fill="'+dark+'" '+K+'/><path d="M23 3 L42 38 L23 30 Z" fill="'+base+'" '+K+'/><path d="M4 38 L23 30 L42 38 Z" fill="'+lite+'" '+K+'/>';
- else if(name==='square pyramid')body='<path d="M23 3 L4 34 L23 42 Z" fill="'+dark+'" '+K+'/><path d="M23 3 L42 34 L23 42 Z" fill="'+base+'" '+K+'/>';
- else if(name==='cube')body='<path d="M10 14 L23 8 L36 14 L23 20 Z" fill="'+lite+'" '+K+'/><path d="M10 14 L10 34 L23 40 L23 20 Z" fill="'+base+'" '+K+'/><path d="M36 14 L36 34 L23 40 L23 20 Z" fill="'+dark+'" '+K+'/>';
- else{ /* n-gon prism (pentagonal · hexagonal · the fallback) */
-  const g=name.slice(0,4)==='pent'?5:name.slice(0,4)==='hexa'?6:Math.max(3,n-2);
-  let front='',top='';
-  for(let i=0;i<g;i++){const a=-Math.PI/2+i*2*Math.PI/g;
-   front+=(23+15*Math.cos(a)).toFixed(1)+','+(27+15*Math.sin(a)).toFixed(1)+' ';
-   top+=(23+15*Math.cos(a)).toFixed(1)+','+(27+15*Math.sin(a)-7).toFixed(1)+' ';}
-  body='<polygon points="'+top+'" fill="'+lite+'" '+K+'/><polygon points="'+front+'" fill="'+base+'" '+K+'/>';
- }
  return '<svg viewBox="0 0 46 46" width="46" height="46"><title>'+name+' — '+n+' side'+(n===1?'':'s')+', one per chord of this moment</title>'
-  +body+'<circle class="modAnBg" cx="23" cy="26" r="10.5" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.35)" stroke-width="0.7"/>'
+  +'<g class="modMesh" data-n="'+n+'">'+modMeshRender(n,0,false)+'</g>'
+  +'<circle class="modAnBg" cx="23" cy="26" r="10.5" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.35)" stroke-width="0.7"/>'
   +modAnimalSVG(tpl.id,23,25.4,9)+'</svg>';
 }
 let modAud={timers:[],el:null,active:false};
 function modAudClear(){
  for(const t of modAud.timers)clearTimeout(t);
  modAud.timers=[];modAud.active=false;
+ if(modAud.raf)cancelAnimationFrame(modAud.raf);modAud.raf=null;
+ if(modAud.mesh){const g=modAud.mesh;modAud.mesh=null;
+  try{g.innerHTML=modMeshRender(+(g.dataset.n||2),0,false);}catch(e){}}   /* the badge back to rest — face 0 front */
  if(modAud.el){
-  const sv=modAud.el.querySelector('svg');if(sv)sv.style.transform='';
   modAud.el.classList.remove('modLit');modAud.el.classList.remove('modSpin');
   modAud.el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill','rgba(255,255,255,.85)'));
   modAud.el=null;}
@@ -9682,9 +9745,7 @@ function modAudPlay(tplId,rows,opts){
   modAud.timers.push(setTimeout(()=>{
    try{if(!opts.mute&&audioReady&&inst)inst.note('comping',(opts.voicing?opts.voicing(c):voice({r:c.r,iv:c.iv},null)),c.d*spb*.95,Tone.now()+.02,.5);}catch(e){}
    if(el){
-    const sv=el.querySelector('svg');
-    if(sv)sv.style.transform='rotateY('+(k*360/Math.max(1,n))+'deg)';   /* the chord's face, toward the user */
-    el.classList.add('modLit');
+    el.classList.add('modLit');   /* [M8d]: the face fully facing the user lights up as its chord plays */
     setTimeout(()=>{if(modAud.el===el)el.classList.remove('modLit');},Math.min(600,c.d*spb*700));
     el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill',col));
    }
@@ -9696,6 +9757,31 @@ function modAudPlay(tplId,rows,opts){
   const x0=blocks[0].offsetLeft,x1=blocks[n-1].offsetLeft+blocks[n-1].offsetWidth;
   ph.style.transition='none';ph.style.left=x0+'px';ph.style.display='block';
   modAud.timers.push(setTimeout(()=>{ph.style.transition='left '+(at*spb)+'s linear';ph.style.left=x1+'px';},30));
+ }
+ /* [M8d]: THE TUMBLE — the mesh turns through a full revolution, piecewise so the
+    chord's face is dead-front exactly when its chord sounds (modMeshAngles), the turn
+    completing to 360° by the audition's end. ~20 polygons at 46px, only while playing —
+    cheaper than one Orbit rotation frame. */
+ if(el){
+  const g=el.querySelector('.modMesh');
+  if(g){
+   const nn=rows.length;
+   const angles=modMeshAngles(nn).concat(360);
+   const times=[];{let t=0;for(const c of rows){times.push(t);t+=c.d*spb;}}
+   times.push(at*spb);
+   const t0=performance.now();
+   modAud.mesh=g;
+   const stepFn=()=>{
+    if(!modAud.active||modAud.mesh!==g)return;
+    const t=(performance.now()-t0)/1000;
+    let k=0;while(k<times.length-2&&t>=times[k+1])k++;
+    const span=Math.max(.001,times[k+1]-times[k]);
+    const th=angles[k]+(angles[k+1]-angles[k])*Math.min(1,Math.max(0,(t-times[k])/span));
+    g.innerHTML=modMeshRender(nn,th,el.classList.contains('modLit'));
+    if(t<times[times.length-1]+.05)modAud.raf=requestAnimationFrame(stepFn);
+   };
+   modAud.raf=requestAnimationFrame(stepFn);
+  }
  }
  modAud.timers.push(setTimeout(modAudClear,at*spb*1000+180));
 }
@@ -9752,7 +9838,10 @@ function drawModPrev(){
  const M=modPrevModel();
  if(M.err){lane.innerHTML='<span style="font-size:10.5px;color:var(--dim);align-self:center;">'+M.err+'</span>';ruler.innerHTML='';exp.style.display='none';return;}
  const total=M.endBeat-M.startBeat;
- const mppb=Math.max(16,Math.min(48,560/Math.max(1,total)));
+ /* [M8a] THE FIXED-GRID LAW: the lane owns its pixels-per-beat (modPrev.zoom). Resizing a
+    chord NEVER rescales the grid — the 24c bug was deriving this from the total. Only the
+    ruler's own ⬍ drag changes it ([M8c]). Wide moments scroll (#modPrevScroll). */
+ const mppb=modPrev.zoom||(modPrev.zoom=28);
  /* the bars-and-beats ruler ([M5]) — absolute beats; bar starts wear the bar number */
  let rh='';
  const firstTick=Math.ceil(M.startBeat-1e-6);
@@ -9775,22 +9864,36 @@ function drawModPrev(){
   const di=curScale().pcs.indexOf(((m.r-project.tonic)%12+12)%12);
   d.style.background=degColor(di<0?0:di);
   if(psy){d.style.borderColor='var(--accent)';d.style.borderStyle='dashed';}   /* the ⚡ overlay idiom */
-  d.title=(k===M.seq.length-1?'The landing — this slot IS the target chord ('+(selChord!=null?'your selected chord':'the playhead’s chord')+').':m.lbl)+' · '+M.durs[k]+' beat'+(M.durs[k]===1?'':'s')+' · click = select (the expansion follows) · drag the right edge = resize.';
+  d.title=(k===M.seq.length-1?'The landing — this slot IS the target chord ('+(selChord!=null?'your selected chord':'the playhead’s chord')+').':m.lbl)+' · '+M.durs[k]+' beat'+(M.durs[k]===1?'':'s')+' · click = select (the expansion follows) · drag an edge ([ ]) = move the boundary with the neighbor, the lane’s own law.';
   d.textContent=m.lbl;
   d.onclick=()=>{modPrev.sel=(modPrev.sel===k?null:k);drawModPrev();};   /* [M7d]: selectable */
-  const g=document.createElement('div');g.className='mpcGrip';g.title='Drag — set this chord’s length (the moment still ends on the target). Dragging switches the rate toggle to YOUR rate.';
-  g.onmousedown=e=>{
+  /* [M8b]: RESIZE = A BOUNDARY MOVE, exactly the real lane's law — the edge wears the
+     lane's own [ / ] cursors, the neighbor absorbs, the total (and so the grid) stands */
+  const EDGE=7;
+  d.onmousemove=ev=>{
+   if(modAud.active)return;
+   const r=d.getBoundingClientRect();
+   const nearL=k>0&&ev.clientX-r.left<EDGE,nearR=k<M.seq.length-1&&r.right-ev.clientX<EDGE;
+   d.style.cursor=nearL?CURS_L:nearR?CURS_R:'pointer';
+  };
+  d.onmousedown=e=>{
+   const r=d.getBoundingClientRect();
+   const nearL=k>0&&e.clientX-r.left<EDGE,nearR=k<M.seq.length-1&&r.right-e.clientX<EDGE;
+   if(!nearL&&!nearR)return;
    e.preventDefault();e.stopPropagation();
    if(modWinSettings.rate){modWinSettings.rate=false;persistModWin();
-    setModStatus('Your rate now — the toggle switched off as you dragged; the moment still ends on the target.');}
-   const x0=e.clientX,d0=M.durs[k];
-   const mm=ev=>{const nd=Math.max(.5,Math.round((d0+(ev.clientX-x0)/mppb)*4)/4);
-    if(!modPrev.durs||modPrev.durs.length!==M.seq.length)modPrev.durs=M.durs.slice();
-    modPrev.durs[k]=nd;drawModPrev();};
+    setModStatus('Your rate now — the toggle switched off as you dragged; the boundary moves, the grid does not.');}
+   const b=nearL?k-1:k;   /* the boundary between chord b and b+1 */
+   if(!modPrev.durs||modPrev.durs.length!==M.seq.length)modPrev.durs=M.durs.slice();
+   const x0=e.clientX,dl0=modPrev.durs[b],dr0=modPrev.durs[b+1];
+   const mm=ev=>{
+    let dx=Math.round(((ev.clientX-x0)/mppb)*4)/4;
+    dx=Math.max(.5-dl0,Math.min(dr0-.5,dx));
+    modPrev.durs[b]=+(dl0+dx).toFixed(4);modPrev.durs[b+1]=+(dr0-dx).toFixed(4);
+    drawModPrev();};
    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
   };
-  d.appendChild(g);
   lane.appendChild(d);
  });
  /* [M7d]: BEAT lines as well as bar lines — an overlay grid across the lane, phase-locked
@@ -9975,6 +10078,15 @@ modState.lastPick=modState.lastPick||'mim';
  if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
   setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
  if(pb)pb.onclick=modPrevAudition;
+ /* [M8c]: the ruler's ⬍ drag is the ONE thing that moves the bars and beats — the zoom */
+ const ru=document.getElementById('modPrevRuler');
+ if(ru)ru.onmousedown=e=>{
+  e.preventDefault();
+  const y0=e.clientY,z0=modPrev.zoom||28;
+  const mm=ev=>{modPrev.zoom=Math.max(10,Math.min(64,Math.round(z0-(ev.clientY-y0)*0.25)));drawModPrev();};
+  const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+ };
  /* [M7c]: Escape — or clicking away from the window — stops the audition */
  document.addEventListener('keydown',e=>{if(e.key==='Escape')modAudStop();});
  document.addEventListener('mousedown',e=>{if(modAud.active&&!(e.target&&e.target.closest&&e.target.closest('#modPanel')))modAudStop();},true);
