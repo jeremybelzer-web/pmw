@@ -392,6 +392,29 @@
 .psyName{font-size:11.5px;}
 .psyChain{font-size:10.5px;color:var(--dim);flex:1;min-width:120px;}
 .psyRow .psyArm{padding:3px 9px;font-size:10.5px;}
+/* 4.3 R-WINDOW (24b, [M6a-d]): the 3D shape badge — face count = the moment's chord count;
+   a geometric animal inside; .modSpin turns while the moment auditions */
+.modShape{flex:0 0 auto;width:46px;height:46px;display:inline-block;}
+.mimCard .modShape{float:right;margin:-2px -4px 2px 6px;}
+@keyframes modspin{from{transform:rotateY(0deg);}to{transform:rotateY(360deg);}}
+.modShape svg{display:block;}
+.modShape.modSpin svg{animation:modspin 2.4s linear infinite;transform-style:preserve-3d;}
+/* [M3b]/[M5]/[M6e-f]: the embedded preview lane at the top of the window */
+#modPrevRow{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+#modPrevPlay{padding:6px 11px;font-size:13px;align-self:center;}
+#modPrevRuler{display:flex;height:14px;font-size:8.5px;color:var(--dim);border-bottom:1px solid var(--line);}
+#modPrevRuler .mprTick{border-left:1px solid var(--line);padding-left:2px;box-sizing:border-box;overflow:hidden;white-space:nowrap;}
+#modPrevRuler .mprTick.bar{border-left-color:var(--dim);color:var(--text);font-weight:700;}
+#modPrevLane{display:flex;height:34px;}
+#modPrevLane .mpc{position:relative;box-sizing:border-box;border:1px solid rgba(0,0,0,.35);border-radius:4px;margin-right:1px;
+ display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;min-width:0;}
+#modPrevLane .mpc.mpcTgt{box-shadow:0 0 0 2px var(--accent) inset;}
+#modPrevLane .mpcGrip{position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:2;}
+#modPrevExp{border:1px solid var(--line);border-radius:6px;margin-top:4px;padding:4px 6px;font-size:10.5px;}
+#modPrevExp .mpeRow{display:flex;gap:8px;align-items:center;padding:2px 0;}
+#modPrevExp .mpeNotes{color:var(--dim);flex:1;}
+.modTogs{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--dim);margin-bottom:10px;}
+.modTogs label{display:flex;gap:5px;align-items:center;cursor:pointer;}
 .mimCard{width:216px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:8px 10px;cursor:pointer;box-sizing:border-box;}
 .mimCard:hover{border-color:var(--dim);}
 .mimCard.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
@@ -469,7 +492,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-23c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -827,6 +850,25 @@
 
   <div class="gridwrap" id="modPanel" style="margin-top:12px;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">The Modulation Engine · psych-outs &amp; Mimic Modulations</div>
+    <!-- 4.3 R-WINDOW (build 2026-08-24b, MODULATION-INJECT-RAW [M3b][M5][M6e-g]): the embedded
+         preview chord lane — bars-and-beats ruler above, ▶ at its left, always ENDING on the
+         selected chord in the multi-track lane (else the playhead's chord); expandable for
+         inversion editing; the two toggles beneath. -->
+    <div id="modPrevRow">
+      <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written.">▶</span>
+      <div style="flex:1;min-width:0;">
+        <div id="modPrevRuler"></div>
+        <div id="modPrevLane"></div>
+        <div id="modPrevExp" style="display:none;"></div>
+      </div>
+      <span class="part" id="modPrevExpB" title="Expand the lane — edit each chord&#8217;s inversion, like an expanded multi-track lane.">▤</span>
+    </div>
+    <div class="modTogs">
+      <label id="modRateTog" title="ON: the preview and the inject keep the song&#8217;s own rate of chord change (the slot law). OFF: drag the chord boundaries in the lane above — the moment lands at YOUR rate, still ending on the target.">
+        <input type="checkbox" id="modRateChk" checked> Use the original rate of chord change from the song</label>
+      <label id="modHideTog" title="Audition modulations and psych out modulations on the fly without accidentally recording what you do as an automation.">
+        <input type="checkbox" id="modHideChk" checked> Hide from performance record mode</label>
+    </div>
     <div id="psySection">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;" title="A psych-out pivots toward a new key, then just returns — it lives at playback level only, the chord lane is never written.">⚡ Psych-outs — feint toward a new key, then come home (playback-only)</div>
       <div id="psyRows" style="display:flex;flex-direction:column;gap:6px;max-width:760px;"></div>
@@ -1767,6 +1809,46 @@ function slotInjectModulation(chords,targetIdx,tpl,srcTonic){
  for(let i=targetIdx+1;i<out.length;i++)out[i].r=((out[i].r+tpl.interval)%12+12)%12;
  let t=0;for(let i=0;i<targetIdx;i++)t+=chords[i].d;
  return {chords:out,tgtTonic:((srcTonic+tpl.interval)%12+12)%12,tailStart:+t.toFixed(6),first,need:seq.length};
+}
+function modShapeFor(n){
+ /* 4.3 R-WINDOW ([M6a]): the 3D shape whose FACE COUNT equals the moment's chord count —
+    his own example: V → I of the new key = 2 chords = a cone (the circle + the smooth
+    side). The menu is his chart; n>8 falls back to an (n−2)-gon prism. Pure. */
+ return n<=1?'sphere':n===2?'cone':n===3?'cylinder':n===4?'tetrahedron'
+  :n===5?'square pyramid':n===6?'cube':n===7?'pentagonal prism':n===8?'hexagonal prism'
+  :(n-2)+'-gon prism';
+}
+function spanInjectModulation(chords,targetIdx,tpl,srcTonic,durs){
+ /* THE SLOT LAW at the WINDOW'S OWN RATE ([M3b], rate toggle OFF): the moment still ENDS
+    on the target chord's END, but each of its chords wears the duration the user set in
+    the embedded lane. The span [end − Σdurs, end) replaces whatever it covers — a lane
+    chord half-covered at the span's start keeps its head (the pivotInsertChords trim
+    idiom). Null when the span would start before beat 0. Tail after the target
+    transposes; tailStart = the landing chord's start. Pure — fresh rows. */
+ if(!Array.isArray(chords)||targetIdx==null||!chords[targetIdx]||!tpl)return null;
+ const seq=modTemplateChords(tpl,srcTonic);
+ if(!Array.isArray(durs)||durs.length!==seq.length||durs.some(d=>!(d>0)))return null;
+ let end=0;for(let i=0;i<=targetIdx;i++)end+=chords[i].d;
+ end=+end.toFixed(6);
+ const need=durs.reduce((a,d)=>a+d,0);
+ const start=+(end-need).toFixed(6);
+ if(start<-1e-6)return null;
+ const out=[];let t=0;
+ for(const c of chords){
+  const a=t,b=+(t+c.d).toFixed(6);t=b;
+  const keepL=Math.min(b,start)-a;
+  if(keepL>1e-6)out.push({...c,iv:c.iv.slice(),d:+keepL.toFixed(6)});
+  if(a<=start+1e-6&&b>start+1e-6)
+   seq.forEach((m,k)=>out.push({d:durs[k],r:((m.r%12)+12)%12,iv:m.iv.slice(),lbl:m.lbl,bass:0}));
+  if(b>end+1e-6&&a<end+1e-6&&b-end>1e-6)out.push({...c,iv:c.iv.slice(),d:+(b-end).toFixed(6)});
+  else if(a>=end-1e-6)out.push({...c,iv:c.iv.slice()});
+ }
+ const iv=tpl.interval||0;
+ let seen=0,landIdx=-1;
+ for(let i=0;i<out.length;i++){const a=seen;seen=+(seen+out[i].d).toFixed(6);
+  if(landIdx<0&&Math.abs(seen-end)<1e-6)landIdx=i;}
+ for(let i=landIdx+1;i<out.length;i++)out[i].r=((out[i].r+iv)%12+12)%12;
+ return {chords:out,tgtTonic:((srcTonic+iv)%12+12)%12,tailStart:+(end-durs[durs.length-1]).toFixed(6),need:seq.length,first:landIdx-(seq.length-1)};
 }
 /* ==== 4.1 MODULATION LANE (pure layer) ==== the Modulation Engine's lane surface reads
    key-center REGIONS straight off project.sections (one data model with the Machine and
@@ -9441,8 +9523,207 @@ function mimicAudition(tpl){
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
   let at=0;
   for(const c of rows){inst.note('comping',voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+  modAudFx(tpl.id,rows,spb);   /* [M6c]/[M6d]: the card's shape spins, the fox recolours per chord */
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+}
+/* ==== 4.3 R-WINDOW (build 2026-08-24b) — MODULATION-INJECT-RAW [M3b][M4][M5][M6] ====
+   the embedded preview chord lane (ends ON the target — selected chord trumps playhead),
+   its bars-and-beats ruler, the ▶, inversion expansion, the two toggles, and the 3D
+   shape badges (face count = chord count; a geometric fox inside; the shape spins while
+   its moment auditions and the fox's backdrop recolours on every chord). */
+let modPrev={exp:false,durs:null,inv:{}};
+let modWinSettings={rate:true,hide:true};
+function persistModWin(){try{localStorage.setItem('cp_modwin',JSON.stringify(modWinSettings));}catch(e){}}
+function modPerfHidden(){return !!modWinSettings.hide;}
+/* [M6g]: the contract point — while ON, nothing this window auditions or arms may land in a
+   performance/automation record. Today NO code path records these actions (measured: the 2.7
+   stream records bound lane-header moves; the ⏺ take records MIDI input); any future path
+   that could MUST consult modPerfHidden() first. verify-modw67.py asserts the behavior. */
+function modFoxSVG(cx,cy,s){
+ /* the geometric animal ([M6b], his fox picture's style — straight-edged facets, heavy
+    outline): a faceted fox head, drawn small enough to live inside any of the shapes */
+ const P=(pts)=>'<polygon points="'+pts.map(p=>(cx+p[0]*s).toFixed(1)+','+(cy+p[1]*s).toFixed(1)).join(' ')+'" ';
+ const K='stroke="#1c1408" stroke-width="0.7" stroke-linejoin="round"';
+ return P([[-1,-.9],[-.55,-.25],[-1.05,-.05]])+'fill="#c96f1e" '+K+'/>'   /* left ear */
+  +P([[1,-.9],[.55,-.25],[1.05,-.05]])+'fill="#c96f1e" '+K+'/>'          /* right ear */
+  +P([[-1.05,-.05],[-.55,-.25],[0,.1]])+'fill="#f2a93b" '+K+'/>'
+  +P([[1.05,-.05],[.55,-.25],[0,.1]])+'fill="#f2a93b" '+K+'/>'
+  +P([[-.55,-.25],[.55,-.25],[0,.1]])+'fill="#ffd35c" '+K+'/>'           /* brow facet */
+  +P([[-1.05,-.05],[0,.1],[-.45,.55]])+'fill="#e08a26" '+K+'/>'
+  +P([[1.05,-.05],[0,.1],[.45,.55]])+'fill="#e08a26" '+K+'/>'
+  +P([[-.45,.55],[0,.1],[.45,.55],[0,1]])+'fill="#fff3d6" '+K+'/>'       /* muzzle */
+  +P([[-.14,.62],[.14,.62],[0,.84]])+'fill="#1c1408" '+K+'/>'            /* nose */
+  +'<circle cx="'+(cx-.34*s).toFixed(1)+'" cy="'+(cy+.02*s).toFixed(1)+'" r="'+(0.09*s).toFixed(1)+'" fill="#1c1408"/>'
+  +'<circle cx="'+(cx+.34*s).toFixed(1)+'" cy="'+(cy+.02*s).toFixed(1)+'" r="'+(0.09*s).toFixed(1)+'" fill="#1c1408"/>';
+}
+function modShapeSVG(tpl){
+ /* [M6a]: the 3D shape by FACE COUNT = the moment's chord count. Flat-shaded like his
+    chart; the fox sits on a circular backdrop (.modAnBg) whose fill is the audition's
+    per-chord colour ([M6d]). */
+ const n=tpl.bridge.length+(tpl.interval?1:0);
+ const name=modShapeFor(n);
+ const hue=(n*47)%360,base='hsl('+hue+',55%,52%)',dark='hsl('+hue+',55%,38%)',lite='hsl('+hue+',60%,66%)';
+ const K='stroke="rgba(0,0,0,.4)" stroke-width="0.8" stroke-linejoin="round"';
+ let body='';
+ if(name==='sphere')body='<circle cx="23" cy="23" r="19" fill="'+base+'" '+K+'/>';
+ else if(name==='cone')body='<ellipse cx="23" cy="38" rx="17" ry="6" fill="'+dark+'" '+K+'/><path d="M6 38 L23 3 L40 38 A17 6 0 0 1 6 38 Z" fill="'+base+'" '+K+'/>';
+ else if(name==='cylinder')body='<path d="M6 10 L6 36 A17 6 0 0 0 40 36 L40 10 Z" fill="'+base+'" '+K+'/><ellipse cx="23" cy="10" rx="17" ry="6" fill="'+lite+'" '+K+'/>';
+ else if(name==='tetrahedron')body='<path d="M23 3 L4 38 L23 30 Z" fill="'+dark+'" '+K+'/><path d="M23 3 L42 38 L23 30 Z" fill="'+base+'" '+K+'/><path d="M4 38 L23 30 L42 38 Z" fill="'+lite+'" '+K+'/>';
+ else if(name==='square pyramid')body='<path d="M23 3 L4 34 L23 42 Z" fill="'+dark+'" '+K+'/><path d="M23 3 L42 34 L23 42 Z" fill="'+base+'" '+K+'/>';
+ else if(name==='cube')body='<path d="M10 14 L23 8 L36 14 L23 20 Z" fill="'+lite+'" '+K+'/><path d="M10 14 L10 34 L23 40 L23 20 Z" fill="'+base+'" '+K+'/><path d="M36 14 L36 34 L23 40 L23 20 Z" fill="'+dark+'" '+K+'/>';
+ else{ /* n-gon prism (pentagonal · hexagonal · the fallback) */
+  const g=name.slice(0,4)==='pent'?5:name.slice(0,4)==='hexa'?6:Math.max(3,n-2);
+  let front='',top='';
+  for(let i=0;i<g;i++){const a=-Math.PI/2+i*2*Math.PI/g;
+   front+=(23+15*Math.cos(a)).toFixed(1)+','+(27+15*Math.sin(a)).toFixed(1)+' ';
+   top+=(23+15*Math.cos(a)).toFixed(1)+','+(27+15*Math.sin(a)-7).toFixed(1)+' ';}
+  body='<polygon points="'+top+'" fill="'+lite+'" '+K+'/><polygon points="'+front+'" fill="'+base+'" '+K+'/>';
+ }
+ return '<svg viewBox="0 0 46 46" width="46" height="46"><title>'+name+' — '+n+' side'+(n===1?'':'s')+', one per chord of this moment</title>'
+  +body+'<circle class="modAnBg" cx="23" cy="26" r="10.5" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.35)" stroke-width="0.7"/>'
+  +modFoxSVG(23,25.4,9)+'</svg>';
+}
+let modAud={timers:[],el:null};
+function modAudClear(){
+ for(const t of modAud.timers)clearTimeout(t);
+ modAud.timers=[];
+ if(modAud.el){modAud.el.classList.remove('modSpin');
+  modAud.el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill','rgba(255,255,255,.85)'));
+  modAud.el=null;}
+}
+function modAudFx(tplId,rows,spb){
+ /* [M6c]/[M6d]: the moment's shape SPINS for the audition's length, and the fox's
+    backdrop takes each chord's colour as the audition reaches it */
+ modAudClear();
+ const el=document.querySelector('.modShape[data-tpl="'+tplId+'"]');
+ if(!el)return;
+ modAud.el=el;el.classList.add('modSpin');
+ let at=0;
+ for(const c of rows){
+  const col='hsl('+((((c.r||0)%12)+12)%12)*30+',62%,62%)';
+  modAud.timers.push(setTimeout(()=>{el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill',col));},Math.max(0,at*spb*1000)));
+  at+=c.d;
+ }
+ modAud.timers.push(setTimeout(modAudClear,at*spb*1000+150));
+}
+function modPrevTpl(){
+ return modState.lastPick==='psy'?psychTemplate(modState.psySel):currentModTemplate();
+}
+function modPrevTarget(){
+ /* [M6e]: the lane ENDS on the selected chord in the MULTI-TRACK lane, else the
+    playhead's chord — selected trumps playhead */
+ if(typeof selChord!=='undefined'&&selChord!=null&&project.chords[selChord])return selChord;
+ const b=(typeof playheadBeat==='number')?playheadBeat:0;
+ return chordIdxAtBeat(project.chords,Math.max(0,Math.min(b,LOOP-1e-6)));
+}
+function modPrevVoicing(m,bass){
+ /* a close stack from the chosen bass tone up — the expansion's display/audition voicing */
+ const b=((bass||0)%m.iv.length+m.iv.length)%m.iv.length;
+ const order=m.iv.slice(b).concat(m.iv.slice(0,b));
+ let last=null;
+ return order.map(x=>{let md=48+((m.r+x)%12+12)%12;while(last!=null&&md<=last)md+=12;last=md;return md;});
+}
+function modPrevModel(){
+ /* the previewed moment resolved onto the CURRENT target — one model for the lane, the
+    ruler, the ▶ and the inject */
+ const tpl=modPrevTpl();
+ const tgt=modPrevTarget();
+ if(!tpl||tgt==null||!project.chords[tgt])return {err:'Pick a moment below — the lane previews it ending on the selected chord (or the playhead’s).'};
+ const srcKey=keyFor(chordStartOf(tgt));
+ const seq=modTemplateChords(tpl,srcKey.tonic);
+ const first=tgt-(seq.length-1);
+ let durs;
+ if(modWinSettings.rate){
+  if(first<0)return {err:'No room at the song’s rate — this '+seq.length+'-chord moment needs '+(seq.length-1)+' chord'+(seq.length===2?'':'s')+' before the target. Select a later chord.',tpl};
+  durs=Array.from({length:seq.length},(_,k)=>project.chords[first+k].d);
+ }else{
+  durs=(modPrev.durs&&modPrev.durs.length===seq.length)?modPrev.durs.slice()
+   :(first>=0?Array.from({length:seq.length},(_,k)=>project.chords[first+k].d):seq.map(()=>1));
+ }
+ const endBeat=+(chordStartOf(tgt)+project.chords[tgt].d).toFixed(6);
+ const startBeat=+(endBeat-durs.reduce((a,d)=>a+d,0)).toFixed(6);
+ if(!modWinSettings.rate&&startBeat<-1e-6)return {err:'No room at this rate — the moment would begin before the song does. Shorten its chords or pick a later target.',tpl};
+ return {tpl,tgt,srcKey,seq,durs,first,startBeat,endBeat};
+}
+function drawModPrev(){
+ const lane=document.getElementById('modPrevLane');if(!lane)return;
+ const ruler=document.getElementById('modPrevRuler'),exp=document.getElementById('modPrevExp');
+ const rc=document.getElementById('modRateChk'),hc=document.getElementById('modHideChk');
+ if(rc)rc.checked=!!modWinSettings.rate;
+ if(hc)hc.checked=!!modWinSettings.hide;
+ const M=modPrevModel();
+ if(M.err){lane.innerHTML='<span style="font-size:10.5px;color:var(--dim);align-self:center;">'+M.err+'</span>';ruler.innerHTML='';exp.style.display='none';return;}
+ const total=M.endBeat-M.startBeat;
+ const mppb=Math.max(16,Math.min(48,560/Math.max(1,total)));
+ /* the bars-and-beats ruler ([M5]) — absolute beats; bar starts wear the bar number */
+ let rh='';
+ const firstTick=Math.ceil(M.startBeat-1e-6);
+ if(firstTick>M.startBeat+1e-6)rh+='<span style="width:'+((firstTick-M.startBeat)*mppb).toFixed(1)+'px;flex:0 0 auto;"></span>';
+ for(let b=firstTick;b<M.endBeat-1e-6;b++){
+  const num=(typeof tsigNumAtBeat==='function')?tsigNumAtBeat(project.tsigMap||[],b):4;
+  const isBar=(b%Math.max(1,num))===0;
+  const w=Math.min(b+1,M.endBeat)-b;
+  rh+='<span class="mprTick'+(isBar?' bar':'')+'" style="width:'+(w*mppb).toFixed(1)+'px;flex:0 0 auto;">'+(isBar?('bar '+(Math.floor(b/Math.max(1,num))+1)):(b%Math.max(1,num))+1)+'</span>';
+ }
+ ruler.innerHTML=rh;
+ /* the lane — the moment's chords ending ON the target */
+ lane.innerHTML='';
+ M.seq.forEach((m,k)=>{
+  const d=document.createElement('div');
+  d.className='mpc'+(k===M.seq.length-1?' mpcTgt':'');
+  const psy=!M.tpl.interval;
+  d.style.width=(M.durs[k]*mppb).toFixed(1)+'px';
+  d.style.background=psy?'hsl(275,45%,42%)':(k===M.seq.length-1?'hsl(35,70%,42%)':'hsl('+((((m.r%12)+12)%12)*30)+',45%,40%)');
+  d.title=(k===M.seq.length-1?'The landing — this slot IS the target chord ('+(selChord!=null?'your selected chord':'the playhead’s chord')+').':m.lbl)+' · '+M.durs[k]+' beat'+(M.durs[k]===1?'':'s');
+  d.textContent=m.lbl;
+  if(!modWinSettings.rate&&k<M.seq.length){
+   const g=document.createElement('div');g.className='mpcGrip';g.title='Drag — set this chord’s length (the moment still ends on the target).';
+   g.onmousedown=e=>{
+    e.preventDefault();e.stopPropagation();
+    const x0=e.clientX,d0=M.durs[k];
+    const mm=ev=>{const nd=Math.max(.5,Math.round((d0+(ev.clientX-x0)/mppb)*4)/4);
+     if(!modPrev.durs||modPrev.durs.length!==M.seq.length)modPrev.durs=M.durs.slice();
+     modPrev.durs[k]=nd;drawModPrev();};
+    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+   };
+   d.appendChild(g);
+  }
+  lane.appendChild(d);
+ });
+ /* the expansion ([M5]) — per-chord inversion editing */
+ exp.style.display=modPrev.exp?'block':'none';
+ if(modPrev.exp){
+  exp.innerHTML='';
+  M.seq.forEach((m,k)=>{
+   const inv=modPrev.inv[k]||0;
+   const notes=modPrevVoicing(m,inv).map(md=>PCN[((md%12)+12)%12]).join(' · ');
+   const row=document.createElement('div');row.className='mpeRow';
+   row.innerHTML='<span style="min-width:64px;font-weight:700;">'+m.lbl+'</span>'
+    +'<span class="mpeNotes">'+notes+' <span style="opacity:.6;">('+(inv===0?'root position':'inversion '+inv)+')</span></span>'
+    +'<span class="part mpeUp" title="Cycle the inversion up">▲</span><span class="part mpeDn" title="Cycle the inversion down">▼</span>';
+   row.querySelector('.mpeUp').onclick=()=>{modPrev.inv[k]=((modPrev.inv[k]||0)+1)%m.iv.length;drawModPrev();};
+   row.querySelector('.mpeDn').onclick=()=>{modPrev.inv[k]=(((modPrev.inv[k]||0)-1)%m.iv.length+m.iv.length)%m.iv.length;drawModPrev();};
+   exp.appendChild(row);
+  });
+ }
+}
+function modPrevAudition(){
+ /* [M6f]'s ▶ — plays the lane EXACTLY as shown (durations and inversions), the psych
+    convention: nothing is written. The shape spins, the fox recolours per chord. */
+ const M=modPrevModel();
+ if(M.err){setModStatus(M.err);return;}
+ const rows=M.seq.map((m,k)=>({d:M.durs[k],r:m.r,iv:m.iv,bass:modPrev.inv[k]||0,lbl:m.lbl}));
+ const go=()=>{try{
+  if(!audioReady||!inst)return;
+  const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
+  let at=0;
+  for(const c of rows){inst.note('comping',modPrevVoicing(c,c.bass),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+  modAudFx(M.tpl.id,rows,spb);
+ }catch(e){}};
+ if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+ setModStatus('▶ '+(M.tpl.name||'the moment')+' — as the lane shows it, ending on the target · nothing is written.');
 }
 /* the psych-out rows (above the divider) */
 function drawPsyRows(){
@@ -9454,10 +9735,11 @@ function drawPsyRows(){
   row.className='psyRow'+(modState.psySel===t.id?' on':'')+(armed?' armed':'');
   row.dataset.tpl=t.id;
   row.title=t.desc+' Press the row = hear the feint from this song’s key (nothing is written).';
-  row.innerHTML='<span class="psyName">'+t.name+'</span><span class="psyChain">'+t.bridge.map(s=>s.lbl).join(' → ')+'</span>'
+  row.innerHTML='<span class="modShape" data-tpl="'+t.id+'">'+modShapeSVG(t)+'</span>'
+   +'<span class="psyName">'+t.name+'</span><span class="psyChain">'+t.bridge.map(s=>s.lbl).join(' → ')+'</span>'
    +'<span class="part psyArm" title="'+(armed?'Disarm the psych-out':'Arm at the selected chord — the burst replaces it during playback only, the chord lane stays untouched')+'">'+(armed?'⚡ Disarm':'⚡ Arm at selected chord')+'</span>';
   row.querySelector('.psyArm').onclick=e=>{e.stopPropagation();modState.psySel=t.id;togglePsych(t.id);};
-  row.onclick=()=>{modState.psySel=t.id;drawPsyRows();mimicAudition(t);};
+  row.onclick=()=>{modState.psySel=t.id;modState.lastPick='psy';drawPsyRows();drawModPrev();mimicAudition(t);};
   host.appendChild(row);
  });
 }
@@ -9470,13 +9752,14 @@ function drawMimicCards(){
   d.className='mimCard'+(modState.sel===t.id?' on':'');
   d.dataset.tpl=t.id;
   d.title=t.desc+' Press = hear the move from this song’s key (nothing is written) · Inject / drag ⚡⇢ writes it.';
-  d.innerHTML='<div class="mimName">'+t.name+'</div>'
+  d.innerHTML='<span class="modShape" data-tpl="'+t.id+'">'+modShapeSVG(t)+'</span>'
+   +'<div class="mimName">'+t.name+'</div>'
    +'<div class="mimMeta">'+t.source+'</div>'
    +'<div class="mimChain">'+t.bridge.map(s=>s.lbl).join(' → ')
    +' <span class="mimIv">'+(t.interval>0?'+':'')+t.interval+' st'
    +(t.tgtMode==='aeolian'?' · lands minor':t.tgtMode?' · lands major':'')+'</span>'
    +(t.derived?' <span class="mimDer" title="Derived by ear from the record — awaiting your approval (decision #6)">✎ derived</span>':'')+'</div>';
-  d.onclick=()=>{modState.sel=t.id;drawMimicCards();updateModDesc();mimicAudition(t);};
+  d.onclick=()=>{modState.sel=t.id;modState.lastPick='mim';drawMimicCards();updateModDesc();drawModPrev();mimicAudition(t);};
   host.appendChild(d);
  });
 }
@@ -9507,9 +9790,18 @@ function injectModulationAtChord(atIdx){
  const srcKey=keyFor(chordStartOf(atIdx));   /* 2.2b: the key AT the injection point */
  /* THE SLOT LAW (client, Aug 23 — MODULATION-INJECT-RAW [M2]/[M3a]): the selected chord
     IS the modulation's last chord; the bridge replaces the chords to its left at the
-    lane's own rate of change. Refusal BEFORE the snapshot — a no-op leaves no undo. */
- const res=slotInjectModulation(project.chords,atIdx,tpl,srcKey.tonic);
- if(!res){const nn=tpl.bridge.length+(tpl.interval?1:0);setModStatus('No room — a '+nn+'-chord moment needs '+(nn-1)+' chord'+(nn===2?'':'s')+' before the selected one (it ENDS there). Pick a later chord.');return false;}
+    lane's own rate of change. Refusal BEFORE the snapshot — a no-op leaves no undo.
+    24b ([M3b]/[M4]): rate toggle OFF + edited preview durations → the moment lands at
+    the WINDOW'S own rate instead (spanInjectModulation), still ending on the target. */
+ const nseq=tpl.bridge.length+(tpl.interval?1:0);
+ const custom=(typeof modWinSettings==='object'&&!modWinSettings.rate&&modPrev.durs&&modPrev.durs.length===nseq)?modPrev.durs.slice():null;
+ const res=custom?spanInjectModulation(project.chords,atIdx,tpl,srcKey.tonic,custom)
+  :slotInjectModulation(project.chords,atIdx,tpl,srcKey.tonic);
+ if(!res){setModStatus(custom?'No room at this rate — the moment would begin before the song does. Shorten its chords or pick a later target.'
+  :'No room — a '+nseq+'-chord moment needs '+(nseq-1)+' chord'+(nseq===2?'':'s')+' before the selected one (it ENDS there). Pick a later chord.');return false;}
+ /* [M5]: the expansion's inversion picks ride the inject (bass = the chosen chord tone) */
+ if(typeof modPrev==='object'&&modPrev.inv&&typeof res.first==='number')
+  for(let k=0;k<res.need;k++)if(modPrev.inv[k])res.chords[res.first+k].bass=modPrev.inv[k]%res.chords[res.first+k].iv.length;
  snapshot();
  noteEngine('modulation',{tpl:tpl.id||tpl.name||'custom',interval:tpl.interval});
  if(tpl.interval!==0){
@@ -9561,6 +9853,20 @@ document.getElementById('modFav').onclick=e=>{
  e.target.blur();
 };
 drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
+/* 24b — the preview lane's boot wiring: settings load, the two toggles, ▶ and ▤ */
+try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
+ if(typeof _mw.rate==='boolean')modWinSettings.rate=_mw.rate;
+ if(typeof _mw.hide==='boolean')modWinSettings.hide=_mw.hide;}catch(e){}
+modState.lastPick=modState.lastPick||'mim';
+(()=>{const rc=document.getElementById('modRateChk'),hc=document.getElementById('modHideChk'),
+  pb=document.getElementById('modPrevPlay'),xb=document.getElementById('modPrevExpB');
+ if(rc)rc.onchange=e=>{modWinSettings.rate=!!e.target.checked;persistModWin();drawModPrev();
+  setModStatus(modWinSettings.rate?'The song’s own rate of chord change — the slot law, untouched.':'Your rate — drag the chord boundaries in the lane above; the moment still ends on the target.');};
+ if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
+  setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
+ if(pb)pb.onclick=modPrevAudition;
+ if(xb)xb.onclick=()=>{modPrev.exp=!modPrev.exp;xb.classList.toggle('on',modPrev.exp);drawModPrev();};})();
+drawModPrev();
 
 /* ==== 5.3 THE CADENCE WINDOW (UI layer) ==== ONE window, four categories. Press a
    card = audition the cadence in the target phrase's key (psych-out convention —
@@ -16630,10 +16936,14 @@ function orbMoonNow(el){
  }
  return {x:lp.x,y:lp.y};
 }
-function orbRoadPath(sx,sy,ex,ey){
+const ORB_ROAD_STRAIGHT=4.5;   /* 24a (client, Aug 21/24: "For close planets the dotted line should be straight"): a world whose centre sits within this many planet radii of its moon gets a STRAIGHT road */
+function orbRoadStraight(dist,bodyR){return dist<=ORB_ROAD_STRAIGHT*(bodyR||58);}   /* pure: is this world "close"? */
+function orbRoadPath(sx,sy,ex,ey,straight){
  /* the dotted road is SLIGHTLY CURVED SPACE (client, Aug 20): one quadratic bow whose
     control point leans toward the destination side of the straight line, so the
-    road arrives bending INTO the new world rather than away from it. Pure. */
+    road arrives bending INTO the new world rather than away from it. Pure.
+    24a: a CLOSE world's road is a ruler — a straight line, no bow (client). */
+ if(straight)return 'M'+sx.toFixed(1)+' '+sy.toFixed(1)+' L'+ex.toFixed(1)+' '+ey.toFixed(1);
  const mx=(sx+ex)/2,my=(sy+ey)/2;
  const dx=ex-sx,dy=ey-sy,L=Math.hypot(dx,dy)||1;
  const k=Math.min(34,L*.16);
@@ -16692,7 +17002,7 @@ function orbRoadAim(far,road){
  else if(ancEl){const mm=orbMoonNow(ancEl);sx=mm.x;sy=mm.y;}
  else{const a=+far.getAttribute('data-a')||0;sx=geo.cx+Math.cos(a)*geo.r;sy=geo.cy+Math.sin(a)*geo.r;}
  const ea=Math.atan2(py-sy,px-sx);
- road.setAttribute('d',orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr));
+ road.setAttribute('d',orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr,orbRoadStraight(Math.hypot(px-sx,py-sy),orbState.bodyR)));   /* 24a: close = straight */
  const hit=road.nextElementSibling;if(hit&&hit.classList.contains('orbRoadHit'))hit.setAttribute('d',road.getAttribute('d'));   /* 20l [59]: the wide invisible hit twin follows */
  /* R5 (20g): the inner segment — from the planet's edge THROUGH the moon (client: "the dotted
     lines should go through the moon to the planet") */
@@ -17397,8 +17707,8 @@ function renderOrb(){
   /* the road: from the doorway's RESTING spot now (orbRoadsRefresh re-aims it from the live one) */
   const sx=pvp?pvp.x:anc?anc.x:cx+Math.cos(a)*R,sy=pvp?pvp.y:anc?anc.y:cy+Math.sin(a)*R;
   const ea=Math.atan2(py-sy,px-sx);
-  roadS+='<path class="orbRoad'+(sel?' on':'')+'" data-far="'+farKey+'" d="'+orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr)+'" fill="none" stroke="'+col+'" stroke-width="'+(big?1.5:1.1)+'" stroke-dasharray="5 5"/>'
-   +'<path class="orbRoadHit" data-far="'+farKey+'" d="'+orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr)+'" fill="none" stroke="transparent" stroke-width="12" style="pointer-events:stroke;cursor:pointer;"/>'
+  roadS+='<path class="orbRoad'+(sel?' on':'')+'" data-far="'+farKey+'" d="'+orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr,orbRoadStraight(Math.hypot(px-sx,py-sy),orbState.bodyR))+'" fill="none" stroke="'+col+'" stroke-width="'+(big?1.5:1.1)+'" stroke-dasharray="5 5"/>'
+   +'<path class="orbRoadHit" data-far="'+farKey+'" d="'+orbRoadPath(sx,sy,px-Math.cos(ea)*pr,py-Math.sin(ea)*pr,orbRoadStraight(Math.hypot(px-sx,py-sy),orbState.bodyR))+'" fill="none" stroke="transparent" stroke-width="12" style="pointer-events:stroke;cursor:pointer;"/>'
    +(pvp?'<path class="orbRoadIn'+(sel?' on':'')+'" data-far="'+farKey+'" d="M'+(cx+Math.cos(Math.atan2(sy-cy,sx-cx))*(bodyR+3)).toFixed(1)+' '+(cy+Math.sin(Math.atan2(sy-cy,sx-cx))*(bodyR+3)).toFixed(1)+' L'+sx.toFixed(1)+' '+sy.toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="1.2" stroke-dasharray="5 5"/>':'');
   const fill3=deep?(pl.psych?'url(#orbPsychGrad)':'url(#orbFarGrad)'):'rgba(20,22,28,.55)';
   farS+='<g class="orbNode orbFar'+(big?'':' orbFarMinor')+(sel?' on':'')+'" data-orb="'+idx+'" data-far="'+farKey+'" data-a="'+a.toFixed(4)+'" data-rx="'+rx.toFixed(1)+'" data-ry="'+ry.toFixed(1)+'" data-phi="'+phi.toFixed(4)+'" data-rate="'+rate.toFixed(3)+'" data-pr="'+pr+'" data-col="'+col+'"'+(anc?' data-anchor="'+anc.idx+'"':'')+' transform="translate('+px.toFixed(1)+' '+py.toFixed(1)+')"'+(grey?' opacity=".62"':'')+'><title>'+PCN[pl.tonic]+' '+(pl.minor?'Minor':'Major')+(pl.psych?' — a Psych-out world: the song only visits for a moment':' — a destination planet with its own diatonic ring')+(pl.tag?' · Weber: '+pl.tag:'')+'. Click = it zooms to the centre and takes this planet&#8217;s place (song stopped: at the playhead · song playing: through 🧳 Upcoming Trips).</title>'
@@ -21635,13 +21945,14 @@ function uiDispatch(action){
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
- if(action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel')){
+ if(action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel')){
   const p=document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
+  if(uiState.open==='modPanel'&&typeof drawModPrev==='function')drawModPrev();       /* 4.3 24b: the preview lane re-reads its target on open */
  }
  /* 5.3: the Cadence Window lives BETWEEN the palette and the grid — opening it scrolls
     it into view there and rebuilds against the current sections/chords */
