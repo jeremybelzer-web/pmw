@@ -469,7 +469,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-23b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-23c</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -1733,6 +1733,40 @@ function applyPsychOut(chords,atIdx,tpl,srcTonic){
  const tot=burst.reduce((a,c)=>a+c.d,0);
  const scaled=burst.map(c=>({...c,d:c.d*c0.d/tot}));
  return chords.slice(0,atIdx).concat(scaled,chords.slice(atIdx+1));
+}
+/* THE SLOT LAW (client, Aug 23, 65th — MODULATION-INJECT-RAW [M2]/[M3]): the target
+   chord is the modulation's LAST chord; the second-to-last replaces the chord to its
+   left, and so on, one by one — each injected chord ADOPTS the lane chord's own
+   duration ("the rate of chord change"), so the song's length and every chord boundary
+   stay put. The tail after the target keeps 4.1's meaning of a modulation: chords
+   transposed into the new key (the CALLER lifts notes and re-keys sections from
+   tailStart). Null when the lane has fewer chords before the target than the
+   modulation needs — an honest refusal, no carving, no truncation. A psych-out is
+   interval 0: no tail transpose, no re-key, the feint resolving ON the target.
+   Pure — fresh rows. (injectModulation above is the carve-era law, kept for the
+   harness and the record; the shipped verbs now run this one.) */
+function modTemplateChords(tpl,srcTonic){
+ /* the modulation AS A CHORD LIST: the resolved bridge, plus — when the key actually
+    changes — the landing I of the new key wearing the template's target mode. The
+    LAST entry is the chord the slot law puts ON the target. Pure. */
+ const r=resolveBridge(tpl,srcTonic);
+ const out=r.chords.map(c=>({d:c.d,r:c.r,iv:c.iv.slice(),lbl:c.lbl,bass:0}));
+ if(tpl.interval)out.push({d:2,r:r.tgtTonic,iv:(tpl.tgtMode==='aeolian'?MIN:MAJ).slice(),lbl:tpl.tgtMode==='aeolian'?'i':'I',bass:0});
+ return out;
+}
+function slotInjectModulation(chords,targetIdx,tpl,srcTonic){
+ if(!Array.isArray(chords)||targetIdx==null||!chords[targetIdx]||!tpl)return null;
+ const seq=modTemplateChords(tpl,srcTonic);
+ const first=targetIdx-(seq.length-1);
+ if(first<0)return null;
+ const out=chords.map(c=>({...c,iv:c.iv.slice()}));
+ for(let k=0;k<seq.length;k++){
+  const s=out[first+k],m=seq[k];
+  s.r=((m.r%12)+12)%12;s.iv=m.iv.slice();s.lbl=m.lbl;s.bass=0;   /* d untouched — the lane's rate */
+ }
+ for(let i=targetIdx+1;i<out.length;i++)out[i].r=((out[i].r+tpl.interval)%12+12)%12;
+ let t=0;for(let i=0;i<targetIdx;i++)t+=chords[i].d;
+ return {chords:out,tgtTonic:((srcTonic+tpl.interval)%12+12)%12,tailStart:+t.toFixed(6),first,need:seq.length};
 }
 /* ==== 4.1 MODULATION LANE (pure layer) ==== the Modulation Engine's lane surface reads
    key-center REGIONS straight off project.sections (one data model with the Machine and
@@ -9470,10 +9504,14 @@ function injectModulationAtChord(atIdx){
  if(!tpl){setModStatus('Choose a modulation template first.');return false;}
  if(atIdx==null||!project.chords[atIdx]){setModStatus('No chord there to inject at.');return false;}
  if(psychOut.on){setModStatus('Toggle ⚡ Psych-out off before editing the chord lane.');return false;}
+ const srcKey=keyFor(chordStartOf(atIdx));   /* 2.2b: the key AT the injection point */
+ /* THE SLOT LAW (client, Aug 23 — MODULATION-INJECT-RAW [M2]/[M3a]): the selected chord
+    IS the modulation's last chord; the bridge replaces the chords to its left at the
+    lane's own rate of change. Refusal BEFORE the snapshot — a no-op leaves no undo. */
+ const res=slotInjectModulation(project.chords,atIdx,tpl,srcKey.tonic);
+ if(!res){const nn=tpl.bridge.length+(tpl.interval?1:0);setModStatus('No room — a '+nn+'-chord moment needs '+(nn-1)+' chord'+(nn===2?'':'s')+' before the selected one (it ENDS there). Pick a later chord.');return false;}
  snapshot();
  noteEngine('modulation',{tpl:tpl.id||tpl.name||'custom',interval:tpl.interval});
- const srcKey=keyFor(chordStartOf(atIdx));   /* 2.2b: the key AT the injection point */
- const res=injectModulation(project.chords,atIdx,tpl,srcKey.tonic);
  if(tpl.interval!==0){
   /* lift every track's notes from the start of the new-key section */
   for(const tname of Object.keys(project.tracks)){
@@ -9489,15 +9527,19 @@ function injectModulationAtChord(atIdx){
  }
  project.chords=res.chords;
  selChord=null;closePalette();selNotes.clear();
- setModStatus(res.carved+1e-9<res.need
-  ?'Injected — not enough room to carve, progression extends past the loop end (tail clips).'
-  :`Injected ${tpl.bridge.length} bridge chord${tpl.bridge.length>1?'s':''}${tpl.interval?` · new key ${PCN[res.tgtTonic]}${tpl.tgtMode==='aeolian'?' minor':tpl.tgtMode?' major':''} from beat ${Math.round(res.tailStart)} (its own section — the earlier music keeps its key)`:''} · ⌘Z undoes.`);
+ setModStatus(`${res.need} chord${res.need>1?'s':''} landed at the lane's own rate — the ${tpl.interval?'arrival':'feint'} sits ON the chord you picked${tpl.interval?` · new key ${PCN[res.tgtTonic]}${tpl.tgtMode==='aeolian'?' minor':' major'} from beat ${Math.round(res.tailStart)} (its own section — the earlier music keeps its key)`:''} · ⌘Z undoes.`);
  refresh(true);
  return true;
 }
 function applyModulation(){
- if(selChord==null){setModStatus('Click a chord in the lane first — the bridge is injected at its start, and everything from there is the new key. (Or drag the ⚡⇢ object onto the Keys lane.)');return;}
- injectModulationAtChord(selChord);
+ /* [M2]: the selected chord gets preference; with none, the chord under the playhead */
+ let idx=selChord;
+ if(idx==null){
+  const b=(typeof playheadBeat==='number')?playheadBeat:0;
+  idx=chordIdxAtBeat(project.chords,Math.max(0,Math.min(b,LOOP-1e-6)));
+ }
+ if(idx==null||!project.chords[idx]){setModStatus('Click a chord in the lane (or park the playhead on one) — it becomes the modulation’s LAST chord; the bridge replaces the chords to its left at the lane’s own rate.');return;}
+ injectModulationAtChord(idx);
 }
 function togglePsych(id){
  if(!psychOut.on){
@@ -15961,6 +16003,19 @@ function orbFitMelody(b0,b1){
  });
  return moved;
 }
+function orbTplForPivot(id){
+ /* 65th round two: a boarded shelf essence's template is the FIRST authority — the
+    curated DB second (kept curated moments keep their DB ids, so both resolve; an
+    EXTRACTED moment's id — tmod/tpsy — resolves ONLY here, which is the seam this
+    round's test found broken: it used to fall through to the single-chord write). */
+ const g=orbState.ghost||'';
+ if(g.slice(0,6)==='shelf:'&&Array.isArray(project.shelf)){
+  const o=project.shelf.find(x=>x.strand==='travel'&&'shelf:'+x.id===g);
+  const m=o&&o.data&&Array.isArray(o.data.moments)?o.data.moments.find(t=>t.id===id):null;
+  if(m&&validateModTemplate(m))return m;
+ }
+ return ((typeof MODULATION_DB!=='undefined')&&MODULATION_DB.find(t=>t.id===id))||null;
+}
 function orbPivotGo(pv){
  /* a pivot chord fires its road: ghost templates run their true bridge (psych bursts
     included); expanded/user pivots write the pivot ON the boundary and re-key from the
@@ -15968,31 +16023,40 @@ function orbPivotGo(pv){
  if(effectiveChords()!==project.chords){setOrbStatus('Toggle ⚡ off first — the lane is read-only while a psych-out is armed.');return false;}
  const at=orbLandBeat();if(at==null)return false;
  const cur=orbCurrentKey();
- const tpl=pv.tplId&&(typeof MODULATION_DB!=='undefined')&&MODULATION_DB.find(t=>t.id===pv.tplId);
+ const tpl=pv.tplId?orbTplForPivot(pv.tplId):null;
  /* ORBIT FEEDBACK R2 — read the doorway's LIVE position and its far world BEFORE the
     map changes: that is the direction the flight takes (client: "based on where the
     moon is at that moment"). landed/landAt name the world and beat the map goes ahead to. */
  const from=(pv.dest&&!pv.dest.psych)?orbTripFrom(pv.dest.tonic,pv.dest.minor,false):null;
  let landed=null,landAt=at;
+ /* THE SLOT LAW ([M2], 65th round two): a template moment ENDS on its target — the
+    selected chord gets preference, else the chord at the landing beat — and its
+    earlier chords replace the ones to its left at the lane's own rate of change.
+    The refusal runs BEFORE the journey starts, so a no-op leaves no snapshot. */
+ let slotRes=null;
+ if(tpl){
+  const idx=(selChord!=null&&project.chords[selChord])?selChord:chordIdxAtBeat(project.chords,at);
+  slotRes=slotInjectModulation(project.chords,idx,tpl,cur.tonic);
+  if(!slotRes){const nn=tpl.bridge.length+(tpl.interval?1:0);setOrbStatus('No room — this '+nn+'-chord moment ENDS on the chord it lands on and needs '+(nn-1)+' chord'+(nn===2?'':'s')+' before it. Select (or reach) a later chord and fire it again.');return false;}
+ }
  orbJourneyStart();
- if(tpl&&!tpl.interval){
-  const idx=chordIdxAtBeat(project.chords,at);
-  project.chords=applyPsychOut(project.chords,idx,tpl,cur.tonic);
-  orbJourney.log.push({beat:at,psych:tpl.id});
-  noteEngine('orbit-psych',{tpl:tpl.id,beat:at});
- }else if(tpl){
-  const idx=chordIdxAtBeat(project.chords,at);
-  const res=injectModulation(project.chords,idx,tpl,cur.tonic);
-  for(const tname of Object.keys(project.tracks)){
-   const arr=project.tracks[tname];if(!arr)continue;
-   for(const n of arr)if(n[0]>=res.tailStart-1e-6)n[2]+=tpl.interval;
+ if(tpl){
+  const res=slotRes;
+  if(tpl.interval){
+   for(const tname of Object.keys(project.tracks)){
+    const arr=project.tracks[tname];if(!arr)continue;
+    for(const n of arr)if(n[0]>=res.tailStart-1e-6)n[2]+=tpl.interval;
+   }
+   project.sections=modulationSections(project.sections,res.tailStart,tpl.interval,LOOP);
+   if(tpl.tgtMode)project.sections=modulationSectionsMode(project.sections,res.tailStart,tpl.tgtMode);
+   orbJourney.log.push({beat:res.tailStart,tonic:res.tgtTonic,minor:tpl.tgtMode==='aeolian'});
+   noteEngine('orbit-travel',{tpl:tpl.id,beat:res.tailStart});
+   landed={tonic:((res.tgtTonic%12)+12)%12,minor:tpl.tgtMode==='aeolian'};landAt=res.tailStart;
+  }else{
+   orbJourney.log.push({beat:res.tailStart,psych:tpl.id});
+   noteEngine('orbit-psych',{tpl:tpl.id,beat:res.tailStart});
   }
-  project.sections=modulationSections(project.sections,res.tailStart,tpl.interval,LOOP);
-  if(tpl.tgtMode)project.sections=modulationSectionsMode(project.sections,res.tailStart,tpl.tgtMode);
   project.chords=res.chords;
-  orbJourney.log.push({beat:at,tonic:res.tgtTonic,minor:tpl.tgtMode==='aeolian'});
-  noteEngine('orbit-travel',{tpl:tpl.id,beat:at});
-  landed={tonic:((res.tgtTonic%12)+12)%12,minor:tpl.tgtMode==='aeolian'};landAt=res.tailStart;
  }else if(pv.bridge&&pv.dest&&!pv.dest.psych&&(function(){
   /* ORBIT FEEDBACK R1 — a grey doorway fires its WHOLE road: the bridge (ii–V by
      default) is carved leftward into the old key so the new key lands exactly ON the
