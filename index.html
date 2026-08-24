@@ -407,6 +407,10 @@
 #modPrevRuler .mprTick{border-left:1px solid var(--line);padding-left:2px;box-sizing:border-box;overflow:hidden;white-space:nowrap;}
 #modPrevRuler .mprTick.bar{border-left-color:var(--dim);color:var(--text);font-weight:700;}
 #modPrevScroll{overflow-x:auto;overflow-y:hidden;}
+/* [M10a]: the lane's left-side grip — the textured grab surface */
+#modPrevGripL{flex:0 0 11px;align-self:stretch;cursor:grab;border-radius:3px;border:1px solid var(--line);
+ background:repeating-linear-gradient(45deg,var(--line),var(--line) 2px,transparent 2px,transparent 5px);}
+#modPrevGripL:hover{border-color:var(--accent);}
 #modPrevRuler{cursor:ns-resize;}
 #modPrevLaneWrap{position:relative;}
 #modPrevLane{display:flex;height:34px;position:relative;}
@@ -500,7 +504,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24e</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -864,6 +868,7 @@
          inversion editing; the two toggles beneath. -->
     <div id="modPrevRow">
       <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written.">▶</span>
+      <span id="modPrevGripL" title="Grab — drag the whole lane up into the multi-track grid. The LANDING chord rides the cursor tip; the earlier chords trail left at their own rate. Drop it on its destination chord."></span>
       <div style="flex:1;min-width:0;">
         <div id="modPrevScroll">
           <div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click + drag ⬍ to zoom; nothing else ever moves this grid."></div>
@@ -9626,62 +9631,110 @@ function modMeshAngles(n){
  if(n===2)return [0,90];
  const out=[];for(let k=0;k<n;k++)out.push(k*180/(n-1));return out;
 }
-function modMeshRender(n,theta,lit){
- /* [M8d]: A REAL 3D TUMBLE — the shape is a tiny mesh, rotated about the horizontal
-    axis by theta (plus a fixed 14° turn for depth) and flat-shaded by each face's
-    normal, so it remains the 3D shape FROM ANY ANGLE. Faces fronting the user (normal
-    toward the eye) go bright — brighter still while `lit` (the chord's flash). Pure:
-    returns the <g> innerHTML for the badge's mesh layer. */
- const hue=(n*47)%360;
- const CX=23,CY=21,SC=15.5;
- const tr=theta*Math.PI/180,ty=14*Math.PI/180;
- const rot=v=>{const y=v[1]*Math.cos(tr)-v[2]*Math.sin(tr),z=v[1]*Math.sin(tr)+v[2]*Math.cos(tr);
-  const x=v[0]*Math.cos(ty)+z*Math.sin(ty),z2=-v[0]*Math.sin(ty)+z*Math.cos(ty);
-  return [x,y,z2];};
- if(n<=1){ /* the sphere — a circle from every angle; a turning meridian carries the motion */
-  const rx=Math.abs(Math.cos(tr))*13;
-  return '<circle cx="'+CX+'" cy="'+CY+'" r="14" fill="hsl('+hue+',55%,'+(lit?62:50)+'%)" stroke="rgba(0,0,0,.4)" stroke-width="0.8"/>'
-   +'<ellipse cx="'+CX+'" cy="'+CY+'" rx="'+rx.toFixed(1)+'" ry="14" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="0.8"/>';
- }
+/* [M9c] the quaternion kit — each logical face owns the MINIMAL rotation that brings its
+   normal dead-front, and the tumble SLERPS between those orientations chord to chord, so
+   EVERY face (the tetrahedron's four included — no single axis can front them all) truly
+   faces the user exactly when its chord hits. Pure math, no library. */
+function mqAA(ax,ang){const l=Math.hypot(ax[0],ax[1],ax[2])||1,s2=Math.sin(ang/2);return [ax[0]/l*s2,ax[1]/l*s2,ax[2]/l*s2,Math.cos(ang/2)];}
+function mqSlerp(a,b,t){
+ let d=a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3];let bb=b;
+ if(d<0){d=-d;bb=[-b[0],-b[1],-b[2],-b[3]];}
+ if(d>.9995){const o=a.map((x,i)=>x+(bb[i]-x)*t);const l=Math.hypot(o[0],o[1],o[2],o[3])||1;return o.map(x=>x/l);}
+ const th=Math.acos(Math.min(1,d)),sn=Math.sin(th);
+ const wa=Math.sin((1-t)*th)/sn,wb=Math.sin(t*th)/sn;
+ return a.map((x,i)=>x*wa+bb[i]*wb);
+}
+function mqRot(q,v){
+ const [x,y,z,w]=q,[vx,vy,vz]=v;
+ const tx=2*(y*vz-z*vy),ty=2*(z*vx-x*vz),tz=2*(x*vy-y*vx);
+ return [vx+w*tx+(y*tz-z*ty),vy+w*ty+(z*tx-x*tz),vz+w*tz+(x*ty-y*tx)];
+}
+function mqFace(nrm){
+ /* the minimal rotation carrying this rest normal to the FRONT direction (toward the eye) */
+ const F=[0,0,-1];
+ const d=nrm[0]*F[0]+nrm[1]*F[1]+nrm[2]*F[2];
+ if(d>.9999)return [0,0,0,1];
+ if(d<-.9999)return mqAA([1,0,0],Math.PI);
+ return mqAA([nrm[1]*F[2]-nrm[2]*F[1],nrm[2]*F[0]-nrm[0]*F[2],nrm[0]*F[1]-nrm[1]*F[0]],Math.acos(Math.max(-1,Math.min(1,d))));
+}
+let MOD_MESH_CACHE={};
+function modMeshBuild(n){
+ /* the n-face mesh + which face carries each CHORD (`logical`, in chord order) */
+ if(MOD_MESH_CACHE[n])return MOD_MESH_CACHE[n];
  const V=[],F=[];
- const ring=(m,z,r)=>{const s0=V.length;for(let i=0;i<m;i++){const a=i*2*Math.PI/m;V.push([r*Math.cos(a),r*Math.sin(a),z]);}return s0;};
- const M=14;
- if(n===2){ /* cone: the base circle + the smooth side (his own example) */
-  const b=ring(M,.55,.95);V.push([0,0,-1.05]);const ap=V.length-1;
-  F.push({v:Array.from({length:M},(_,i)=>b+i)});
-  for(let i=0;i<M;i++)F.push({v:[b+i,b+(i+1)%M,ap]});
- }else if(n===3){ /* cylinder: two caps + the side */
-  const a=ring(M,.65,.85),b=ring(M,-.65,.85);
-  F.push({v:Array.from({length:M},(_,i)=>a+i)});
-  F.push({v:Array.from({length:M},(_,i)=>b+M-1-i)});
-  for(let i=0;i<M;i++)F.push({v:[a+i,a+(i+1)%M,b+(i+1)%M,b+i]});
- }else if(n===4){ /* tetrahedron */
+ const ring=(m,z,r)=>{const s0=V.length;for(let i=0;i<m;i++){const a2=i*2*Math.PI/m;V.push([r*Math.cos(a2),r*Math.sin(a2),z]);}return s0;};
+ const M=14;let logical=[];
+ if(n===2){
+  const b2=ring(M,.55,.95);V.push([0,0,-1.05]);const ap=V.length-1;
+  F.push({v:Array.from({length:M},(_,i)=>b2+i)});
+  for(let i=0;i<M;i++)F.push({v:[b2+i,b2+(i+1)%M,ap]});
+  logical=[0,1];
+ }else if(n===3){
+  const a2=ring(M,.65,.85),b2=ring(M,-.65,.85);
+  F.push({v:Array.from({length:M},(_,i)=>a2+i)});
+  F.push({v:Array.from({length:M},(_,i)=>b2+M-1-i)});
+  for(let i=0;i<M;i++)F.push({v:[a2+i,a2+(i+1)%M,b2+(i+1)%M,b2+i]});
+  logical=[0,2,1];
+ }else if(n===4){
   V.push([0,-1,.35],[-.95,.6,.35],[.95,.6,.35],[0,0,-1.05]);
   F.push({v:[0,1,2]},{v:[0,3,1]},{v:[1,3,2]},{v:[2,3,0]});
- }else if(n===5){ /* square pyramid */
+  logical=[0,1,2,3];
+ }else if(n===5){
   V.push([-.85,-.85,.55],[.85,-.85,.55],[.85,.85,.55],[-.85,.85,.55],[0,0,-1.05]);
   F.push({v:[0,1,2,3]},{v:[1,0,4]},{v:[2,1,4]},{v:[3,2,4]},{v:[0,3,4]});
- }else if(n===6){ /* cube */
+  logical=[0,1,2,3,4];
+ }else if(n===6){
   V.push([-.75,-.75,.75],[.75,-.75,.75],[.75,.75,.75],[-.75,.75,.75],
    [-.75,-.75,-.75],[.75,-.75,-.75],[.75,.75,-.75],[-.75,.75,-.75]);
   F.push({v:[0,1,2,3]},{v:[5,4,7,6]},{v:[4,5,1,0]},{v:[3,2,6,7]},{v:[1,5,6,2]},{v:[4,0,3,7]});
- }else{ /* n-gon prism: two (n-2)-gon caps + the sides */
+  logical=[0,2,4,1,5,3];   /* front → bottom → right → back → left → top: a rolling walk */
+ }else{
   const g=Math.max(3,n-2);
-  const a=ring(g,.6,.9),b=ring(g,-.6,.9);
-  F.push({v:Array.from({length:g},(_,i)=>a+i)});
-  F.push({v:Array.from({length:g},(_,i)=>b+g-1-i)});
-  for(let i=0;i<g;i++)F.push({v:[a+i,a+(i+1)%g,b+(i+1)%g,b+i]});
+  const a2=ring(g,.6,.9),b2=ring(g,-.6,.9);
+  F.push({v:Array.from({length:g},(_,i)=>a2+i)});
+  F.push({v:Array.from({length:g},(_,i)=>b2+g-1-i)});
+  for(let i=0;i<g;i++)F.push({v:[a2+i,a2+(i+1)%g,b2+(i+1)%g,b2+i]});
+  logical=[0].concat(Array.from({length:g},(_,i)=>2+i)).concat([1]).slice(0,n);
  }
- const P=V.map(rot);
+ /* rest normals of the logical faces, in the renderer's own convention */
+ const nrm=f=>{const p=f.v.map(i=>V[i]);
+  const ux=p[1][0]-p[0][0],uy=p[1][1]-p[0][1],uz=p[1][2]-p[0][2];
+  const vx=p[2][0]-p[0][0],vy=p[2][1]-p[0][1],vz=p[2][2]-p[0][2];
+  let x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;const l=Math.hypot(x,y,z)||1;
+  return [x/l,y/l,z/l];};
+ const out={V,F,fronts:logical.map(i=>mqFace(nrm(F[i])))};
+ MOD_MESH_CACHE[n]=out;
+ return out;
+}
+function modMeshFrontQuats(n){return n<=1?[[0,0,0,1]]:modMeshBuild(n).fronts;}
+function modMeshRender(n,rot,lit){
+ /* [M8d]/[M9]: the true 3D render — `rot` is a QUATERNION (or a legacy number of degrees
+    about the horizontal axis, kept for the harness); a fixed 14° turn adds depth; faces
+    flat-shaded by normal, painter-sorted; the fronting face brightens, brighter under
+    `lit`. [M9a]: the shape ENGULFS the animal (scale 21). Pure — the <g> innerHTML. */
+ const hue=(n*47)%360;
+ const CX=23,CY=23,SC=21;
+ const q=(typeof rot==='number')?mqAA([1,0,0],rot*Math.PI/180):(rot||[0,0,0,1]);
+ const ty=14*Math.PI/180;
+ const place=v=>{const r=mqRot(q,v);
+  const x=r[0]*Math.cos(ty)+r[2]*Math.sin(ty),z2=-r[0]*Math.sin(ty)+r[2]*Math.cos(ty);
+  return [x,r[1],z2];};
+ if(n<=1){
+  const rx=Math.abs((typeof rot==='number')?Math.cos(rot*Math.PI/180):1-2*(q[0]*q[0]+q[1]*q[1]))*18;
+  return '<circle cx="'+CX+'" cy="'+CY+'" r="19" fill="hsl('+hue+',55%,'+(lit?62:50)+'%)" stroke="rgba(0,0,0,.4)" stroke-width="0.8"/>'
+   +'<ellipse cx="'+CX+'" cy="'+CY+'" rx="'+rx.toFixed(1)+'" ry="19" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="0.8"/>';
+ }
+ const {V,F}=modMeshBuild(n);
+ const P=V.map(place);
  const faces=F.map(f=>{
   const pts=f.v.map(i=>P[i]);
   const ux=pts[1][0]-pts[0][0],uy=pts[1][1]-pts[0][1],uz=pts[1][2]-pts[0][2];
   const vx=pts[2][0]-pts[0][0],vy=pts[2][1]-pts[0][1],vz=pts[2][2]-pts[0][2];
   let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz2=ux*vy-uy*vx;
-  const nl=Math.hypot(nx,ny,nz2)||1;const nz=-nz2/nl;   /* toward the eye = −z */
+  const nl=Math.hypot(nx,ny,nz2)||1;const nz=-nz2/nl;
   const zavg=pts.reduce((acc,p)=>acc+p[2],0)/pts.length;
   return {pts,nz,zavg};
- }).sort((x,y)=>y.zavg-x.zavg);   /* painter: far first */
+ }).sort((x,y)=>y.zavg-x.zavg);
  let out='';
  for(const f of faces){
   const front=Math.max(0,f.nz);
@@ -9698,9 +9751,9 @@ function modShapeSVG(tpl){
  const n=tpl.bridge.length+(tpl.interval?1:0);
  const name=modShapeFor(n);
  return '<svg viewBox="0 0 46 46" width="46" height="46"><title>'+name+' — '+n+' side'+(n===1?'':'s')+', one per chord of this moment</title>'
-  +'<g class="modMesh" data-n="'+n+'">'+modMeshRender(n,0,false)+'</g>'
-  +'<circle class="modAnBg" cx="23" cy="26" r="10.5" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.35)" stroke-width="0.7"/>'
-  +modAnimalSVG(tpl.id,23,25.4,9)+'</svg>';
+  +'<g class="modMesh" data-n="'+n+'">'+modMeshRender(n,modMeshFrontQuats(n)[0],false)+'</g>'
+  +'<g opacity="0.5"><circle class="modAnBg" cx="23" cy="23" r="10.5" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.35)" stroke-width="0.7"/>'
+  +modAnimalSVG(tpl.id,23,22.4,9)+'</g></svg>';
 }
 let modAud={timers:[],el:null,active:false};
 function modAudClear(){
@@ -9708,7 +9761,7 @@ function modAudClear(){
  modAud.timers=[];modAud.active=false;
  if(modAud.raf)cancelAnimationFrame(modAud.raf);modAud.raf=null;
  if(modAud.mesh){const g=modAud.mesh;modAud.mesh=null;
-  try{g.innerHTML=modMeshRender(+(g.dataset.n||2),0,false);}catch(e){}}   /* the badge back to rest — face 0 front */
+  try{const nn=+(g.dataset.n||2);g.innerHTML=modMeshRender(nn,modMeshFrontQuats(nn)[0],false);}catch(e){}}   /* back to rest — face 0 dead-front */
  if(modAud.el){
   modAud.el.classList.remove('modLit');modAud.el.classList.remove('modSpin');
   modAud.el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill','rgba(255,255,255,.85)'));
@@ -9766,7 +9819,10 @@ function modAudPlay(tplId,rows,opts){
   const g=el.querySelector('.modMesh');
   if(g){
    const nn=rows.length;
-   const angles=modMeshAngles(nn).concat(360);
+   /* [M9c]: EVERY face truly fronts on its chord — per-face minimal-rotation quaternions,
+      SLERPED chord to chord, gliding home (face 0) by the audition's end */
+   const qs=modMeshFrontQuats(nn);
+   const path=qs.concat([qs[0]]);
    const times=[];{let t=0;for(const c of rows){times.push(t);t+=c.d*spb;}}
    times.push(at*spb);
    const t0=performance.now();
@@ -9776,8 +9832,8 @@ function modAudPlay(tplId,rows,opts){
     const t=(performance.now()-t0)/1000;
     let k=0;while(k<times.length-2&&t>=times[k+1])k++;
     const span=Math.max(.001,times[k+1]-times[k]);
-    const th=angles[k]+(angles[k+1]-angles[k])*Math.min(1,Math.max(0,(t-times[k])/span));
-    g.innerHTML=modMeshRender(nn,th,el.classList.contains('modLit'));
+    const q=mqSlerp(path[k],path[k+1],Math.min(1,Math.max(0,(t-times[k])/span)));
+    g.innerHTML=modMeshRender(nn,q,el.classList.contains('modLit'));
     if(t<times[times.length-1]+.05)modAud.raf=requestAnimationFrame(stepFn);
    };
    modAud.raf=requestAnimationFrame(stepFn);
@@ -10078,6 +10134,52 @@ modState.lastPick=modState.lastPick||'mim';
  if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
   setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
  if(pb)pb.onclick=modPrevAudition;
+ /* [M10]: the left grip — drag the WHOLE lane up into the grid; the LANDING chord rides
+    the cursor tip, the earlier chords trail left at their own rate; the drop picks the
+    inject's target (the slot law fired by drag) */
+ const gl=document.getElementById('modPrevGripL');
+ if(gl)gl.onmousedown=e=>{
+  e.preventDefault();
+  const M=modPrevModel();
+  if(M.err){setModStatus(M.err);return;}
+  const mz=modPrev.zoom||28;
+  const gh=document.createElement('div');
+  gh.style.cssText='position:fixed;z-index:130;pointer-events:none;display:flex;height:30px;opacity:.88;left:-9999px;top:-9999px;';
+  let wsum=0;const ws=[];
+  M.seq.forEach((m,k)=>{
+   const w=M.durs[k]*mz;ws.push(w);wsum+=w;
+   const b=document.createElement('div');
+   const di=curScale().pcs.indexOf(((m.r-project.tonic)%12+12)%12);
+   b.style.cssText='box-sizing:border-box;border:1px solid rgba(0,0,0,.45);border-radius:4px;margin-right:1px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden;flex:0 0 auto;width:'+w.toFixed(1)+'px;background:'+degColor(di<0?0:di)+(k===M.seq.length-1?';box-shadow:0 0 0 2px var(--accent) inset':'');
+   b.textContent=m.lbl;gh.appendChild(b);
+  });
+  document.body.appendChild(gh);
+  const anchor=wsum-ws[ws.length-1]/2;   /* [M10b]: the LAST chord centered on the cursor tip */
+  const mv=ev=>{gh.style.left=(ev.clientX-anchor)+'px';gh.style.top=(ev.clientY-15)+'px';};
+  mv(e);
+  setModStatus('Drop the LANDING chord on its destination in the chord lane — the earlier chords trail left at their own rate. Esc lets go.');
+  const done=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc,true);gh.remove();};
+  const esc=ev=>{if(ev.key==='Escape'){done();setModStatus('Let go — nothing written.');}};
+  const up=ev=>{
+   done();
+   const elu=document.elementFromPoint(ev.clientX,ev.clientY);
+   const cb=elu&&elu.closest?elu.closest('#chordlane .cb'):null;
+   let idx=null;
+   if(cb)idx=[...document.querySelectorAll('#chordlane .cb')].indexOf(cb);
+   else{
+    const cl=document.getElementById('chordlane');
+    if(cl){const r=cl.getBoundingClientRect();
+     if(ev.clientY>r.top-44&&ev.clientY<r.bottom+44&&ev.clientX>=r.left&&ev.clientX<=r.right)
+      idx=chordIdxAtBeat(project.chords,Math.max(0,Math.min(LOOP-1e-6,(ev.clientX-r.left+(document.getElementById('gridWrap')?document.getElementById('gridWrap').scrollLeft:0)*0)/PPB)));
+    }
+   }
+   if(idx==null||idx<0||!project.chords[idx]){setModStatus('Dropped clear of the chord lane — nothing written. Drag again and land the LAST chord on its destination chord.');return;}
+   selChord=idx;   /* the drop IS the selection */
+   const ok=injectModulationAtChord(idx);
+   if(ok)drawModPrev();
+  };
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc,true);
+ };
  /* [M8c]: the ruler's ⬍ drag is the ONE thing that moves the bars and beats — the zoom */
  const ru=document.getElementById('modPrevRuler');
  if(ru)ru.onmousedown=e=>{
