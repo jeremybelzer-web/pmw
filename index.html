@@ -394,21 +394,27 @@
 .psyRow .psyArm{padding:3px 9px;font-size:10.5px;}
 /* 4.3 R-WINDOW (24b, [M6a-d]): the 3D shape badge — face count = the moment's chord count;
    a geometric animal inside; .modSpin turns while the moment auditions */
-.modShape{flex:0 0 auto;width:46px;height:46px;display:inline-block;}
+.modShape{flex:0 0 auto;width:46px;height:46px;display:inline-block;perspective:130px;}
 .mimCard .modShape{float:right;margin:-2px -4px 2px 6px;}
-@keyframes modspin{from{transform:rotateY(0deg);}to{transform:rotateY(360deg);}}
-.modShape svg{display:block;}
-.modShape.modSpin svg{animation:modspin 2.4s linear infinite;transform-style:preserve-3d;}
+/* [M7b]: per-chord STEPPED rotation — the chord's face turns toward the user — plus the lit face */
+.modShape svg{display:block;transition:transform .32s ease,filter .18s;}
+.modShape.modLit svg{filter:brightness(1.65) saturate(1.25) drop-shadow(0 0 5px rgba(255,230,150,.9));}
+.modShape.modSpin svg{}   /* retired at 24c ([M7b] replaced the continuous spin); the class survives one build for any stale reader */
 /* [M3b]/[M5]/[M6e-f]: the embedded preview lane at the top of the window */
 #modPrevRow{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
 #modPrevPlay{padding:6px 11px;font-size:13px;align-self:center;}
 #modPrevRuler{display:flex;height:14px;font-size:8.5px;color:var(--dim);border-bottom:1px solid var(--line);}
 #modPrevRuler .mprTick{border-left:1px solid var(--line);padding-left:2px;box-sizing:border-box;overflow:hidden;white-space:nowrap;}
 #modPrevRuler .mprTick.bar{border-left-color:var(--dim);color:var(--text);font-weight:700;}
-#modPrevLane{display:flex;height:34px;}
+#modPrevLaneWrap{position:relative;}
+#modPrevLane{display:flex;height:34px;position:relative;}
+#modPrevGrid{position:absolute;left:0;top:0;bottom:0;right:0;pointer-events:none;z-index:2;}
+#modPrevPh{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--accent);display:none;z-index:3;box-shadow:0 0 7px var(--accent);pointer-events:none;}
 #modPrevLane .mpc{position:relative;box-sizing:border-box;border:1px solid rgba(0,0,0,.35);border-radius:4px;margin-right:1px;
- display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;min-width:0;}
+ display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;min-width:0;cursor:pointer;}
 #modPrevLane .mpc.mpcTgt{box-shadow:0 0 0 2px var(--accent) inset;}
+#modPrevLane .mpc.mpcSel{outline:2px solid #fff;outline-offset:-2px;}
+#modPrevLane .mpc.mpcNow{filter:brightness(1.45);}
 #modPrevLane .mpcGrip{position:absolute;right:-3px;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:2;}
 #modPrevExp{border:1px solid var(--line);border-radius:6px;margin-top:4px;padding:4px 6px;font-size:10.5px;}
 #modPrevExp .mpeRow{display:flex;gap:8px;align-items:center;padding:2px 0;}
@@ -492,7 +498,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24c</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -858,7 +864,11 @@
       <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written.">▶</span>
       <div style="flex:1;min-width:0;">
         <div id="modPrevRuler"></div>
-        <div id="modPrevLane"></div>
+        <div id="modPrevLaneWrap">
+          <div id="modPrevLane"></div>
+          <div id="modPrevGrid"></div>
+          <div id="modPrevPh"></div>
+        </div>
         <div id="modPrevExp" style="display:none;"></div>
       </div>
       <span class="part" id="modPrevExpB" title="Expand the lane — edit each chord&#8217;s inversion, like an expanded multi-track lane.">▤</span>
@@ -9557,10 +9567,57 @@ function modFoxSVG(cx,cy,s){
   +'<circle cx="'+(cx-.34*s).toFixed(1)+'" cy="'+(cy+.02*s).toFixed(1)+'" r="'+(0.09*s).toFixed(1)+'" fill="#1c1408"/>'
   +'<circle cx="'+(cx+.34*s).toFixed(1)+'" cy="'+(cy+.02*s).toFixed(1)+'" r="'+(0.09*s).toFixed(1)+'" fill="#1c1408"/>';
 }
+function modOwlSVG(cx,cy,s){
+ /* [M7a] the menagerie grows — faceted owl, original, in the folder pictures' spirit */
+ const P=(pts)=>'<polygon points="'+pts.map(p=>(cx+p[0]*s).toFixed(1)+','+(cy+p[1]*s).toFixed(1)).join(' ')+'" ';
+ const K='stroke="#1a1420" stroke-width="0.7" stroke-linejoin="round"';
+ return P([[-1,-.95],[-.35,-.55],[-.95,-.3]])+'fill="#7b5ea7" '+K+'/>'+P([[1,-.95],[.35,-.55],[.95,-.3]])+'fill="#7b5ea7" '+K+'/>'
+  +P([[-.95,-.3],[-.35,-.55],[.35,-.55],[.95,-.3],[.6,.5],[0,.95],[-.6,.5]])+'fill="#9b7fc7" '+K+'/>'
+  +P([[-.35,-.55],[.35,-.55],[0,-.05]])+'fill="#c9b3ef" '+K+'/>'
+  +'<circle cx="'+(cx-.4*s).toFixed(1)+'" cy="'+(cy-.18*s).toFixed(1)+'" r="'+(0.26*s).toFixed(1)+'" fill="#ffd35c" '+K+'/>'
+  +'<circle cx="'+(cx+.4*s).toFixed(1)+'" cy="'+(cy-.18*s).toFixed(1)+'" r="'+(0.26*s).toFixed(1)+'" fill="#ffd35c" '+K+'/>'
+  +'<circle cx="'+(cx-.4*s).toFixed(1)+'" cy="'+(cy-.18*s).toFixed(1)+'" r="'+(0.11*s).toFixed(1)+'" fill="#1a1420"/>'
+  +'<circle cx="'+(cx+.4*s).toFixed(1)+'" cy="'+(cy-.18*s).toFixed(1)+'" r="'+(0.11*s).toFixed(1)+'" fill="#1a1420"/>'
+  +P([[-.14,.12],[.14,.12],[0,.42]])+'fill="#f2a93b" '+K+'/>';
+}
+function modBirdSVG(cx,cy,s){
+ /* faceted songbird in flight — the mural picture's spirit */
+ const P=(pts)=>'<polygon points="'+pts.map(p=>(cx+p[0]*s).toFixed(1)+','+(cy+p[1]*s).toFixed(1)).join(' ')+'" ';
+ const K='stroke="#122" stroke-width="0.7" stroke-linejoin="round"';
+ return P([[-1.05,-.15],[-.2,-.75],[.15,-.15]])+'fill="#38b6a0" '+K+'/>'
+  +P([[-.75,-.05],[-.2,-.75],[-.35,-.05]])+'fill="#2a8ec9" '+K+'/>'
+  +P([[-.35,-.05],[.15,-.15],[.75,.1],[.2,.55],[-.4,.45]])+'fill="#e0507a" '+K+'/>'
+  +P([[.15,-.15],[.62,-.42],[.75,.1]])+'fill="#f2a93b" '+K+'/>'
+  +P([[.62,-.42],[1.05,-.3],[.75,.1]])+'fill="#ffd35c" '+K+'/>'
+  +P([[-.4,.45],[.2,.55],[-.55,.95]])+'fill="#7b5ea7" '+K+'/>'
+  +'<circle cx="'+(cx+.68*s).toFixed(1)+'" cy="'+(cy-.24*s).toFixed(1)+'" r="'+(0.09*s).toFixed(1)+'" fill="#122"/>'
+  +P([[1.05,-.3],[1.3,-.22],[1.02,-.12]])+'fill="#f2a93b" '+K+'/>';
+}
+function modDogSVG(cx,cy,s){
+ /* faceted dog head — the alamy-style picture's spirit, drawn original */
+ const P=(pts)=>'<polygon points="'+pts.map(p=>(cx+p[0]*s).toFixed(1)+','+(cy+p[1]*s).toFixed(1)).join(' ')+'" ';
+ const K='stroke="#181008" stroke-width="0.7" stroke-linejoin="round"';
+ return P([[-.95,-.95],[-.35,-.45],[-.85,-.15]])+'fill="#8a4b18" '+K+'/>'+P([[.95,-.95],[.35,-.45],[.85,-.15]])+'fill="#8a4b18" '+K+'/>'
+  +P([[-.85,-.15],[-.35,-.45],[.35,-.45],[.85,-.15],[.5,.35],[-.5,.35]])+'fill="#c9973a" '+K+'/>'
+  +P([[-.35,-.45],[.35,-.45],[0,0]])+'fill="#e8c06a" '+K+'/>'
+  +P([[-.5,.35],[.5,.35],[.22,.95],[-.22,.95]])+'fill="#a86f24" '+K+'/>'
+  +P([[-.16,.62],[.16,.62],[0,.86]])+'fill="#181008" '+K+'/>'
+  +'<circle cx="'+(cx-.35*s).toFixed(1)+'" cy="'+(cy-.1*s).toFixed(1)+'" r="'+(0.1*s).toFixed(1)+'" fill="#181008"/>'
+  +'<circle cx="'+(cx+.35*s).toFixed(1)+'" cy="'+(cy-.1*s).toFixed(1)+'" r="'+(0.1*s).toFixed(1)+'" fill="#181008"/>';
+}
+function modAnimalFor(id){
+ /* [M7a]: a stable animal per moment — the id decides, so a card keeps its animal */
+ let h=0;for(const ch of String(id))h=(h*31+ch.charCodeAt(0))>>>0;
+ return ['fox','owl','bird','dog'][h%4];
+}
+function modAnimalSVG(id,cx,cy,s){
+ const a=modAnimalFor(id);
+ return a==='owl'?modOwlSVG(cx,cy,s):a==='bird'?modBirdSVG(cx,cy,s):a==='dog'?modDogSVG(cx,cy,s):modFoxSVG(cx,cy,s);
+}
 function modShapeSVG(tpl){
  /* [M6a]: the 3D shape by FACE COUNT = the moment's chord count. Flat-shaded like his
-    chart; the fox sits on a circular backdrop (.modAnBg) whose fill is the audition's
-    per-chord colour ([M6d]). */
+    chart; the animal ([M7a] — per-moment, from the menagerie) sits on a circular
+    backdrop (.modAnBg) whose fill is the audition's per-chord colour ([M6d]). */
  const n=tpl.bridge.length+(tpl.interval?1:0);
  const name=modShapeFor(n);
  const hue=(n*47)%360,base='hsl('+hue+',55%,52%)',dark='hsl('+hue+',55%,38%)',lite='hsl('+hue+',60%,66%)';
@@ -9582,30 +9639,70 @@ function modShapeSVG(tpl){
  }
  return '<svg viewBox="0 0 46 46" width="46" height="46"><title>'+name+' — '+n+' side'+(n===1?'':'s')+', one per chord of this moment</title>'
   +body+'<circle class="modAnBg" cx="23" cy="26" r="10.5" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.35)" stroke-width="0.7"/>'
-  +modFoxSVG(23,25.4,9)+'</svg>';
+  +modAnimalSVG(tpl.id,23,25.4,9)+'</svg>';
 }
-let modAud={timers:[],el:null};
+let modAud={timers:[],el:null,active:false};
 function modAudClear(){
  for(const t of modAud.timers)clearTimeout(t);
- modAud.timers=[];
- if(modAud.el){modAud.el.classList.remove('modSpin');
+ modAud.timers=[];modAud.active=false;
+ if(modAud.el){
+  const sv=modAud.el.querySelector('svg');if(sv)sv.style.transform='';
+  modAud.el.classList.remove('modLit');modAud.el.classList.remove('modSpin');
   modAud.el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill','rgba(255,255,255,.85)'));
   modAud.el=null;}
+ const ph=document.getElementById('modPrevPh');if(ph)ph.style.display='none';
+ document.querySelectorAll('#modPrevLane .mpc.mpcNow').forEach(x=>x.classList.remove('mpcNow'));
+}
+function modAudStop(){
+ /* [M7c]: Escape — or clicking away from the auditioning pivot chords — STOPS the
+    playback. The engine schedules every chord's notes on its own timer, so a stop
+    silences everything not yet struck; the chord already sounding rings out its own
+    length (the notes are fired, not held). */
+ if(!modAud.active&&!modAud.timers.length)return;
+ modAudClear();
+ if(typeof setModStatus==='function')setModStatus('⏹ Audition stopped.');
+}
+function modAudPlay(tplId,rows,opts){
+ /* THE ONE AUDITION ENGINE (24c) — cancellable by construction: each chord is scheduled
+    on its own timer that ① sounds it ② steps the moment's shape so the chord's FACE
+    turns toward the user and LIGHTS UP ([M7b]) ③ recolours the animal's backdrop ([M6d])
+    ④ sweeps the PLAYHEAD through the embedded lane and brightens the block under it —
+    the audition takes place IN the lane ([M7d]). opts: {lane:true, voicing:(c)=>midis}. */
+ opts=opts||{};
+ modAudClear();
+ const spb=60/Math.max(40,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96));
+ const el=document.querySelector('.modShape[data-tpl="'+tplId+'"]');
+ modAud.el=el;modAud.active=true;
+ const n=rows.length;
+ const ph=opts.lane?document.getElementById('modPrevPh'):null;
+ const blocks=opts.lane?[...document.querySelectorAll('#modPrevLane .mpc')]:[];
+ let at=0;
+ rows.forEach((c,k)=>{
+  const col='hsl('+((((c.r||0)%12)+12)%12)*30+',62%,62%)';
+  modAud.timers.push(setTimeout(()=>{
+   try{if(!opts.mute&&audioReady&&inst)inst.note('comping',(opts.voicing?opts.voicing(c):voice({r:c.r,iv:c.iv},null)),c.d*spb*.95,Tone.now()+.02,.5);}catch(e){}
+   if(el){
+    const sv=el.querySelector('svg');
+    if(sv)sv.style.transform='rotateY('+(k*360/Math.max(1,n))+'deg)';   /* the chord's face, toward the user */
+    el.classList.add('modLit');
+    setTimeout(()=>{if(modAud.el===el)el.classList.remove('modLit');},Math.min(600,c.d*spb*700));
+    el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill',col));
+   }
+   if(blocks[k]){blocks.forEach(x=>x.classList.remove('mpcNow'));blocks[k].classList.add('mpcNow');}
+  },Math.max(0,at*spb*1000)));
+  at+=c.d;
+ });
+ if(ph&&blocks.length){
+  const x0=blocks[0].offsetLeft,x1=blocks[n-1].offsetLeft+blocks[n-1].offsetWidth;
+  ph.style.transition='none';ph.style.left=x0+'px';ph.style.display='block';
+  modAud.timers.push(setTimeout(()=>{ph.style.transition='left '+(at*spb)+'s linear';ph.style.left=x1+'px';},30));
+ }
+ modAud.timers.push(setTimeout(modAudClear,at*spb*1000+180));
 }
 function modAudFx(tplId,rows,spb){
- /* [M6c]/[M6d]: the moment's shape SPINS for the audition's length, and the fox's
-    backdrop takes each chord's colour as the audition reaches it */
- modAudClear();
- const el=document.querySelector('.modShape[data-tpl="'+tplId+'"]');
- if(!el)return;
- modAud.el=el;el.classList.add('modSpin');
- let at=0;
- for(const c of rows){
-  const col='hsl('+((((c.r||0)%12)+12)%12)*30+',62%,62%)';
-  modAud.timers.push(setTimeout(()=>{el.querySelectorAll('.modAnBg').forEach(b=>b.setAttribute('fill',col));},Math.max(0,at*spb*1000)));
-  at+=c.d;
- }
- modAud.timers.push(setTimeout(modAudClear,at*spb*1000+150));
+ /* kept one build under the old name — the engine is modAudPlay now; this fires the
+    fx only, no audio (its historical contract) */
+ modAudPlay(tplId,rows,{mute:true});
 }
 function modPrevTpl(){
  return modState.lastPick==='psy'?psychTemplate(modState.psySel):currentModTemplate();
@@ -9667,31 +9764,48 @@ function drawModPrev(){
   rh+='<span class="mprTick'+(isBar?' bar':'')+'" style="width:'+(w*mppb).toFixed(1)+'px;flex:0 0 auto;">'+(isBar?('bar '+(Math.floor(b/Math.max(1,num))+1)):(b%Math.max(1,num))+1)+'</span>';
  }
  ruler.innerHTML=rh;
- /* the lane — the moment's chords ending ON the target */
+ /* the lane — the moment's chords ending ON the target, wearing the REAL lane's colours
+    ([M7d]: degColor by degree, the synesthesia spec — the same law as #chordlane) */
  lane.innerHTML='';
  M.seq.forEach((m,k)=>{
   const d=document.createElement('div');
-  d.className='mpc'+(k===M.seq.length-1?' mpcTgt':'');
+  d.className='mpc'+(k===M.seq.length-1?' mpcTgt':'')+(modPrev.sel===k?' mpcSel':'');
   const psy=!M.tpl.interval;
   d.style.width=(M.durs[k]*mppb).toFixed(1)+'px';
-  d.style.background=psy?'hsl(275,45%,42%)':(k===M.seq.length-1?'hsl(35,70%,42%)':'hsl('+((((m.r%12)+12)%12)*30)+',45%,40%)');
-  d.title=(k===M.seq.length-1?'The landing — this slot IS the target chord ('+(selChord!=null?'your selected chord':'the playhead’s chord')+').':m.lbl)+' · '+M.durs[k]+' beat'+(M.durs[k]===1?'':'s');
+  const di=curScale().pcs.indexOf(((m.r-project.tonic)%12+12)%12);
+  d.style.background=degColor(di<0?0:di);
+  if(psy){d.style.borderColor='var(--accent)';d.style.borderStyle='dashed';}   /* the ⚡ overlay idiom */
+  d.title=(k===M.seq.length-1?'The landing — this slot IS the target chord ('+(selChord!=null?'your selected chord':'the playhead’s chord')+').':m.lbl)+' · '+M.durs[k]+' beat'+(M.durs[k]===1?'':'s')+' · click = select (the expansion follows) · drag the right edge = resize.';
   d.textContent=m.lbl;
-  if(!modWinSettings.rate&&k<M.seq.length){
-   const g=document.createElement('div');g.className='mpcGrip';g.title='Drag — set this chord’s length (the moment still ends on the target).';
-   g.onmousedown=e=>{
-    e.preventDefault();e.stopPropagation();
-    const x0=e.clientX,d0=M.durs[k];
-    const mm=ev=>{const nd=Math.max(.5,Math.round((d0+(ev.clientX-x0)/mppb)*4)/4);
-     if(!modPrev.durs||modPrev.durs.length!==M.seq.length)modPrev.durs=M.durs.slice();
-     modPrev.durs[k]=nd;drawModPrev();};
-    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
-    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
-   };
-   d.appendChild(g);
-  }
+  d.onclick=()=>{modPrev.sel=(modPrev.sel===k?null:k);drawModPrev();};   /* [M7d]: selectable */
+  const g=document.createElement('div');g.className='mpcGrip';g.title='Drag — set this chord’s length (the moment still ends on the target). Dragging switches the rate toggle to YOUR rate.';
+  g.onmousedown=e=>{
+   e.preventDefault();e.stopPropagation();
+   if(modWinSettings.rate){modWinSettings.rate=false;persistModWin();
+    setModStatus('Your rate now — the toggle switched off as you dragged; the moment still ends on the target.');}
+   const x0=e.clientX,d0=M.durs[k];
+   const mm=ev=>{const nd=Math.max(.5,Math.round((d0+(ev.clientX-x0)/mppb)*4)/4);
+    if(!modPrev.durs||modPrev.durs.length!==M.seq.length)modPrev.durs=M.durs.slice();
+    modPrev.durs[k]=nd;drawModPrev();};
+   const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
+  d.appendChild(g);
   lane.appendChild(d);
  });
+ /* [M7d]: BEAT lines as well as bar lines — an overlay grid across the lane, phase-locked
+    to the absolute beats (bars heavier), above the blocks so it reads like the grid's */
+ const grid=document.getElementById('modPrevGrid');
+ if(grid){
+  let gh='';
+  const width=(M.endBeat-M.startBeat)*mppb;
+  for(let b=Math.ceil(M.startBeat-1e-6);b<M.endBeat-1e-6;b++){
+   const num=(typeof tsigNumAtBeat==='function')?tsigNumAtBeat(project.tsigMap||[],b):4;
+   const isBar=(b%Math.max(1,num))===0;
+   gh+='<div style="position:absolute;top:0;bottom:0;left:'+((b-M.startBeat)*mppb).toFixed(1)+'px;width:0;border-left:1px solid rgba(255,255,255,'+(isBar?'.32':'.13')+');"></div>';
+  }
+  grid.innerHTML=gh;grid.style.width=width.toFixed(1)+'px';
+ }
  /* the expansion ([M5]) — per-chord inversion editing */
  exp.style.display=modPrev.exp?'block':'none';
  if(modPrev.exp){
@@ -9700,6 +9814,7 @@ function drawModPrev(){
    const inv=modPrev.inv[k]||0;
    const notes=modPrevVoicing(m,inv).map(md=>PCN[((md%12)+12)%12]).join(' · ');
    const row=document.createElement('div');row.className='mpeRow';
+   if(modPrev.sel===k)row.style.background='rgba(232,163,61,.14)';   /* the lane's selection follows into the expansion */
    row.innerHTML='<span style="min-width:64px;font-weight:700;">'+m.lbl+'</span>'
     +'<span class="mpeNotes">'+notes+' <span style="opacity:.6;">('+(inv===0?'root position':'inversion '+inv)+')</span></span>'
     +'<span class="part mpeUp" title="Cycle the inversion up">▲</span><span class="part mpeDn" title="Cycle the inversion down">▼</span>';
@@ -9710,20 +9825,15 @@ function drawModPrev(){
  }
 }
 function modPrevAudition(){
- /* [M6f]'s ▶ — plays the lane EXACTLY as shown (durations and inversions), the psych
-    convention: nothing is written. The shape spins, the fox recolours per chord. */
+ /* [M6f]'s ▶ — plays the lane EXACTLY as shown (durations and inversions), IN the lane
+    ([M7d]: the playhead sweeps it, each block brightens as it sounds), the psych
+    convention: nothing is written. Esc or a click away stops it ([M7c]). */
  const M=modPrevModel();
  if(M.err){setModStatus(M.err);return;}
  const rows=M.seq.map((m,k)=>({d:M.durs[k],r:m.r,iv:m.iv,bass:modPrev.inv[k]||0,lbl:m.lbl}));
- const go=()=>{try{
-  if(!audioReady||!inst)return;
-  const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
-  let at=0;
-  for(const c of rows){inst.note('comping',modPrevVoicing(c,c.bass),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
-  modAudFx(M.tpl.id,rows,spb);
- }catch(e){}};
- if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
- setModStatus('▶ '+(M.tpl.name||'the moment')+' — as the lane shows it, ending on the target · nothing is written.');
+ const go=()=>{modAudPlay(M.tpl.id,rows,{lane:true,voicing:c=>modPrevVoicing(c,c.bass)});};
+ if(audioReady)go();else ensureAudio().then(go).catch(go);
+ setModStatus('▶ '+(M.tpl.name||'the moment')+' — in the lane, ending on the target · Esc (or a click away) stops it · nothing is written.');
 }
 /* the psych-out rows (above the divider) */
 function drawPsyRows(){
@@ -9739,7 +9849,7 @@ function drawPsyRows(){
    +'<span class="psyName">'+t.name+'</span><span class="psyChain">'+t.bridge.map(s=>s.lbl).join(' → ')+'</span>'
    +'<span class="part psyArm" title="'+(armed?'Disarm the psych-out':'Arm at the selected chord — the burst replaces it during playback only, the chord lane stays untouched')+'">'+(armed?'⚡ Disarm':'⚡ Arm at selected chord')+'</span>';
   row.querySelector('.psyArm').onclick=e=>{e.stopPropagation();modState.psySel=t.id;togglePsych(t.id);};
-  row.onclick=()=>{modState.psySel=t.id;modState.lastPick='psy';drawPsyRows();drawModPrev();mimicAudition(t);};
+  row.onclick=()=>{modState.psySel=t.id;modState.lastPick='psy';drawPsyRows();drawModPrev();modPrevAudition();};   /* [M7d]: the audition happens IN the lane */
   host.appendChild(row);
  });
 }
@@ -9759,7 +9869,7 @@ function drawMimicCards(){
    +' <span class="mimIv">'+(t.interval>0?'+':'')+t.interval+' st'
    +(t.tgtMode==='aeolian'?' · lands minor':t.tgtMode?' · lands major':'')+'</span>'
    +(t.derived?' <span class="mimDer" title="Derived by ear from the record — awaiting your approval (decision #6)">✎ derived</span>':'')+'</div>';
-  d.onclick=()=>{modState.sel=t.id;modState.lastPick='mim';drawMimicCards();updateModDesc();drawModPrev();mimicAudition(t);};
+  d.onclick=()=>{modState.sel=t.id;modState.lastPick='mim';drawMimicCards();updateModDesc();drawModPrev();modPrevAudition();};   /* [M7d]: the audition happens IN the lane */
   host.appendChild(d);
  });
 }
@@ -9865,6 +9975,9 @@ modState.lastPick=modState.lastPick||'mim';
  if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
   setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
  if(pb)pb.onclick=modPrevAudition;
+ /* [M7c]: Escape — or clicking away from the window — stops the audition */
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')modAudStop();});
+ document.addEventListener('mousedown',e=>{if(modAud.active&&!(e.target&&e.target.closest&&e.target.closest('#modPanel')))modAudStop();},true);
  if(xb)xb.onclick=()=>{modPrev.exp=!modPrev.exp;xb.classList.toggle('on',modPrev.exp);drawModPrev();};})();
 drawModPrev();
 
