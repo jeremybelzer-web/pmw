@@ -469,7 +469,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-23a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-23b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -2334,9 +2334,10 @@ function contourToSamples(contour){
    project files and autosave like groups. */
 function validShelf(a){
  /* 30r: 'chords' joined the strand kinds — an Orbits journey keeps its whole re-harmonization (chords + sections) as ONE shelf object.
-    EN4 (build 2026-08-20c): 'form' is the FIFTH kind and the first with a SHAPE guard — admitted only through validFormData (the strand rule: the whitelist entry ships with the extractor) */
+    EN4 (build 2026-08-20c): 'form' is the FIFTH kind and the first with a SHAPE guard — admitted only through validFormData (the strand rule: the whitelist entry ships with the extractor)
+    4.7 R4 (build 2026-08-23b): 'travel' is the SIXTH kind — E-079/E-080 as a list of 4.3 mod-templates, admitted only through validTravelData (the form pattern: own guard, own clause, the four-kind literal untouched) */
  return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
-  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
+  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
 function shelfNextId(shelf){
  let n=1;
  const ids=new Set((shelf||[]).map(x=>x.id));
@@ -3030,6 +3031,59 @@ function validFormData(d){
    &&s.segs.every(g=>g&&typeof g==='object'&&typeof g.letter==='string'&&g.rows===undefined&&g.notes===undefined))
   &&d.pairs.every(p=>p&&typeof p==='object'&&Array.isArray(p.a)&&Array.isArray(p.b)&&Array.isArray(p.changed));}
 /* ==== /5.1 · EN4 FORM PERSISTENCE (pure layer) ==== */
+/* ==== 4.7 R4 · TRAVEL ESSENCES (pure layer) ==== E-079 Modulation + E-080 Psych-Out
+   as Shelf strands. The data shape is NOT new: a 'travel' strand is a list of the 4.3
+   mod-templates (validateModTemplate — the same shape MODULATION_DB ships), so every
+   kept moment is transposable by resolveBridge/ghostPivotFor and note-free by
+   construction. Like validFormData, the guard enforces the legal gate: a moment that
+   smuggles rows/notes is refused. Pure. */
+function validTravelData(d){
+ return !!d&&typeof d==='object'&&Array.isArray(d.moments)&&d.moments.length>0
+  &&(d.src===undefined||typeof d.src==='string')
+  &&d.moments.every(m=>validateModTemplate(m)&&m.rows===undefined&&m.notes===undefined);
+}
+function travelMoments(chords,sections,loop,opts){
+ /* THE EXTRACTOR: a piece's key travel as validated mod-templates.
+    Real modulations read keyRegions (the section key map): the chord straddling each
+    boundary becomes a src-relative bridge step and the landing chord a tgt-relative
+    one. Psych-outs read psychFromChords (outside-the-key runs that come home).
+    sections may be null: pass opts {tonic,mode} for a one-key source (the ghost-song
+    excerpts). A parallel-mode change (interval 0) is skipped on purpose — the shipped
+    psych convention keys off interval, and interval-0 real travel would wear the wrong
+    badge everywhere downstream. Returns {mods:[tpl],psychs:[tpl]} — pure, inputs untouched. */
+ const T=t=>((t%12)+12)%12;
+ opts=opts||{};
+ const regs=sections?keyRegions(sections,loop):[{start:0,tonic:T(opts.tonic||0),mode:opts.mode||'ionian'}];
+ const mods=[];
+ for(let i=1;i<regs.length;i++){
+  const src=regs[i-1],tgt=regs[i];
+  const interval=T(tgt.tonic-src.tonic);
+  if(!interval)continue;
+  const bridge=[];
+  const before=chordAt(chords,Math.max(0,tgt.start-1e-3));
+  if(before&&before.c)bridge.push({rel:'src',deg:T((before.c.r||0)-src.tonic),iv:(before.c.iv||[0,4,7]).slice(),
+   dur:Math.max(.5,Math.min(4,before.c.d||1)),lbl:before.c.lbl||PCN[T(before.c.r||0)]});
+  const at=chordAt(chords,tgt.start);
+  if(at&&at.c&&(!before||at.c!==before.c))bridge.push({rel:'tgt',deg:T((at.c.r||0)-tgt.tonic),iv:(at.c.iv||[0,4,7]).slice(),
+   dur:Math.max(.5,Math.min(4,at.c.d||1)),lbl:at.c.lbl||PCN[T(at.c.r||0)]});
+  if(!bridge.length)continue;
+  const tpl={id:'tmod'+i,name:'beat '+Math.round(tgt.start)+' → '+PCN[tgt.tonic]+(orbMinor(tgt.mode)?' minor':' major'),
+   kind:(interval===1||interval===2)?'step-up':'modal',interval,bridge,desc:'a written modulation in this piece'};
+  if(orbMinor(tgt.mode))tpl.tgtMode='aeolian';
+  if(validateModTemplate(tpl))mods.push(tpl);
+ }
+ const tonic=(regs[0]||{tonic:0}).tonic;
+ const pcs=opts.pcs||((SCALE_DB[(regs[0]&&regs[0].mode)||'ionian']||SCALE_DB.ionian).pcs);
+ const psychs=[];
+ psychFromChords(flatChords(chords),tonic,pcs).forEach((p,i)=>{
+  const tpl={id:'tpsy'+(i+1),name:p.lbls.join(' → '),kind:'psych-out',interval:0,
+   bridge:p.roots.map((c,k)=>({rel:'src',deg:T(c.r-tonic),iv:c.iv.slice(),dur:1,lbl:p.lbls[k]||PCN[T(c.r)]})),
+   desc:'an outside run that comes home — '+p.len+' chord'+(p.len===1?'':'s')+' out'};
+  if(validateModTemplate(tpl))psychs.push(tpl);
+ });
+ return {mods,psychs};
+}
+/* ==== /4.7 R4 · TRAVEL ESSENCES (pure layer) ==== */
 /* ==== 2.5 ⑥ · QUANTIZE (pure layer) ==== starts pull toward the grid by `strength`
    (the Amount slider's law); durations optionally snap too. Fresh rows. Pure. */
 function quantizeRows(rows,idxs,step,strength,alsoDur){
@@ -9687,7 +9741,7 @@ function setPrzStatus(msg){
  przStatusEl.textContent=msg;
  clearTimeout(przStatusTimer);przStatusTimer=setTimeout(()=>{przStatusEl.textContent='';},6000);
 }
-const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES',form:'THE FORM'};
+const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES',form:'THE FORM',travel:'KEY TRAVEL'};
 /* EN4 PERSISTENCE (build 2026-08-20c) — the beam's lettering as a RECORD: one formMap
    pass over the track's sections (the same segmentSection/letterSegments the chips
    show), no note rows inside (the legal gate is in the pure layer). */
@@ -9764,6 +9818,15 @@ function przThumb(strand,data){
    inner+='<rect x="'+((t/end)*W).toFixed(1)+'" y="6" width="'+Math.max(2,(c.d/end)*W-1).toFixed(1)+'" height="28" rx="3" fill="hsl('+(((c.r||0)*30)%360)+',45%,52%)" opacity=".85"/>';
    t+=c.d;
   }
+ }else if(strand==='travel'){
+  /* 4.7 R4: one badge per moment — a real modulation wears its interval, a feint wears Psych! purple */
+  const ms=(data&&data.moments)||[];
+  const n=Math.max(1,ms.length),bw=W/n;
+  ms.forEach((m,i)=>{
+   const x=i*bw,psy=!m.interval;
+   inner+='<rect x="'+(x+1).toFixed(1)+'" y="6" width="'+Math.max(2,bw-2).toFixed(1)+'" height="28" rx="4" fill="hsl('+(psy?275:35)+',55%,45%)" opacity=".85"/>'
+    +'<text x="'+(x+bw/2).toFixed(1)+'" y="24" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">'+(psy?'Psych!':'+'+m.interval)+'</text>';
+  });
  }else if(strand==='contour'){
   const s=contourToSamples(data)||[[0,.5],[1,.5]];
   const pts=s.map(([x,y])=>(x*W).toFixed(1)+','+((1-y)*(H-8)+4).toFixed(1)).join(' ');
@@ -9784,6 +9847,29 @@ function przThumb(strand,data){
 }
 function przAudition(strand,data,startMidi,atBeat){
  if(strand==='form'){setPrzStatus('A form is a map, not a sound — '+((data&&data.songForm)||'')+' · press a phrase chip above to hear its three strands.');return;}
+ if(strand==='travel'){
+  /* 4.7 R4: audition the FIRST moment through the shipped 4.3 audition — home-key
+     context, the bridge, the landing — in the key under the playhead. Psych convention:
+     nothing is written. */
+  const ms=(data&&data.moments)||[];
+  if(!ms.length){setPrzStatus('That travel essence is empty — nothing to audition.');return;}
+  const go=()=>{try{
+   if(!audioReady||!inst)return;
+   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
+   const key=melismaKeyAt(atBeat||0);
+   const rows=mimicAuditionChords(ms[0],((key.tonic||0)%12+12)%12,orbMinor(key.mode||'ionian'));
+   let acc=0;
+   for(const c of rows){
+    if(acc>=16)break;
+    const d=Math.min(c.d,16-acc);
+    inst.note('comping',voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
+    acc+=c.d;
+   }
+  }catch(e){}};
+  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+  setPrzStatus('Auditioning '+(ms[0].name||'the first moment')+(ms.length>1?' · '+(ms.length-1)+' more moment'+(ms.length===2?'':'s')+' ride this essence.':'.'));
+  return;
+ }
  const go=()=>{try{
   if(!audioReady||!inst)return;
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
@@ -9822,6 +9908,17 @@ function przApply(strand,data){
     nothing faked: the apply verb for forms (re-order the sections to this letter scheme,
     E-112's Form LEGO) is its own round. No snapshot, nothing changes. */
  if(strand==='form'){setPrzStatus('The form is a map, not a pattern — ✓ Apply for forms (build a song to this scheme) is its own round. It lives on the Shelf and rides the file today.');return false;}
+ /* 4.7 R4: a 'travel' strand's ✓ BOARDS it — the essence docks as the Orbits sun, its
+    moments land on the ring, and a click there is the one-undo write. Direct injection
+    (injectModulation at the brace) is its own round. Boarding is session state — no snapshot. */
+ if(strand==='travel'){
+  const o=Array.isArray(project.shelf)?project.shelf.find(x=>x.strand==='travel'&&x.data===data):null;
+  if(!o){setPrzStatus('That travel essence is not on the Shelf any more.');return false;}
+  orbState.ghost='shelf:'+o.id;orbState.sel=0;
+  if(uiState.open!=='orbPanel')uiDispatch({type:'toggle',id:'orbPanel'});else renderOrb();
+  setPrzStatus('★ '+o.name+' is aboard the Orbits window as its sun — the moments ring the planet; click one to land it (one undo).');
+  return true;
+ }
  /* 30r: a 'chords' keep needs no note selection — ✓ writes the whole journey back
     (chord lane + its key sections, one undo) */
  if(strand==='chords'){
@@ -15718,6 +15815,9 @@ function orbGhostSources(){
  if(typeof SONGS!=='undefined')for(const s of SONGS)out.push({id:'song:'+s.id,label:s.name});
  for(const g of ghostSongsFrom(typeof MODULATION_DB!=='undefined'?MODULATION_DB:[]))
   out.push({id:'db:'+g.src,label:g.src});
+ /* 4.7 R4: every kept travel essence is a boardable source — the ★ rows */
+ if(Array.isArray(project.shelf))for(const o of project.shelf)
+  if(o.strand==='travel')out.push({id:'shelf:'+o.id,label:'★ '+o.name});
  return out;
 }
 function orbGhostAnalysis(){
@@ -15773,6 +15873,20 @@ function orbGhostAnalysis(){
    if(tpl.interval)res.mods.push({name:tpl.name,desc:tpl.desc,tplId:tpl.id});
    else res.psychs.push({name:tpl.name,desc:tpl.desc,tplId:tpl.id});
   }
+ }else if(g.slice(0,6)==='shelf:'){
+  /* 4.7 R4: a kept travel essence boards as the sun — its mod-templates land on THIS
+     planet exactly the way the curated DB's do (ghostPivotFor transposes each) */
+  const o=Array.isArray(project.shelf)?project.shelf.find(x=>x.strand==='travel'&&'shelf:'+x.id===g):null;
+  if(o&&validTravelData(o.data)){
+   for(const tpl of o.data.moments){
+    const pv=ghostPivotFor(tpl,cur.tonic);
+    if(!pv)continue;
+    res.pivots.push(pv);
+    if(tpl.interval)res.mods.push({name:tpl.name,desc:tpl.desc,tplId:tpl.id});
+    else res.psychs.push({name:tpl.name,desc:tpl.desc,tplId:tpl.id});
+   }
+   res.note='★ '+o.name+' is aboard as the sun — its kept moments land on this planet’s ring, transposed to '+PCN[cur.tonic]+(cur.minor?' minor':' major')+'.';
+  }else res.note='That travel essence left the Shelf — pick another ghost source.';
  }
  /* ORBIT FEEDBACK R1: the grey doorways are ALWAYS on the ring — ii–V into each diatonic
     chord's key by default, the 🎨 Chromatic toggle adds the five missing notes. The old
@@ -16914,14 +17028,18 @@ function renderOrb(){
   +'<g pointer-events="none">'+(lblSvg||'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+lbl+'</text>')+'</g>':'';
  /* ☀ the sun — the essence aboard (Keys &amp; Chords is the only essence docked so far;
     the essence selector rides the R4 round) */
- sunS+='<g id="orbSunG" data-a="'+sunA.toFixed(4)+'" transform="translate('+sunP.x.toFixed(1)+' '+sunP.y.toFixed(1)+')"><title>The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤). From the still planet it seems to wheel slowly round the sky, turning as it goes.</title>'
+ /* 4.7 R4: when a kept travel essence is boarded (ghost = shelf:…) the sun IS that
+    essence — the label wears its name. Otherwise the shipped Keys & Chords sun. */
+ const aboard=((orbState.ghost||'').slice(0,6)==='shelf:'&&Array.isArray(project.shelf))?project.shelf.find(x=>x.strand==='travel'&&'shelf:'+x.id===orbState.ghost):null;
+ const sunEsc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+ sunS+='<g id="orbSunG" data-a="'+sunA.toFixed(4)+'" transform="translate('+sunP.x.toFixed(1)+' '+sunP.y.toFixed(1)+')"><title>'+(aboard?'The sun is the ESSENCE — ★ '+sunEsc(aboard.name)+' is aboard: a kept travel essence, its moments landed on this planet’s ring. From the still planet it seems to wheel slowly round the sky, turning as it goes.':'The sun is the ESSENCE — the musical dimension this solar system explores. Keys &amp; Chords is aboard today; more essences dock in a later round (GEMS ⑤). From the still planet it seems to wheel slowly round the sky, turning as it goes.')+'</title>'
   +(deep?'<circle cx="0" cy="0" r="'+(sunR*2.4)+'" fill="url(#orbSunGrad3)" opacity=".9"/><circle cx="0" cy="0" r="'+Math.round(sunR*.7)+'" fill="#fff1c2" filter="url(#orbSoft)"/><circle cx="0" cy="0" r="'+Math.round(sunR*.58)+'" fill="#ffe7a8"/>'
    :'<circle cx="0" cy="0" r="'+(sunR*1.85)+'" fill="url(#orbSunGrad)" opacity=".8"/>'
   +'<circle cx="0" cy="0" r="'+Math.round(sunR*.62)+'" fill="#ffdf9e" stroke="#e8a33d" stroke-width="1.5"/>')
   +'<g class="orbSunSpin"><circle cx="0" cy="0" r="'+Math.round(sunR*.78)+'" fill="none" stroke="rgba(232,163,61,.55)" stroke-width="1.2" stroke-dasharray="3 9"/>'
   +'<circle cx="'+Math.round(sunR*.3)+'" cy="'+(-Math.round(sunR*.18))+'" r="3.2" fill="#e8a33d" opacity=".55"/><circle cx="'+(-Math.round(sunR*.22))+'" cy="'+Math.round(sunR*.3)+'" r="2.4" fill="#e8a33d" opacity=".5"/><circle cx="'+(-Math.round(sunR*.12))+'" cy="'+(-Math.round(sunR*.38))+'" r="1.8" fill="#e8a33d" opacity=".45"/></g>'
-  +'<text x="0" y="'+(sunR+18)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#e8a33d">KEYS &amp; CHORDS</text>'
-  +'<text x="0" y="'+(sunR+30)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">the essence aboard</text></g>';
+  +'<text x="0" y="'+(sunR+18)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#e8a33d">'+(aboard?'★ '+sunEsc(aboard.name.toUpperCase().slice(0,26)):'KEYS &amp; CHORDS')+'</text>'
+  +'<text x="0" y="'+(sunR+30)+'" text-anchor="middle" font-size="8.5" fill="#8b93a7">'+(aboard?'a kept travel essence aboard':'the essence aboard')+'</text></g>';
  if(zoomed){
  /* ============ CHORD LEVEL (GEMS R2 ④) — the moon became the planet ============ */
  const zr=frame.r,ziv=frame.iv&&frame.iv.length?frame.iv:[0,4,7];
@@ -17287,8 +17405,8 @@ function renderOrb(){
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="Import any song you want through time and space which has modulations in it — the app analyzes it and lists its modulations and its psych-outs, then builds their planets and pivot roads onto the map.">👻 Ghost Song Modulator</label>'
   +'<select id="orbGhost">'+ghostOpts+'</select>'
   +(ana.note?'<div style="font-size:10.5px;color:var(--dim);line-height:1.45;">'+ana.note+'</div>':'')
-  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;">Modulations</div><div>'+modRows+'</div>'
-  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;" title="A Psych-Out Modulation is when a piece of music departs the key only for a moment and immediately returns.">Psych-out modulations</div><div>'+psyRows+'</div>'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;display:flex;align-items:center;gap:6px;">Modulations'+(ana.mods.length?' <span class="cpchip" id="orbKeepMods" style="text-transform:none;letter-spacing:0;" title="★ Keep — this source&#8217;s modulations land on the Essence Shelf as ONE travel essence (transposable mod-templates, no notes inside). Board it later from the ghost menu&#8217;s ★ rows, in any key. ⌘Z undoes.">★ Keep</span>':'')+'</div><div>'+modRows+'</div>'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-top:2px;display:flex;align-items:center;gap:6px;" title="A Psych-Out Modulation is when a piece of music departs the key only for a moment and immediately returns.">Psych-out modulations'+(ana.psychs.length?' <span class="cpchip" id="orbKeepPsy" style="text-transform:none;letter-spacing:0;" title="★ Keep — this source&#8217;s psych-outs land on the Essence Shelf as ONE travel essence (transposable mod-templates, no notes inside). Board it later from the ghost menu&#8217;s ★ rows, in any key. ⌘Z undoes.">★ Keep</span>':'')+'</div><div>'+psyRows+'</div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;" title="The Performance speed: how soon a click lands — the change waits for the NEXT boundary of this size (audio never stops). Instantaneous lands NOW.">⏱ Performance speed</label>'
   +'<select id="orbSpeed">'+speedOpts+'</select>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Autonomous modulators wander the maze while the song plays — the treasure is what the journey sounds like"><input type="checkbox" id="orbAuto"'+(orbState.auto?' checked':'')+' style="accent-color:var(--accent);">🤖 Modulator wanders the maze</label>'
@@ -17563,6 +17681,9 @@ function renderOrb(){
   el.onclick=()=>orbTravelTo(+el.dataset.t,el.dataset.m==='1');
  });
  document.getElementById('orbGhost').onchange=e=>{orbState.ghost=e.target.value;orbState.sel=0;renderOrb();};
+ /* 4.7 R4: the ★ Keep verbs — E-079/E-080 to the Essence Shelf */
+ const kmB=document.getElementById('orbKeepMods');if(kmB)kmB.onclick=()=>orbKeepTravel('mods');
+ const kpB=document.getElementById('orbKeepPsy');if(kpB)kpB.onclick=()=>orbKeepTravel('psychs');
  /* GEMS R1 controls */
  const vB=document.getElementById('orbView');if(vB)vB.onclick=()=>{orbState.view=solar?'circles':'solar';renderOrb();};
  const d3B=document.getElementById('orb3d');if(d3B)d3B.onclick=()=>{orbState.view=orbState.view==='3d'?'solar':'3d';renderOrb();};   /* ORBIT FEEDBACK R3: the depth skin, a toggle beside the view chip */
@@ -17776,6 +17897,47 @@ function orbUserPrompt(){
  document.getElementById('orbUserOk').onclick=go;
  document.getElementById('orbUserNo').onclick=()=>d.remove();
  inp.onkeydown=e=>{if(e.key==='Enter')go();if(e.key==='Escape')d.remove();};
+}
+function orbKeepTravel(which){
+ /* 4.7 R4 · THE ★ KEEP VERBS — E-079 Modulation ('mods') / E-080 Psych-Out ('psychs')
+    land on the Essence Shelf as ONE 'travel' strand: the current ghost source's moments
+    in mod-template form (transposable, note-free — the strand rule's extractor half;
+    validTravelData is the whitelist half, shipped this same round). One undo. */
+ const g=orbState.ghost||'weber';
+ const label=which==='mods'?'modulations':'psych-outs';
+ let moments=[],src='';
+ if(g==='weber'){setOrbStatus('Weber neighbors are the map itself, not a song — pick a ghost song (or This piece) and ★ Keep its '+label+'.');return false;}
+ if(g.slice(0,6)==='shelf:'){setOrbStatus('That essence is already on the Shelf — it is aboard as the sun.');return false;}
+ if(g==='this'){
+  const tm=travelMoments(project.chords,project.sections,LOOP);
+  moments=which==='mods'?tm.mods:tm.psychs;
+  src=(project.song&&project.song.name)?project.song.name.split(' — ')[0]:'this piece';
+ }else if(g.slice(0,5)==='song:'){
+  const s=(typeof SONGS!=='undefined')&&SONGS.find(x=>'song:'+x.id===g);
+  if(s){
+   const tm=travelMoments(s.chords,null,0,{tonic:s.tonic,mode:s.mode==='minor'?'aeolian':'ionian'});
+   moments=which==='mods'?tm.mods:tm.psychs;
+   src=s.name.split(' — ')[0];
+  }
+ }else if(g.slice(0,3)==='db:'){
+  const grp=ghostSongsFrom(typeof MODULATION_DB!=='undefined'?MODULATION_DB:[]).find(x=>x.src===g.slice(3));
+  if(grp){
+   moments=grp.moments.filter(t=>which==='mods'?t.interval:!t.interval).map(t=>JSON.parse(JSON.stringify(t)));
+   src=grp.src;
+  }
+ }
+ if(!moments.length){setOrbStatus('No '+label+' found in this source — nothing to keep.');return false;}
+ if(!Array.isArray(project.shelf))project.shelf=[];
+ snapshot();
+ const nm=(label+' · '+src).slice(0,60);
+ project.shelf.push({id:shelfNextId(project.shelf),strand:'travel',name:nm,level:'L1',
+  data:{moments:JSON.parse(JSON.stringify(moments)),src},
+  fp:prismHash(moments.map(t=>t.kind+':'+t.interval+':'+t.bridge.map(b=>b.rel+b.deg).join('/')).join(','))});
+ autosaveSoon();
+ noteEngine('orbit-keep-travel',{which,n:moments.length});
+ renderOrb();
+ setOrbStatus(moments.length+' '+(which==='mods'?'modulation':'psych-out')+(moments.length===1?'':'s')+' kept on the Essence Shelf as ONE travel essence — board it from the ghost menu’s ★ row (any key), or open the △ Prism to see the card. ⌘Z undoes.');
+ return true;
 }
 function orbRecToggle(){
  if(!orbState.rec){
