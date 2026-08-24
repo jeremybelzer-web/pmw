@@ -28,7 +28,7 @@
      copy. Text fields inside the wrap stay selectable/editable. */
   #gridWrap{user-select:none;-webkit-user-select:none;}
   #gridWrap input,#gridWrap textarea,#gridWrap [contenteditable="true"]{user-select:text;-webkit-user-select:text;}
-  .chordlane{display:flex;gap:2px;margin-top:6px;}
+  .chordlane{display:flex;gap:2px;margin-top:6px;flex:0 0 auto;}   /* [77]/[78]: the lane must HOLD its LOOP*PPB width — as a flex item of #chordRow it silently shrank below the grid's beat width at high zoom, which no proportional maths could match */
   /* 3.2b multi-track view: header column + track strips */
   /* MG round (client item 4): lanes STRETCH their children — the colored name box now
      grows and shrinks with its track (the name/S/R/On row stays its own size at the top,
@@ -161,7 +161,7 @@
   .lanerow.on{opacity:1;outline:1.5px solid var(--accent);outline-offset:1px;}
   .lanecell{border-radius:3px;overflow:hidden;font-size:8.5px;line-height:16px;color:rgba(255,255,255,.9);text-align:center;white-space:nowrap;pointer-events:none;}
   .lanetag{position:absolute;right:4px;top:0;font-size:9px;line-height:16px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:none;letter-spacing:.4px;}
-  .cb{background:var(--panel2);border:1px solid var(--line);border-radius:5px;text-align:center;padding:7px 1px;cursor:pointer;overflow:hidden;user-select:none;position:relative;}
+  .cb{background:var(--panel2);border:1px solid var(--line);border-radius:5px;text-align:center;padding:7px 1px;cursor:pointer;overflow:hidden;user-select:none;position:relative;min-width:0;}   /* [77]/[78] min-width:0: a block's width is its chord's duration share, never its label's min-content — the labels already clip */
   .cb .cbBr{position:absolute;top:50%;transform:translateY(-50%);font:700 13px/1 monospace;color:#fff;opacity:.55;pointer-events:none;text-shadow:0 0 2px #000;} .cb .cbBrL{left:2px;} .cb .cbBrR{right:2px;} .cb:hover .cbBr{opacity:.95;}   /* 20l [53]: the [ ] edge handles */
   .cb:hover{border-color:var(--accent);}
   .cb.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent) inset;filter:brightness(1.12);}
@@ -198,6 +198,8 @@
   .cpMatHead .cpMatX{font-size:11px;color:var(--dim);cursor:pointer;user-select:none;} .cpMatHead .cpMatX:hover{color:var(--accent);}
   #cpAddMat{display:inline-block;width:auto;margin:6px 0 2px;font-size:12px;line-height:1;padding:3px 12px;background:none;color:var(--dim);border:1px dashed var(--line);border-radius:6px;box-shadow:none;cursor:pointer;} #cpAddMat:hover{color:var(--accent);border-color:var(--accent);background:none;}   /* 20n [63]: the [+] under the bottom matrix adds another relative scale + matrix */
   .cpg .cpl.lane{color:var(--accent);}
+  .cpg.lanepx .cpl{font-size:8px;letter-spacing:.2px;padding-right:0;}   /* [77]/[78]: the labels live in the GUT-wide gutter now */
+  .cpg.lanepx .cpb{min-width:0;overflow:hidden;}   /* [77]/[78]: a palette column is its lane chord's width, never its label's — matching .cb */
   .cpb{border-radius:6px;padding:5px 2px;cursor:grab;user-select:none;text-align:center;font-weight:700;font-size:12px;color:#1a1408;border:1px solid rgba(0,0,0,.35);line-height:1.2;overflow:hidden;}
   .cpb .abs{display:block;font-size:9px;font-weight:600;opacity:.8;white-space:nowrap;}
   .cpb:hover{filter:brightness(1.15);}
@@ -467,7 +469,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-22a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-23a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -8734,15 +8736,31 @@ function blankPalCell(){const b=document.createElement('div');b.className='cpb b
    invisible spacers under the °7 columns */
 function buildPaletteGrid(el,scale,tonic){
  el.innerHTML='';
+ el.style.gap='';el.style.marginLeft='';el.classList.remove('lanepx');
  if(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length){
   /* 20n [65] (client, Aug 21): the matrix's top row IS the chord lane — each column a lane chord, as wide as the
      chord's duration, the V of x / V of V rows lined up under it; the ▶ plays V of V → V of x and ENDS on the
      lane's chord. The In-key row is hidden in this mode. */
+  /* [77]/[78] "Match always" (client, Aug 23): in this mode the palette ADOPTS the grid's pixel geometry — the
+     columns reproduce the chord lane's own flex distribution over LOOP*PPB with the lane's 2px gap (no 56px
+     floor), the label gutter is GUT wide (the 46px column is gone), and the grid sits at the lane's own x
+     (the 76px .thead column + GUT — the grid rows' own idiom) inside the shared #gridWrap scroll, so a zoom
+     (PPB is live) or a pan moves lane and palette together. Toggle OFF keeps the 20n geometry below untouched. */
   const cols=palLaneCols(project.chords,tonic);
-  el.style.gridTemplateColumns='46px '+cols.map(c=>'minmax(56px,'+c.d+'fr)').join(' ');
+  let t=0;const grow=cols.map(c=>{const g=t>=LOOP?0:Math.min(c.d,LOOP-t);t+=c.d;return g;});
+  const vis=cols.filter((c,k)=>grow[k]>0),gs=grow.filter(g=>g>0);
+  /* a lane block's flex-basis is 0% under box-sizing:border-box, so each block is its 4px chrome (1px pad + 1px
+     border a side) PLUS its grow share of what remains — measured, not assumed. The columns reproduce that. */
+  let chrome=4;try{const cb0=document.querySelector('#chordlane .cb');if(cb0){const s=getComputedStyle(cb0);chrome=(parseFloat(s.paddingLeft)||0)+(parseFloat(s.paddingRight)||0)+(parseFloat(s.borderLeftWidth)||0)+(parseFloat(s.borderRightWidth)||0);}}catch(e){}
+  const sum=gs.reduce((a,b)=>a+b,0)||1,freePx=LOOP*PPB-(gs.length-1)*2-chrome*gs.length;
+  let inset=13;try{const cs=getComputedStyle(document.getElementById('chordPanel'));inset=(parseFloat(cs.paddingLeft)||12)+(parseFloat(cs.borderLeftWidth)||1);}catch(e){}
+  el.style.gridTemplateColumns=(GUT-2)+'px '+gs.map(g=>(chrome+g/sum*freePx).toFixed(2)+'px').join(' ');
+  el.style.gap='3px 2px';                 /* the lane's own 2px column gap; rows keep the palette's 3px */
+  el.style.marginLeft=(76-inset)+'px';
+  el.classList.add('lanepx');
   const row=(label,pick,cls)=>{
    const lab=document.createElement('div');lab.className='cpl'+(cls?' '+cls:'');lab.textContent=label;el.appendChild(lab);
-   cols.forEach(col=>el.appendChild(pick(col)||blankPalCell()));
+   vis.forEach(col=>el.appendChild(pick(col)||blankPalCell()));
   };
   const J=c=>palState.jimi?jimiCell(c):c;
   row('',col=>{
@@ -8893,6 +8911,11 @@ function drawChordPanel(){
  const fl=document.getElementById('cpFollowSel');if(fl)fl.classList.toggle('on',!!palState.followSel);
  const lb=document.getElementById('cpLaneTopBox');if(lb)lb.checked=!!palState.laneTop;
  const ll=document.getElementById('cpLaneTop');if(ll)ll.classList.toggle('on',!!palState.laneTop);
+ /* [77]/[78] "Match always": lane-as-top-row adopts the grid's pixel geometry, so the dock must SPAN the scroll
+    content (it shares #gridWrap's horizontal scroll) — 76 thead + GUT + LOOP*PPB + 13 right chrome. Cleared with
+    the toggle off: the 20n dock fits the viewport exactly as before. */
+ const laneWide=!!(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length);
+ document.getElementById('chordPanel').style.minWidth=laneWide?(76+GUT+LOOP*PPB+13)+'px':'';
  document.getElementById('cpKey').textContent=PCN[t]+' '+cs.name;
  /* 20n [61]–[64]: the song's matrix, then the relative matrices (default one, a third away), each under its own
     name + drop-down; a [+] under the bottom one adds another. The fixed "Parallel" grid is gone. */
