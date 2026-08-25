@@ -515,7 +515,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25d</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -6123,10 +6123,26 @@ function drawGridView(v,svgEl){
      scrolled clip group, so the keys line up with the lattice at every zoom and scroll
      position by construction. pointer-events off — the gutter stays gesture-free. */
   if(!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showPianoRoll===false)){
+   /* [M23a] (his call, Aug 25): the roll LOOKS like a piano now — an ivory column with
+      real black-key geometry: a row whose pitch IS an accidental wears its own black
+      key (narrow, inset, on top of the ivory), and a WHOLE step between two natural
+      rows grows the between-the-whites black key a real keyboard has there — so C
+      major finally reads as a piano instead of an unbroken white strip. Still inside
+      the scrolled clip group (aligned at every zoom by construction), still
+      gesture-free. The Settings → Piano roll toggle is unchanged. */
    const pmid=scalePitch(k),ppc=((pmid%12)+12)%12;
-   const blk=ppc===1||ppc===3||ppc===6||ppc===8||ppc===10;
-   out+=`<rect x="0" y="${viewRowY(v,r)}" width="11" height="${CELLH}" fill="${blk?'#23242c':'#c9cdd9'}" stroke="#14151b" stroke-width="0.6" pointer-events="none"/>`;
-   if(ppc===0)out+=`<text x="1" y="${viewRowY(v,r)+14}" font-size="7.5" fill="#3a3d49" font-weight="700" pointer-events="none">C${Math.floor(pmid/12)-1}</text>`;
+   const isBlkPc=p=>p===1||p===3||p===6||p===8||p===10;
+   const blk=isBlkPc(ppc),y0=viewRowY(v,r);
+   out+=`<rect x="0" y="${y0}" width="18" height="${CELLH}" fill="#e8eaf1" stroke="#9aa0b0" stroke-width="0.6" pointer-events="none"/>`;
+   if(blk){
+    out+=`<rect x="0" y="${y0+2.5}" width="11.5" height="${CELLH-5}" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
+    out+=`<rect x="1" y="${y0+3.5}" width="1.6" height="${CELLH-7}" fill="rgba(255,255,255,.14)" pointer-events="none"/>`;
+   }else if(r>0){
+    const pup=scalePitch(k+1),upc=((pup%12)+12)%12;
+    if(pup-pmid===2&&!isBlkPc(upc))   /* two naturals a whole step apart — the black key between them */
+     out+=`<rect x="0" y="${y0-5}" width="11.5" height="10" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
+   }
+   if(ppc===0)out+=`<text x="2" y="${y0+14.5}" font-size="7.5" fill="#565a68" font-weight="700" pointer-events="none">C${Math.floor(pmid/12)-1}</text>`;
   }
  }
  /* chord-tone highlights — each chord column resolves rows/colors in ITS section's key (2.2b) */
@@ -21413,7 +21429,7 @@ function buildStripContent(strip,t){
  /* layer 3 (July 26b): the underlying chord written in the middle of every clip —
     default ON app-wide (⚙ Settings → Clips can turn clip names off; the Chord Palette
     and the Chord Lane always keep theirs, and the ACTING chord lane is exempt too) */
- if(!contOn&&(acting||!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.clipChordNames===false))){   /* ⑧: Continuous hides the clip chrome, names included */
+ if(!contOn&&t!=='drums'&&(acting||!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.clipChordNames===false))){   /* ⑧: Continuous hides the clip chrome, names included · [M22]: the DRUM lane wears no chord markers (both grids — this builder serves both) */
   const labs=document.createElement('div');labs.className='sclabs';
   spans.forEach((sp,ci)=>{
    const lb=document.createElement('div');lb.className='sclab';lb.style.flex=String(sp.d);
