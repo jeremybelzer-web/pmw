@@ -422,10 +422,10 @@
 .part.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
 #modPrevRuler{cursor:ns-resize;}
 #modPrevLaneWrap{position:relative;}
-#modPrevLane{display:flex;height:34px;position:relative;}
+#modPrevLane{height:34px;position:relative;}   /* [M14c]: blocks are ABSOLUTE at exact beat x — flex margins drifted the edges off the beat lines */
 #modPrevGrid{position:absolute;left:0;top:0;bottom:0;right:0;pointer-events:none;z-index:2;}
 #modPrevPh{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--accent);display:none;z-index:3;box-shadow:0 0 7px var(--accent);pointer-events:none;}
-#modPrevLane .mpc{position:relative;box-sizing:border-box;border:1px solid rgba(0,0,0,.35);border-radius:4px;margin-right:1px;
+#modPrevLane .mpc{position:absolute;top:0;bottom:0;box-sizing:border-box;border:1px solid rgba(0,0,0,.35);border-radius:4px;
  display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;min-width:0;cursor:pointer;}
 #modPrevLane .mpc.mpcTgt{box-shadow:0 0 0 2px var(--accent) inset;}
 #modPrevLane .mpc.mpcSel{outline:2px solid #fff;outline-offset:-2px;}
@@ -515,7 +515,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24i</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -904,7 +904,10 @@
       <span class="part" id="modMelChip" title="[M11d] Show and audition YOUR melody (from around the landing in your song) over these chords.">🎵 Melody</span>
       <span class="part" id="modSnapChip" title="Snap to chord notes — the auditioned melody bends to the sounding chord&#8217;s tones (the Conform set). Audition-only, nothing written.">Snap to chord notes</span>
       <span class="part" id="modDrumChip" title="[M11d] A drum beat under the audition — kick, snare and hats, for groove context. Audition-only.">🥁 Drums</span>
+      <label id="modAdvTog" title="[M14a] With nothing selected, opening this window advances the song to the FIRST CHORD OF THE NEXT SONG SECTION — modulating a whole section to a new key is a real modulation.">
+        <input type="checkbox" id="modAdvChk" checked> Advance to the next section</label>
     </div>
+    <div style="font-size:10px;color:var(--dim);margin:-4px 0 10px 0;">PRO TIP: If you want to try a psych out modulation or real modulation in the middle of a song section, go ahead and select whichever chord will be at the end of the modulation in the multi-track grid, and then scroll back down to the Modulation Window.</div>
     <div id="psySection">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;" title="A psych-out pivots toward a new key, then just returns — it lives at playback level only, the chord lane is never written.">⚡ Psych-outs — feint toward a new key, then come home (playback-only)</div>
       <div id="psyRows" style="display:flex;flex-direction:column;gap:6px;max-width:760px;"></div>
@@ -9593,7 +9596,7 @@ function mimicAudition(tpl){
    shape badges (face count = chord count; a geometric fox inside; the shape spins while
    its moment auditions and the fox's backdrop recolours on every chord). */
 let modPrev={exp:false,durs:null,inv:{},ph:0,mel:true,snap:true,drums:true};
-let modWinSettings={rate:true,hide:true};
+let modWinSettings={rate:true,hide:true,adv:true};
 function persistModWin(){try{localStorage.setItem('cp_modwin',JSON.stringify(modWinSettings));}catch(e){}}
 function modPerfHidden(){return !!modWinSettings.hide;}
 /* [M6g]: the contract point — while ON, nothing this window auditions or arms may land in a
@@ -10034,12 +10037,14 @@ function drawModPrev(){
  ruler.style.width=(total*mppb).toFixed(1)+'px';
  /* the lane — grey context · coloured moment ([M11c]) */
  lane.innerHTML='';
+ lane.style.width=(total*mppb).toFixed(1)+'px';
  let acc=0;
  M.rows.forEach((m,k)=>{
   const d=document.createElement('div');
   const isTgtRow=(!m.ctx&&m.mk===M.seq.length-1);
   d.className='mpc'+(m.ctx?' mpcCtx':'')+(isTgtRow?' mpcTgt':'')+((!m.ctx&&modPrev.sel===m.mk)?' mpcSel':'');
-  d.style.width=(m.d*mppb).toFixed(1)+'px';
+  d.style.left=(acc*mppb).toFixed(1)+'px';   /* [M14c]: EXACT beat x — the edges sit ON the lines */
+  d.style.width=(m.d*mppb-1).toFixed(1)+'px';
   if(m.ctx){d.style.background='#4a4e5c';d.style.color='#b9bdcc';}
   else{
    const di=curScale().pcs.indexOf(((m.r-project.tonic)%12+12)%12);
@@ -10318,12 +10323,16 @@ drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
 /* 24b — the preview lane's boot wiring: settings load, the two toggles, ▶ and ▤ */
 try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
  if(typeof _mw.rate==='boolean')modWinSettings.rate=_mw.rate;
- if(typeof _mw.hide==='boolean')modWinSettings.hide=_mw.hide;}catch(e){}
+ if(typeof _mw.hide==='boolean')modWinSettings.hide=_mw.hide;
+ if(typeof _mw.adv==='boolean')modWinSettings.adv=_mw.adv;}catch(e){}
 modState.lastPick=modState.lastPick||'mim';
 (()=>{const rc=document.getElementById('modRateChk'),hc=document.getElementById('modHideChk'),
   pb=document.getElementById('modPrevPlay'),xb=document.getElementById('modPrevExpB');
  if(rc)rc.onchange=e=>{modWinSettings.rate=!!e.target.checked;persistModWin();drawModPrev();
   setModStatus(modWinSettings.rate?'The song’s own rate of chord change — the slot law, untouched.':'Your rate — drag the chord boundaries in the lane above; the moment still ends on the target.');};
+ const ac=document.getElementById('modAdvChk');
+ if(ac){ac.checked=!!modWinSettings.adv;
+  ac.onchange=e=>{modWinSettings.adv=!!e.target.checked;persistModWin();};}
  if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
   setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
  if(pb)pb.onclick=modPrevAudition;
@@ -21990,6 +21999,7 @@ function refresh(reschedule){
  if(reschedule&&playing){rebuild();}
 }
 async function togglePlay(){
+ if(typeof modAudStop==='function')modAudStop();   /* [M14b]: spacebar / the grid's play shuts the Modulation window's audition off */
  if(!audioReady){playBtn.disabled=true;playBtn.textContent='Loading…';await ensureAudio();playBtn.disabled=false;}
  if(playing){
   if(typeof finalizeTake==='function')finalizeTake();   /* commit held notes BEFORE the transport resets */
@@ -22493,7 +22503,16 @@ function uiDispatch(action){
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
-  if(uiState.open==='modPanel'&&typeof drawModPrev==='function')drawModPrev();       /* 4.3 24b: the preview lane re-reads its target on open */
+  if(uiState.open==='modPanel'&&typeof drawModPrev==='function'){
+   /* [M14a]: nothing selected + the toggle ON → the song advances to the next section's first chord */
+   if(typeof modWinSettings==='object'&&modWinSettings.adv&&(typeof selChord==='undefined'||selChord==null)){
+    const ss=Array.isArray(project.sections)?project.sections:[];
+    let st=null;for(const sct of ss)if(sct.start>playheadBeat+1e-6){st=sct.start;break;}
+    if(st!=null&&st<LOOP-1e-6){playheadBeat=st;if(typeof refresh==='function')refresh(false);
+     if(typeof setModStatus==='function')setModStatus('Advanced to the next section (beat '+Math.round(st)+') — modulating a whole section is a real modulation. Untick “Advance” to stay put.');}
+   }
+   drawModPrev();       /* 4.3 24b: the preview lane re-reads its target on open */
+  }
  }
  /* 5.3: the Cadence Window lives BETWEEN the palette and the grid — opening it scrolls
     it into view there and rebuilds against the current sections/chords */
