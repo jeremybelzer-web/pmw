@@ -186,11 +186,12 @@
   #snapHideBtn{position:absolute;top:3px;right:8px;cursor:pointer;color:var(--dim);font-size:14px;line-height:1;}
   #snapHideBtn:hover{color:var(--text);}
   #snapIcon{cursor:pointer;display:inline-flex;}
-  /* [M23c] the palette window's chrome — window manners on the dock; NOT a WINDOW_DEFS entry (landmine ②). */
-  #palWinHead{display:flex;gap:8px;align-items:center;}
-  #palWinHead .wtitle{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);}
-  #palWinHead .cpchip{margin-left:auto;}
-  #palWinHead .cpchip+.cpchip{margin-left:0;}
+  /* [M23c] the palette window's chrome — window manners on the dock; NOT a WINDOW_DEFS entry (landmine ②).
+     [M24] (71st round two, his call: "its own boxed window, docked"): the palette wears the app's own
+     WINDOW dress — the #cadPanel margin idiom, a lifted shadow, and the real .winHead/.wbtn header —
+     while staying inside #gridWrap so the [77]/[78] alignment survives a pan/zoom. */
+  #chordPanel{margin:14px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}
+  #palWinHead .picon{font-size:12px;}
   .cplink{font-size:10.5px;color:var(--dim);cursor:pointer;text-decoration:underline dotted;margin-left:6px;user-select:none;}
   .cplink:hover{color:var(--text);}
   #cpModes{display:flex;gap:4px;flex-wrap:wrap;align-items:stretch;}
@@ -528,7 +529,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25f</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -869,9 +870,9 @@
            Position/minimize ride cp_pal.win; the dock never leaves #gridWrap, so [77]/[78] lane-top
            alignment survives in BOTH positions by construction. -->
       <div class="winHead" id="palWinHead">
-        <span class="wtitle">Chord Palette</span>
-        <span class="cpchip" id="palPosChip" title="Move the Chord Palette window to the other side of the multi-track grid">▲ Above the grid</span>
-        <span class="cpchip" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
+        <span class="picon">🎹</span><span class="wtitle">Chord Palette</span>
+        <span class="wbtn" id="palPosChip" title="Move the Chord Palette window to the other side of the multi-track grid">▲ Above the grid</span>
+        <span class="wbtn" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
       </div>
       <div id="cpHead">
         <span class="cp-title" style="margin:0;display:none;">Chord palette · <span id="cpKey" style="color:var(--text);"></span></span><!-- 20b: dock title + key readout hidden (client request); #cpKey kept in DOM for the updater -->
