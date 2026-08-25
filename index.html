@@ -178,6 +178,19 @@
   .cp-mklab{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-left:6px;}
   #cpTools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:2px 0;}
   .cp-toollab{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);white-space:nowrap;}
+  /* [M23d] the Snap split (71st): the Snap surface is its own dock directly below the grid. The "−" zooms it
+     back to the icon in the 76px gutter at the grid's left; the transform-origin IS the zoom-to-icon animation. */
+  #snapDock{display:flex;align-items:flex-start;margin-top:10px;}
+  #snapPanel{flex:1;min-width:0;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 26px 8px 12px;transition:transform .28s ease,opacity .28s ease;transform-origin:left center;}
+  #snapPanel.snapZoom{transform:scale(.04);opacity:0;}
+  #snapHideBtn{position:absolute;top:3px;right:8px;cursor:pointer;color:var(--dim);font-size:14px;line-height:1;}
+  #snapHideBtn:hover{color:var(--text);}
+  #snapIcon{cursor:pointer;display:inline-flex;}
+  /* [M23c] the palette window's chrome — window manners on the dock; NOT a WINDOW_DEFS entry (landmine ②). */
+  #palWinHead{display:flex;gap:8px;align-items:center;}
+  #palWinHead .wtitle{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);}
+  #palWinHead .cpchip{margin-left:auto;}
+  #palWinHead .cpchip+.cpchip{margin-left:0;}
   .cplink{font-size:10.5px;color:var(--dim);cursor:pointer;text-decoration:underline dotted;margin-left:6px;user-select:none;}
   .cplink:hover{color:var(--text);}
   #cpModes{display:flex;gap:4px;flex-wrap:wrap;align-items:stretch;}
@@ -515,7 +528,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25e</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -803,6 +816,29 @@
       <div class="chordlane" id="chordlane"></div>
     </div>
     <div id="laneRows"></div>
+    <!-- [M23d] THE SNAP SPLIT (71st, his words verbatim in MODULATION-INJECT-RAW [M23]): the
+         Snap-to-chord-tones surface is its own dock DIRECTLY below the grid, separate from the
+         Chord Palette window. Its "−" (upper right) zooms it back to the ⇒ Snap icon in the 76px
+         gutter at the grid's left; the icon's click brings it back. State rides cp_pal.snapHide. -->
+    <div id="snapDock">
+      <div class="thead" style="display:flex;align-items:flex-start;padding-top:4px;"><span class="cpchip" id="snapIcon" style="display:none;" title="Snap to chord tones — click to bring the Snap window back">⇒ Snap</span></div>
+      <div id="snapPanel">
+        <span id="snapHideBtn" title="Hide the Snap window — it zooms back to the ⇒ Snap icon at the grid&#8217;s left">−</span>
+        <!-- 19y (client request): Scale menu + Conform/extension toggles. The extension checkboxes
+             EDIT the selection live: with a chord selected they rebuild its quality from the toggled
+             degrees; with notes selected they snap each note to the nearest allowed tone. They remain
+             the Conform degree set for the Snap button. ([M23d]: moved here from the palette dock.) -->
+        <div id="cpTools">
+          <label class="cp-toollab">Scale (background)</label><select id="selMode" style="min-width:190px;"></select>
+          <button id="snapBtn" style="background:#5bb98c;color:#0c1f16;">Snap → chord tones</button>
+          <label class="cp-toollab" title="Chord extensions — 1·9·3·11·5·13·7. Toggle with a chord selected to rebuild it from these degrees; with notes selected, each snaps to the nearest allowed tone. The Snap button uses the same set.">Extensions</label>
+          <div id="confDegs" style="display:flex;gap:6px;font-size:11px;color:var(--dim);align-items:center;"></div>
+          <!-- 3.4 Feature 1: the four-detent conformance law (Absolute · Scale · Function · Contour) -->
+          <label class="cp-toollab" title="The conformance law: what the melody does when the chords change under it (chord swaps, source-box chords, source melodies) — and what ⇒ now applies on demand. Absolute = the shipped behavior: notes stay, harmony recolors them.">Conformance</label>
+          <div id="confDet" style="display:flex;gap:4px;font-size:11px;align-items:center;"></div>
+        </div>
+      </div>
+    </div>
     <!-- 5.3: THE CADENCE WINDOW — physically between the Multi-Track Grid and the
          Chord Palette (client spec: the palette's 𝄂 link opens it exactly here). ONE
          window, four categories — Classical incl. Elided (≥2 voices) · Modulating ·
@@ -827,6 +863,16 @@
          (Show). Click a block = apply to the selected chord (mousedown auditions);
          drag = drop onto a chord-lane block or expand onto the grid. -->
     <div id="chordPanel">
+      <!-- [M23c] (71st): window CHROME on the dock — minimizable, movable above or below the grid.
+           NOT a WINDOW_DEFS promotion (landmine ② + the one-window law): the palette must stay usable
+           while another window is open, so it keeps its dock identity and never steals the open slot.
+           Position/minimize ride cp_pal.win; the dock never leaves #gridWrap, so [77]/[78] lane-top
+           alignment survives in BOTH positions by construction. -->
+      <div class="winHead" id="palWinHead">
+        <span class="wtitle">Chord Palette</span>
+        <span class="cpchip" id="palPosChip" title="Move the Chord Palette window to the other side of the multi-track grid">▲ Above the grid</span>
+        <span class="cpchip" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
+      </div>
       <div id="cpHead">
         <span class="cp-title" style="margin:0;display:none;">Chord palette · <span id="cpKey" style="color:var(--text);"></span></span><!-- 20b: dock title + key readout hidden (client request); #cpKey kept in DOM for the updater -->
         <div id="cpCtl">
@@ -839,20 +885,9 @@
           <span class="cplink" id="cpCadLink" title="Open the 𝄂 Cadence Window — it opens between the Chord Palette and the Multi-Track Grid (client spec). A cadence: the chords at the end of a musical phrase. Nothing more or less.">𝄂 Cadences</span>
         </div>
       </div>
-      <!-- 19y (client request): Scale menu + Conform/extension toggles live at the top of
-           the palette. The extension checkboxes now EDIT the selection live: with a chord
-           selected they rebuild its quality from the toggled degrees; with notes selected
-           they snap each note to the nearest allowed tone. They remain the Conform degree
-           set for the Snap button. -->
-      <div id="cpTools">
-        <label class="cp-toollab">Scale (background)</label><select id="selMode" style="min-width:190px;"></select>
-        <button id="snapBtn" style="background:#5bb98c;color:#0c1f16;">Snap → chord tones</button>
-        <label class="cp-toollab" title="Chord extensions — 1·9·3·11·5·13·7. Toggle with a chord selected to rebuild it from these degrees; with notes selected, each snaps to the nearest allowed tone. The Snap button uses the same set.">Extensions</label>
-        <div id="confDegs" style="display:flex;gap:6px;font-size:11px;color:var(--dim);align-items:center;"></div>
-        <!-- 3.4 Feature 1: the four-detent conformance law (Absolute · Scale · Function · Contour) -->
-        <label class="cp-toollab" title="The conformance law: what the melody does when the chords change under it (chord swaps, source-box chords, source melodies) — and what ⇒ now applies on demand. Absolute = the shipped behavior: notes stay, harmony recolors them.">Conformance</label>
-        <div id="confDet" style="display:flex;gap:4px;font-size:11px;align-items:center;"></div>
-      </div>
+      <!-- [M23d] (71st): #cpTools — the Scale menu, the Snap button and the Conform machinery —
+           moved OUT of this dock into #snapPanel, directly below the grid. His words: the palette
+           "should be separate from the 'Snap to chord tones' button and it's features." -->
       <div id="cpModes"></div>
       <div class="cpMatHead" id="cpMainHead"></div><!-- 20n [61] [62]: the song scale's name + its drop-down (Search → the Browser; then its mode family) -->
       <div id="cpMain" class="cpg"></div>
@@ -8894,10 +8929,17 @@ function applyPanelChord(i,ch){
  refresh(true);
 }
 /* ---- dock state (persisted per browser) ---- */
+function palWinNorm(o){
+ /* [M23c] (71st): the palette window's persisted shape — {pos:'below'|'above', min:bool}. Junk in →
+    the default out (the shipped below-the-grid, full). Pure; the cp_pal loader consumes it. */
+ const p=o&&typeof o==='object'?o:{};
+ return {pos:p.pos==='above'?'above':'below',min:!!p.min};
+}
 const palState=(()=>{try{const o=JSON.parse(localStorage.getItem('cp_pal')||'{}');
  return {dims:!!o.dims,jimi:!!o.jimi,hm:!!o.hm,mmAll:!!o.mmAll,followSel:!!o.followSel,laneTop:!!o.laneTop,
+  win:palWinNorm(o.win),snapHide:!!o.snapHide,
   mats:Array.isArray(o.mats)?o.mats.map(m=>(m&&typeof m==='object'&&typeof m.id==='string')?{tonic:((+m.tonic||0)%12+12)%12,id:m.id}:null):[null]};}
- catch(e){return {dims:false,jimi:false,hm:false,mmAll:false,followSel:false,laneTop:false,mats:[null]};}})();
+ catch(e){return {dims:false,jimi:false,hm:false,mmAll:false,followSel:false,laneTop:false,win:palWinNorm(null),snapHide:false,mats:[null]};}})();
 /* 20n THE CHORD PALETTE ROUND (client, Aug 21 — ORBIT-FEEDBACK-RAW [61]–[65]). palState.mats = the relative
    matrices under the song's matrix: null = AUTOMATIC (a third from the song's scale, following the key),
    {tonic,id} = a scale the drop-down or the Browser put there. laneTop = [65], the chord lane as top row. */
@@ -9256,6 +9298,32 @@ function applyTogglesToSelection(){
   noteEngine('extension-toggle-snap');
  }
 }
+/* [M23c]/[M23d] (71st): the palette window's position/minimize + the Snap dock's hide/restore.
+   The REAL #chordPanel node moves — above #zoomStrip or back before #parts — always inside
+   #gridWrap, so the [77]/[78] alignment machinery holds in both positions by construction. */
+function palWinApply(){
+ const cp=document.getElementById('chordPanel'),gw=document.getElementById('gridWrap');
+ if(!cp||!gw)return;
+ const w=palState.win=palWinNorm(palState.win);
+ const anchor=w.pos==='above'?document.getElementById('zoomStrip'):document.getElementById('parts');
+ if(anchor&&anchor.parentNode===gw&&cp.nextElementSibling!==anchor)gw.insertBefore(cp,anchor);
+ cp.classList.toggle('winCollapsed',!!w.min);
+ const pc=document.getElementById('palPosChip');if(pc)pc.textContent=w.pos==='above'?'▼ Below the grid':'▲ Above the grid';
+ const mc=document.getElementById('palMinChip');if(mc)mc.textContent=w.min?'+':'−';
+}
+function snapDockApply(anim){
+ const p=document.getElementById('snapPanel'),ic=document.getElementById('snapIcon');
+ if(!p||!ic)return;
+ const hid=!!palState.snapHide;
+ if(anim&&hid){p.classList.add('snapZoom');setTimeout(()=>{if(palState.snapHide){p.style.display='none';ic.style.display='';}},290);}
+ else if(anim&&!hid){ic.style.display='none';p.style.display='';requestAnimationFrame(()=>p.classList.remove('snapZoom'));}
+ else{p.style.display=hid?'none':'';p.classList.toggle('snapZoom',hid);ic.style.display=hid?'':'none';}
+}
+document.getElementById('palPosChip').onclick=()=>{palState.win=palWinNorm(palState.win);palState.win.pos=palState.win.pos==='above'?'below':'above';persistPal();palWinApply();};
+document.getElementById('palMinChip').onclick=()=>{palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();};
+document.getElementById('snapHideBtn').onclick=()=>{palState.snapHide=true;persistPal();snapDockApply(true);};
+document.getElementById('snapIcon').onclick=()=>{palState.snapHide=false;persistPal();snapDockApply(true);};
+try{palWinApply();snapDockApply(false);}catch(e){}   /* landmine ⑪'s general defence: a saved state must never take the boot down */
 /* dock controls (wired once) */
 document.getElementById('cpDimsChip').onclick=()=>{palState.dims=!palState.dims;persistPal();drawChordPanel();};
 document.getElementById('cpJimiChip').onclick=()=>{palState.jimi=!palState.jimi;persistPal();drawChordPanel();};
