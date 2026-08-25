@@ -515,7 +515,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24j</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -5490,6 +5490,14 @@ function normalizeStack(order,allIds){
  }
  return out;
 }
+function stackDefaultIds(all){
+ /* [M15b] (Aug 24): the DRUM track defaults to the TOP of the lane stack — this shapes
+    the DEFAULT order only; an explicit trackOrder (a drag, a file's viewH.order) always
+    wins. The coming second (audition) grid inherits the same default by construction.
+    Pure. */
+ const i=all.indexOf('drums');
+ return i<0?all.slice():['drums'].concat(all.slice(0,i)).concat(all.slice(i+1));
+}
 function stackReorder(order,vis,id,to){
  /* move id (a member of order) so it lands at visual index `to` among vis — the
     currently RENDERED stack rows; id's own row is ignored in the count. Returns the
@@ -5563,7 +5571,7 @@ var trackOrder=null;   /* null = default order (tracks in MIX order, Grid last) 
 var trackBigH={},trackSmallH={};  /* per-track remembered ▸/corner toggle sizes (view state, in-memory) */
 var selHead=null;                 /* v3: the SELECTED name box (click a name box, press Delete) */
 function stackOrderNow(){
- trackOrder=normalizeStack(trackOrder,MIX_TRACKS.concat(customTrackIds(project.tracks)));
+ trackOrder=normalizeStack(trackOrder,stackDefaultIds(MIX_TRACKS.concat(customTrackIds(project.tracks))));   /* [M15b]: drums default to the top */
  return trackOrder;
 }
 /* ==== ⌘G grouping — runtime (one undo per group edit; groups are project data) ==== */
@@ -21155,7 +21163,7 @@ function buildStripContent(strip,t){
  strip.title=acting
   ?trackLabel(t)+' — ACTING CHORD LANE (the Chord Lane is minimized): every chord-lane gesture works here — press = select + play · drag edges = resize chords · drag body = move · ⌥-drag = duplicate · ⇧-click/drag = multi-select · ⌘-drag ↕ = clip velocity · right-click = clip menu · double-click = rename · drag up into the grid = expand to MIDI'
   :trackLabel(t)+(t==='drums'
-  ?' — chord-colored slices of the built-in kit: press one to hear it (mute/solo/rename on the left)'
+  ?' — the built-in kit as colored lines and dots (kick blue · snare pink · ticks grey), sliced at the chord boundaries: press a slice to hear it (mute/solo/rename on the left)'
   :' — chord/MIDI clips: press = select + play · ⇧-click = multi-select · ⌘-click = merge menu · double-click = pop-up clip editor · drag onto another lane = merge/replace there');
  /* layer 1: the clip cells (60% transparent chord tints + the break lines) */
  const cells=document.createElement('div');cells.className='scells';
@@ -21179,7 +21187,9 @@ function buildStripContent(strip,t){
   cell.className='scell'+(isGap?' gap':'')+((acting?(ci===selChord||selChordSet.has(ci)):cellIsSelected(t,ci))?' sel':'');
   cell.style.flex=String(sp.d);
   const tint=document.createElement('div');tint.className='stint';
-  tint.style.background=isGap?'#07080b':chordFillCSS(chordAt(project.chords,sp.a).c,sp.a);
+  /* [M15b]: the drum lane reads DARK under its colored lines and dots — the chord
+     tints belong to the melodic lanes (the cells and their gestures are untouched) */
+  tint.style.background=isGap?'#07080b':t==='drums'?'#101218':chordFillCSS(chordAt(project.chords,sp.a).c,sp.a);
   cell.appendChild(tint);
   if(acting){
    cell.onmousedown=ev=>{
@@ -21207,10 +21217,15 @@ function buildStripContent(strip,t){
  /* layer 2: the track's MIDI on top (pointer-events off — cells take the gestures) */
  const ns=stripNotes(t);
  const W=LOOP*PPB;
- const rects=thumbSpec(ns,W,12,LOOP).map(r=>
-  `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="1" fill="${c}" opacity=".95"/>`).join('');
+ /* [M15b]: the drum lane wears the lines-and-dots look (drumBarSpec, pure) — every
+    other lane keeps the generic MIDI thumbnail */
+ const rects=(t==='drums'
+  ?drumBarSpec(ns,W,LOOP).map(r=>
+   `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="1.5" fill="${r.f}"/>`)
+  :thumbSpec(ns,W,12,LOOP).map(r=>
+   `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="1" fill="${c}" opacity=".95"/>`)).join('');
  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
- sv.setAttribute('viewBox','0 0 '+W+' 12');sv.setAttribute('preserveAspectRatio','none');
+ sv.setAttribute('viewBox','0 0 '+W+' '+(t==='drums'?14:12));sv.setAttribute('preserveAspectRatio','none');
  sv.setAttribute('style','position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;');
  sv.innerHTML=rects;
  strip.appendChild(sv);
@@ -22309,7 +22324,7 @@ function currentViewH(){
  if(Object.keys(s).length)out.strips=s;
  /* July 27a: lane order + minimized lanes ride too — only when off the default */
  if(trackOrder){
-  const def=normalizeStack(null,MIX_TRACKS.concat(customTrackIds(project.tracks)));
+  const def=normalizeStack(null,stackDefaultIds(MIX_TRACKS.concat(customTrackIds(project.tracks))));   /* [M15b]: the default has drums on top — must match stackOrderNow's */
   if(JSON.stringify(trackOrder)!==JSON.stringify(def))out.order=trackOrder.slice();
  }
  if(hiddenTracks.size)out.hidden=[...hiddenTracks];   /* v3: the hidden set replaces viewH.min (collapse retired) */
@@ -22784,6 +22799,20 @@ function thumbSpec(notes,W,Hh,loop){
   w:Math.max(1.2,Math.min(W,(n[1]||.25)/(loop||32)*W)),
   y:Math.round((1-(n[2]-lo)/span)*(Hh-3)),
   h:2.6}));}
+function drumBarSpec(notes,W,loop){
+ /* [M15b] the minimized DRUM lane's look — his keeper from the Modulation window's
+    audition strip: "simple colored lines and dots". One thin bottom-anchored bar per
+    hit — kick TALL blue, snare MID pink, everything else a SHORT dim tick. Viewbox
+    height is 14 (bars sit 2 up from the floor). Pure. */
+ if(!notes||!notes.length)return [];
+ const L=loop||32;
+ return notes.map(n=>{
+  const p=n[2],kick=p===35||p===36,snare=p===38||p===40;
+  const h=kick?11:snare?9:4;
+  return {x:Math.max(0,Math.min(W-2,n[0]/L*W)),w:4,y:14-2-h,h,
+   f:kick?'#7f9cf5':snare?'#e0507a':'rgba(255,255,255,.35)'};
+ });
+}
 let trackLabels=parseTrackLabels(null);
 try{trackLabels=parseTrackLabels(localStorage.getItem('cp_track_labels'));}catch(e){}
 function persistTrackLabels(){try{localStorage.setItem('cp_track_labels',JSON.stringify(trackLabels));}catch(e){}}
