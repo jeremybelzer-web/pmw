@@ -402,6 +402,8 @@
 .modShape.modSpin svg{}   /* retired at 24c ([M7b] replaced the continuous spin); the class survives one build for any stale reader */
 /* [M3b]/[M5]/[M6e-f]: the embedded preview lane at the top of the window */
 #modPrevRow{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+/* [M21]: the SELECTED grid wears the ring — spacebar plays this one */
+#modPrevRow.gridFocused #modPrevScroll{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
 #modPrevPlay{padding:6px 11px;font-size:13px;align-self:center;}
 #modPrevRuler{display:flex;height:14px;font-size:8.5px;color:var(--dim);border-bottom:1px solid var(--line);}
 #modPrevRuler .mprTick{border-left:1px solid var(--line);padding-left:2px;box-sizing:border-box;overflow:hidden;white-space:nowrap;}
@@ -513,7 +515,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -876,7 +878,7 @@
          selected chord in the multi-track lane (else the playhead's chord); expandable for
          inversion editing; the two toggles beneath. -->
     <div id="modPrevRow">
-      <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written.">▶</span>
+      <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written. Spacebar does the same while this window is SELECTED (click it to select).">▶</span>
       <span id="modPrevGripL" title="Grab — drag the whole lane up into the multi-track grid. The LANDING chord rides the cursor tip; the earlier chords trail left at their own rate. Drop it on its destination chord."></span>
       <div style="flex:1;min-width:0;">
         <!-- [M14d] R1 (68th entry): the SECOND MULTI-TRACK GRID — the window's own track
@@ -884,7 +886,7 @@
              three default tracks populate: DRUMS on top, CHORDS, MELODY — minimized,
              reading as chord lanes; unlinked from the song's playback (audition-only). -->
         <div id="modPrevScroll">
-          <div class="mgRow"><div class="thead mgHead mgSpacer" title="The audition grid — the Modulation window&#8217;s own second multi-track. Unlinked from the song&#8217;s playback; everything here is audition-only."></div><div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click = park the playhead; click + drag ⬍ = zoom; nothing else ever moves this grid."></div></div>
+          <div class="mgRow"><div class="thead mgHead mgSpacer" title="The audition grid — the Modulation window&#8217;s own second multi-track with its OWN transport. Click anywhere in this window to SELECT it: spacebar then plays THIS grid (the accent ring shows which grid owns the spacebar). Click the main grid to hand it back."></div><div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click = park the playhead; click + drag ⬍ = zoom; nothing else ever moves this grid."></div></div>
           <div class="mgRow"><div class="mgHead" id="mgHeadDrums"></div><div id="modPrevDrums" style="display:none;"></div></div>
           <div class="mgRow"><div class="mgHead" id="mgHeadChords"></div><div id="modPrevLaneWrap">
             <div id="modPrevLane"></div>
@@ -1874,6 +1876,30 @@ function slotInjectModulation(chords,targetIdx,tpl,srcTonic){
  for(let i=targetIdx+1;i<out.length;i++)out[i].r=((out[i].r+tpl.interval)%12+12)%12;
  let t=0;for(let i=0;i<targetIdx;i++)t+=chords[i].d;
  return {chords:out,tgtTonic:((srcTonic+tpl.interval)%12+12)%12,tailStart:+t.toFixed(6),first,need:seq.length};
+}
+function spanSlotInject(chords,targetIdx,entries,interval){
+ /* [M19]/[M20] THE WIDENED INJECT (his answer, Aug 25: "Widen the inject") — every
+    excerpt chord owns a SLOT from the landing-on-target alignment: off 0 = the landing
+    ON the target chord, negative = the chords to its left, positive = after it. The
+    SELECTED span's chords land in their slots, each ADOPTING the lane chord's own
+    duration (the slot law, now in both directions). The tail still transposes into the
+    new key from the target's start (4.1's meaning), BEFORE the right-side writes — the
+    excerpt's chords arrive already resolved and must not be shifted twice. Refuses
+    honestly when a slot falls off either end of the lane. Pure — fresh rows. */
+ if(!Array.isArray(chords)||targetIdx==null||!chords[targetIdx]||!Array.isArray(entries)||!entries.length)return null;
+ for(const e of entries){
+  if(!e||typeof e.off!=='number'||typeof e.r!=='number'||!Array.isArray(e.iv))return null;
+  const i=targetIdx+e.off;if(i<0||i>=chords.length)return null;
+ }
+ const out=chords.map(c=>({...c,iv:c.iv.slice()}));
+ if(interval)for(let i=targetIdx+1;i<out.length;i++)out[i].r=((out[i].r+interval)%12+12)%12;
+ for(const e of entries){
+  const s=out[targetIdx+e.off];
+  s.r=((e.r%12)+12)%12;s.iv=e.iv.slice();s.lbl=e.lbl;s.bass=0;   /* d untouched — the lane's rate */
+ }
+ let t=0;for(let i=0;i<targetIdx;i++)t+=chords[i].d;
+ let mn=0,mx=0;for(const e of entries){if(e.off<mn)mn=e.off;if(e.off>mx)mx=e.off;}
+ return {chords:out,tailStart:+t.toFixed(6),first:targetIdx+mn,need:entries.length,maxOff:mx};
 }
 function modShapeFor(n){
  /* 4.3 R-WINDOW ([M6a]): the 3D shape whose FACE COUNT equals the moment's chord count —
@@ -9619,6 +9645,16 @@ function mimicAudition(tpl){
    shape badges (face count = chord count; a geometric fox inside; the shape spins while
    its moment auditions and the fox's backdrop recolours on every chord). */
 let modPrev={exp:false,durs:null,inv:{},ph:0,mel:true,snap:true,drums:true};
+/* [M21] FOCUS-BASED TRANSPORT (his change of mind, Aug 25): whichever grid is SELECTED
+   owns the spacebar. Click the Modulation window = select ITS grid (accent ring); click
+   the main grid = hand the spacebar back. Session state — never persisted. */
+let gridFocus='main';
+function setGridFocus(f){
+ if(gridFocus===f)return;
+ gridFocus=f;
+ const row=document.getElementById('modPrevRow');
+ if(row)row.classList.toggle('gridFocused',f==='mod');
+}
 let modWinSettings={rate:true,hide:true,adv:true};
 function persistModWin(){try{localStorage.setItem('cp_modwin',JSON.stringify(modWinSettings));}catch(e){}}
 function modPerfHidden(){return !!modWinSettings.hide;}
@@ -10383,14 +10419,41 @@ function injectModulationAtChord(atIdx){
     24b ([M3b]/[M4]): rate toggle OFF + edited preview durations → the moment lands at
     the WINDOW'S own rate instead (spanInjectModulation), still ending on the target. */
  const nseq=tpl.bridge.length+(tpl.interval?1:0);
- const custom=(typeof modWinSettings==='object'&&!modWinSettings.rate&&modPrev.durs&&modPrev.durs.length===nseq)?modPrev.durs.slice():null;
+ /* [M19]/[M20] THE WIDENED INJECT: the lane's SELECTION defines what lands. The excerpt
+    rows resolve at THIS target's key; the landing (the moment's last chord) aligns ON
+    the target, and every selected chord — original-song context included — lands in its
+    slot relative to that alignment, at the lane's own rate. The default selection IS
+    the moment, which reproduces the shipped slot law exactly. */
+ const seq=modTemplateChords(tpl,srcKey.tonic);
+ const tgtT=((srcKey.tonic+(tpl.interval||0))%12+12)%12;
+ const pre=modResolveCtx(tpl.ctxPre,srcKey.tonic,tgtT);
+ const post=modResolveCtx(tpl.ctxPost,srcKey.tonic,tgtT);
+ const rows=pre.concat(seq.map((m,k)=>({r:m.r,iv:m.iv.slice(),lbl:m.lbl,mk:k}))).concat(post);
+ const L=pre.length+seq.length-1;
+ /* the stored span belongs to ONE (source, target) pair — a different template or a
+    drop on another chord falls back to the moment (the default), never a stale span */
+ const wantKey=(tpl.id||'')+':'+atIdx+':'+rows.length;
+ const spanLive=(typeof modPrev==='object'&&modPrev.spanKey===wantKey
+  &&typeof modPrev.selA==='number'&&typeof modPrev.selB==='number');
+ let sA=spanLive?modPrev.selA:pre.length;
+ let sB=spanLive?modPrev.selB:L;
+ if(!(sA>=0&&sB>=sA&&sB<rows.length)){sA=pre.length;sB=L;}
+ const widened=!(sA===pre.length&&sB===L);
+ const entries=rows.slice(sA,sB+1).map((r2,j)=>({off:(sA+j)-L,r:r2.r,iv:r2.iv.slice(),lbl:r2.lbl,mk:(typeof r2.mk==='number')?r2.mk:null}));
+ const custom=(!widened&&typeof modWinSettings==='object'&&!modWinSettings.rate&&modPrev.durs&&modPrev.durs.length===nseq)?modPrev.durs.slice():null;
  const res=custom?spanInjectModulation(project.chords,atIdx,tpl,srcKey.tonic,custom)
-  :slotInjectModulation(project.chords,atIdx,tpl,srcKey.tonic);
+  :spanSlotInject(project.chords,atIdx,entries,tpl.interval||0);
  if(!res){setModStatus(custom?'No room at this rate — the moment would begin before the song does. Shorten its chords or pick a later target.'
-  :'No room — a '+nseq+'-chord moment needs '+(nseq-1)+' chord'+(nseq===2?'':'s')+' before the selected one (it ENDS there). Pick a later chord.');return false;}
+  :'No room — the selected span needs '+(L-sA)+' chord'+(L-sA===1?'':'s')+' before the target'+(sB>L?' and '+(sB-L)+' after it':'')+'. Narrow the selection or pick another chord.');return false;}
+ if(custom)res.maxOff=0;
+ if(res.tgtTonic==null)res.tgtTonic=tgtT;   /* the closing status names the new key */
  /* [M5]: the expansion's inversion picks ride the inject (bass = the chosen chord tone) */
- if(typeof modPrev==='object'&&modPrev.inv&&typeof res.first==='number')
-  for(let k=0;k<res.need;k++)if(modPrev.inv[k])res.chords[res.first+k].bass=modPrev.inv[k]%res.chords[res.first+k].iv.length;
+ if(typeof modPrev==='object'&&modPrev.inv){
+  if(custom){for(let k=0;k<res.need;k++)if(modPrev.inv[k])res.chords[res.first+k].bass=modPrev.inv[k]%res.chords[res.first+k].iv.length;}
+  else for(const e of entries)if(e.mk!=null&&modPrev.inv[e.mk]){const s=res.chords[atIdx+e.off];s.bass=modPrev.inv[e.mk]%s.iv.length;}
+ }
+ /* (a WIDENED selection always lands at the LANE's rate — the closing status says so;
+    a your-own-rate inject for widened spans is a coming round) */
  snapshot();
  noteEngine('modulation',{tpl:tpl.id||tpl.name||'custom',interval:tpl.interval});
  if(tpl.interval!==0){
@@ -10408,7 +10471,7 @@ function injectModulationAtChord(atIdx){
  }
  project.chords=res.chords;
  selChord=null;closePalette();selNotes.clear();
- setModStatus(`${res.need} chord${res.need>1?'s':''} landed at the lane's own rate — the ${tpl.interval?'arrival':'feint'} sits ON the chord you picked${tpl.interval?` · new key ${PCN[res.tgtTonic]}${tpl.tgtMode==='aeolian'?' minor':' major'} from beat ${Math.round(res.tailStart)} (its own section — the earlier music keeps its key)`:''} · ⌘Z undoes.`);
+ setModStatus(`${res.need} chord${res.need>1?'s':''} landed at the lane's own rate — the ${tpl.interval?'arrival':'feint'} sits ON the chord you picked${res.maxOff>0?` (the selection's ${res.maxOff} extra chord${res.maxOff>1?'s':''} follow${res.maxOff>1?'':'s'} it)`:''}${tpl.interval?` · new key ${PCN[res.tgtTonic]}${tpl.tgtMode==='aeolian'?' minor':' major'} from beat ${Math.round(res.tailStart)} (its own section — the earlier music keeps its key)`:''} · ⌘Z undoes.`);
  refresh(true);
  return true;
 }
@@ -10458,6 +10521,11 @@ modState.lastPick=modState.lastPick||'mim';
  if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
   setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
  if(pb)pb.onclick=modPrevAudition;
+ /* [M21]: clicking a grid SELECTS it — the whole Modulation window counts as its grid's
+    territory; the main grid's wrap hands the spacebar back */
+ const mpEl=document.getElementById('modPanel'),gwEl=document.getElementById('gridWrap');
+ if(mpEl)mpEl.addEventListener('mousedown',()=>setGridFocus('mod'),true);
+ if(gwEl)gwEl.addEventListener('mousedown',()=>setGridFocus('main'),true);
  /* [M11d]: the melody / snap / drums chips */
  const mc=document.getElementById('modMelChip'),sc=document.getElementById('modSnapChip'),dc=document.getElementById('modDrumChip');
  const chipSync=()=>{if(mc)mc.classList.toggle('on',!!modPrev.mel);if(sc)sc.classList.toggle('on',!!modPrev.snap);if(dc)dc.classList.toggle('on',!!modPrev.drums);};
@@ -22126,7 +22194,16 @@ function refresh(reschedule){
  if(reschedule&&playing){rebuild();}
 }
 async function togglePlay(){
- if(typeof modAudStop==='function')modAudStop();   /* [M14b]: spacebar / the grid's play shuts the Modulation window's audition off */
+ /* [M21] (supersedes [M14b]'s spacebar half): the SELECTED grid owns the spacebar.
+    With the Modulation window selected and open, spacebar toggles ITS transport; the
+    main grid's transport is untouched. Clicking the main grid selects it back. */
+ if(typeof gridFocus!=='undefined'&&gridFocus==='mod'
+  &&typeof uiState==='object'&&uiState&&uiState.open==='modPanel'){
+  if(typeof modAud==='object'&&modAud.active){if(typeof modAudStop==='function')modAudStop();}
+  else if(typeof modPrevAudition==='function')modPrevAudition();
+  return;
+ }
+ if(typeof modAudStop==='function')modAudStop();   /* [M14b]'s surviving half: the MAIN grid taking over silences the window's audition — two transports never overlap */
  if(!audioReady){playBtn.disabled=true;playBtn.textContent='Loading…';await ensureAudio();playBtn.disabled=false;}
  if(playing){
   if(typeof finalizeTake==='function')finalizeTake();   /* commit held notes BEFORE the transport resets */
