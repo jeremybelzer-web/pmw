@@ -515,7 +515,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24f</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24h</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -897,7 +897,7 @@
       <span class="part" id="modPrevExpB" title="Expand the lane — edit each chord&#8217;s inversion, like an expanded multi-track lane.">▤</span>
     </div>
     <div class="modTogs">
-      <label id="modRateTog" title="ON: the preview and the inject keep the song&#8217;s own rate of chord change (the slot law). OFF: drag the chord boundaries in the lane above — the moment lands at YOUR rate, still ending on the target.">
+      <label id="modRateTog" title="ON: the lane shows the ORIGINAL song&#8217;s rate of chord change — quantized, neat on the grid (the inject still lands at YOUR lane&#8217;s rate, the slot law). OFF: drag the chord boundaries above — your own rate, for the preview and the inject alike.">
         <input type="checkbox" id="modRateChk" checked> Use the original rate of chord change from the song</label>
       <label id="modHideTog" title="Audition modulations and psych out modulations on the fly without accidentally recording what you do as an automation.">
         <input type="checkbox" id="modHideChk" checked> Hide from performance record mode</label>
@@ -1844,10 +1844,16 @@ function applyPsychOut(chords,atIdx,tpl,srcTonic){
 function modTemplateChords(tpl,srcTonic){
  /* the modulation AS A CHORD LIST: the resolved bridge, plus — when the key actually
     changes — the landing I of the new key wearing the template's target mode. The
-    LAST entry is the chord the slot law puts ON the target. Pure. */
+    LAST entry is the chord the slot law puts ON the target. [M12a]: the landing's
+    written length PADS the moment to WHOLE BARS, so the preview sits neatly on the
+    grid (the inject ignores these lengths — the slot law brings the user's own). Pure. */
  const r=resolveBridge(tpl,srcTonic);
  const out=r.chords.map(c=>({d:c.d,r:c.r,iv:c.iv.slice(),lbl:c.lbl,bass:0}));
- if(tpl.interval)out.push({d:2,r:r.tgtTonic,iv:(tpl.tgtMode==='aeolian'?MIN:MAJ).slice(),lbl:tpl.tgtMode==='aeolian'?'i':'I',bass:0});
+ if(tpl.interval){
+  const base=out.reduce((a,c)=>a+c.d,0);
+  const land=((4-(base%4))%4)||4;
+  out.push({d:land,r:r.tgtTonic,iv:(tpl.tgtMode==='aeolian'?MIN:MAJ).slice(),lbl:tpl.tgtMode==='aeolian'?'i':'I',bass:0});
+ }
  return out;
 }
 function slotInjectModulation(chords,targetIdx,tpl,srcTonic){
@@ -9586,7 +9592,7 @@ function mimicAudition(tpl){
    its bars-and-beats ruler, the ▶, inversion expansion, the two toggles, and the 3D
    shape badges (face count = chord count; a geometric fox inside; the shape spins while
    its moment auditions and the fox's backdrop recolours on every chord). */
-let modPrev={exp:false,durs:null,inv:{},ph:0,mel:false,snap:true,drums:false};
+let modPrev={exp:false,durs:null,inv:{},ph:0,mel:true,snap:true,drums:true};
 let modWinSettings={rate:true,hide:true};
 function persistModWin(){try{localStorage.setItem('cp_modwin',JSON.stringify(modWinSettings));}catch(e){}}
 function modPerfHidden(){return !!modWinSettings.hide;}
@@ -9900,6 +9906,11 @@ function modAudPlay(tplId,rows,opts){
    modAud.big=big;
    const rowEl=document.getElementById('modPrevRow');
    const rr=rowEl?rowEl.getBoundingClientRect():null;
+   /* [M13b]: the drift LAUNCHES on the click and ARRIVES exactly as the MOMENT's first
+      chord sounds — its duration is the grey run-up's length */
+   let tMoment=0;{let t=0;for(const c of rows){if(!c.ctx){tMoment=t;break;}t+=c.d;}}
+   const drift=Math.max(.5,tMoment*spb);
+   big.style.transition='left '+drift+'s ease-in-out,top '+drift+'s ease-in-out,width '+drift+'s ease-in-out,height '+drift+'s ease-in-out';
    requestAnimationFrame(()=>{if(modAud.big!==big)return;
     big.style.width='150px';big.style.height='150px';
     big.style.left=((panel.clientWidth-150)/2)+'px';
@@ -9982,14 +9993,13 @@ function modPrevModel(){
  const srcKey=keyFor(chordStartOf(tgt));
  const seq=modTemplateChords(tpl,srcKey.tonic);
  const first=tgt-(seq.length-1);
+ /* [M12a]/[M4] resolved: rate toggle ON (default) = the ORIGINAL song's rhythm — the
+    template's own durations, whole-bar padded, neat on the grid ("don't default what's
+    already in the multi-tracks"). OFF = your own rate, by boundary drag. ⛔ The INJECT
+    is untouched either way — [M2]'s slot law brings the user's lane durations. */
  let durs;
- if(modWinSettings.rate){
-  if(first<0)return {err:'No room at the song’s rate — this '+seq.length+'-chord moment needs '+(seq.length-1)+' chord'+(seq.length===2?'':'s')+' before the target. Select a later chord.',tpl};
-  durs=Array.from({length:seq.length},(_,k)=>project.chords[first+k].d);
- }else{
-  durs=(modPrev.durs&&modPrev.durs.length===seq.length)?modPrev.durs.slice()
-   :(first>=0?Array.from({length:seq.length},(_,k)=>project.chords[first+k].d):seq.map(()=>1));
- }
+ if(modWinSettings.rate)durs=seq.map(c=>c.d);
+ else durs=(modPrev.durs&&modPrev.durs.length===seq.length)?modPrev.durs.slice():seq.map(c=>c.d);
  const endBeat=+(chordStartOf(tgt)+project.chords[tgt].d).toFixed(6);
  const startBeat=+(endBeat-durs.reduce((a,d)=>a+d,0)).toFixed(6);
  if(!modWinSettings.rate&&startBeat<-1e-6)return {err:'No room at this rate — the moment would begin before the song does. Shorten its chords or pick a later target.',tpl};
@@ -10037,7 +10047,7 @@ function drawModPrev(){
    if(!M.tpl.interval){d.style.borderColor='var(--accent)';d.style.borderStyle='dashed';}
   }
   d.title=(m.ctx?m.lbl+' — the original song\u2019s context (grey; it still plays under the lane\u2019s playhead).':(isTgtRow?'The LANDING — the inject puts this ON the selected chord in your song.':m.lbl)+' \u00b7 '+m.d+' beat'+(m.d===1?'':'s')+' \u00b7 click = select \u00b7 drag an edge ([ ]) = move the boundary.');
-  d.textContent=m.lbl;
+  d.innerHTML='<span style="line-height:1.05;">'+m.lbl+'<br><span style="font-size:8px;opacity:.8;">'+PCN[((m.r%12)+12)%12]+(m.iv[1]===3?'m':'')+'</span></span>';
   const rowStart=acc;acc+=m.d;
   d.onclick=()=>{
    modPrev.ph=rowStart;   /* [M11c]: the lane\u2019s own playhead parks where you click */
@@ -10374,9 +10384,23 @@ modState.lastPick=modState.lastPick||'mim';
  const ru=document.getElementById('modPrevRuler');
  if(ru)ru.onmousedown=e=>{
   e.preventDefault();
-  const y0=e.clientY,z0=modPrev.zoom||28;
-  const mm=ev=>{modPrev.zoom=Math.max(10,Math.min(64,Math.round(z0-(ev.clientY-y0)*0.25)));drawModPrev();};
-  const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+  const y0=e.clientY,x0=e.clientX,z0=modPrev.zoom||28;
+  let dragged=false;
+  const mm=ev=>{
+   if(!dragged&&Math.abs(ev.clientY-y0)<4)return;
+   dragged=true;
+   modPrev.zoom=Math.max(10,Math.min(64,Math.round(z0-(ev.clientY-y0)*0.25)));drawModPrev();};
+  const mu=ev=>{
+   document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);
+   if(!dragged){
+    /* [M13a]: a plain CLICK on the bars and beats parks the lane's playhead there —
+       the multi-track grid's own method; the ⬍ drag is still the zoom */
+    const r=ru.getBoundingClientRect();
+    const sc=document.getElementById('modPrevScroll');
+    const beat=Math.max(0,Math.round((ev.clientX-r.left)/(modPrev.zoom||28)));
+    modPrev.ph=beat;drawModPrev();
+    setModStatus('Playhead at beat '+(beat+1)+' of the lane — ▶ plays from here.');
+   }};
   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
  };
  /* [M7c]: Escape — or clicking away from the window — stops the audition */
