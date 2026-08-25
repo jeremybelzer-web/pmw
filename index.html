@@ -411,10 +411,16 @@
 #modPrevGripL{flex:0 0 11px;align-self:stretch;cursor:grab;border-radius:3px;border:1px solid var(--line);
  background:repeating-linear-gradient(45deg,var(--line),var(--line) 2px,transparent 2px,transparent 5px);}
 #modPrevGripL:hover{border-color:var(--accent);}
-#modPrevMel{position:relative;height:26px;border:1px solid var(--line);border-bottom:none;border-radius:4px 4px 0 0;}
+/* [M14d] R1: the second grid's track rows — name boxes left, strips right (the main
+   grid's minimized-lane idiom); rows wider than the panel ride #modPrevScroll */
+#modPrevScroll .mgRow{display:flex;align-items:stretch;margin:0 0 3px 0;width:max-content;min-width:100%;}
+.mgHead{flex:0 0 58px;min-width:58px;display:flex;align-items:center;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text);padding:0 6px;border-radius:5px;margin-right:5px;cursor:pointer;user-select:none;-webkit-user-select:none;box-sizing:border-box;}
+.mgHead.off{opacity:.45;}
+.mgHead.mgSpacer{cursor:default;background:none !important;border:none !important;}
+#modPrevMel{position:relative;height:26px;border:1px solid var(--line);border-radius:4px;box-sizing:border-box;}
 #modPrevMel .mpm{position:absolute;height:3px;border-radius:2px;background:var(--accent);opacity:.85;}
 #modPrevMel .mpm.snapped{background:#5bb98c;}
-#modPrevDrums{position:relative;height:14px;border:1px solid var(--line);border-top:none;border-radius:0 0 4px 4px;}
+#modPrevDrums{position:relative;height:14px;border:1px solid var(--line);border-radius:4px;box-sizing:border-box;}
 #modPrevDrums .mpd{position:absolute;bottom:2px;width:4px;border-radius:2px;background:#7f9cf5;}
 #modPrevCursor{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;opacity:.75;display:none;z-index:3;pointer-events:none;}
 #modPrevLane .mpc.mpcCtx{opacity:.8;}
@@ -515,7 +521,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-24k</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -881,16 +887,20 @@
       <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written.">▶</span>
       <span id="modPrevGripL" title="Grab — drag the whole lane up into the multi-track grid. The LANDING chord rides the cursor tip; the earlier chords trail left at their own rate. Drop it on its destination chord."></span>
       <div style="flex:1;min-width:0;">
+        <!-- [M14d] R1 (68th entry): the SECOND MULTI-TRACK GRID — the window's own track
+             stack, always present, blank until a Modulation Source is selected; then the
+             three default tracks populate: DRUMS on top, CHORDS, MELODY — minimized,
+             reading as chord lanes; unlinked from the song's playback (audition-only). -->
         <div id="modPrevScroll">
-          <div id="modPrevMel" title="[M11d] The melody lane — your song&#8217;s melody around the landing, laid over the excerpt for auditioning (Snap to chord notes bends it to the sounding chord). Audition-only, nothing written." style="display:none;"></div>
-          <div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click + drag ⬍ to zoom; nothing else ever moves this grid."></div>
-          <div id="modPrevLaneWrap">
+          <div class="mgRow"><div class="mgHead mgSpacer" title="The audition grid — the Modulation window&#8217;s own second multi-track. Unlinked from the song&#8217;s playback; everything here is audition-only."></div><div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click = park the playhead; click + drag ⬍ = zoom; nothing else ever moves this grid."></div></div>
+          <div class="mgRow"><div class="mgHead" id="mgHeadDrums"></div><div id="modPrevDrums" style="display:none;"></div></div>
+          <div class="mgRow"><div class="mgHead" id="mgHeadChords"></div><div id="modPrevLaneWrap">
             <div id="modPrevLane"></div>
             <div id="modPrevGrid"></div>
             <div id="modPrevPh"></div>
             <div id="modPrevCursor" title="The lane&#8217;s own playhead — click anywhere in the lane to park it; ▶ plays from here (the grey context plays too)."></div>
-          </div>
-          <div id="modPrevDrums" style="display:none;"></div>
+          </div></div>
+          <div class="mgRow"><div class="mgHead" id="mgHeadMel"></div><div id="modPrevMel" title="[M11d] The melody lane — your song&#8217;s melody around the landing, laid over the excerpt for auditioning (Snap to chord notes bends it to the sounding chord). Audition-only, nothing written." style="display:none;"></div></div>
         </div>
         <div id="modPrevExp" style="display:none;"></div>
       </div>
@@ -5388,7 +5398,7 @@ function gridViewForEvent(e){   /* "which grid am I in" — resolved ONCE per ge
    MIDI and scrolls instead of growing taller (19v absorbed, decision #12a); an
    the slim overlay scrollbar appears only when notes are out of view; per-track view
    heights ride the project file + autosave (#12c). Pure helpers — unit-tested. */
-const STRIP_DEF=14,STRIP_MIN=8,GRIDVIEW_MAX=620,MAIN_MIN=4*CELLH,LATTICE_MAX=60;
+const STRIP_DEF=14,STRIP_MIN=8,GRIDVIEW_MAX=620,MAIN_MIN=4*CELLH,LATTICE_MAX=60,DRUMROLL_MAX=240;
 /* 2.1b-e LANE LAW v3 (client Q1): tracks NEVER collapse — the resize floor is the
    name-box text bounds. Hide Selected Tracks replaces collapse entirely. */
 const TRACK_MIN_H=14;
@@ -9998,7 +10008,11 @@ function modPrevModel(){
  /* the previewed moment resolved onto the CURRENT target — one model for the lane, the
     ruler, the ▶ and the inject. [M11]: the lane now carries ≥4 bars of the moment's
     original-song context either side (grey; the pivots coloured). */
- const tpl=modPrevTpl();
+ /* [M14d]: the grid is BLANK until a Modulation Source is SELECTED — the preview never
+    falls back to the first DB template (the verbs keep their own paths) */
+ const tpl=(modState.lastPick==='psy'
+  ?(modState.psySel!=null?psychTemplate(modState.psySel):null)
+  :(modState.sel?currentModTemplate():null));
  const tgt=modPrevTarget();
  if(!tpl||tgt==null||!project.chords[tgt])return {err:'Pick a moment below — the lane previews it in its original context; the inject still lands on the selected chord (or the playhead’s).'};
  const srcKey=keyFor(chordStartOf(tgt));
@@ -10022,14 +10036,52 @@ function modPrevModel(){
  const total=rows.reduce((a,c)=>a+c.d,0);
  return {tpl,tgt,srcKey,seq,durs,first,startBeat,endBeat,rows,pre,post,preSpan,total};
 }
+function modGridHeadsDraw(){
+ /* [M14d] R1: the second grid's name boxes — DRUMS on top, then CHORDS, then MELODY,
+    wearing the main grid's colored-name-box idiom. Drums/Melody boxes toggle their
+    audition strips (the 🥁/🎵 chips' law, one more affordance); Chords is the moment
+    itself and never hides. */
+ const mk=(id,col,label,on,tip,tog)=>{
+  const h=document.getElementById(id);if(!h)return;
+  h.textContent=label;
+  h.className='mgHead'+(on?'':' off');
+  h.style.background=hexA(col,.24);h.style.borderLeft='3px solid '+col;
+  h.title=tip;h.onclick=tog||null;
+ };
+ /* boot-safe (landmine ⑪'s family): drawModPrev runs before the color store initializes —
+    a TDZ throw here would take the whole boot down, so the lookup wears a try/catch */
+ const tc=t=>{try{return trackColorOf(t)||'#8a8f9f';}catch(e){return '#8a8f9f';}};
+ mk('mgHeadDrums',tc('drums'),'Drums',!!modPrev.drums,
+  'The audition DRUM track (kick · snare · hats over the excerpt) — click to show/hide. Audition-only; never the song’s playback.',
+  ()=>{modPrev.drums=!modPrev.drums;drawModPrev();});
+ mk('mgHeadChords','#e8a33d','Chords',true,
+  'The modulating CHORDS — the selected moment with 4 bars of its original song either side (grey). The landing rides the selected chord in YOUR grid.');
+ mk('mgHeadMel',tc('melody'),'Melody',!!modPrev.mel,
+  'YOUR melody from around the landing, auditioned over the new chords — click to show/hide. Audition-only; nothing is written.',
+  ()=>{modPrev.mel=!modPrev.mel;drawModPrev();});
+}
 function drawModPrev(){
  const lane=document.getElementById('modPrevLane');if(!lane)return;
  const ruler=document.getElementById('modPrevRuler'),exp=document.getElementById('modPrevExp');
  const rc=document.getElementById('modRateChk'),hc=document.getElementById('modHideChk');
  if(rc)rc.checked=!!modWinSettings.rate;
  if(hc)hc.checked=!!modWinSettings.hide;
+ modGridHeadsDraw();
  const M=modPrevModel();
- if(M.err){lane.innerHTML='<span style="font-size:10.5px;color:var(--dim);align-self:center;">'+M.err+'</span>';ruler.innerHTML='';exp.style.display='none';return;}
+ if(M.err){
+  /* [M14d]: the grid is ALWAYS PRESENT — blank rows until a Modulation Source is
+     selected; the hint rides the chords lane */
+  const blankW='420px';
+  lane.innerHTML='<span style="font-size:10.5px;color:var(--dim);position:absolute;left:8px;top:9px;right:8px;">'+M.err+'</span>';
+  lane.style.width=blankW;ruler.innerHTML='';ruler.style.width=blankW;exp.style.display='none';
+  const wrap0=document.getElementById('modPrevLaneWrap');if(wrap0)wrap0.style.width=blankW;
+  const grid0=document.getElementById('modPrevGrid');if(grid0)grid0.innerHTML='';
+  const ph0=document.getElementById('modPrevPh');if(ph0)ph0.style.display='none';
+  const cur0=document.getElementById('modPrevCursor');if(cur0)cur0.style.display='none';
+  const mel0=document.getElementById('modPrevMel'),dr0=document.getElementById('modPrevDrums');
+  if(mel0){mel0.innerHTML='';mel0.style.width=blankW;mel0.style.display=modPrev.mel?'block':'none';}
+  if(dr0){dr0.innerHTML='';dr0.style.width=blankW;dr0.style.display=modPrev.drums?'block':'none';}
+  return;}
  const total=M.total;
  /* [M8a] THE FIXED-GRID LAW: the lane owns its pixels-per-beat (modPrev.zoom). Only the
     ruler's own ⬍ drag changes it ([M8c]). [M11]: the timeline is the EXCERPT's own —
@@ -10046,6 +10098,9 @@ function drawModPrev(){
  /* the lane — grey context · coloured moment ([M11c]) */
  lane.innerHTML='';
  lane.style.width=(total*mppb).toFixed(1)+'px';
+ /* [M14d]: the wrap sizes WITH the lane, so the beat-grid overlay ends where the lane does */
+ const wrapEl0=document.getElementById('modPrevLaneWrap');
+ if(wrapEl0)wrapEl0.style.width=(total*mppb).toFixed(1)+'px';
  let acc=0;
  M.rows.forEach((m,k)=>{
   const d=document.createElement('div');
@@ -21163,7 +21218,7 @@ function buildStripContent(strip,t){
  strip.title=acting
   ?trackLabel(t)+' — ACTING CHORD LANE (the Chord Lane is minimized): every chord-lane gesture works here — press = select + play · drag edges = resize chords · drag body = move · ⌥-drag = duplicate · ⇧-click/drag = multi-select · ⌘-drag ↕ = clip velocity · right-click = clip menu · double-click = rename · drag up into the grid = expand to MIDI'
   :trackLabel(t)+(t==='drums'
-  ?' — the built-in kit as colored lines and dots (kick blue · snare pink · ticks grey), sliced at the chord boundaries: press a slice to hear it (mute/solo/rename on the left)'
+  ?' — the built-in kit as colored lines and dots (kick blue · snare pink · ticks grey), sliced at the chord boundaries: press a slice to hear it (mute/solo/rename on the left) · drag the name-box line ↕ or ▸ to expand into the drum roll (read-only — the kit renders from the style)'
   :' — chord/MIDI clips: press = select + play · ⇧-click = multi-select · ⌘-click = merge menu · double-click = pop-up clip editor · drag onto another lane = merge/replace there');
  /* layer 1: the clip cells (60% transparent chord tints + the break lines) */
  const cells=document.createElement('div');cells.className='scells';
@@ -21217,15 +21272,25 @@ function buildStripContent(strip,t){
  /* layer 2: the track's MIDI on top (pointer-events off — cells take the gestures) */
  const ns=stripNotes(t);
  const W=LOOP*PPB;
- /* [M15b]: the drum lane wears the lines-and-dots look (drumBarSpec, pure) — every
-    other lane keeps the generic MIDI thumbnail */
+ /* [M15b]: the MINIMIZED drum lane wears the lines-and-dots look (drumBarSpec, pure).
+    Grown past its floor, the lane reveals the pitch-mapped MIDI view again (kick low ·
+    snare mid · hats high) — his correction, Aug 24: the keeper was the minimized look,
+    not a replacement at every height. Every other lane keeps the generic thumbnail. */
+ const hNow=parseFloat(strip.style.height)||STRIP_DEF;
+ const drumMin=t==='drums'&&hNow<=((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H)+4;
  const rects=(t==='drums'
-  ?drumBarSpec(ns,W,LOOP).map(r=>
-   `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="1.5" fill="${r.f}"/>`)
+  ?(drumMin
+   ?drumBarSpec(ns,W,LOOP).map(r=>
+    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="1.5" fill="${r.f}"/>`)
+   /* grown: the read-only DRUM ROLL — piece rows + two faint separators */
+   :[`<line x1="0" y1="14" x2="${W}" y2="14" stroke="rgba(255,255,255,.09)"/>`,
+     `<line x1="0" y1="28" x2="${W}" y2="28" stroke="rgba(255,255,255,.09)"/>`]
+    .concat(drumRollSpec(ns,W,LOOP).map(r=>
+    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="2" fill="${r.f}"/>`)))
   :thumbSpec(ns,W,12,LOOP).map(r=>
    `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="1" fill="${c}" opacity=".95"/>`)).join('');
  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
- sv.setAttribute('viewBox','0 0 '+W+' '+(t==='drums'?14:12));sv.setAttribute('preserveAspectRatio','none');
+ sv.setAttribute('viewBox','0 0 '+W+' '+(t==='drums'?(drumMin?14:42):12));sv.setAttribute('preserveAspectRatio','none');
  sv.setAttribute('style','position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;');
  sv.innerHTML=rects;
  strip.appendChild(sv);
@@ -21509,15 +21574,13 @@ document.addEventListener('mousemove',ev=>{
     Hidden Tracks window brings it back). */
  const chordH=chordLaneH();
  const boxH=nboxNaturalH();
- const maxH=(rz.t==='drums')?Math.max(chordH,boxH):GRIDVIEW_MAX;
+ /* his Aug 24 call: drums GROW again — into the read-only drum roll (never a pitched
+    Grid transform; the kit is style-rendered and has no editable MIDI track) */
+ const maxH=(rz.t==='drums')?DRUMROLL_MAX:GRIDVIEW_MAX;
  const h=Math.round(Math.max(boxH,Math.min(maxH,rz.h0+d)));
  if(rz.h0+d<boxH-4&&!rz.floorHint){
   rz.floorHint=true;
   flashHint('Tracks never shrink below their name box — to tuck '+trackLabel(rz.t)+' away, ctrl+click its name box and choose “Hide track”.');
- }
- if(rz.t==='drums'&&rz.h0+d>Math.max(chordH,boxH)+10&&!rz.warned){
-  rz.warned=true;
-  flashHint('Drums stay a strip — the Grid is pitched (kit MIDI mapping coming).');
  }
  if(h!==stripHeightOf(rz.t)){
   stripH[rz.t]=h;
@@ -21531,7 +21594,7 @@ document.addEventListener('mouseup',()=>{
     Grid-sized result refreshes the track's "big", a strip-sized one its "small" */
  if(rz.t!=='__main'){
   const h=stripHeightOf(rz.t);
-  if(rz.t!=='drums'&&h>stripBoundaryH())trackBigH[rz.t]=h;else trackSmallH[rz.t]=h;   /* fix 2: the boundary includes the box floor */
+  if(h>stripBoundaryH())trackBigH[rz.t]=h;else trackSmallH[rz.t]=h;   /* fix 2: the boundary includes the box floor · Aug 24: drums remember a big size too (the roll) */
  }
  rz=null;
  autosaveSoon();   /* heights are project state (#12c) — dirty + autosave, no undo entry */
@@ -21541,7 +21604,8 @@ document.addEventListener('mouseup',()=>{
    ≈6× the minimized height (client: "about 6 times"); minimize→expand returns to the
    last user-set size, remembered per track. Drums honestly cap at strip height. */
 function trackIsBig(t){
- return t!=='drums'&&stripKindForHeight(stripHeightOf(t),stripBoundaryH())==='grid';
+ /* Aug 24: drums count as big past the boundary too (the read-only roll) */
+ return stripKindForHeight(stripHeightOf(t),stripBoundaryH())==='grid';
 }
 function toggleTrackBig(t){
  const bnd=stripBoundaryH();   /* July 30 fix 2: the strip→Grid boundary includes the box floor */
@@ -21551,11 +21615,10 @@ function toggleTrackBig(t){
   stripH[t]=Math.min(bnd,Math.max(nboxNaturalH(),Math.round(trackSmallH[t]||STRIP_DEF)));
  }else{
   trackSmallH[t]=h;
-  const maxH=(t==='drums')?bnd:GRIDVIEW_MAX;
+  const maxH=(t==='drums')?DRUMROLL_MAX:GRIDVIEW_MAX;   /* Aug 24: ▸ expands drums into the roll */
   const big=trackExpandHeight(trackBigH[t],h,bnd,maxH);
   stripH[t]=big;
   if(t!=='drums'&&big>bnd)setViewPx(stripGridViewFor(t),big);
-  if(t==='drums')flashHint('Drums stay a strip — the Grid is pitched (kit MIDI mapping coming).');
  }
  autosaveSoon();   /* heights are project state (#12c) */
  drawTrackSel();drawMainStrip();positionMainRz();
@@ -22811,6 +22874,20 @@ function drumBarSpec(notes,W,loop){
   const h=kick?11:snare?9:4;
   return {x:Math.max(0,Math.min(W-2,n[0]/L*W)),w:4,y:14-2-h,h,
    f:kick?'#7f9cf5':snare?'#e0507a':'rgba(255,255,255,.35)'};
+ });
+}
+function drumRollSpec(notes,W,loop){
+ /* the EXPANDED drum lane (his correction, Aug 24) — an honest READ-ONLY roll of the
+    style-rendered kit: three piece rows (hats/other TOP · snare MID · kick BOTTOM),
+    piece-colored, on a 42-high viewbox (3 rows of 14). The kit has no editable MIDI
+    track (renderDrums IS the source), so this reveals, never edits. Pure. */
+ if(!notes||!notes.length)return [];
+ const L=loop||32;
+ return notes.map(n=>{
+  const p=n[2],kick=p===35||p===36,snare=p===38||p===40;
+  const row=kick?2:snare?1:0;
+  return {x:Math.max(0,Math.min(W-3,n[0]/L*W)),w:Math.max(3,(n[1]||.25)/L*W),
+   y:row*14+3,h:8,f:kick?'#7f9cf5':snare?'#e0507a':'rgba(255,255,255,.45)'};
  });
 }
 let trackLabels=parseTrackLabels(null);
