@@ -216,6 +216,9 @@
   .colGrip{cursor:grab;user-select:none;-webkit-user-select:none;margin-right:7px;color:var(--dim);font-size:11px;letter-spacing:-1px;}
   .colGrip:hover{color:var(--text);}
   .colGrip:active{cursor:grabbing;}
+  #colSlotMarks{position:absolute;top:0;left:0;right:0;height:0;z-index:95;pointer-events:none;display:none;}
+  .colSlotMark{position:absolute;left:24px;right:24px;height:0;border-top:2px dashed var(--dim);opacity:.55;}   /* 78th R3: every place the drag could land, marked; the live one is the gold line */
+  .commitTri{color:var(--accent);font-size:11px;}   /* 78th R3: the group's commit-to-Grid-1 triangle */
   #colDropLine{position:absolute;left:8px;right:8px;height:3px;background:var(--accent);border-radius:2px;display:none;z-index:110;box-shadow:0 0 8px var(--accent);pointer-events:none;}
   [data-gridworld].gridFocused{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px;}   /* Phase 2 R2: the SELECTED grid instance wears the [M21] accent ring */
   .cpSearchBtn{font-size:9px;letter-spacing:.6px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--dim);cursor:pointer;padding:2px 2px;align-self:stretch;writing-mode:horizontal-tb;}
@@ -527,16 +530,20 @@
 #orbBody:fullscreen #orbMapWrap svg{max-width:min(94vw,150vh)!important;margin:0 auto;}
   /* ==== 76th R2 · THE FIXED CHROME (his words: the transport and the navigation
        section become fixed windows at the top; the left icon rail stops scrolling) ==== */
-  #transportWin,#navWin{position:fixed;left:0;right:0;z-index:90;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  #transportWin,#navWin,#engWin,#gcWin{position:fixed;left:0;right:0;z-index:90;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.35);}
   #transportWin{top:0;}
-  #transportWin .winHead,#navWin .winHead{padding:2px 10px;min-height:20px;}
+  #transportWin .winHead,#navWin .winHead,#engWin .winHead,#gcWin .winHead{padding:2px 10px;min-height:20px;}
   #transportWin.winCollapsed .controls{display:none;}
   #navWin.winCollapsed #navBody{display:none;}
+  #engWin.winCollapsed #engBody,#gcWin.winCollapsed #gcBody{display:none;}   /* 78th R3: the Engines + Grid Controls windows share the idiom */
+  #gcBody input,#gcBody select{user-select:text;-webkit-user-select:text;}
   #transportWin .controls{padding:4px 10px 6px;margin:0;}
   #navBody{padding:4px 10px 6px;}
-  #transportLink,#navLink{position:fixed;z-index:90;top:3px;font-size:11px;color:var(--accent);cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:2px 10px;}
+  #transportLink,#navLink,#engLink,#gcLink{position:fixed;z-index:90;top:3px;font-size:11px;color:var(--accent);cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:2px 10px;}
   #transportLink{left:8px;}
   #navLink{left:128px;}
+  #engLink{left:222px;}
+  #gcLink{left:302px;}
   [id^="gridRowWrap_g"] [id="zoomStrip"]{display:none;}   /* instance grids: the Navigator is THE nav — the clone strips retire */
   #navBody input,#navBody select,#navBody textarea{user-select:text;-webkit-user-select:text;}   /* the wrap's field exception rides the strip's move */
   #rail{position:fixed;left:4px;z-index:90;}
@@ -553,7 +560,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26p</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26s</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -576,7 +583,7 @@
          window's source boxes own song selection now (dotted [+] Select music, unlimited
          songs, per-song track tables). The hidden selects keep every handler, project-file
          path and verify suite alive — the Phase-1.1 hidden-buttons precedent. -->
-    <div class="ctl" style="display:none;"><label>Load song (chords + melody)</label><select id="selSong"></select></div>
+    <div class="ctl" id="songCtl" style="display:none;"><label>Song</label><select id="selSong"></select></div>
     <div class="ctl" style="display:none;"><label>Cross-pollinate: chords from…</label><select id="selChords"></select></div>
     <div class="ctl" style="display:none;"><label>Groove / bass from…</label><select id="selStyle"></select></div>
     <!-- 19y: the Scale (background) menu and the Conform/extensions controls moved to the top of the Chord Palette dock -->
@@ -614,6 +621,31 @@
     <div id="navBody"></div>
   </div>
   <span id="navLink" style="display:none;" title="Bring the Navigator back">Navigator</span>
+
+  <!-- 78th R3 (his words): THE ENGINES WINDOW — "Where each Engine Window Button exists.
+       And it should stay at the top of the App along with the navigation window etc and
+       function the same." And THE GRID CONTROLS WINDOW below it ("The 'grid window'
+       should be located below the Window Engines Window" — read as this window; the
+       reading is recorded as a labeled inference in the spec). Both wear data-gwfocus:
+       "They will apply to whichever grid is at the top." -->
+  <div id="engWin" data-gwfocus="1">
+    <div class="winHead" id="engWinHead" title="The Engines — every engine window's button, fixed at the top. Click the bar to minimize.">
+      <span class="picon">⚙</span><span class="wtitle">Engines</span>
+      <span class="wbtn" id="engMinChip" title="Minimize the Engines window to its title bar">−</span>
+      <span class="wbtn" id="engCloseChip" title="Delete the Engines window — an &#8220;Engines&#8221; link stays at the top to bring it back">✕</span>
+    </div>
+    <div id="engBody" style="display:flex;gap:6px;flex-wrap:wrap;padding:4px 10px 8px 10px;"></div>
+  </div>
+  <span id="engLink" style="display:none;" title="Bring the Engines window back">Engines</span>
+  <div id="gcWin" data-gwfocus="1">
+    <div class="winHead" id="gcWinHead" title="Grid Controls — they apply to whichever grid is at the top (the selected group). Click the bar to minimize.">
+      <span class="picon">▤</span><span class="wtitle">Grid Controls</span>
+      <span class="wbtn" id="gcMinChip" title="Minimize Grid Controls to its title bar">−</span>
+      <span class="wbtn" id="gcCloseChip" title="Delete the Grid Controls window — a &#8220;Grid controls&#8221; link stays at the top to bring it back">✕</span>
+    </div>
+    <div id="gcBody" style="padding:2px 10px 8px 10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"></div>
+  </div>
+  <span id="gcLink" style="display:none;" title="Bring the Grid Controls window back">Grid controls</span>
 
   <div id="panelBar"></div>
 
@@ -769,7 +801,7 @@
     <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span></div>
     <div id="zoomStrip" title="Drag ↕ here to zoom the grid (same as the bar-number lane)" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px 0;cursor:ns-resize;">
       <div class="parts" id="trackSel" style="margin:0;"></div>
-      <div class="parts" style="margin:0;align-items:center;">
+      <div class="parts" id="gridCtlRow" style="margin:0;align-items:center;">
         <span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Grid:</span>
         <label class="part" style="gap:5px;" title="Show every other track's notes dimmed behind the one you're editing"><input type="checkbox" id="chkGhosts" style="accent-color:var(--accent);">👥 All tracks</label>
         <label class="part" style="gap:5px;" title="Music-paper view: the song wraps into systems of 4 bars, like a score page. Read &amp; navigate — click anywhere to move the playhead, click notes to select (Delete works), click the dashed strip at the bottom to add 4 more bars. Section edits live in the linear view's Section Lane — untick to go back."><input type="checkbox" id="chkPaper" style="accent-color:var(--accent);">📄 Paper</label>
@@ -22647,7 +22679,8 @@ function parseSettings(str){
   showOverview:false,showScrub:true,showSecLane:false,showTsig:false,showKeysLane:false,showTempoLane:false,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,   /* 78th (his words): the grid-top nav rows default OFF — the global Navigator + the bars/beats lane carry navigation; every row re-enables in Settings */
   /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
   countIn:0,latencyPref:'interactive',sinkId:'',
-  classicHeads:false};   /* 77th (his words): the MICRO name box is the default standard; classic two-row boxes are the Settings opt-in */
+  classicHeads:false,
+ gcPerGrid:false};   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -22666,6 +22699,7 @@ function parseSettings(str){
    if(o.showOverview===true)def.showOverview=true;   /* 2.5 ⑪e — 78th: default OFF, an explicit true re-enables */
    if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
    if(o.showSecLane===true)def.showSecLane=true;   /* 2.5 ⑪f — 78th: default OFF */
+   if(o.gcPerGrid===true)def.gcPerGrid=true;   /* 78th R3: the per-grid Grid Controls opt-in */
    if(o.showTsig===true)def.showTsig=true;   /* 2.5 ④ — 78th: default OFF */
    if(o.showKeysLane===true)def.showKeysLane=true;   /* 78th */
    if(o.showTempoLane===true)def.showTempoLane=true;   /* 78th */
@@ -22992,7 +23026,7 @@ function parseUiState(str,defs){
    if(o.gridMin===true)def.gridMin=true;
    if(Array.isArray(o.colOrder))def.colOrder=o.colOrder.filter(x=>typeof x==='string');   /* Phase 2 R0: the column order (normalized at apply) */
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
-   if(o.chrome&&typeof o.chrome==='object')for(const _k of ['tr','nav']){const _c=o.chrome[_k];if(_c&&typeof _c==='object'){if(_c.min===true)def.chrome[_k].min=true;if(_c.closed===true)def.chrome[_k].closed=true;}}   /* 76th R2 */
+   if(o.chrome&&typeof o.chrome==='object')for(const _k of ['tr','nav','eng','gc']){const _c=o.chrome[_k];if(_c&&typeof _c==='object'){if(_c.min===true)def.chrome[_k].min=true;if(_c.closed===true)def.chrome[_k].closed=true;}}   /* 76th R2 */
    if(o.trips==='min'||o.trips==='full')def.trips=o.trips;
    if(def.open==='tripsPanel'){def.open=null;if(!def.trips)def.trips='full';}
   }
@@ -23006,7 +23040,8 @@ function uiReduce(state,action,defs){
   links:Array.isArray(state.links)?state.links.slice():[],
   openWins:Array.isArray(state.openWins)?state.openWins.slice():(state.open?[state.open]:[]),
   gridMin:!!state.gridMin,
-  colOrder:Array.isArray(state.colOrder)?state.colOrder.slice():null};   /* Phase 1: the graph + the grid-minimize; Phase 2 R0: the multi-open set */
+  colOrder:Array.isArray(state.colOrder)?state.colOrder.slice():null,
+  chrome:(state.chrome&&typeof state.chrome==='object')?Object.keys(state.chrome).reduce((a,k)=>{a[k]=Object.assign({},state.chrome[k]);return a;},{}):undefined};   /* Phase 1: the graph + the grid-minimize; Phase 2 R0: the multi-open set; 78th R3 FIX: the reducer DROPPED chrome — every uiDispatch reset the fixed windows' persisted state (his "the X is not working / the navigator seems hidden") */
  if(!action||typeof action!=='object')return s;
  /* WINDOW-SHELL · RAW [69][72][75]: Trips is the one-window-law EXCEPTION — a companion
     that opens BETWEEN the top window and the one below. Toggle never steals `open`. */
@@ -23177,8 +23212,11 @@ function initUiShell(){
  document.getElementById('pchip_eye').onclick=()=>uiDispatch({type:'icons'});
  /* transform rail */
  const rail=document.getElementById('rail');
- rail.innerHTML=RAIL_DEFS.map((r,i)=>`<button id="rail_${i}" title="${r.tip}">${r.icon}</button>`).join('');
+ /* 78th R3 (his words): the Engine Window Buttons live in the fixed ENGINES WINDOW now —
+    the rail keeps the transform verbs (pin/neg/snv/aretha/★/⤢) */
+ rail.innerHTML=RAIL_DEFS.map((r,i)=>r.win?'':`<button id="rail_${i}" title="${r.tip}">${r.icon}</button>`).join('');
  RAIL_DEFS.forEach((r,i)=>{
+  if(!document.getElementById('rail_'+i))return;
   document.getElementById('rail_'+i).onclick=e=>{
    if(r.act){const b=document.getElementById(r.act);
     if(b&&b.onclick)b.onclick({target:b,altKey:e.altKey,shiftKey:e.shiftKey});   /* keep ⌥/⇧ (Aretha run cycling) */
@@ -23211,6 +23249,13 @@ function initUiShell(){
  colGripAdd(document.getElementById('gridWinHead'),'gridRowWrap');
  colGripAdd(document.getElementById('palWinHead'),'chordPanel');
  colGripAdd(document.getElementById('snapWinHead'),'snapPanel');   /* 76th R4 */
+ /* 78th R3 (his words): "The App should default to having a multi-track grid + chord
+    palette at the top." A fresh board (no saved order) leads with them; a user's saved
+    order always wins. Not persisted — the default recomputes until the user reorders. */
+ if(typeof uiState==='object'&&uiState&&(!Array.isArray(uiState.colOrder)||!uiState.colOrder.length)){
+  const rest=colMembersNow().filter(id=>id!=='gridRowWrap'&&id!=='chordPanel');
+  uiState.colOrder=['gridRowWrap','chordPanel'].concat(rest);
+ }
  applyColOrder();
  applyUiState();
  wireDockDrag();buildDocks();   /* vertical docking (2.1b-e ⑦) */
@@ -23481,6 +23526,7 @@ function gridWorldSpawn(opts){
   x.className='wbtn';x.textContent='✕';x.title='Close this grid';
   x.onclick=()=>gridWorldClose(id);
   head.appendChild(x);
+  const _og=head.querySelector('.colGrip');if(_og)_og.remove();   /* 78th R3: the CLONED grip is a corpse (cloneNode drops handlers) and it fooled colGripAdd's dedup guard — instance grips were dead */
   if(typeof colGripAdd==='function')colGripAdd(head,root.id);
  }
  const before=(opts&&opts.before&&opts.before.parentNode===document.body)?opts.before:me.root.nextSibling;
@@ -23616,6 +23662,16 @@ function gridAuditionSpawn(winId){
  /* 78th R2b (his words): the Essence Shelf window ships BETWEEN the grid and the (search)
     window — the stack's fused middle member */
  if(panel)essShelfWinMint(w,panel);
+ /* 78th R3 (his words): the COMMIT triangle in the group's corner — ▲ pastes what this
+    window group does into Grid 1 at the selected chord or the playhead */
+ const _wh=w.els.root.querySelector('[id="gridWinHead"]');
+ if(_wh&&!_wh.querySelector('.commitTri')){
+  const t=document.createElement('span');
+  t.className='wbtn commitTri';t.textContent='▲';
+  t.title='Commit — paste what this window group does into the 1st Multi-Track Grid, at the selected chord or the playhead.';
+  t.onclick=()=>{gridGroupCommit(winId);};   /* no stopPropagation — it would eat the router's bubble world-exit (the wbtn guard already covers the head toggle) */
+  _wh.insertBefore(t,_wh.querySelector('[id="gridMinChip"]')||null);
+ }
  uiState.links=linkAdd(uiState.links,'win:'+winId,'grid:'+w.id,true);
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  return w;
@@ -23824,29 +23880,57 @@ document.body.addEventListener('contextmenu',e=>{
    the router runs their events under the FOCUSED grid's world, so they control whichever
    linked group is selected. State = uiState.chrome, riding cp_ui. ==== */
 function fixedChromeState(){
- if(!uiState.chrome||typeof uiState.chrome!=='object')uiState.chrome={tr:{min:false,closed:false},nav:{min:false,closed:false}};
- for(const k of ['tr','nav'])if(!uiState.chrome[k]||typeof uiState.chrome[k]!=='object')uiState.chrome[k]={min:false,closed:false};
+ if(!uiState.chrome||typeof uiState.chrome!=='object')uiState.chrome={};
+ for(const k of ['tr','nav','eng','gc'])if(!uiState.chrome[k]||typeof uiState.chrome[k]!=='object')uiState.chrome[k]={min:false,closed:false};   /* 78th R3: eng + gc joined */
  return uiState.chrome;
 }
 function fixedChromeApply(){
  const c=fixedChromeState();
- const tw=_gridGetById('transportWin'),nw=_gridGetById('navWin');
- if(!tw||!nw)return;
- tw.classList.toggle('winCollapsed',!!c.tr.min);tw.style.display=c.tr.closed?'none':'';
- nw.classList.toggle('winCollapsed',!!c.nav.min);nw.style.display=c.nav.closed?'none':'';
- const mc=_gridGetById('trMinChip');if(mc)mc.textContent=c.tr.min?'+':'−';
- const nc=_gridGetById('navMinChip');if(nc)nc.textContent=c.nav.min?'+':'−';
- const tl=_gridGetById('transportLink');if(tl)tl.style.display=c.tr.closed?'':'none';
- const nl=_gridGetById('navLink');if(nl)nl.style.display=c.nav.closed?'':'none';
- const trH=c.tr.closed?0:tw.offsetHeight;
- nw.style.top=(trH+(c.tr.closed?26:0))+'px';   /* 77th fix: a restored Navigator must never cover the 'Show transport' link band */
- const navH=c.nav.closed?0:nw.offsetHeight;
- const chromeH=Math.max(trH+(c.tr.closed?26:0)+navH,(c.tr.closed||c.nav.closed)?26:0);
+ /* 78th R3: FOUR fixed windows stack top-down — Transport, Navigator, Engines, Grid
+    Controls (his order, the "grid window below the Window Engines Window" reading).
+    Any closed window's restore link lives in a 26px band at the very top (the 77th's
+    link-band law generalized); gcPerGrid stands the Grid Controls window down. */
+ const defs=[['tr','transportWin','trMinChip','transportLink'],
+  ['nav','navWin','navMinChip','navLink'],
+  ['eng','engWin','engMinChip','engLink'],
+  ['gc','gcWin','gcMinChip','gcLink']];
+ if(!_gridGetById('transportWin'))return;
+ let anyClosed=false;
+ for(const [key,winId,minId,linkId] of defs){
+  const w=_gridGetById(winId);if(!w)continue;
+  const perGrid=(key==='gc'&&typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gcPerGrid);
+  const closed=perGrid||!!c[key].closed;
+  w.classList.toggle('winCollapsed',!!c[key].min);
+  w.style.display=closed?'none':'';
+  const mc2=_gridGetById(minId);if(mc2)mc2.textContent=c[key].min?'+':'−';
+  const l=_gridGetById(linkId);if(l)l.style.display=(closed&&!perGrid)?'':'none';
+  if(closed&&!perGrid)anyClosed=true;
+ }
+ let y=anyClosed?26:0;
+ for(const [key,winId] of defs){
+  const w=_gridGetById(winId);if(!w)continue;
+  if(w.style.display==='none')continue;
+  w.style.top=y+'px';
+  y+=w.offsetHeight;
+ }
+ const chromeH=Math.max(y,anyClosed?26:0);
  document.body.style.paddingTop=chromeH+'px';
  document.documentElement.style.scrollPaddingTop=(chromeH+8)+'px';   /* scrollIntoView never lands under the fixed bars */
  const rail=_gridGetById('rail');
  if(rail){rail.style.top=(chromeH+12)+'px';
   document.body.style.paddingLeft=((rail.offsetWidth||44)+10)+'px';}   /* his "the other windows a bit smaller" — the room the fixed rail takes */
+}
+function gcPerGridApply(){
+ /* 78th R3 (his follow-up): the Settings opt-in creates the Grid Controls WITH the
+    multi-track grids instead of fixed at the top (default: fixed). The Grid: row moves
+    between the fixed window's body and Grid 1's own strip; the fixed window stands
+    down/up through fixedChromeApply's perGrid gate. */
+ const gb=_gridGetById('gcBody'),gcr=_gridGetById('gridCtlRow'),zs=_gridGetById('zoomStrip');
+ if(!gb||!gcr)return;
+ const per=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gcPerGrid);
+ if(per&&zs&&!zs.contains(gcr))zs.appendChild(gcr);
+ if(!per&&!gb.contains(gcr))gb.appendChild(gcr);
+ fixedChromeApply();
 }
 function fixedChromeInit(){
  const nb=_gridGetById('navBody'),zs=_gridGetById('zoomStrip');
@@ -23862,18 +23946,65 @@ function fixedChromeInit(){
    drag={mode:'zoom',x0:e.clientX-r.left,y0:e.clientY-r.top,p0:PPB,fromStrip:true};
   });
  }
- const c=fixedChromeState();
+ /* 78th R3 FIX (his "The 'X' on the window for the transport is not working"): NEVER
+    capture uiState.chrome — uiDispatch REPLACES uiState wholesale, so a captured
+    reference is dead after the first window toggle. Read fixedChromeState() at CALL time. */
  const persist=()=>{try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}};
  const wire=(headId,minId,closeId,key,linkId)=>{
-  const tog=()=>{c[key].min=!c[key].min;fixedChromeApply();persist();};
+  const tog=()=>{const c=fixedChromeState();c[key].min=!c[key].min;fixedChromeApply();persist();};
   const head=_gridGetById(headId);
   if(head)head.onclick=e=>{if(e.target&&e.target.classList&&e.target.classList.contains('wbtn'))return;tog();};
   const mc=_gridGetById(minId);if(mc)mc.onclick=e=>{e.stopPropagation();tog();};
-  const x=_gridGetById(closeId);if(x)x.onclick=e=>{e.stopPropagation();c[key].closed=true;fixedChromeApply();persist();};
-  const l=_gridGetById(linkId);if(l)l.onclick=()=>{c[key].closed=false;c[key].min=false;fixedChromeApply();persist();};   /* 77th (his words): the link restores FULL-size — only the title or the − minimizes */
+  const x=_gridGetById(closeId);if(x)x.onclick=e=>{e.stopPropagation();const c=fixedChromeState();c[key].closed=true;fixedChromeApply();persist();};
+  const l=_gridGetById(linkId);if(l)l.onclick=()=>{const c=fixedChromeState();c[key].closed=false;c[key].min=false;fixedChromeApply();persist();};   /* 77th (his words): the link restores FULL-size — only the title or the − minimizes */
  };
  wire('trWinHead','trMinChip','trCloseChip','tr','transportLink');
  wire('navWinHead','navMinChip','navCloseChip','nav','navLink');
+ wire('engWinHead','engMinChip','engCloseChip','eng','engLink');
+ wire('gcWinHead','gcMinChip','gcCloseChip','gc','gcLink');
+ /* 78th R3: FOUR stacked windows make height staleness VISIBLE (content grows after the
+    position pass — the track chips draw post-boot and the middle windows overlapped).
+    A ResizeObserver re-runs the pass; it only writes tops/padding, so no feedback loop. */
+ try{
+  const _ro=new ResizeObserver(()=>{try{fixedChromeApply();}catch(e){}});
+  for(const id of ['transportWin','navWin','engWin','gcWin']){const w=_gridGetById(id);if(w)_ro.observe(w);}
+ }catch(e){}
+ /* 78th R3 (his words): THE ENGINES WINDOW carries every Engine Window Button — the
+    rail's win: entries move up here (the rail keeps the transform icons) */
+ const eb=_gridGetById('engBody');
+ if(eb&&!eb.children.length){
+  const NAMES={modPanel:'Modulation',melPanel:'Melisma',ragaPanel:'Scales',wanPanel:'Wanderer',
+   tripsPanel:'Trips',orbPanel:'Orbits',prismPanel:'Prism',cadPanel:'Cadences'};
+  for(const r of RAIL_DEFS){
+   if(!r.win)continue;
+   const b=document.createElement('span');
+   b.className='part';b.style.cssText='padding:3px 10px;font-size:11.5px;cursor:pointer;';
+   b.textContent=r.icon+' '+(NAMES[r.win]||r.win);
+   b.title=r.tip;
+   b.setAttribute('data-eng',r.win);
+   b.onclick=()=>{uiDispatch({type:'toggle',id:r.win});};
+   eb.appendChild(b);
+  }
+ }
+ /* THE GRID CONTROLS WINDOW (his words: "The 'Grid:' and following grid controls ...
+    their own window") — the Grid: row MOVES in (handlers ride, the zoomStrip precedent),
+    plus Song / Sections / Time signature (his follow-up; Song re-surfaces from the 4.4
+    retirement BY his newer direction, recorded in the spec) */
+ const gb=_gridGetById('gcBody'),gcr=_gridGetById('gridCtlRow');
+ if(gb&&gcr&&!gb.contains(gcr)&&!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gcPerGrid))gb.appendChild(gcr);
+ if(gb&&!_gridGetById('gcExtraRow')){
+  const ex=document.createElement('div');
+  ex.id='gcExtraRow';ex.className='parts';ex.style.cssText='margin:0;align-items:center;';
+  ex.innerHTML='<label class="part" style="gap:5px;" title="Show the Sections lane on the grids"><input type="checkbox" id="gcSecChk" style="accent-color:var(--accent);"> Sections</label>'
+   +'<label class="part" style="gap:5px;" title="Show the Time-signature lane on the grids"><input type="checkbox" id="gcTsigChk" style="accent-color:var(--accent);"> Time signature</label>';
+  gb.appendChild(ex);
+  const sc=ex.querySelector('#gcSecChk');sc.checked=!!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showSecLane);
+  sc.onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
+  const tc=ex.querySelector('#gcTsigChk');tc.checked=!!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showTsig);
+  tc.onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
+  const sctl=_gridGetById('songCtl');
+  if(sctl){gb.insertBefore(sctl,gb.firstChild);sctl.style.display='';}
+ }
  fixedChromeApply();
  window.addEventListener('resize',()=>{try{fixedChromeApply();}catch(e){}});
 }
@@ -23916,9 +24047,12 @@ window.addEventListener('scroll',()=>{if(_sfPend)return;_sfPend=true;requestAnim
 function navSyncFromFocus(){
  /* the Navigator + Transport readouts follow the SELECTED grid (his follow-up law) */
  try{
-  const nb=_gridGetById('navBody');if(!nb)return;
+  const nb=_gridGetById('navBody'),gb=_gridGetById('gcBody');if(!nb&&!gb)return;
   const run=()=>{
-   const q=id=>{const el=document.getElementById(id);return (el&&nb.contains(el))?el:null;};
+   /* 78th R3: the Grid: row moved into the GRID CONTROLS window — the readouts follow
+      the controls wherever they sit (navBody, gcBody, or back in the strip per-grid) */
+   const q=id=>{const el=document.getElementById(id);
+    return (el&&((nb&&nb.contains(el))||(gb&&gb.contains(el))||(el.closest&&el.closest('[id="zoomStrip"]'))))?el:null;};
    const b=q('barsInp');if(b)b.value=String(Math.round(LOOP/4));
    const tr=q('chkTrip');if(tr)tr.checked=!!gridTriplets;
    const sw=q('chkSwing');if(sw)sw.checked=!!swingOn;
@@ -24020,6 +24154,68 @@ function colOrderNorm(list){
  for(const m of COL_MEMBERS)if(!seen[m])out.push(m);
  return out;
 }
+function colNodeOf(id){
+ /* column member id -> its node name in the ONE graph */
+ if(id==='gridRowWrap')return 'grid:main';
+ const m=/^gridRowWrap_(g\d+)$/.exec(id);if(m)return 'grid:'+m[1];
+ if(id==='chordPanel')return 'win:chordPalette';   /* the palette's historical node name */
+ return 'win:'+id;
+}
+function colMemberOfNode(n){
+ if(n==='grid:main')return 'gridRowWrap';
+ if(/^grid:g\d+$/.test(n))return 'gridRowWrap_'+n.slice(5);
+ if(n==='win:chordPalette')return 'chordPanel';
+ if(n.slice(0,4)==='win:')return n.slice(4);
+ return null;
+}
+function linkedColGroup(memberId){
+ /* 78th R3 (his words): "Grabbing a window which is linked to another window and moving
+    it should automatically move all linked windows together." ⚠ Read structurally, NOT
+    from the raw graph: the spawn-link law writes win↔focused-grid edges for EVERY opened
+    window, so the raw component would glue the whole board to Grid 1. The drag group is
+    the SHIPPED-pair ties — an engine stack (rig + shelf + window) and the Grid 1 +
+    Chord Palette pair [that reading is recorded in the spec]. Current DOM order. */
+ const members=colMembersNow();
+ const ids=new Set([memberId]);
+ if(typeof GRID_WORLDS==='object')for(const gid in GRID_WORLDS){
+  if(gid==='main')continue;
+  const w=GRID_WORLDS[gid];if(!w||!w.pairFor)continue;
+  const rig='gridRowWrap_'+gid;
+  if(ids.has(rig)||ids.has(w.pairFor)){ids.add(rig);ids.add(w.pairFor);}
+ }
+ if(ids.has('gridRowWrap')||ids.has('chordPanel')){ids.add('gridRowWrap');ids.add('chordPanel');}
+ return members.filter(id=>ids.has(id));
+}
+function pairGlueAll(){
+ /* 78th R3: an engine STACK rides any reorder whole — shelf window then pair window glued
+    directly after their rig (the palGlueAll idiom) */
+ if(typeof GRID_WORLDS!=='object')return;
+ for(const gid in GRID_WORLDS){
+  if(gid==='main')continue;
+  const w=GRID_WORLDS[gid];
+  if(!w||!w.els||!w.els.root||!w.els.root.isConnected||!w.els.pairWin||!w.els.pairWin.isConnected)continue;
+  let anchor=w.els.root;
+  if(w.els.essWin&&w.els.essWin.isConnected){anchor.parentNode.insertBefore(w.els.essWin,anchor.nextSibling);anchor=w.els.essWin;}
+  anchor.parentNode.insertBefore(w.els.pairWin,anchor.nextSibling);
+ }
+}
+function gridGroupCommit(winId){
+ /* 78th R3 (his words): the ▲ "will paste what this window group does into the selected
+    chord or playhead in the multi-track grid" — each engine's own primary apply verb,
+    forced under MAIN's world (Grid 1). */
+ const go=()=>{
+  if(winId==='modPanel')return applyModulation();
+  if(winId==='melPanel')return melismaRunGo(0);
+  if(winId==='cadPanel')return cadApplySel();
+  if(winId==='ragaPanel'){
+   if(ragaState.sel)return ragaApply(ragaState.sel);
+   ragaStatus('Pick a scale first — ▲ applies the selected scale to the active section of Grid 1.');
+   return;
+  }
+  if(typeof flashHint==='function')flashHint('This window group has no commit verb yet — recorded for its round.');
+ };
+ return withGridWorld('main',go);
+}
 function colMembersNow(){
  return [...document.body.children].map(el=>el.id).filter(id=>colMemberOk(id));
 }
@@ -24036,6 +24232,7 @@ function applyColOrder(){
   if(el&&el.parentNode===document.body)document.body.insertBefore(el,anchor);
  }
  if(typeof palGlueAll==='function')palGlueAll();   /* 75th r3: instance palettes ride their grids through any reorder */
+ if(typeof pairGlueAll==='function')pairGlueAll();   /* 78th R3: engine stacks ride whole */
 }
 function colGripAdd(head,memberId){
  if(!head||head.querySelector('.colGrip'))return;
@@ -24044,35 +24241,54 @@ function colGripAdd(head,memberId){
  g.title='Drag ↕ to move this window up or down the column — the stack reorders around where you drop it.';
  g.onmousedown=e=>{
   e.preventDefault();e.stopPropagation();
+  /* 78th R3 (his words): a linked window drags its WHOLE group; the app auto-scrolls as
+     the cursor gestures past the edges; every landing slot is marked, the live one gold */
+  const group=(typeof linkedColGroup==='function')?linkedColGroup(memberId):[memberId];
   let line=document.getElementById('colDropLine');
   if(!line){line=document.createElement('div');line.id='colDropLine';document.body.appendChild(line);}
-  let at=null;
+  let marks=document.getElementById('colSlotMarks');
+  if(!marks){marks=document.createElement('div');marks.id='colSlotMarks';document.body.appendChild(marks);}
+  let at=null,lastY=e.clientY,rafOn=true;
   const vis=()=>colMembersNow().map(id=>document.getElementById(id))
-   .filter(el=>el&&el.id!==memberId&&el.getClientRects().length>0);
-  const mm=ev=>{
-   const els=vis();let idx=els.length,y=null;
+   .filter(el=>el&&!group.includes(el.id)&&el.getClientRects().length>0);
+  const paint=()=>{
+   const els=vis();let idx=els.length,y=null;const ys=[];
+   for(const el of els)ys.push(el.getBoundingClientRect().top+(window.scrollY||0));
+   if(els.length)ys.push(els[els.length-1].getBoundingClientRect().bottom+(window.scrollY||0));
    for(let i=0;i<els.length;i++){
     const r=els[i].getBoundingClientRect();
-    if(ev.clientY<r.top+r.height/2){idx=i;y=r.top+(window.scrollY||0);break;}
+    if(lastY<r.top+r.height/2){idx=i;y=r.top+(window.scrollY||0);break;}
    }
-   if(y==null&&els.length){const r=els[els.length-1].getBoundingClientRect();y=r.bottom+(window.scrollY||0);}
+   if(y==null&&els.length)y=ys[ys.length-1];
    at={idx,before:idx<els.length?els[idx].id:null};
    line.style.display='block';line.style.top=Math.round((y||0)-2)+'px';
+   marks.style.display='block';
+   if(marks.children.length!==ys.length)marks.innerHTML=ys.map(()=>'<div class="colSlotMark"></div>').join('');
+   [...marks.children].forEach((d,i)=>{d.style.top=Math.round(ys[i]-1)+'px';});
   };
-  const done=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('keydown',esc,true);line.style.display='none';};
+  const tick=()=>{
+   if(!rafOn)return;
+   const chromeTop=(parseFloat(document.body.style.paddingTop)||0),zone=56;
+   if(lastY<chromeTop+zone)window.scrollBy(0,-Math.min(28,Math.ceil((chromeTop+zone-lastY)/2)));
+   else if(lastY>window.innerHeight-zone)window.scrollBy(0,Math.min(28,Math.ceil((lastY-(window.innerHeight-zone))/2)));
+   paint();
+   requestAnimationFrame(tick);
+  };
+  const mm=ev=>{lastY=ev.clientY;paint();};
+  const done=()=>{rafOn=false;document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('keydown',esc,true);line.style.display='none';marks.style.display='none';};
   const esc=ev=>{if(ev.key==='Escape'){at=null;done();}};
   const mu=()=>{
    done();
    if(!at)return;
-   const cur=colMembersNow().filter(id=>id!==memberId);
+   const cur=colMembersNow().filter(id=>!group.includes(id));
    const idx=at.before?cur.indexOf(at.before):cur.length;
-   cur.splice(idx<0?cur.length:idx,0,memberId);
+   cur.splice(idx<0?cur.length:idx,0,...group);   /* the GROUP lands as one block, his law */
    uiState.colOrder=cur;
    try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
    applyColOrder();
   };
   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);document.addEventListener('keydown',esc,true);
-  mm(e);
+  paint();requestAnimationFrame(tick);
  };
  head.insertBefore(g,head.firstChild);
 }
@@ -24828,6 +25044,7 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setOvLane" ${SETTINGS.showOverview!==false?'checked':''}> <b>Song Overview lane</b> — the whole arrangement in miniature with a viewport outline (drag ←→ scroll · ↕ zoom · double-click = whole song)</label></p>
  <p><label><input type="checkbox" id="setScrubLane" ${SETTINGS.showScrub!==false?'checked':''}> <b>Scrub area</b> — the strip under the ruler (click: play from that bar · hold: repeat it · drag: scrub)</label></p>
  <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
+ <p><label><input type="checkbox" id="setGcPerGrid" ${SETTINGS.gcPerGrid===true?'checked':''}> Grid Controls ride each grid</label> <span class="dim">— create the Grid Controls with the Multi-Track Grids instead of the fixed window at the top (default: fixed at the top).</span></p>
  <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
  <p><label><input type="checkbox" id="setKeysLane" ${SETTINGS.showKeysLane===true?'checked':''}> <b>Keys lane</b> — the key-region strip above the grid (off by default since the grids slimmed)</label>
@@ -24870,6 +25087,7 @@ function openSettings(){
  if(g('setOvLane'))g('setOvLane').onchange=e=>{SETTINGS.showOverview=!!e.target.checked;persistSettings();drawOverview();};
  if(g('setScrubLane'))g('setScrubLane').onchange=e=>{SETTINGS.showScrub=!!e.target.checked;persistSettings();refresh(false);drawTrackSel();};
  if(g('setSecLane'))g('setSecLane').onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
+ if(g('setGcPerGrid'))g('setGcPerGrid').onchange=e=>{SETTINGS.gcPerGrid=!!e.target.checked;persistSettings();if(typeof gcPerGridApply==='function')gcPerGridApply();};   /* 78th R3: his fixed-vs-per-grid option */
  if(g('setTsigLane'))g('setTsigLane').onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
  if(g('setPRoll'))g('setPRoll').onchange=e=>{SETTINGS.showPianoRoll=!!e.target.checked;persistSettings();refresh(false);};
  if(g('setKeysLane'))g('setKeysLane').onchange=e=>{SETTINGS.showKeysLane=!!e.target.checked;persistSettings();refresh(false);};
