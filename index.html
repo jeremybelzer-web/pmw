@@ -191,6 +191,16 @@
      WINDOW dress — the #cadPanel margin idiom, a lifted shadow, and the real .winHead/.wbtn header —
      while staying inside #gridWrap so the [77]/[78] alignment survives a pan/zoom. */
   #chordPanel{margin:14px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}
+  /* MODULAR_WINDOWS_SPEC Phase 1 (73rd): the palette is the FIRST free-standing modular
+     window — it lives in #winLayer (z-band 90, below every menu at 95+), draggable by its
+     title bar, natively resizable. .palLock = lane-top ON: x and width belong to the grid,
+     the pair scrolls as one. */
+  #winLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:90;}
+  #chordPanel.palFloat{position:absolute;margin:0;resize:both;overflow:auto;min-width:300px;max-height:80vh;box-shadow:0 10px 34px rgba(0,0,0,.55);}
+  #chordPanel.palFloat.palLock{resize:none;overflow-x:auto;}
+  #chordPanel.palFloat.winSel{outline:2px solid var(--accent);outline-offset:1px;}
+  #chordPanel.palFloat #palWinHead{cursor:grab;}
+  #chordPanel.palFloat #palWinHead:active{cursor:grabbing;}
   #palWinHead .picon{font-size:12px;}
   .cplink{font-size:10.5px;color:var(--dim);cursor:pointer;text-decoration:underline dotted;margin-left:6px;user-select:none;}
   .cplink:hover{color:var(--text);}
@@ -532,7 +542,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25h</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -825,7 +835,7 @@
          Chord Palette window. Its "−" (upper right) zooms it back to the ⇒ Snap icon in the 76px
          gutter at the grid's left; the icon's click brings it back. State rides cp_pal.snapHide. -->
     <div id="snapDock">
-      <div class="thead" style="display:flex;align-items:flex-start;padding-top:4px;"><span class="cpchip" id="snapIcon" style="display:none;" title="Snap to chord tones — click to bring the Snap window back">⇒ Snap</span></div>
+      <div class="thead" style="display:flex;align-items:flex-start;padding-top:4px;flex-direction:column;gap:4px;"><span class="cpchip" id="snapIcon" style="display:none;" title="Snap to chord tones — click to bring the Snap window back">⇒ Snap</span><span class="cpchip" id="palIcon" style="display:none;" title="Bring the Chord Palette window back — it reopens linked to this grid">🎹 Palette</span></div>
       <div id="snapPanel">
         <span id="snapHideBtn" title="Hide the Snap window — it zooms back to the ⇒ Snap icon at the grid&#8217;s left">−</span>
         <!-- 19y (client request): Scale menu + Conform/extension toggles. The extension checkboxes
@@ -872,10 +882,10 @@
            while another window is open, so it keeps its dock identity and never steals the open slot.
            Position/minimize ride cp_pal.win; the dock never leaves #gridWrap, so [77]/[78] lane-top
            alignment survives in BOTH positions by construction. -->
-      <div class="winHead" id="palWinHead">
+      <div class="winHead" id="palWinHead" title="The Chord Palette — a free-standing window. Drag this bar to move it; it stays linked to its grid (the colored border arrives with groups).">
         <span class="picon">🎹</span><span class="wtitle">Chord Palette</span>
-        <span class="wbtn" id="palPosChip" title="Move the Chord Palette window to the other side of the multi-track grid">▲ Above the grid</span>
         <span class="wbtn" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
+        <span class="wbtn" id="palCloseChip" title="Delete the Chord Palette window (Delete does it too while it&#8217;s selected) — the 🎹 icon at the grid&#8217;s left brings it back. A modified palette offers to save a template first.">✕</span>
       </div>
       <div id="cpHead">
         <span class="cp-title" style="margin:0;display:none;">Chord palette · <span id="cpKey" style="color:var(--text);"></span></span><!-- 20b: dock title + key readout hidden (client request); #cpKey kept in DOM for the updater -->
@@ -8984,11 +8994,52 @@ function applyPanelChord(i,ch){
  refresh(true);
 }
 /* ---- dock state (persisted per browser) ---- */
+/* ==== THE CONNECTION GRAPH (MODULAR_WINDOWS_SPEC Phase 1) ==== ONE graph, ONE source of
+   truth: the Phase 1/2 window↔grid pairings are entries here, Phase 3 draws them as group
+   borders, Phase 4 as patch cables. Node addressing: 'grid:main' = Grid 1 (later
+   'grid:<id>'), 'win:<id>' = a window ('win:chordPalette' is the palette — the first
+   MODULAR window; deliberately NOT a WINDOW_DEFS entry, that registry is the old model's).
+   THE SPAWN-LINK LAW (client, Aug 25, verbatim in the spec's Decisions made): a window
+   links, at creation, to whichever grid is SELECTED at that moment — Grid 1 by default,
+   being the only grid at boot. Pure helpers — unit-tested; fresh arrays, never mutation. */
+function linkKey(a,b){return a<b?a+'|'+b:b+'|'+a;}
+function linkNorm(list){
+ const out=[],seen={};
+ for(const l of (Array.isArray(list)?list:[])){
+  if(!l||typeof l!=='object'||typeof l.a!=='string'||typeof l.b!=='string'||!l.a||!l.b||l.a===l.b)continue;
+  const k=linkKey(l.a,l.b);
+  if(seen[k])continue;seen[k]=1;
+  out.push({a:l.a,b:l.b,auto:!!l.auto});
+ }
+ return out;
+}
+function linkHas(list,a,b){const k=linkKey(a,b);return (Array.isArray(list)?list:[]).some(l=>l&&linkKey(l.a,l.b)===k);}
+function linkAdd(list,a,b,auto){
+ const base=linkNorm(list);
+ if(typeof a!=='string'||typeof b!=='string'||!a||!b||a===b||linkHas(base,a,b))return base;
+ return base.concat([{a,b,auto:!!auto}]);
+}
+function linkRemove(list,a,b){const k=linkKey(a,b);return linkNorm(list).filter(l=>linkKey(l.a,l.b)!==k);}
+function linkedTo(list,node){
+ const out=[];
+ for(const l of linkNorm(list)){if(l.a===node)out.push(l.b);else if(l.b===node)out.push(l.a);}
+ return out;
+}
+function focusedGridNode(){
+ /* the SELECTED grid a spawning window links to. One linkable grid exists today (the
+    Modulation window's embedded surface retires in Phase 2), so this resolves to Grid 1 —
+    Phase 2 extends it when 'grid:<id>' instances arrive. */
+ return 'grid:main';
+}
 function palWinNorm(o){
- /* [M23c] (71st): the palette window's persisted shape — {pos:'below'|'above', min:bool}. Junk in →
-    the default out (the shipped below-the-grid, full). Pure; the cp_pal loader consumes it. */
+ /* [M23c] (71st) → Phase 1 (73rd): the palette window's persisted shape. The docked
+    {pos:'below'|'above'} model is RETIRED — the palette is a FREE-STANDING modular window
+    now: {x,y,w: numbers or null (null = the default spot below the grid), min, closed}.
+    An old saved {pos,min} normalizes cleanly (min kept, position falls to the default).
+    Junk in → the default out. Pure; the cp_pal loader consumes it. */
  const p=o&&typeof o==='object'?o:{};
- return {pos:p.pos==='above'?'above':'below',min:!!p.min};
+ const num=v=>(typeof v==='number'&&isFinite(v))?v:null;
+ return {x:num(p.x),y:num(p.y),w:num(p.w),min:!!p.min,closed:!!p.closed};
 }
 const palState=(()=>{try{const o=JSON.parse(localStorage.getItem('cp_pal')||'{}');
  return {dims:!!o.dims,jimi:!!o.jimi,hm:!!o.hm,mmAll:!!o.mmAll,followSel:!!o.followSel,laneTop:!!o.laneTop,
@@ -9306,11 +9357,11 @@ function drawChordPanel(){
  const fl=document.getElementById('cpFollowSel');if(fl)fl.classList.toggle('on',!!palState.followSel);
  const lb=document.getElementById('cpLaneTopBox');if(lb)lb.checked=!!palState.laneTop;
  const ll=document.getElementById('cpLaneTop');if(ll)ll.classList.toggle('on',!!palState.laneTop);
- /* [77]/[78] "Match always": lane-as-top-row adopts the grid's pixel geometry, so the dock must SPAN the scroll
-    content (it shares #gridWrap's horizontal scroll) — 76 thead + GUT + LOOP*PPB + 13 right chrome. Cleared with
-    the toggle off: the 20n dock fits the viewport exactly as before. */
- const laneWide=!!(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length);
- document.getElementById('chordPanel').style.minWidth=laneWide?(76+GUT+LOOP*PPB+13)+'px':'';
+ /* [77]/[78] "Match always" after the Phase 1 extraction: the free-standing window x-locks
+    to the grid and the pair scroll-syncs (palWinApply), so the panel no longer spans the
+    content by minWidth — the lane-mode grids inside supply the scrollWidth instead */
+ document.getElementById('chordPanel').style.minWidth='';
+ try{palWinApply();}catch(e){}   /* every draw refreshes the lock geometry (zoom, toggle, resize) */
  document.getElementById('cpKey').textContent=PCN[t]+' '+cs.name;
  /* 20n [61]–[64]: the song's matrix, then the relative matrices (default one, a third away), each under its own
     name + drop-down; a [+] under the bottom one adds another. The fixed "Parallel" grid is gone. */
@@ -9353,18 +9404,105 @@ function applyTogglesToSelection(){
   noteEngine('extension-toggle-snap');
  }
 }
-/* [M23c]/[M23d] (71st): the palette window's position/minimize + the Snap dock's hide/restore.
-   The REAL #chordPanel node moves — above #zoomStrip or back before #parts — always inside
-   #gridWrap, so the [77]/[78] alignment machinery holds in both positions by construction. */
+/* MODULAR_WINDOWS_SPEC Phase 1 (73rd): THE CHORD PALETTE IS A FREE-STANDING MODULAR WINDOW.
+   The REAL #chordPanel node moves OUT of #gridWrap into #winLayer (the floating-window
+   layer, z-band 90) — draggable by its title bar, resizable, closable (✕ / Delete), the
+   🎹 gutter icon brings it back. The grid↔palette pairing is a CONNECTION-GRAPH entry
+   (uiState.links), never a hard-coded reference. [77]/[78] "Match always" survives the
+   extraction as a behavior of the LINKED pair: with the lane-top toggle ON the window
+   x-locks to the grid's content origin, matches its width, and the two scroll as one
+   (two-way scrollLeft sync). The [M23c] docked ▲/▼ model is RETIRED — free drag replaced it. */
+let palWinSel=false,palWinRzT=null;
 function palWinApply(){
  const cp=document.getElementById('chordPanel'),gw=document.getElementById('gridWrap');
  if(!cp||!gw)return;
+ let wl=document.getElementById('winLayer');
+ if(!wl){wl=document.createElement('div');wl.id='winLayer';document.body.appendChild(wl);}
+ if(cp.parentNode!==wl)wl.appendChild(cp);
+ cp.classList.add('palFloat');
  const w=palState.win=palWinNorm(palState.win);
- const anchor=w.pos==='above'?document.getElementById('zoomStrip'):document.getElementById('parts');
- if(anchor&&anchor.parentNode===gw&&cp.nextElementSibling!==anchor)gw.insertBefore(cp,anchor);
  cp.classList.toggle('winCollapsed',!!w.min);
- const pc=document.getElementById('palPosChip');if(pc)pc.textContent=w.pos==='above'?'▼ Below the grid':'▲ Above the grid';
+ cp.style.display=w.closed?'none':'';
+ const ic=document.getElementById('palIcon');if(ic)ic.style.display=w.closed?'':'none';
  const mc=document.getElementById('palMinChip');if(mc)mc.textContent=w.min?'+':'−';
+ /* THE ANCHORED DEFAULT (the no-regressions rule): until the user drags it, the free
+    window sits exactly in its old slot and a spacer RESERVES that space in the page —
+    the boot looks byte-identical to the docked era and nothing underneath is covered
+    (a floating default over the modulation lane ate verify-p4's drop, which is how this
+    rule was earned). The first drag collapses the spacer and true free-window life begins. */
+ const anchored=!w.closed&&w.x==null&&w.y==null;
+ let spc=document.getElementById('palSpacer');
+ if(anchored){
+  if(!spc){spc=document.createElement('div');spc.id='palSpacer';
+   const parts=document.getElementById('parts');
+   if(parts&&parts.parentNode===gw)gw.insertBefore(spc,parts);else gw.appendChild(spc);}
+  spc.style.display='';
+ }else if(spc)spc.style.display='none';
+ if(w.closed)return;
+ const lock=!!(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length);
+ cp.classList.toggle('palLock',lock);
+ /* geometry — measured, not assumed: the LOCKED x aligns the panel's BORDER BOX with
+    #gridWrap's content origin, exactly where the docked panel used to sit (measured: an
+    inset-subtracted first cut was off by exactly 13px, the inset), which is what makes
+    the lane-branch column math land on the lane's own pixels */
+ let gwX=40,gwY=300,gwW=800;
+ try{const gr=gw.getBoundingClientRect(),gs=getComputedStyle(gw);
+  gwX=gr.left+(window.scrollX||0)+(gw.clientLeft||0)+(parseFloat(gs.paddingLeft)||0);
+  gwY=gr.bottom+(window.scrollY||0)+10;gwW=gw.clientWidth;}catch(e){}
+ let x,y,wid=null;
+ if(anchored&&spc){
+  const sr=spc.getBoundingClientRect();
+  x=sr.left+(window.scrollX||0);y=sr.top+(window.scrollY||0)+14;   /* the old margin:14px 0 */
+  wid=spc.offsetWidth||null;
+ }else{
+  x=w.x==null?gwX:w.x;y=w.y==null?gwY:w.y;wid=w.w;
+ }
+ if(lock)x=gwX;
+ cp.style.left=Math.max(0,Math.round(x))+'px';
+ cp.style.top=Math.max(0,Math.round(y))+'px';
+ if(lock)cp.style.width=gwW+'px';
+ else if(wid)cp.style.width=wid+'px';
+ else cp.style.width='';
+ if(anchored&&spc){
+  /* the spacer wears the window's real height (+ the old vertical margins) so the page
+     below stands where it always did; it follows every resize through this same path */
+  const h=cp.offsetHeight;
+  if(h)spc.style.height=(h+28)+'px';
+ }
+ if(lock)cp.scrollLeft=gw.scrollLeft;   /* arrive already in sync */
+}
+function palWinModified(){
+ /* "changes to the default Chord Palette" — any matrix chosen by hand, or any palette
+    setting flipped from its shipped default */
+ return (Array.isArray(palState.mats)&&palState.mats.some(m=>m!=null))
+  ||!!palState.dims||!!palState.jimi||!!palState.hm||!!palState.mmAll||!!palState.laneTop||!!palState.followSel;
+}
+function palWinClose(){
+ /* the spec's deletion law: a MODIFIED palette offers a Chord Palette Template first; an
+    untouched one deletes silently. (Template LOADING is the 3.3 GEMS save-as round —
+    the saved shapes wait for it in cp_pal.templates.) */
+ if(palWinModified()&&confirm('You’ve modified this Chord Palette. Save it as a Chord Palette Template before deleting?')){
+  const name=prompt('Template name:','My Chord Palette');
+  if(name===null)return;   /* cancel = keep the window */
+  if(name)palState.templates=(Array.isArray(palState.templates)?palState.templates:[])
+   .concat([{name:String(name).slice(0,60),ts:Date.now(),
+     mats:JSON.parse(JSON.stringify(Array.isArray(palState.mats)?palState.mats:[null])),
+     dims:!!palState.dims,jimi:!!palState.jimi,hm:!!palState.hm,
+     laneTop:!!palState.laneTop,followSel:!!palState.followSel}]);
+ }
+ const w=palState.win=palWinNorm(palState.win);
+ w.closed=true;palWinSel=false;persistPal();
+ /* the graph mirrors reality: a deleted window's links go with it */
+ for(const n of linkedTo(uiState.links,'win:chordPalette'))uiState.links=linkRemove(uiState.links,'win:chordPalette',n);
+ try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ palWinApply();
+}
+function palWinReopen(){
+ const w=palState.win=palWinNorm(palState.win);
+ w.closed=false;persistPal();
+ uiState.links=linkAdd(uiState.links,'win:chordPalette',focusedGridNode(),true);   /* the SPAWN-LINK LAW */
+ try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ palWinApply();drawChordPanel();
 }
 function snapDockApply(anim){
  const p=document.getElementById('snapPanel'),ic=document.getElementById('snapIcon');
@@ -9374,8 +9512,73 @@ function snapDockApply(anim){
  else if(anim&&!hid){ic.style.display='none';p.style.display='';requestAnimationFrame(()=>p.classList.remove('snapZoom'));}
  else{p.style.display=hid?'none':'';p.classList.toggle('snapZoom',hid);ic.style.display=hid?'':'none';}
 }
-document.getElementById('palPosChip').onclick=()=>{palState.win=palWinNorm(palState.win);palState.win.pos=palState.win.pos==='above'?'below':'above';persistPal();palWinApply();};
 document.getElementById('palMinChip').onclick=()=>{palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();};
+document.getElementById('palCloseChip').onclick=e=>{e.stopPropagation();palWinClose();};
+document.getElementById('palIcon').onclick=()=>palWinReopen();
+/* Phase 1: drag the window by its title bar (a locked window — lane-top ON — keeps its x
+   glued to the grid and drags in y only) */
+document.getElementById('palWinHead').addEventListener('mousedown',e=>{
+ if(e.target.closest&&e.target.closest('.wbtn'))return;
+ e.preventDefault();
+ const cp=document.getElementById('chordPanel');if(!cp)return;
+ palWinSel=true;cp.classList.add('winSel');
+ const w=palState.win=palWinNorm(palState.win);
+ const r=cp.getBoundingClientRect();
+ const x0=e.clientX,y0=e.clientY,left0=r.left+(window.scrollX||0),top0=r.top+(window.scrollY||0);
+ const lock=cp.classList.contains('palLock');
+ let moved=false;
+ const mm=ev=>{
+  if(!moved&&Math.abs(ev.clientX-x0)+Math.abs(ev.clientY-y0)<3)return;
+  moved=true;
+  if(!lock)cp.style.left=Math.max(0,left0+(ev.clientX-x0))+'px';
+  cp.style.top=Math.max(0,top0+(ev.clientY-y0))+'px';
+ };
+ const mu=()=>{
+  document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);
+  if(moved){
+   const r2=cp.getBoundingClientRect();
+   if(!lock)w.x=Math.round(r2.left+(window.scrollX||0));
+   w.y=Math.round(r2.top+(window.scrollY||0));
+   persistPal();
+  }
+ };
+ document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+});
+/* selection: click the window = selected (Delete deletes it); click anywhere else clears */
+document.addEventListener('mousedown',e=>{
+ const cp=document.getElementById('chordPanel');if(!cp)return;
+ const inside=e.target&&e.target.closest&&e.target.closest('#chordPanel');
+ if(inside){palWinSel=true;cp.classList.add('winSel');}
+ else if(palWinSel){palWinSel=false;cp.classList.remove('winSel');}
+},true);
+document.addEventListener('keydown',e=>{
+ if(!palWinSel||(e.key!=='Delete'&&e.key!=='Backspace'))return;
+ const t=e.target;
+ if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+ e.preventDefault();e.stopPropagation();
+ palWinClose();
+},true);
+/* the LINKED pair scrolls as one while lane-top is on — two-way, guarded */
+(function(){
+ const gw=document.getElementById('gridWrap'),cp=document.getElementById('chordPanel');
+ if(!gw||!cp)return;
+ let syncing=false;
+ gw.addEventListener('scroll',()=>{if(syncing||!cp.classList.contains('palLock'))return;syncing=true;cp.scrollLeft=gw.scrollLeft;syncing=false;});
+ cp.addEventListener('scroll',()=>{if(syncing||!cp.classList.contains('palLock'))return;syncing=true;gw.scrollLeft=cp.scrollLeft;syncing=false;});
+})();
+/* a native corner resize persists (free mode only — a locked width belongs to the grid) */
+try{new ResizeObserver(()=>{
+ const cp=document.getElementById('chordPanel');
+ if(!cp)return;
+ /* an anchored window's spacer follows its height, so the page below never jumps */
+ const spc=document.getElementById('palSpacer');
+ if(spc&&spc.style.display!=='none'){const h=cp.offsetHeight;if(h)spc.style.height=(h+28)+'px';}
+ if(cp.classList.contains('palLock'))return;
+ const w=palState.win;if(!w||w.closed)return;
+ const ow=cp.offsetWidth;
+ if(ow&&Math.abs((w.w||0)-ow)>2){w.w=ow;clearTimeout(palWinRzT);palWinRzT=setTimeout(persistPal,300);}
+}).observe(document.getElementById('chordPanel'))}catch(e){}
+window.addEventListener('resize',()=>{try{palWinApply();}catch(e){}});
 document.getElementById('snapHideBtn').onclick=()=>{palState.snapHide=true;persistPal();snapDockApply(true);};
 document.getElementById('snapIcon').onclick=()=>{palState.snapHide=false;persistPal();snapDockApply(true);};
 try{palWinApply();snapDockApply(false);}catch(e){}   /* landmine ⑪'s general defence: a saved state must never take the boot down */
@@ -22946,7 +23149,7 @@ const RAIL_DEFS=[
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
    unchanged, it simply starts as the open one. A saved state (incl. an explicit close)
    always wins over the default. */
-function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false,trips:null};}
+function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false,trips:null,links:[]};}   /* Phase 1: links = THE CONNECTION GRAPH */
 function parseUiState(str,defs){
  const def=uiDefault(),ids=(defs||WINDOW_DEFS).map(d=>d.id);
  try{
@@ -22959,6 +23162,7 @@ function parseUiState(str,defs){
    if(o.heights&&typeof o.heights==='object')
     for(const k of ids)if(typeof o.heights[k]==='number')def.heights[k]=Math.max(120,Math.min(1000,o.heights[k]));
    if(o.iconsHidden===true)def.iconsHidden=true;
+   if(Array.isArray(o.links))def.links=linkNorm(o.links);   /* Phase 1: the graph persists in cp_ui */
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
    if(o.trips==='min'||o.trips==='full')def.trips=o.trips;
    if(def.open==='tripsPanel'){def.open=null;if(!def.trips)def.trips='full';}
@@ -22969,7 +23173,8 @@ function uiReduce(state,action,defs){
  const ids=(defs||WINDOW_DEFS).map(d=>d.id);
  const s={open:state.open,collapsed:Object.assign({},state.collapsed),
   heights:Object.assign({},state.heights),iconsHidden:state.iconsHidden,
-  trips:state.trips===undefined?null:state.trips};
+  trips:state.trips===undefined?null:state.trips,
+  links:Array.isArray(state.links)?state.links.slice():[]};   /* Phase 1: the graph rides every reduce */
  if(!action||typeof action!=='object')return s;
  /* WINDOW-SHELL · RAW [69][72][75]: Trips is the one-window-law EXCEPTION — a companion
     that opens BETWEEN the top window and the one below. Toggle never steals `open`. */
@@ -22999,8 +23204,18 @@ function uiReduce(state,action,defs){
  return s;}
 let uiState=uiDefault();
 try{uiState=parseUiState(localStorage.getItem('cp_ui'));}catch(e){}
+/* Phase 1: the DEFAULT PAIRING — the palette arrives linked to Grid 1 ("a default starting
+   state created for the user instead of by hand"). Seeded only when the palette has no
+   entry at all, so a future unlink verb is not resurrected at every boot. */
+try{if(!linkedTo(uiState.links,'win:chordPalette').length&&!(palState&&palState.win&&palState.win.closed))
+ uiState.links=linkAdd(uiState.links,'win:chordPalette',focusedGridNode(),true);}catch(e){}
 function uiDispatch(action){
+ const prevOpen=uiState.open;
  uiState=uiReduce(uiState,action);
+ /* Phase 1 · THE SPAWN-LINK LAW: a window opening links to the SELECTED grid (his answer,
+    Aug 25 — universal across the windows/engines; Grid 1 is the only grid at boot) */
+ if(uiState.open&&uiState.open!==prevOpen)
+  uiState.links=linkAdd(uiState.links,'win:'+uiState.open,focusedGridNode(),true);
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  /* docking: opening a docked window from its chip pulls it OFF the edge first */
  if(typeof dockedWins==='object'&&dockedWins&&uiState.open){
