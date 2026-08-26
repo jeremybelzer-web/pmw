@@ -39,6 +39,11 @@
   .nboxMicro{display:flex;flex-direction:row;align-items:center;gap:4px;}
   .nboxMicro .tctl{order:-1;margin-top:0;padding-left:2px;gap:3px;}
   .nboxMicro .texp{font-size:9px;}
+  .nboxMicro .tvol{display:none;}   /* 77th: the micro row is exactly his list — [on][S][R][▸ name]; the vol drag lives on in classic boxes, expanded heads and the Mixer (full-width it covered every click — elementFromPoint said .tvol) */
+  .nboxMicro .tdel{display:none;}   /* the ✕ yields its pixels in micro — the ctrl+click menu still deletes; classic keeps the chip */
+  .nboxMicro .tonoff{order:-1;}   /* his list: the yellow on-box FIRST, then S and R, left of the name */
+  .nboxMicro .tname{flex:0 1 auto;min-width:22px;}   /* sized to its text — the row's TAIL stays bare box background, so click-to-select and drag-to-reorder keep their surface */
+  .nboxMicro>div:first-child{display:flex;align-items:center;gap:1px;min-width:34px;flex:1 1 auto;}
   .tonbox{width:10px;height:10px;border-radius:2px;background:#555a68;cursor:pointer;flex:0 0 auto;border:1px solid var(--line);}
   .tonbox.on{background:#e8d24a;}
   .nboxWRz{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:ew-resize;}
@@ -99,7 +104,7 @@
   #shtWin .shtRow:hover{background:#262a36;}
   #shtWin .shtBtns{display:flex;gap:8px;margin-top:9px;}
   #shtWin .shtBtns button{padding:5px 12px;font-size:12px;}
-  .tname{font-size:11px;font-weight:700;color:var(--dim);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:4px;padding:0 3px;transition:color .12s;}
+  .tname{font-size:11px;font-weight:700;color:var(--dim);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:clip;border-radius:4px;padding:0 3px;transition:color .12s;}   /* 77th (his words): no '…' — the name runs until the box border */
   .tname.on{color:var(--accent);}
   .tname.editing{outline:1px solid var(--accent);background:#0d0f14;color:var(--text);cursor:text;}
   .tctl{display:flex;gap:5px;margin-top:2px;padding-left:3px;align-items:center;}
@@ -161,6 +166,7 @@
      track and rides along as it is resized — the row stretches with the grid, and the
      header centers inside it */
   #gridHead{display:flex;flex-direction:column;justify-content:center;}
+  #gridHead.nboxMicro{flex-direction:row;align-items:center;gap:4px;}   /* 77th fix ⑤ */
   #chordHead{display:flex;align-items:center;}
   #recBtn.on{background:#e5484d;color:#fff;}
   #laneRows{display:flex;flex-direction:column;gap:3px;margin-top:3px;padding-left:76px;}
@@ -538,7 +544,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26k</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5925,7 +5931,8 @@ function validViewH(o){
   &&o.hidden.every(x=>typeof x==='string'&&x.length<=24)))return false;
  return true;}
 let stripH={};   /* per-track strip/grid-view heights in px (#12c: rides project file + autosave; reset on loadSong) */
-let theadW=null;   /* 76th R3: the name-box column width (null = the 76px default); per-world slot, rides viewH */
+let theadW=null;   /* 76th R3: the name-box column width (null = the default); per-world slot, rides viewH */
+function theadWNow(){return (typeof theadW==='number'&&theadW)?theadW:((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.classicHeads)?76:110);}   /* 77th: 'a bit more of the track names visible as a standard' — the micro standard widens the default column; every hardcoded 76 reads THIS */
 const TRACK_MICRO_H=18;   /* 76th R3, his words: tracks minimize SMALLER — S/R/the on-box sit LEFT of the name */
 function stripHeightOf(t){
  /* July 30 fix 2 (the box floor), AMENDED at the 76th by his direction: a height the
@@ -5934,7 +5941,9 @@ function stripHeightOf(t){
     nothing changes until the user drags below the box on purpose. */
  const h=stripH[t]!=null?stripH[t]:STRIP_DEF;
  const box=(typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H;
- if(h<TRACK_MICRO_H)return box;
+ /* 77th (his words): the MICRO row IS the default standard — sub-18 values (STRIP_DEF
+    included) read as MICRO; the classic Settings toggle restores the old box floor */
+ if(h<TRACK_MICRO_H)return (typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.classicHeads)?box:TRACK_MICRO_H;
  return h;
 }
 function chordLaneH(){
@@ -9299,7 +9308,7 @@ function buildPaletteGrid(el,scale,tonic){
     sibOff=(gw.clientLeft||0)+(parseFloat(gs.paddingLeft)||0)+Math.round(gw.getBoundingClientRect().left-cpEl.getBoundingClientRect().left);}}catch(e){}
   el.style.gridTemplateColumns=(GUT-2)+'px '+gs.map(g=>(chrome+g/sum*freePx).toFixed(2)+'px').join(' ');
   el.style.gap='3px 2px';                 /* the lane's own 2px column gap; rows keep the palette's 3px */
-  el.style.marginLeft=(76-inset+sibOff)+'px';
+  el.style.marginLeft=(theadWNow()-inset+sibOff)+'px';
   el.classList.add('lanepx');
   const row=(label,pick,cls)=>{
    const lab=document.createElement('div');lab.className='cpl'+(cls?' '+cls:'');lab.textContent=label;el.appendChild(lab);
@@ -12182,7 +12191,7 @@ function drawTsigLane(){
    bespoke canvas. Chrome: no z-index. Own listeners: selections never touched. */
 function ovWrapMetrics(){
  const w=document.getElementById('gridWrap');
- return w?{sl:w.scrollLeft,vw:w.clientWidth,total:GUT+14+76+LOOP*PPB}:{sl:0,vw:800,total:LOOP*PPB};
+ return w?{sl:w.scrollLeft,vw:w.clientWidth,total:GUT+14+theadWNow()+LOOP*PPB}:{sl:0,vw:800,total:LOOP*PPB};
 }
 function ovViewportRect(sl,vw,total,W){
  /* pure: wrap scroll state → outline x/w in overview px. Unit-tested. */
@@ -13785,7 +13794,7 @@ function wheelZoomPPB(ppb,dy){
   PPB=wheelZoomPPB(PPB,e.deltaY);
   refresh(false);
   if(typeof followProg!=='undefined'){followProg=true;requestAnimationFrame(()=>{followProg=false;});}   /* fix 5: a zoom re-anchor is not a manual pan */
-  w.scrollLeft=Math.max(0,GUT+14+76+beat*PPB-(e.clientX-r.left));
+  w.scrollLeft=Math.max(0,GUT+14+theadWNow()+beat*PPB-(e.clientX-r.left));
  },{passive:false,capture:true});
 })();
 /* the scrollbar rides the visible right corner — re-place it when the timeline pans */
@@ -20355,7 +20364,7 @@ window.addEventListener('keydown',e=>{
    const vw=w?Math.max(120,w.clientWidth-GUT-14-76):800;
    PPB=Math.max(14,Math.min(240,vw/(selBox.b1-selBox.b0)));
    refresh(false);
-   if(w)w.scrollLeft=Math.max(0,GUT+14+76+selBox.b0*PPB-8);
+   if(w)w.scrollLeft=Math.max(0,GUT+14+theadWNow()+selBox.b0*PPB-8);
   }
  }
  else if(!mod&&!e.altKey&&!e.shiftKey&&(e.key==='x'||e.key==='X')){
@@ -20616,7 +20625,7 @@ function startInlineRename(el,t){
   else if(e.key==='Escape'){done(false);}
  };
 }
-function trackHead(t,inLane){
+function trackHead(t,inLane,microOv){
  /* 2.1b-e LANE LAW v3: the COLORED NAME BOX (oriented left) — the
     track's whole control surface. inLane adds the lane-only chrome: name-box resize
     lines (Q3), ▸ expand + corner big/small toggle, drag-to-re-order (Q2 second grip),
@@ -20627,7 +20636,7 @@ function trackHead(t,inLane){
  h.style.borderLeft='3px solid '+col;
  /* 76th R3 (his words): below the box height the head goes MICRO — one slim row with
     the on-box, S and R to the LEFT of the name */
- const _micro=inLane&&stripHeightOf(t)<((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H)-2;
+ const _micro=(microOv!==undefined)?!!microOv:(inLane&&stripHeightOf(t)<((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H)-2);
  if(_micro)h.classList.add('nboxMicro');
  const top=document.createElement('div');
  top.style.cssText='display:flex;align-items:center;gap:1px;min-width:0;';
@@ -20663,13 +20672,9 @@ function trackHead(t,inLane){
  top.appendChild(nm);
  h.appendChild(top);
  const ctl=document.createElement('div');ctl.className='tctl';
- if(_micro){
-  const ob=document.createElement('span');
-  ob.className='tonbox'+(trackOn(t)?' on':'');
-  ob.title='On/off — yellow = you can hear it (the same law as clicking the name)';
-  ob.onclick=e=>{e.stopPropagation();mutes[t]=!mutes[t];drawTrackSel();if(mixerOpen)drawMixer();};
-  ctl.appendChild(ob);
- }
+ /* 77th: the head ALREADY carries the yellow on/off box (.tonoff) — micro just ORDERS
+    it first ([on][S][R], his list); a duplicate tonbox was built here for one build and
+    starved the name of its pixels */
  const so=document.createElement('span');
  so.className='tsolo'+((mixer[t]&&mixer[t].solo)?' on':'');
  so.textContent='S';
@@ -21055,7 +21060,7 @@ function buildGroupStrip(strip,g){
 }
 function drawTrackSel(){
  /* top row: just the add-track / re-render chips now — the tracks themselves are strips */
- try{const _rt=document.getElementById('gridRowWrap');if(_rt)_rt.style.setProperty('--theadW',((typeof theadW==='number'&&theadW)?theadW:76)+'px');}catch(e){}   /* 76th R3: the world's name-box column width */
+ try{const _rt=document.getElementById('gridRowWrap');if(_rt)_rt.style.setProperty('--theadW',theadWNow()+'px');}catch(e){}   /* 76th R3/77th: the world's name-box column width (micro standard default 96) */
  if(armedTrack&&armedTrack!=='drums'&&!(armedTrack in project.tracks))armedTrack=null;
  const el=document.getElementById('trackSel');el.innerHTML='';
  const add=document.createElement('div');add.className='part';
@@ -21080,7 +21085,9 @@ function drawTrackSel(){
  /* the grid's own header: the active track, name + S + ● like everyone else */
  const gh=document.getElementById('gridHead');
  if(gh){
-  gh.innerHTML='';const th=trackHead(activeTrack);while(th.firstChild)gh.appendChild(th.firstChild);
+  const _ghMicro=(typeof mainIsStrip==='function'&&mainIsStrip()&&GRID_VIEWS.main.px<((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H)-2);   /* 77th fix ⑤ */
+  gh.innerHTML='';const th=trackHead(activeTrack,false,_ghMicro);while(th.firstChild)gh.appendChild(th.firstChild);
+  gh.classList.toggle('nboxMicro',_ghMicro);
   /* v3: the active track's header wears its colored name box too */
   gh.style.background=hexA(trackColorOf(activeTrack),.24);
   gh.style.borderLeft='3px solid '+trackColorOf(activeTrack);
@@ -21855,7 +21862,7 @@ document.addEventListener('mousemove',ev=>{
   /* July 24 r2: all lanes are equal — the main Grid minimizes right down to a clip lane
      (July 30 fix 2: …but never below its own name box, like every other lane) */
   const m=GRID_VIEWS.main;
-  const px=Math.max(nboxNaturalH(),Math.min(1200,rz.h0+d));
+  const px=Math.max(TRACK_MICRO_H,Math.min(1200,rz.h0+d));   /* 77th fix ⑤: the expanded lane reaches MICRO too */
   if(px!==m.px){m.userPx=true;setViewPx(m,px);
    /* 76th (his "appears only on release" fix): the rAF callback fires OUTSIDE the routed
       gesture — capture the gesture's world and redraw INSIDE it, or an instance resize
@@ -21912,10 +21919,10 @@ function toggleTrackBig(t){
  const h=stripHeightOf(t);
  if(trackIsBig(t)){
   trackBigH[t]=h;
-  stripH[t]=Math.min(bnd,Math.max(nboxNaturalH(),Math.round(trackSmallH[t]||STRIP_DEF)));
+  stripH[t]=Math.min(bnd,Math.max((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.classicHeads)?nboxNaturalH():TRACK_MICRO_H,Math.round(trackSmallH[t]||STRIP_DEF)));   /* 77th: the ▸ collapse lands at the standard's own floor */
  }else{
   trackSmallH[t]=h;
-  const big=trackExpandHeight(trackBigH[t],h,bnd,GRIDVIEW_MAX);   /* Aug 25: drums expand like every track */
+  const big=trackExpandHeight(trackBigH[t],Math.max(h,nboxNaturalH()),bnd,GRIDVIEW_MAX);   /* Aug 25: drums expand like every track; 77th: the expand target stays ≈6× the BOX even from a MICRO row — the micro standard slims the minimized look, not the working size */
   stripH[t]=big;
   if(big>bnd)setViewPx(stripGridViewFor(t),big);
  }
@@ -21985,7 +21992,7 @@ function addTrackGrips(row,id){
   const g=document.createElement('div');g.className='tgrip';
   g.title=(id==='__grid'?'The Grid block is draggable':'This track is draggable')
    +' — drag ↕ to re-order the lanes. The Grid can sit above or below any track.';
-  g.style.left=side==='L'?'-13px':(76+GUT+LOOP*PPB+4)+'px';
+  g.style.left=side==='L'?'-13px':(theadWNow()+GUT+LOOP*PPB+4)+'px';
   g.onmousedown=e=>{
    if(e.button!==0)return;
    e.preventDefault();e.stopPropagation();
@@ -22022,7 +22029,7 @@ document.addEventListener('mousemove',ev=>{
  const r0=rows[0].el.getBoundingClientRect();
  d.style.display='block';
  d.style.left=(r0.left-13)+'px';
- d.style.width=(76+GUT+LOOP*PPB+28)+'px';
+ d.style.width=(theadWNow()+GUT+LOOP*PPB+28)+'px';
  d.style.top=(y-2)+'px';
 });
 document.addEventListener('mouseup',()=>{
@@ -22552,7 +22559,8 @@ function parseSettings(str){
      cp_settings, never the project file; the workspace-vs-device line for 1.7 R0) */
   showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,
   /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
-  countIn:0,latencyPref:'interactive',sinkId:''};
+  countIn:0,latencyPref:'interactive',sinkId:'',
+  classicHeads:false};   /* 77th (his words): the MICRO name box is the default standard; classic two-row boxes are the Settings opt-in */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -22563,6 +22571,7 @@ function parseSettings(str){
    if(o.clipAlign==='bars')def.clipAlign='bars';   /* July 24 r2: clip boundaries default to the chord lane */
    if(o.clipDrop==='merge'||o.clipDrop==='replace')def.clipDrop=o.clipDrop;   /* default: ask each time */
    if(o.clipChordNames===false)def.clipChordNames=false;   /* July 26b: chord names in every clip, default ON */
+   if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -23636,9 +23645,9 @@ function fixedChromeApply(){
  const tl=_gridGetById('transportLink');if(tl)tl.style.display=c.tr.closed?'':'none';
  const nl=_gridGetById('navLink');if(nl)nl.style.display=c.nav.closed?'':'none';
  const trH=c.tr.closed?0:tw.offsetHeight;
- nw.style.top=trH+'px';
+ nw.style.top=(trH+(c.tr.closed?26:0))+'px';   /* 77th fix: a restored Navigator must never cover the 'Show transport' link band */
  const navH=c.nav.closed?0:nw.offsetHeight;
- const chromeH=Math.max(trH+navH,(c.tr.closed||c.nav.closed)?26:0);
+ const chromeH=Math.max(trH+(c.tr.closed?26:0)+navH,(c.tr.closed||c.nav.closed)?26:0);
  document.body.style.paddingTop=chromeH+'px';
  document.documentElement.style.scrollPaddingTop=(chromeH+8)+'px';   /* scrollIntoView never lands under the fixed bars */
  const rail=_gridGetById('rail');
@@ -23667,7 +23676,7 @@ function fixedChromeInit(){
   if(head)head.onclick=e=>{if(e.target&&e.target.classList&&e.target.classList.contains('wbtn'))return;tog();};
   const mc=_gridGetById(minId);if(mc)mc.onclick=e=>{e.stopPropagation();tog();};
   const x=_gridGetById(closeId);if(x)x.onclick=e=>{e.stopPropagation();c[key].closed=true;fixedChromeApply();persist();};
-  const l=_gridGetById(linkId);if(l)l.onclick=()=>{c[key].closed=false;fixedChromeApply();persist();};
+  const l=_gridGetById(linkId);if(l)l.onclick=()=>{c[key].closed=false;c[key].min=false;fixedChromeApply();persist();};   /* 77th (his words): the link restores FULL-size — only the title or the − minimizes */
  };
  wire('trWinHead','trMinChip','trCloseChip','tr','transportLink');
  wire('navWinHead','navMinChip','navCloseChip','nav','navLink');
@@ -24550,6 +24559,7 @@ function settingsHTML(){
  <p><b>Chord numerals</b> — how harmonic functions are written (chord lane, palettes):<br>
  <label><input type="radio" name="setNum" value="roman" ${SETTINGS.numerals!=='numbers'?'checked':''}> Roman numerals — I · ii7 · ♭VII</label>
  <label style="margin-left:14px;"><input type="radio" name="setNum" value="numbers" ${SETTINGS.numerals==='numbers'?'checked':''}> Numbers — 1 · 2m7 · ♭7</label></p>
+ <p><label><input type="checkbox" id="setClassicHeads" ${SETTINGS.classicHeads?'checked':''}> <b>Classic track boxes</b> — the two-row name boxes (default: the slim micro row with on/S/R beside the name)</label></p>
  <p><b>Chord lane labels</b> — the big text on each chord block:<br>
  <label><input type="radio" name="setLane" value="function" ${SETTINGS.laneLabel!=='name'?'checked':''}> Function big (V7), chord name small</label>
  <label style="margin-left:14px;"><input type="radio" name="setLane" value="name" ${SETTINGS.laneLabel==='name'?'checked':''}> Chord name big (G7), function small</label></p>
@@ -24609,6 +24619,9 @@ function openSettings(){
  const box=document.getElementById('infoBox'),g=id=>document.getElementById(id);
  box.querySelectorAll('input[name=setNum]').forEach(r=>r.onchange=()=>{SETTINGS.numerals=r.value;persistSettings();drawChordLane();drawChordPanel();});
  box.querySelectorAll('input[name=setLane]').forEach(r=>r.onchange=()=>{SETTINGS.laneLabel=r.value;persistSettings();drawChordLane();});
+ if(g('setClassicHeads'))g('setClassicHeads').onchange=e=>{SETTINGS.classicHeads=!!e.target.checked;persistSettings();
+  const _rd=()=>{drawTrackSel();refresh(false);};_rd();
+  if(typeof GRID_WORLDS==='object')for(const _gid in GRID_WORLDS)if(_gid!=='main'&&GRID_WORLDS[_gid])try{withGridWorld(_gid,_rd);}catch(err){}};   /* 77th: the standard flips live, every grid */
  if(g('setAuto'))g('setAuto').onchange=e=>{SETTINGS.autosave=e.target.checked;persistSettings();};
  if(g('setRecOver'))g('setRecOver').onchange=e=>{SETTINGS.recordOver=e.target.checked;persistSettings();};
  if(g('setClipAlign'))g('setClipAlign').onchange=e=>{SETTINGS.clipAlign=e.target.value==='bars'?'bars':'chords';persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
