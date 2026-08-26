@@ -514,7 +514,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26f</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26g</span></div>
 
   <div class="controls">
     <!-- 75th r3 (the spec's second creation route): the File menu at the top -->
@@ -5961,10 +5961,14 @@ function gridW(){return GUT+LOOP*PPB;}
 const svg=document.getElementById('grid');
 function sizeSvg(){
  /* July 24 r2/r3: in lane form the main svg holds no lattice; when the bar lane has
-    docked to a lane row above (main.top=0), the svg holds no bar lane either */
+    docked to a lane row above (main.top=0), the svg holds no bar lane either.
+    76th: the CURRENT world's svg — the bare global is Grid 1's, and an instance resize
+    was silently sizing Grid 1's svg with the instance's px (his "appears only on
+    release" report; the world's own svg never moved). */
  const strip=typeof mainIsStrip==='function'&&mainIsStrip();
- svg.setAttribute('width',gridW());
- svg.setAttribute('height',viewTop(GRID_VIEWS.main)+(strip?0:GRID_VIEWS.main.px));
+ const _sv=(typeof curSvg==='function')?curSvg():svg;
+ _sv.setAttribute('width',gridW());
+ _sv.setAttribute('height',viewTop(GRID_VIEWS.main)+(strip?0:GRID_VIEWS.main.px));
 }
 /* the one bar-lane renderer (July 24 r3): used by the main grid when it starts a run of
    grids, and by the docked lane rows everywhere else. Same gestures in every home. */
@@ -6797,7 +6801,10 @@ function drawChordLane(){
   const ph=document.createElement('div');
   ph.className='cbEmpty';
   ph.textContent='Drop a chord from the Chord Palette here to start the progression';
-  ph.style.cssText='flex:1;min-height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);border:1px dashed var(--line);border-radius:6px;pointer-events:none;';
+  /* 76th (his words): the empty lane LOOKS LIKE A BLANK EXPANDED GRID — the beat/bar
+     lattice drawn as layered gradients at the live PPB, not a bare dashed box */
+  ph.style.cssText='flex:1;min-height:40px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:4px;pointer-events:none;'
+   +'background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px '+(PPB*4)+'px),repeating-linear-gradient(90deg,rgba(122,129,148,.22) 0 1px,transparent 1px '+PPB+'px);';
   lane.appendChild(ph);
  }
  let t=0;
@@ -6857,7 +6864,8 @@ function drawChordLane(){
   const tail=document.createElement('div');
   tail.className='cbEmpty cbTail';
   tail.textContent='+';
-  tail.style.cssText='flex:'+(LOOP-t)+' 1 0%;min-height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--dim);border:1px dashed var(--line);border-radius:6px;pointer-events:none;';
+  tail.style.cssText='flex:'+(LOOP-t)+' 1 0%;min-height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--dim);border:1px dashed var(--line);border-radius:4px;pointer-events:none;'
+   +'background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px '+(PPB*4)+'px),repeating-linear-gradient(90deg,rgba(122,129,148,.22) 0 1px,transparent 1px '+PPB+'px);';
   tail.title='';
   lane.appendChild(tail);
  }
@@ -21724,7 +21732,7 @@ function positionMainRz(){
  if(!mrT||!mr)return;
  if(paperView){mrT.style.display='none';mr.style.display='none';return;}
  mrT.style.display='';mr.style.display='';
- const svgH=+svg.getAttribute('height')||0;
+ const svgH=+((typeof curSvg==='function'?curSvg():svg).getAttribute('height'))||0;   /* 76th: the WORLD's own svg — the bare global is Grid 1's */
  const stripEl=document.getElementById('mainStrip');
  const contentBottom=svgH+(stripEl?stripEl.offsetHeight:0);
  /* top line sits at the lattice's top edge — just under the bar lane when main owns it.
@@ -21745,7 +21753,13 @@ document.addEventListener('mousemove',ev=>{
   const m=GRID_VIEWS.main;
   const px=Math.max(nboxNaturalH(),Math.min(1200,rz.h0+d));
   if(px!==m.px){m.userPx=true;setViewPx(m,px);
-   if(!rz.raf){rz.raf=true;requestAnimationFrame(()=>{if(rz)rz.raf=false;if(!paperView){drawTrackSel();drawGrid();drawMainStrip();positionMainRz();}});}}
+   /* 76th (his "appears only on release" fix): the rAF callback fires OUTSIDE the routed
+      gesture — capture the gesture's world and redraw INSIDE it, or an instance resize
+      repaints Grid 1 and shows nothing until some later redraw */
+   if(!rz.raf){rz.raf=true;const _g=(typeof CUR_GRID==='string')?CUR_GRID:'main';
+    requestAnimationFrame(()=>{if(rz)rz.raf=false;
+     const run=()=>{if(!paperView){drawTrackSel();drawGrid();drawMainStrip();positionMainRz();}};
+     (_g!=='main'&&typeof GRID_WORLDS==='object'&&GRID_WORLDS[_g])?withGridWorld(_g,run):run();});}}
   return;
  }
  /* 2.1b-e LANE LAW v3 (client Q1): tracks NEVER collapse — July 30 fix 2: the resize
@@ -21765,7 +21779,9 @@ document.addEventListener('mousemove',ev=>{
  if(h!==stripHeightOf(rz.t)){
   stripH[rz.t]=h;
   if(h>Math.max(chordH,boxH))setViewPx(stripGridViewFor(rz.t),h);
-  if(!rz.raf){rz.raf=true;requestAnimationFrame(()=>{if(rz)rz.raf=false;drawTrackSel();});}
+  if(!rz.raf){rz.raf=true;const _g=(typeof CUR_GRID==='string')?CUR_GRID:'main';
+   requestAnimationFrame(()=>{if(rz)rz.raf=false;
+    (_g!=='main'&&typeof GRID_WORLDS==='object'&&GRID_WORLDS[_g])?withGridWorld(_g,()=>drawTrackSel()):drawTrackSel();});}
  }
 });
 document.addEventListener('mouseup',()=>{
@@ -22998,7 +23014,7 @@ function gridMainEls(){
  }
  return GRID_WORLDS.main.els;
 }
-function curSvg(){const w=GRID_WORLDS[CUR_GRID];return (CUR_GRID!=='main'&&w&&w.els&&w.els.svg)?w.els.svg:svg;}
+function curSvg(){try{const w=GRID_WORLDS[CUR_GRID];return (CUR_GRID!=='main'&&w&&w.els&&w.els.svg)?w.els.svg:svg;}catch(e){return svg;}}   /* 76th: TDZ-safe — boot-time callers (sizeSvg via the first draws) run BEFORE the world declarations; the 75th's palWinApply lesson, same class */
 let GRID_IDSET=null;   /* the composite's id vocabulary, measured from Grid 1 at first spawn */
 function gridIdsetBuild(){
  const me=gridMainEls();if(!me||!me.root)return null;
@@ -23132,6 +23148,8 @@ function gridWireClone(w){
   sv.addEventListener('contextmenu',e=>{if(typeof gridCtxMenu==='function')gridCtxMenu(e);});
   sv.addEventListener('wheel',gridWheel,{passive:false});
  }
+ const _mr=q('mainRz');if(_mr)_mr.onmousedown=e=>startStripRz(e,'__main','bottom');   /* 76th: the clone's own resize handles — cloneNode dropped them and the instance's expanded lane could not resize at all */
+ const _mrT=q('mainRzT');if(_mrT)_mrT.onmousedown=e=>startStripRz(e,'__main','top');
  const cl=q('chordlane');
  if(cl){
   cl.addEventListener('mousedown',e=>{
