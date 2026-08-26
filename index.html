@@ -514,7 +514,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26b</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -911,6 +911,12 @@
 
   <div class="gridwrap" id="modPanel" style="margin-top:12px;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">The Modulation Engine · psych-outs &amp; Mimic Modulations</div>
+    <!-- PHASE 2 · SONG LOADING (spec: "when a song is selected in the Modulation Window,
+         that song loads into the linked Grid 2") -->
+    <div id="modSongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above. Every track other than Drums, the Polyphonic Instrument and Melody arrives muted and hidden — unhide and unmute them any time.">Load a song into the audition grid</label>
+      <select id="modSongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
+    </div>
     <!-- PHASE 2 R1 (his go, MODULAR_WINDOWS_SPEC): the embedded multi-track grid is DELETED —
          "Delete the embedded multi-track grid inside the Modulation Window. All of it. I've
          changed my mind about that approach — do not try to salvage or refactor it, remove it
@@ -5060,7 +5066,7 @@ async function makeAudio(){
   },
   /* a note carrying a slide object ([7]={sc,semis}): pitch follows the curve */
   slide(track,n,time,vel){
-   if(!trackOn(track))return;
+   if(!trackOnPlay(track))return;
    vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain(track));
    if(vel<=0)return;
    const sl=n[7],dur=Math.max(.05,beatsToSec(n[1]));
@@ -5090,7 +5096,7 @@ async function makeAudio(){
   },
   /* every timeline event lands here: hub clip first, built-in instrument as fallback */
   note(track,midis,dur,time,vel){
-   if(!trackOn(track))return;                   /* mixer: activator + solo gate */
+   if(!trackOnPlay(track))return;               /* mixer: activator + solo gate (owner-aware since the 75th) */
    vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain(track));
    if(vel<=0)return;                            /* fader at −Inf */
    const arr=Array.isArray(midis)?midis:[midis];
@@ -5104,7 +5110,7 @@ async function makeAudio(){
   /* Module 4: macro-note playback — plays the linked clip's anchor segment as audio.
      Vertical drags repitch the segment when the clip has a root (rate = 2^(Δ/12)). */
   segment(track,n,time){
-   if(!trackOn(track))return;
+   if(!trackOnPlay(track))return;
    const mxAmp=schedTrackGain(track);if(mxAmp<=0)return;
    midiMirror(track,[n[2]],beatsToSec(n[1]),time,.85*mxAmp);
    const L=audioLinks[track];if(!L)return;
@@ -5160,7 +5166,7 @@ async function makeAudio(){
    }
   },
   drum(piece,time,vel){
-   if(!trackOn('drums'))return;
+   if(!trackOnPlay('drums'))return;
    vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain('drums'));
    if(vel<=0)return;
    midiMirrorDrum(piece,time,vel);
@@ -5417,11 +5423,11 @@ function rebuild(){
  else for(const e of renderDrums(st))schedEv(sw(e.beat),t=>inst.drum(e.piece,t,e.vel));
  if(tr.bass)for(const n of tr.bass)schedEv(sw(n[0]),t=>playEditable('bass',n,t,.85));
  else for(const e of renderBass(ch,st))schedEv(sw(e.beat),t=>inst.bassN(e.midi,beatsToSec(e.dur),t,e.vel));
- if(tr.comping)for(const n of tr.comping)schedEv(sw(n[0]),t=>{if(!mutes.comping)playEditable('comping',n,t,.5);});
- else for(const e of renderComp(ch,st,secStarts()))schedEv(sw(e.beat),t=>{if(!mutes.comping)inst.note('comping',e.midis,beatsToSec(e.dur),t,e.vel);});
- if(tr.pad)for(const n of tr.pad)schedEv(n[0],t=>{if(!mutes.pad)playEditable('pad',n,t,.35);});
+ if(tr.comping)for(const n of tr.comping)schedEv(sw(n[0]),t=>{if(!playMutes().comping)playEditable('comping',n,t,.5);});
+ else for(const e of renderComp(ch,st,secStarts()))schedEv(sw(e.beat),t=>{if(!playMutes().comping)inst.note('comping',e.midis,beatsToSec(e.dur),t,e.vel);});
+ if(tr.pad)for(const n of tr.pad)schedEv(n[0],t=>{if(!playMutes().pad)playEditable('pad',n,t,.35);});
  else if(st.pad)for(const e of renderPad(ch))schedEv(e.beat,t=>inst.padN(e.midis,beatsToSec(e.dur),t,e.vel));
- for(const n of tr.melody)schedEv(sw(n[0]),t=>{if(!mutes.melody)playEditable('melody',n,t,.8);});
+ for(const n of tr.melody)schedEv(sw(n[0]),t=>{if(!playMutes().melody)playEditable('melody',n,t,.8);});
  for(const k of customTrackIds(tr))                     /* Phase 2.1: user-added tracks */
   for(const n of (tr[k]||[]))schedEv(sw(n[0]),t=>playEditable(k,n,t,.8));
  /* ==== 2.6 R4b · pan lanes drive the LIVE AudioParam (Q1 rule 1: the envelope is
@@ -7071,6 +7077,19 @@ function mixerCommit(orig,tag){
  persistMixer();noteEngine(tag,{});
 }
 function trackOn(track){return trackAudible(mutes,mixer,track);}
+/* PHASE 2 song loading (75th): mutes are a WORLD SLOT now. Display/toggle sites keep
+   reading the live map (they run under their world via the event router); PLAY-time
+   reads resolve the transport OWNER's map instead — a Tone callback fires under
+   whatever world the mouse happens to be in, so the live map is the wrong authority
+   the moment a second grid owns the transport. Not playing → the live map stands. */
+function playMutes(){
+ if(typeof playing!=='undefined'&&playing&&typeof transportGrid==='string'&&transportGrid!==CUR_GRID){
+  const w=(typeof GRID_WORLDS==='object')?GRID_WORLDS[transportGrid]:null;
+  if(w&&w.slots&&w.slots.mutes)return w.slots.mutes;
+ }
+ return mutes;
+}
+function trackOnPlay(track){return trackAudible(playMutes(),mixer,track);}
 function trackGain(track){return dbToLin(mixer[track]?mixer[track].db:0);}
 let panNodes={};   /* set in makeAudio: every MIX_TRACK has a real pan bus since 2.3 — the old "melody+comping share the piano voice" note here was stale (AUTOMATION-SORTED §9.11's one-line fix) */
 function applyPans(){for(const t in panNodes)if(panNodes[t]&&mixer[t])panNodes[t].pan.value=mixer[t].pan;}   /* 2.6 R4 (Q1 rule 2): this direct .value write IS the manual override — with the lane marked overridden its callbacks stop firing, so the knob rules; the assignment stopped being a ramp-killer and became the design */
@@ -9857,8 +9876,11 @@ function clearPsych(){
  psychOut={on:false,atIdx:null,n:0,tplId:null};
  if(typeof drawPsyRows==='function')drawPsyRows();
 }
-/* chords as heard: primary state, or with the psych-out burst overlaid (playback-level) */
+/* chords as heard: primary state, or with the psych-out burst overlaid (playback-level).
+   75th: the overlay applies only in the world it was ARMED in (psychOut.grid, default
+   main) — an armed feint's index means nothing against another grid's lane. */
 function effectiveChords(){
+ if(psychOut.on&&(psychOut.grid||'main')!==(typeof CUR_GRID==='string'?CUR_GRID:'main'))return project.chords;
  if(psychOut.on&&psychOut.atIdx!=null&&project.chords[psychOut.atIdx])
   return applyPsychOut(project.chords,psychOut.atIdx,psychTemplate(),
    keyFor(chordStartOf(psychOut.atIdx)).tonic);   /* 2.2b: the burst speaks its section's key */
@@ -10360,12 +10382,16 @@ function modPrevModel(){
    the inject and the audition both read it), modResolveCtx, and the press-to-hear convention
    below. The linked audition Grid 2 arrives with this phase's auto-spawn slice. */
 function modAudition(){
+ /* 75th: the preview resolves in the linked audition grid's world once a song is
+    loaded there (modVerbWorld — the spawn-link law); a blank rig reads the main lane */
+ return modVerbWorld(function(){
  const M=modPrevModel();
  if(M.err){setModStatus(M.err);return;}
  const rows=M.rows.map(m=>({d:m.d,r:m.r,iv:m.iv,ctx:m.ctx,mk:m.mk,bass:0,lbl:m.lbl}));
  const go=()=>{modAudPlay(M.tpl.id,rows,{faceCount:M.seq.length});};
  if(audioReady)go();else ensureAudio().then(go).catch(go);
  setModStatus('▶ the moment in its original context · Esc (or a click away) stops it · nothing is written.');
+ });
 }
 /* the psych-out rows (above the divider) */
 function drawPsyRows(){
@@ -10380,7 +10406,7 @@ function drawPsyRows(){
   row.innerHTML='<span class="modShape" data-tpl="'+t.id+'">'+modShapeSVG(t)+'</span>'
    +'<span class="psyName">'+t.name+'</span><span class="psyChain">'+t.bridge.map(s=>s.lbl).join(' → ')+'</span>'
    +'<span class="part psyArm" title="'+(armed?'Disarm the psych-out':'Arm at the selected chord — the burst replaces it during playback only, the chord lane stays untouched')+'">'+(armed?'⚡ Disarm':'⚡ Arm at selected chord')+'</span>';
-  row.querySelector('.psyArm').onclick=e=>{e.stopPropagation();modState.psySel=t.id;togglePsych(t.id);};
+  row.querySelector('.psyArm').onclick=e=>{e.stopPropagation();modState.psySel=t.id;modVerbWorld(()=>togglePsych(t.id));};   /* 75th: arms against the song-loaded rig's lane when one exists */
   row.onclick=()=>{modState.psySel=t.id;modState.lastPick='psy';drawPsyRows();modAudition();};   /* the press-to-hear convention */
   host.appendChild(row);
  });
@@ -10514,13 +10540,13 @@ function togglePsych(id){
  if(!psychOut.on){
   if(selChord==null){setModStatus('Select a chord — the psych-out burst replaces it during playback only.');return;}
   const tpl=psychTemplate(id||modState.psySel);
-  psychOut={on:true,atIdx:selChord,n:tpl.bridge.length,tplId:tpl.id};
+  psychOut={on:true,atIdx:selChord,n:tpl.bridge.length,tplId:tpl.id,grid:(typeof CUR_GRID==='string'?CUR_GRID:'main')};
   setModStatus('Psych-out armed: '+tpl.bridge.map(s=>s.lbl).join(' → ')+' — primary key unchanged.');
  }else psychOut={on:false,atIdx:null,n:0,tplId:null};
  drawPsyRows();
  refresh(true);
 }
-document.getElementById('modApply').onclick=e=>{applyModulation();e.target.blur();};
+document.getElementById('modApply').onclick=e=>{modVerbWorld(()=>applyModulation());e.target.blur();};   /* 75th: the inject lands in the song-loaded audition grid (blank rig → main, as before) */
 document.getElementById('modFav').onclick=e=>{
  const t=currentModTemplate();if(!t){setModStatus('Choose a template to favorite.');return;}
  const name=prompt('Name this favorite modulation:',t.name);
@@ -10530,6 +10556,21 @@ document.getElementById('modFav').onclick=e=>{
  e.target.blur();
 };
 drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
+/* PHASE 2 · SONG LOADING — the window's song selector fills from the app's own SONGS
+   and loads into the linked audition grid, under its world, through the REAL loader */
+(function(){
+ const sel=document.getElementById('modSongSel');if(!sel)return;
+ sel.add(new Option('— pick a song —',''));
+ SONGS.forEach(s=>sel.add(new Option(s.name,s.id)));
+ sel.onchange=()=>{
+  const id=sel.value;if(!id)return;
+  const w=(typeof gridAuditionSpawn==='function')?gridAuditionSpawn('modPanel'):null;
+  if(!w){setModStatus('No audition grid to load into.');return;}
+  withGridWorld(w.id,()=>gridSongLoad(id));
+  setModStatus('Loaded into the audition grid above — extra tracks arrive muted & hidden (unhide/unmute them any time).');
+  sel.blur();
+ };
+})();
 /* 24b — the preview lane's boot wiring: settings load, the two toggles, ▶ and ▤ */
 try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
  if(typeof _mw.rate==='boolean')modWinSettings.rate=_mw.rate;
@@ -20288,25 +20329,32 @@ STYLES.forEach(s=>selStyle.add(new Option(s.name,s.id)));
 buildConfDetents();   /* 3.4 Feature 1: the conformance detents render at boot */
 
 function loadSong(id){
+ /* PHASE 2 song loading: this loader also runs UNDER a grid instance's world (gridSongLoad
+    via withGridWorld). Everything project-/slot-shaped below is world-scoped by the swap;
+    the _gwMain gates cover the APP-CHROME and shared-transport side effects, which belong
+    to Grid 1 alone — an audition grid inherits the shared BPM (the spec: grids after
+    Grid 1 default to inheriting Grid 1's key and BPM; the loaded song's own key rides
+    its chords/sections, which are world data). */
+ const _gwMain=(typeof CUR_GRID!=='string'||CUR_GRID==='main');
  const s=SONGS.find(x=>x.id===id);
  project.song=s;
  LOOP=32;syncBarsInp();   /* embedded songs are 8 bars; extend with the Bars control */
  project.tonic=s.tonic;project.mode=(s.mode==='major'?'ionian':'aeolian');project.base=s.base;
  project.sections=defaultSections(project.tonic,project.mode,project.base);
- selMode.value=project.mode;
+ if(_gwMain)selMode.value=project.mode;
  project.lanes=[{id:'L1',name:'Chords',chords:s.chords.map(c=>({...c}))}];project.lane=0;  /* 3.2: embedded songs reset to one lane */
  project.tracks={melody:s.melody.filter(n=>n[0]<LOOP).map(n=>n.slice()),bass:null,comping:null,pad:null};
  project.clipMap={};   /* July 24 r2: song loads reset every lane to default (chord-aligned) clips */
  project.tempoMap=[];   /* 4.2: song loads flatten the tempo lane */
  project.markers=[];project.tsigMap=[];project.autoLanes=[];   /* 2.5: song loads reset the transport-fold structures too */
- project.trips=[];orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;   /* 4.7 R3: a song load empties the itinerary and grounds the fleet */
+ project.trips=[];if(_gwMain){orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;}   /* 4.7 R3: a song load empties the itinerary and grounds the fleet (the fleet is Grid 1's) */
  activeTrack='melody';
  project.style=STYLES.find(x=>x.id===s.style);
- selStyle.value=s.style;selChords.value='none';
- setTempo(s.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=Math.round(s.bpm);selNotes.clear();undoStack.length=0;   /* a SONG load still starts a fresh history — deliberate; only a KEEP-load rides undo (SETUP R0, client call Aug 19) */
- clearPsych();closeSectionEditor();closeVoicingEditor();
+ if(_gwMain){selStyle.value=s.style;selChords.value='none';}
+ if(_gwMain){setTempo(s.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=Math.round(s.bpm);}selNotes.clear();undoStack.length=0;   /* a SONG load still starts a fresh history — deliberate; only a KEEP-load rides undo (SETUP R0, client call Aug 19) */
+ if(_gwMain)clearPsych();closeSectionEditor();closeVoicingEditor();
  hardResetViews();   /* 2.1b: song loads reset every view height (#12c) */
- if(typeof buildSources==='function')buildSources();   /* 4.4: sources SURVIVE song loads — only the working box re-labels */
+ if(_gwMain&&typeof buildSources==='function')buildSources();   /* 4.4: sources SURVIVE song loads — only the working box re-labels */
  drawTrackSel();
  refresh(true);
 }
@@ -22898,10 +22946,14 @@ document.querySelector=function(sel){
 function gridSlotsCapture(){
  /* every singleton the grid pipeline reads — grown ONLY here and in gridSlotsApply, in
     lockstep. Deliberately NOT swapped (shared app chrome / engine state, recorded in the
-    spec's deviations): mutes+mixer (Tone callbacks read them OUTSIDE any world at play
-    time), clipboard/pasteCount (copy in one grid, paste in another — a feature),
-    uiState, the Tone transport singletons (transportGrid names the owner). */
- return {project,activeTrack,selOwner,selSurface,LOOP,PPB,stripH,trackOrder,
+    spec's deviations): mixer (volume/pan/solo — the bus split is Phase 3's), clipboard/
+    pasteCount (copy in one grid, paste in another — a feature), uiState, the Tone
+    transport singletons (transportGrid names the owner). mutes JOINED the slots at the
+    75th (song loading needs per-grid mute): UI sites read/write the live map under their
+    world; PLAY-time reads go through playMutes(), which resolves the transport OWNER's
+    map — Tone callbacks fire under whatever world the mouse is in, which is why a bare
+    swapped read was never enough. */
+ return {project,activeTrack,selOwner,selSurface,LOOP,PPB,stripH,trackOrder,mutes,
   hiddenTracks,trackBigH,trackSmallH,selHead,selHeads,chordKeyOv,
   undo:undoStack.slice(),redoStack,lastSnap:_lastSnap,redoStash:_redoStash,
   selNotes,selChordSet,selChord,
@@ -22911,7 +22963,7 @@ function gridSlotsCapture(){
 }
 function gridSlotsApply(s){
  project=s.project;activeTrack=s.activeTrack;renderTrack=null;selOwner=s.selOwner;selSurface=s.selSurface;
- LOOP=s.LOOP;PPB=s.PPB;stripH=s.stripH;trackOrder=s.trackOrder;
+ LOOP=s.LOOP;PPB=s.PPB;stripH=s.stripH;trackOrder=s.trackOrder;mutes=s.mutes;
  hiddenTracks=s.hiddenTracks;trackBigH=s.trackBigH;trackSmallH=s.trackSmallH;selHead=s.selHead;selHeads=s.selHeads;chordKeyOv=s.chordKeyOv;
  undoStack.length=0;for(const u of s.undo)undoStack.push(u);
  redoStack=s.redoStack;_lastSnap=s.lastSnap;_redoStash=s.redoStash;
@@ -22937,12 +22989,14 @@ function leaveGridWorld(){
  CUR_GRID=prev;
 }
 function withGridWorld(id,fn){enterGridWorld(id);try{return fn();}finally{leaveGridWorld();}}
-function gridWorldSlotsFresh(){
+function gridWorldSlotsFresh(opts){
  /* the spec's blank boot: "an empty copy of Grid 1 — all of the functionality, none of
     the MIDI data", 3 tracks visible (Drums · Polyphonic Instrument = comping · Melody),
     key inherited from Grid 1 (BPM is the shared transport's). bass/pad are materialized
     empty but HIDDEN — his own "unhide tracks" power covers them. All five tracks are
-    real arrays so no style renderer ever fills a blank grid with the style groove. */
+    real arrays so no style renderer ever fills a blank grid with the style groove.
+    opts.active picks the EXPANDED (editing) track — 75th fix ③: the Cadence pair boots
+    with the Polyphonic Instrument expanded. */
  const t0=project.tonic,m0=project.mode,b0=project.base,st0=project.style;
  const p={song:null,style:st0,tonic:t0,mode:m0,base:b0,lane:0,
   lanes:[{id:'L1',name:'Chords',chords:[]}],
@@ -22952,10 +23006,12 @@ function gridWorldSlotsFresh(){
  Object.defineProperty(p,'chords',{get(){const L=p.lanes[p.lane]||p.lanes[0];return L?L.chords:[];},set(v){const L=p.lanes[p.lane]||p.lanes[0];if(L)L.chords=v;},configurable:true});
  Object.defineProperty(p,'melody',{get(){return p.tracks[edTrack()];},set(v){p.tracks[edTrack()]=v;},configurable:true});
  const vw={main:makeGridView('main',NROWS0,ROWSTART0)};
- return {project:p,activeTrack:'melody',selOwner:'main',selSurface:'grid',
+ const act=(opts&&typeof opts.active==='string'&&p.tracks[opts.active]!==undefined)?opts.active:'melody';
+ return {project:p,activeTrack:act,selOwner:'main',selSurface:'grid',
   LOOP:32,PPB:34,stripH:{},trackOrder:null,
   hiddenTracks:new Set(['bass','pad']),trackBigH:{},trackSmallH:{},selHead:null,selHeads:new Set(),chordKeyOv:null,
   undo:[],redoStack:[],lastSnap:null,redoStash:null,
+  mutes:{drums:false,bass:false,comping:false,pad:false,melody:false},
   selNotes:new Set(),selChordSet:new Set(),selChord:null,
   views:vw,activeGridView:vw.main,LANE_VIEWS:[],
   armedTrack:null,stripPPB:0,stripLOOP:0,stripPaper:null,
@@ -23009,6 +23065,7 @@ function gridWorldSpawn(opts){
  const root=me.root.cloneNode(true);
  root.id='gridRowWrap_'+id;
  root.setAttribute('data-gridworld',id);
+ root.style.marginTop='12px';   /* 75th fix ①: the clone joins the column's ONE 12px gap (Grid 1's root has none — the blocks above it carry their own); sibling margins collapse, so the palette's 12px below never doubles it */
  const rail=root.querySelector('[id="rail"]');if(rail)rail.remove();   /* the icon rail is app chrome, not grid chrome */
  root.classList.remove('gridFocused');
  /* the clone carries Grid 1's RENDERED pixels — wipe the dynamic hosts so a renderer
@@ -23017,7 +23074,7 @@ function gridWorldSpawn(opts){
  for(const hid of ['modlane','tempolane','sectionlane','tsiglane','chordlane','laneRows',
   'trackStrips','trackStripsB','songOv','trackSel'])
   {const h=root.querySelector('[id="'+hid+'"]');if(h)h.innerHTML='';}
- const w={id,slots:gridWorldSlotsFresh(),els:null,min:false};
+ const w={id,slots:gridWorldSlotsFresh(opts),els:null,min:false};
  w.els={root,wrap:root.querySelector('[id="gridWrap"]'),svg:root.querySelector('[id="grid"]')};
  /* window chrome: retitle, per-instance minimize, a real ✕, the ⠿ column grip */
  const head=root.querySelector('[id="gridWinHead"]');
@@ -23061,11 +23118,45 @@ function gridAuditionSpawn(winId){
  for(const other of linkedTo(uiState.links,'win:'+winId))
   if(/^grid:g\d+$/.test(other)&&GRID_WORLDS[other.slice(5)])return GRID_WORLDS[other.slice(5)];
  const panel=_gridGetById(winId);
- const w=gridWorldSpawn({before:panel});
+ /* 75th fix ③, his words verbatim in the spec's Decisions made: the Cadence pair boots
+    with the Polyphonic Instrument track EXPANDED (drums + melody ride as strips) */
+ const w=gridWorldSpawn({before:panel,active:winId==='cadPanel'?'comping':null});
  if(!w)return null;
  uiState.links=linkAdd(uiState.links,'win:'+winId,'grid:'+w.id,true);
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  return w;
+}
+/* ==== PHASE 2 · SONG LOADING (spec: "when a song is selected in the Modulation Window,
+   that song loads into the linked Grid 2") ==== */
+function auditionExtraTracks(ids){
+ /* the spec's slim rig, pure: every track other than Drums / the Polyphonic Instrument
+    (comping) / Melody arrives muted+hidden — the user can unhide and unmute them */
+ return (ids||[]).filter(t=>t!=='drums'&&t!=='comping'&&t!=='melody');
+}
+function gridSongLoad(id){
+ /* runs UNDER the target world (withGridWorld) — the REAL loader does the work, so a
+    grid instance loads exactly what Grid 1 would ("one component, many instances").
+    loadSong itself gates its app-chrome side effects on the main world. */
+ loadSong(id);
+ if(typeof CUR_GRID==='string'&&CUR_GRID!=='main'){
+  for(const t of auditionExtraTracks(Object.keys(project.tracks))){mutes[t]=true;hiddenTracks.add(t);}
+  drawTrackSel();refresh(false);
+ }
+}
+function modLinkedGrid(){
+ if(typeof uiState!=='object'||!uiState)return null;
+ for(const other of linkedTo(uiState.links,'win:modPanel'))
+  if(/^grid:g\d+$/.test(other)&&GRID_WORLDS[other.slice(5)])return other.slice(5);
+ return null;
+}
+function modVerbWorld(fn){
+ /* the spawn-link law ("apply/inject writes into the window's linked grid"): once the
+    linked audition grid HOLDS A SONG (chords), the Modulation window's preview/verbs
+    resolve THERE. A blank rig falls back to the main lane — the R2-era behavior, kept
+    so the moment browser stays auditionable before a song is loaded. */
+ const gid=modLinkedGrid();
+ if(gid&&withGridWorld(gid,()=>project.chords.length>0))return withGridWorld(gid,fn);
+ return fn();
 }
 /* the event router: enter the world a gesture belongs to BEFORE its handlers run
    (document capture fires first), leave after the dispatch (a document bubble listener
