@@ -198,6 +198,8 @@
   #chordPanel{margin-top:12px;}
   #chordPanel.palLock{overflow-x:auto;}
   #chordPanel.winSel{outline:2px solid var(--accent);outline-offset:1px;}
+  .cpSearchBtn{font-size:9px;letter-spacing:.6px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--dim);cursor:pointer;padding:2px 2px;align-self:stretch;writing-mode:horizontal-tb;}
+  .cpSearchBtn:hover{color:var(--text);border-color:#4a5060;}
   #palWinHead .picon{font-size:12px;}
   .cplink{font-size:10.5px;color:var(--dim);cursor:pointer;text-decoration:underline dotted;margin-left:6px;user-select:none;}
   .cplink:hover{color:var(--text);}
@@ -539,7 +541,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25j</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -858,18 +860,6 @@
          window, four categories — Classical incl. Elided (≥2 voices) · Modulating ·
          Psych-out · Curated most-prominent. The banner is the client definition,
          verbatim. Managed by WINDOW_DEFS like every window (one-window law). -->
-    <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
-      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">𝄂 Cadences — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</div>
-      <div id="cadEndsRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>
-      <div id="cadTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
-      <div id="cadSongsRow" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
-      <div id="cadCards" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
-      <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
-        <label id="cadElideLab" style="font-size:11.5px;color:var(--dim);display:flex;gap:6px;align-items:center;cursor:pointer;" title="Elided placement: the arrival chord lands ON the phrase boundary and STARTS the next phrase — the ending of one melody is the start of another, so it is inherently 2 or more voices (client rule: it applies across tracks, never within a single line)."><input type="checkbox" id="cadElide"> 𝄐 Elide the arrival</label>
-        <button id="cadApplyBtn" title="Write the selected cadence so it ends exactly at the selected phrase end — room is carved from the chords before it, one undo.">✓ Write at the phrase end</button>
-      </div>
-      <div id="cadStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
-    </div>
     <div class="parts" id="parts"></div>
     <div class="prov" id="prov"></div>
   </div>
@@ -908,7 +898,6 @@
         <label class="cpchip" id="cpLaneTop" title="Chord lane as the top row: each matrix hides its In-key row and takes the chord lane instead — the columns follow the lane's rate of chord change, so V of x and V of V line up under every lane chord, and each column's ▶ ends on the lane's chord." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpLaneTopBox" style="accent-color:var(--accent);margin:0;">Chord lane as top row</label><!-- 20n [65] (client, Aug 21): default OFF -->
         <span class="cp-mklab">Make:</span><span class="cpchip cpmod" data-kind="maj" title="Rebuild the selected chord as a major triad (root stays)">Major</span><span class="cpchip cpmod" data-kind="min" title="Rebuild the selected chord as a minor triad (root stays)">Minor</span><span class="cpchip cpmod" data-kind="hdim" title="Rebuild the selected chord as a half-diminished 7th (root stays)">m7♭5</span><span class="cpchip cpmod" data-kind="aug" title="Rebuild the selected chord as an augmented triad (root stays)">Augmented</span>
         <span class="cplink" id="cpHmLink">(Show) Harmonic minor</span>
-        <span class="cplink" id="cpCadLink" title="Open the 𝄂 Cadence Window — it opens between the Chord Palette and the Multi-Track Grid (client spec). A cadence: the chords at the end of a musical phrase. Nothing more or less.">𝄂 Cadences</span>
       </div>
     </div>
     <!-- [M23d] (71st): #cpTools — the Scale menu, the Snap button and the Conform machinery —
@@ -921,6 +910,25 @@
     <button id="cpAddMat" type="button" title="Add another relative scale and its matrix below this one">+</button>
     <div class="cp-title" id="cpHmTitle" style="display:none;"></div>
     <div id="cpHm" class="cpg cp-par" style="display:none;"></div>
+  </div>
+
+  <!-- 5.3 → the 73rd (his direction, verbatim in MODULAR_WINDOWS_SPEC Decisions made): the
+       Cadence Window is its OWN window in the column now — "Right now there is a Cadence button
+       in the Chord Pallet which opens up a window which is embedded in the Multi-Track Grid.
+       This is not right." Opened from its top-rail 𝄂 button; carries the SEARCH stub for the
+       coming Cadence Search Window; joins the Phase-2 auto-spawn list (a linked audition grid
+       opens with it, like Modulation and Melisma) when Grid 2 exists. -->
+    <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadences — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><button id="cadSearchBtn" type="button" style="margin-left:auto;font-size:10px;letter-spacing:.6px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:none;color:var(--dim);cursor:pointer;" title="The Cadence SEARCH Window — coming: whichever set of cadences you select there will populate this window. Its spec lives in the roadmap; this button marks its home.">SEARCH</button></div>
+    <div id="cadEndsRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>
+    <div id="cadTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <div id="cadSongsRow" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <div id="cadCards" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+      <label id="cadElideLab" style="font-size:11.5px;color:var(--dim);display:flex;gap:6px;align-items:center;cursor:pointer;" title="Elided placement: the arrival chord lands ON the phrase boundary and STARTS the next phrase — the ending of one melody is the start of another, so it is inherently 2 or more voices (client rule: it applies across tracks, never within a single line)."><input type="checkbox" id="cadElide"> 𝄐 Elide the arrival</label>
+      <button id="cadApplyBtn" title="Write the selected cadence so it ends exactly at the selected phrase end — room is carved from the chords before it, one undo.">✓ Write at the phrase end</button>
+    </div>
+    <div id="cadStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
   </div>
 
   <div class="gridwrap" id="clipPanel" style="margin-top:12px;display:none;">
@@ -9238,10 +9246,25 @@ function buildPaletteGrid(el,scale,tonic){
  const cols=[];
  dia.forEach((c,d)=>{cols.push({t:'deg',d});const pd=dims.find(x=>x.deg===d);if(pd)cols.push({t:'dim',pd});});
  el.style.gridTemplateColumns='46px '+cols.map(c=>c.t==='deg'?'minmax(56px,1fr)':'minmax(40px,.7fr)').join(' ');
- const row=(label,pick)=>{
-  const lab=document.createElement('div');lab.className='cpl';lab.textContent=label;el.appendChild(lab);
+ /* the 73rd (his direction, verbatim in the spec): a "SEARCH" button lives to the LEFT of the
+    2nd and 3rd chord rows of the palette matrix — NON-FUNCTIONING for now, deliberately: the
+    Cadence/Pivot Search Window's spec lives in the roadmap (3.3's multi-column search) and gets
+    built from there when the time comes. Main matrix only; it spans both pivot rows' label cells. */
+ const row=(label,pick,labEl)=>{
+  if(labEl!==null){
+   if(labEl)el.appendChild(labEl);
+   else{const lab=document.createElement('div');lab.className='cpl';lab.textContent=label;el.appendChild(lab);}
+  }
   cols.forEach(col=>el.appendChild(pick(col)||blankPalCell()));
  };
+ const mkSearchBtn=()=>{
+  const b=document.createElement('button');b.type='button';b.id='cpSearchBtn';b.className='cpl cpSearchBtn';
+  b.textContent='SEARCH';b.style.gridRow='span 2';
+  b.title='The Pivot Chord / Cadence SEARCH Window — coming. It will search chord changes (your curated songs, cadence families, chromatic and Coltrane mediants, eras and cultures) and land them in these two pivot rows. Its spec lives in the roadmap; this button marks its home.';
+  b.onclick=()=>{flashHint('The SEARCH window is coming — its spec lives in the roadmap. This button marks its home.');};
+  return b;
+ };
+ const isMain=el&&el.id==='cpMain';
  /* 20l [57] (client, Aug 21): a ▶ Play at the top of every column — it auditions the column's chords at the song's
     current rate of chord change (the lane's durations, cycled; an empty lane = half notes), in resolution order:
     V of V → V of x → the in-key chord. */
@@ -9263,13 +9286,13 @@ function buildPaletteGrid(el,scale,tonic){
   let c=v1[col.d];if(!c)return null;
   if(palState.jimi)c=jimiCell(c);
   return mkPalCell(c,{far:dia[col.d].hd,tip:dia[col.d].hd?'Secondary dominant of the half-diminished degree — greyed: it sits very far from the key':'Secondary dominant — the V7 of this column’s chord'});
- });
+ },isMain?mkSearchBtn():undefined);
  row('V of V',col=>{
   if(col.t==='dim')return null;
   let c=v2[col.d];if(!c)return null;
   if(palState.jimi)c=jimiCell(c);
   return mkPalCell(c,{far:dia[col.d].hd,tip:dia[col.d].hd?'Chained dominant of the half-diminished degree — greyed: it sits very far from the key':'Chained dominant — the V7 of this column’s V7'});
- });
+ },isMain?null:undefined);   /* main matrix: the spanning SEARCH button occupies this label cell */
 }
 /* mode chips: the seven standard modes (each paired with its relative + parallel key)
    plus the melodic-minor family — trimmed to MM4/5/7 by default (client call, July 19),
@@ -11262,10 +11285,10 @@ function buildCadWindow(){
  if(lab)lab.style.opacity=(cb&&cb.disabled)?.55:1;
 }
 document.getElementById('cadApplyBtn').onclick=e=>{cadApplySel();e.target.blur();};
-document.getElementById('cpCadLink').onclick=()=>{
- if(uiState.open!=='cadPanel')uiDispatch({type:'toggle',id:'cadPanel'});
- else{const p=document.getElementById('cadPanel');if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'center'});}catch(e){}}
-};
+/* the 73rd (his P.S., verbatim in the spec): the palette's 𝄂 Cadences link is GONE — the
+   Cadence Window is its own window with its own top-rail button now. The SEARCH stub in the
+   palette's matrix is its cadence-facing surface (the roadmap's search, when it comes). */
+document.getElementById('cadSearchBtn').onclick=()=>{flashHint('The Cadence SEARCH Window is coming — its spec lives in the roadmap. This button marks its home.');};
 /* ==== /5.3 THE CADENCE WINDOW (UI layer) ==== */
 /* ==== 5.1 THE SONG PRISM (UI layer, round 1) ==== scope chips (any track with its own
    MIDI) · per-section phrase lettering (A A′ B -tag) · press a segment = its three
@@ -23069,7 +23092,7 @@ const WINDOW_DEFS=[
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
  {id:'tripsPanel', name:'Trips',   icon:'🧳',tip:'Upcoming Trips — the itinerary of chord and key changes waiting to enter the song. Opens as a bridge between the window above and the one below. ▶ Start next trip in: the musical time until insert. Small = a chord lane of the trips · expanded = a full editable track.'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
- {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Lives between the Chord Palette and the Multi-Track Grid.'},
+ {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Its own window in the column — the SEARCH button is the coming Cadence Search Window\u2019s home.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & count-in · Web MIDI (device inputs · outputs · connection status) · audio device (output choice · sample rate · latency) · tempo & time signature (the sample-directory and DAW-routing guides live behind the ⇪ Import window)'}];
 const RAIL_DEFS=[
  {icon:'📌',act:'pinBtn', tip:'Pin selection — Conform never moves pinned notes (P)'},
