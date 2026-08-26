@@ -545,12 +545,15 @@
      the window/pair touches the top of the screen (the transport controls it there) */
   .pairTop{margin-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;border-bottom:none!important;}
   .pairBottom{border-top-left-radius:0!important;border-top-right-radius:0!important;}
+  /* 78th R2b: the middle member of a fused engine STACK (grid / essence shelf / search
+     window) — squared on BOTH edges, no gaps either side */
+  .pairMid{margin-top:0!important;margin-bottom:0!important;border-radius:0!important;border-bottom:none!important;}
   .gLit{border-color:var(--accent)!important;box-shadow:0 0 0 1px var(--accent);}
 </style>
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26p</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -972,16 +975,23 @@
         </div>
   </div>
     <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadences — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><button id="cadSearchBtn" type="button" style="margin-left:auto;font-size:10px;letter-spacing:.6px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:none;color:var(--dim);cursor:pointer;" title="The Cadence SEARCH Window — coming: whichever set of cadences you select there will populate this window. Its spec lives in the roadmap; this button marks its home.">SEARCH</button></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadence SEARCH — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><input id="cadSearchInp" spellcheck="false" placeholder="🔎 SEARCH" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the cadence list by name, label or description." style="margin-left:auto;font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:150px;"></div>
     <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
     <div id="cadSongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above. Every track other than Drums, the Polyphonic Instrument and Melody arrives muted and hidden — unhide and unmute them any time.">Load a song into the audition grid</label>
       <select id="cadSongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
     </div>
     <div id="cadEndsRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>
-    <div id="cadTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
     <div id="cadSongsRow" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
-    <div id="cadCards" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+    <!-- 78th R2c (his words): "The Cadences Window should really just be the Cadence Search
+         Window. ... It should be the Omnisphere multi column search layout." Columns
+         left→right: the category filter · the results list (family-captioned under All)
+         · the info pane upper right (the roadmap 3.3 model). -->
+    <div id="cadCols" style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:200px;">
+      <div id="cadTabs" style="display:flex;flex-direction:column;gap:2px;flex:0 0 156px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);align-content:flex-start;"></div>
+      <div id="cadCards" style="display:flex;flex-direction:column;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:360px;"></div>
+      <div id="cadInfo" style="flex:0 0 252px;padding:10px;border-left:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11.5px;color:var(--text);"></div>
+    </div>
     <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
       <label id="cadElideLab" style="font-size:11.5px;color:var(--dim);display:flex;gap:6px;align-items:center;cursor:pointer;" title="Elided placement: the arrival chord lands ON the phrase boundary and STARTS the next phrase — the ending of one melody is the start of another, so it is inherently 2 or more voices (client rule: it applies across tracks, never within a single line)."><input type="checkbox" id="cadElide"> 𝄐 Elide the arrival</label>
       <button id="cadApplyBtn" title="Write the selected cadence so it ends exactly at the selected phrase end — room is carved from the chords before it, one undo.">✓ Write at the phrase end</button>
@@ -10787,7 +10797,7 @@ modState.lastPick=modState.lastPick||'mim';
    songs that ship with PMW. V1 lines (say the word): cadence cards aren't lane-drag
    objects yet (✓ writes to the selected phrase end) · the window rebuilds on open and
    after apply, not live while chords are edited elsewhere. */
-let cadState={cat:'cls',sel:'perfect',end:null,elide:false,exSongs:[],curList:[]};
+let cadState={cat:'cls',sel:'perfect',end:null,elide:false,exSongs:[],curList:[],q:''};
 const CAD_CATS=[['cls','𝄆 Classical'],['mod','⇧ Modulating'],['psy','⚡ Psych-out'],['cur','★ Curated — most prominent']];
 const cadStatusEl=document.getElementById('cadStatus');
 let cadStatusTimer=null;
@@ -10895,12 +10905,14 @@ function buildCadWindow(){
   chip.onclick=()=>{cadState.end=e.beat;buildCadWindow();};
   er.appendChild(chip);
  }
- /* category tabs */
+ /* 78th R2c (his words): the categories are a vertical FILTER COLUMN now — the
+    Omnisphere model, 'All' at the top of a column = that filter bypassed */
  const tabs=document.getElementById('cadTabs');
  tabs.innerHTML='';
- for(const [id,name] of CAD_CATS){
+ for(const [id,name] of [['all','All']].concat(CAD_CATS)){
   const c=document.createElement('span');
   c.className='cpchip'+(cadState.cat===id?' on':'');
+  c.style.display='block';c.style.textAlign='left';
   c.textContent=name;
   c.onclick=()=>{cadState.cat=id;buildCadWindow();};
   tabs.appendChild(c);
@@ -10942,7 +10954,22 @@ function buildCadWindow(){
    cards.appendChild(d);
   });
  }else{
-  for(const t of CADENCE_LIB.filter(x=>x.cat===cadState.cat)){
+  /* 78th R2c: the 'All' bypass renders every family, each under its greyed family
+     caption (the client's layout, roadmap 3.3); the 🔎 is one more AND-filter on top */
+  const q=String(cadState.q||'').trim().toLowerCase();
+  const qHit=t=>{if(!q)return true;
+   return (t.name+' '+(t.desc||'')+' '+t.run.map(x=>x.lbl).join(' ')).toLowerCase().includes(q);};
+  const catsNow=cadState.cat==='all'?CAD_CATS.filter(x=>x[0]!=='cur').map(x=>x[0]):[cadState.cat];
+  for(const catId of catsNow){
+  const _list=CADENCE_LIB.filter(x=>x.cat===catId&&qHit(x));
+  if(cadState.cat==='all'&&_list.length){
+   const cap=document.createElement('div');
+   cap.className='cadFamCap';
+   cap.style.cssText='font-size:12.5px;color:var(--dim);margin:6px 0 2px 0;letter-spacing:.5px;';
+   cap.textContent=(CAD_CATS.find(x=>x[0]===catId)||['',''])[1];
+   cards.appendChild(cap);
+  }
+  for(const t of _list){
    const d=document.createElement('div');
    d.className='mimCard'+(cadState.sel===t.id?' on':'');
    d.title=t.desc+' Press = hear it in this phrase’s key (nothing is written) · ✓ writes it at the phrase end.';
@@ -10962,11 +10989,13 @@ function buildCadWindow(){
     buildCadWindow();cadAudition();};
    cards.appendChild(d);
   }
+  }
+  if(q&&!cards.children.length)cards.innerHTML='<span style="font-size:11.5px;color:var(--dim);">Nothing matches the 🔎 — clear it to see every cadence.</span>';
  }
  /* elide checkbox + apply state */
  const cb=document.getElementById('cadElide');
  const entry=cadState.cat!=='cur'?cadEntry():null;
- const isMod=cadState.cat==='mod';
+ const isMod=cadState.cat==='mod'||!!(entry&&entry.cat==='mod');   /* 78th R2c: 'All' keeps each entry's own law */
  if(cb){
   cb.checked=isMod||cadState.elide||!!(entry&&entry.elide);
   cb.disabled=isMod||!!(entry&&entry.elide);
@@ -10974,12 +11003,38 @@ function buildCadWindow(){
  }
  const lab=document.getElementById('cadElideLab');
  if(lab)lab.style.opacity=(cb&&cb.disabled)?.55:1;
+ /* 78th R2c: the INFO PANE (upper right, Omnisphere-style) — the selected cadence whole */
+ const info=document.getElementById('cadInfo');
+ if(info){
+  const hint='<span style="color:var(--dim);">Select a cadence — its details live here (the Omnisphere info pane). ▶ press a card to hear it in the phrase\'s key; ✓ below writes it at the selected phrase end.</span>';
+  if(String(cadState.sel).slice(0,4)==='cur:'){
+   const hit=cadState.curList[+String(cadState.sel).replace('cur:','')];
+   info.innerHTML=hit?('<div style="font-weight:700;margin-bottom:4px;">'+hit.kind+'</div>'
+    +'<div class="mimChain" style="margin-bottom:6px;">'+hit.steps.map(s2=>dispLbl(s2.lbl)).join(' → ')+'</div>'
+    +'<div style="color:var(--dim);">Detected at the 8-beat phrase ends of: '+hit.songs.join(' · ')+'.</div>'):hint;
+  }else{
+   const t2=cadEntry();
+   if(t2){
+    const e3=cadEndSel(),k3=e3?cadKeyAt(e3):{tonic:project.tonic,mode:project.mode};
+    const rr2=cadenceRun(t2,k3);
+    let land='';
+    if(t2.cat==='mod'){const dest=cadenceDest(t2,k3);
+     land='<div style="margin:4px 0;">Lands '+PCN[((k3.tonic+dest.interval)%12+12)%12]+(dest.tgtMode==='aeolian'?' minor':dest.tgtMode==='ionian'?' major':'')+'</div>';}
+    info.innerHTML='<div style="font-weight:700;margin-bottom:4px;">'+t2.name+'</div>'
+     +'<div class="mimChain" style="margin-bottom:6px;">'+rr2.map(c2=>dispLbl(c2.lbl)).join(' → ')+'</div>'
+     +land+'<div style="color:var(--dim);">'+(t2.desc||'')+'</div>'
+     +(t2.elide?'<div style="margin-top:6px;">𝄐 elides by design</div>':'');
+   }else info.innerHTML=hint;
+  }
+ }
 }
 document.getElementById('cadApplyBtn').onclick=e=>{cadApplySel();e.target.blur();};
 /* the 73rd (his P.S., verbatim in the spec): the palette's 𝄂 Cadences link is GONE — the
    Cadence Window is its own window with its own top-rail button now. The SEARCH stub in the
    palette's matrix is its cadence-facing surface (the roadmap's search, when it comes). */
-document.getElementById('cadSearchBtn').onclick=()=>{flashHint('The Cadence SEARCH Window is coming — its spec lives in the roadmap. This button marks its home.');};
+/* 78th R2c: the stub grew into the REAL thing — this window IS the Cadence SEARCH Window
+   now (his words); the 🔎 is one more filter on top of the columns (the Omnisphere model) */
+{const _ci=document.getElementById('cadSearchInp');if(_ci)_ci.oninput=()=>{cadState.q=_ci.value;buildCadWindow();};}
 /* ==== /5.3 THE CADENCE WINDOW (UI layer) ==== */
 /* ==== 5.1 THE SONG PRISM (UI layer, round 1) ==== scope chips (any track with its own
    MIDI) · per-section phrase lettering (A A′ B -tag) · press a segment = its three
@@ -11459,6 +11514,9 @@ function buildPrism(reanalyze){
   };
   sh.appendChild(d);
  });
+ /* 78th R2b: the engine stacks' Essence Shelf windows mirror this one shelf — every
+    Keep/remove/rename lands here, so they redraw here */
+ if(typeof essShelfWinDrawAll==='function')try{essShelfWinDrawAll();}catch(e){}
  buildPrzSections();
  buildPrzForms();
 }
@@ -23456,9 +23514,65 @@ function gridWorldClose(id){
  if(w.els&&w.els.root&&w.els.root.parentNode)w.els.root.parentNode.removeChild(w.els.root);
  if(w.els&&w.els.palRoot&&w.els.palRoot.parentNode)w.els.palRoot.parentNode.removeChild(w.els.palRoot);   /* 75th r3: a user grid's palette leaves with it */
  if(w.els&&w.els.pairWin){w.els.pairWin.classList.remove('pairBottom','gLit');w.els.pairWin.style.marginTop=w.els.pairWin.dataset.pairMt||'12px';}   /* 78th: the corners revert when the pair breaks */
+ if(w.els&&w.els.essWin&&w.els.essWin.parentNode)w.els.essWin.parentNode.removeChild(w.els.essWin);   /* 78th R2b: the shelf window leaves with its stack */
  const _wasUser=!!w.user;
  delete GRID_WORLDS[id];
  if(_wasUser&&typeof gridsPersistSoon==='function')gridsPersistSoon();
+}
+function essShelfWinDraw(w){
+ /* the shelf window's cards: THE Essence Shelf (Grid 1's project.shelf — essences ride
+    the MAIN project file; a rig's own project keeps an empty shelf). Press = audition
+    (the Prism's przAudition, main-key context), ✓ Apply = przApply under the RIG's
+    world, so a melody/chords essence lands on the selection in the grid ABOVE. */
+ if(!w||!w.els||!w.els.essWin)return;
+ const body=w.els.essWin.querySelector('.essBody');if(!body)return;
+ const sh=(typeof CUR_GRID==='string'&&CUR_GRID!=='main')?withGridWorld('main',()=>project.shelf):project.shelf;
+ body.innerHTML='';
+ if(!Array.isArray(sh)||!sh.length){
+  body.innerHTML='<span style="font-size:11.5px;color:var(--dim);">Empty — ★ Keep any essence (Prism · Orbits · the engines) and it lives here, riding the project file.</span>';
+  return;
+ }
+ sh.forEach(o=>{
+  const d=document.createElement('div');
+  d.className='mimCard';
+  d.title='Press = audition · ✓ applies to the selection in the grid above.';
+  d.innerHTML='<div class="mimName">'+o.name+'</div>'
+   +'<div style="font-size:10px;color:var(--dim);margin:2px 0;">'+o.strand+' · '+(o.level||'')+'</div>'
+   +'<div style="display:flex;gap:8px;"><span class="cpchip essApB">✓ Apply</span></div>';
+  d.onclick=e=>{
+   if(e.target.classList.contains('essApB')){e.stopPropagation();withGridWorld(w.id,()=>przApply(o.strand,o.data));return;}
+   przAudition(o.strand,o.data,project.base+7,0);
+  };
+  body.appendChild(d);
+ });
+}
+function essShelfWinDrawAll(){
+ if(typeof GRID_WORLDS!=='object')return;
+ for(const gid in GRID_WORLDS){const w=GRID_WORLDS[gid];if(gid!=='main'&&w&&w.els&&w.els.essWin&&w.els.essWin.isConnected)essShelfWinDraw(w);}
+}
+function essShelfWinMint(w,panel){
+ /* 78th R2b, his words verbatim in the spec's Decisions made: "Above it should be an
+    essence shelf window that it ships with between the search window and the multi-track
+    grid." One per engine stack, the standard window chrome (title-click/− minimize, ✕
+    hides it until the stack re-mints), fused as the MIDDLE member (.pairMid). */
+ if(!panel||!w||!w.els||!w.els.root)return null;
+ const d=document.createElement('div');
+ d.id='essWin_'+w.id;
+ d.className='gridwrap pairMid';
+ d.setAttribute('data-gridworld',w.id);
+ d.innerHTML='<div class="winHead"><span class="wtitle">🔷 Essence Shelf</span>'
+  +'<span class="wbtn" data-w="collapse">−</span><span class="wbtn" data-w="close" title="Hide the shelf (it returns when the window reopens)">✕</span></div>'
+  +'<div class="essBody" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;"></div>';
+ panel.parentNode.insertBefore(d,panel);
+ const head=d.querySelector('.winHead');
+ head.onclick=e=>{
+  if(e.target.dataset&&e.target.dataset.w==='close'){d.style.display='none';return;}
+  d.classList.toggle('winCollapsed');
+  const chip=head.querySelector('[data-w="collapse"]');if(chip)chip.textContent=d.classList.contains('winCollapsed')?'+':'−';
+ };
+ w.els.essWin=d;
+ essShelfWinDraw(w);
+ return d;
 }
 function auditionRigDefaults(winId){
  /* 78th R2, his words verbatim in the spec's Decisions made: "The only visible track on
@@ -23499,6 +23613,9 @@ function gridAuditionSpawn(winId){
  const _gw2=w.els.root.querySelector('[id="gridWrap"]');
  if(_gw2)_gw2.classList.add('pairTop');
  if(panel){panel.classList.add('pairBottom');panel.dataset.pairMt=panel.style.marginTop||'';panel.style.marginTop='0px';w.els.pairWin=panel;}
+ /* 78th R2b (his words): the Essence Shelf window ships BETWEEN the grid and the (search)
+    window — the stack's fused middle member */
+ if(panel)essShelfWinMint(w,panel);
  uiState.links=linkAdd(uiState.links,'win:'+winId,'grid:'+w.id,true);
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  return w;
@@ -23787,6 +23904,9 @@ function scrollFocusTick(){
    const box=c.root.querySelector('[id="gridWrap"]')||c.root;
    if(box&&box.classList)box.classList.toggle('gLit',on);
    if(c.win)c.win.classList.toggle('gLit',on);
+   /* 78th R2b: the stack's middle member lights with its group */
+   const ew=(c.gid!=='main'&&GRID_WORLDS[c.gid]&&GRID_WORLDS[c.gid].els&&GRID_WORLDS[c.gid].els.essWin)?GRID_WORLDS[c.gid].els.essWin:null;
+   if(ew&&ew.isConnected)ew.classList.toggle('gLit',on);
   }
   if(best&&typeof gridFocus==='string'&&best.gid!==gridFocus&&typeof setGridFocus==='function')setGridFocus(best.gid);
  }catch(e){}
