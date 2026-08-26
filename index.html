@@ -191,16 +191,13 @@
      WINDOW dress — the #cadPanel margin idiom, a lifted shadow, and the real .winHead/.wbtn header —
      while staying inside #gridWrap so the [77]/[78] alignment survives a pan/zoom. */
   #chordPanel{margin:14px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}
-  /* MODULAR_WINDOWS_SPEC Phase 1 (73rd): the palette is the FIRST free-standing modular
-     window — it lives in #winLayer (z-band 90, below every menu at 95+), draggable by its
-     title bar, natively resizable. .palLock = lane-top ON: x and width belong to the grid,
-     the pair scrolls as one. */
-  #winLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:90;}
-  #chordPanel.palFloat{position:absolute;margin:0;resize:both;overflow:auto;min-width:300px;max-height:80vh;box-shadow:0 10px 34px rgba(0,0,0,.55);}
-  #chordPanel.palFloat.palLock{resize:none;overflow-x:auto;}
-  #chordPanel.palFloat.winSel{outline:2px solid var(--accent);outline-offset:1px;}
-  #chordPanel.palFloat #palWinHead{cursor:grab;}
-  #chordPanel.palFloat #palWinHead:active{cursor:grabbing;}
+  /* MODULAR_WINDOWS_SPEC Phase 1 (73rd, corrected on his look): the palette is its OWN boxed
+     window in the column — a SIBLING of the Multi-Track Grid window with the page's black gap
+     between them (his "separate the way that the current Modulation Window is separate").
+     NOT floating, NOT overlapping. .palLock = lane-top ON: the linked pair scrolls as one. */
+  #chordPanel{margin-top:12px;}
+  #chordPanel.palLock{overflow-x:auto;}
+  #chordPanel.winSel{outline:2px solid var(--accent);outline-offset:1px;}
   #palWinHead .picon{font-size:12px;}
   .cplink{font-size:10.5px;color:var(--dim);cursor:pointer;text-decoration:underline dotted;margin-left:6px;user-select:none;}
   .cplink:hover{color:var(--text);}
@@ -542,7 +539,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25i</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -718,6 +715,9 @@
   <div style="display:flex;gap:12px;align-items:flex-start;">
   <div id="rail" title=""></div>
   <div class="gridwrap" id="gridWrap" style="flex:1;min-width:0;"><!-- MG round: the MAIN wrap has an id now — .gridwrap first-match grabbed the melPanel/varPanel boxes (same class, earlier in the DOM since 27a/30d) and silently unbound the zoom strip -->
+    <!-- Phase 1 (73rd, his ask in the same sitting): the Multi-Track Grid is minimize-able
+         like the Modulation window — the same winCollapsed idiom, persisted in cp_ui. -->
+    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span></div>
     <div id="zoomStrip" title="Drag ↕ here to zoom the grid (same as the bar-number lane)" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px 0;cursor:ns-resize;">
       <div class="parts" id="trackSel" style="margin:0;"></div>
       <div class="parts" style="margin:0;align-items:center;">
@@ -870,49 +870,57 @@
       </div>
       <div id="cadStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
     </div>
-    <!-- 3.3: the chord palette dock — lengthwise below the grid. Three column-aligned
-         rows (diatonic / V of x / V of V of x) for the current key AND its parallel
-         set; mode chips with paired relative/parallel keys; passing °7 behind the
-         expand triangle; Jimi 7♯9; quick quality modifiers; Harmonic Minor behind
-         (Show). Click a block = apply to the selected chord (mousedown auditions);
-         drag = drop onto a chord-lane block or expand onto the grid. -->
-    <div id="chordPanel">
-      <!-- [M23c] (71st): window CHROME on the dock — minimizable, movable above or below the grid.
-           NOT a WINDOW_DEFS promotion (landmine ② + the one-window law): the palette must stay usable
-           while another window is open, so it keeps its dock identity and never steals the open slot.
-           Position/minimize ride cp_pal.win; the dock never leaves #gridWrap, so [77]/[78] lane-top
-           alignment survives in BOTH positions by construction. -->
-      <div class="winHead" id="palWinHead" title="The Chord Palette — a free-standing window. Drag this bar to move it; it stays linked to its grid (the colored border arrives with groups).">
-        <span class="picon">🎹</span><span class="wtitle">Chord Palette</span>
-        <span class="wbtn" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
-        <span class="wbtn" id="palCloseChip" title="Delete the Chord Palette window (Delete does it too while it&#8217;s selected) — the 🎹 icon at the grid&#8217;s left brings it back. A modified palette offers to save a template first.">✕</span>
-      </div>
-      <div id="cpHead">
-        <span class="cp-title" style="margin:0;display:none;">Chord palette · <span id="cpKey" style="color:var(--text);"></span></span><!-- 20b: dock title + key readout hidden (client request); #cpKey kept in DOM for the updater -->
-        <div id="cpCtl">
-          <span class="cpchip" id="cpDimsChip" title="Reveal the passing diminished chords that live a semitone above every degree a whole step from its neighbor">▸ passing °7</span>
-          <span class="cpchip" id="cpJimiChip" title="Jimi chord: every dominant in the palette renders and plays as a 7♯9 — the Hendrix chord">🎸 Jimi</span>
-          <label class="cpchip" id="cpFollowSel" title="When switched on, any chord in the chord lane will become the new key of the Chord Pallet." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpFollowSelBox" style="accent-color:var(--accent);margin:0;">Switch Chord Pallet to Selected chord</label><!-- 20l [54] (client, Aug 21): default OFF -->
-          <label class="cpchip" id="cpLaneTop" title="Chord lane as the top row: each matrix hides its In-key row and takes the chord lane instead — the columns follow the lane's rate of chord change, so V of x and V of V line up under every lane chord, and each column's ▶ ends on the lane's chord." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpLaneTopBox" style="accent-color:var(--accent);margin:0;">Chord lane as top row</label><!-- 20n [65] (client, Aug 21): default OFF -->
-          <span class="cp-mklab">Make:</span><span class="cpchip cpmod" data-kind="maj" title="Rebuild the selected chord as a major triad (root stays)">Major</span><span class="cpchip cpmod" data-kind="min" title="Rebuild the selected chord as a minor triad (root stays)">Minor</span><span class="cpchip cpmod" data-kind="hdim" title="Rebuild the selected chord as a half-diminished 7th (root stays)">m7♭5</span><span class="cpchip cpmod" data-kind="aug" title="Rebuild the selected chord as an augmented triad (root stays)">Augmented</span>
-          <span class="cplink" id="cpHmLink">(Show) Harmonic minor</span>
-          <span class="cplink" id="cpCadLink" title="Open the 𝄂 Cadence Window — it opens between the Chord Palette and the Multi-Track Grid (client spec). A cadence: the chords at the end of a musical phrase. Nothing more or less.">𝄂 Cadences</span>
-        </div>
-      </div>
-      <!-- [M23d] (71st): #cpTools — the Scale menu, the Snap button and the Conform machinery —
-           moved OUT of this dock into #snapPanel, directly below the grid. His words: the palette
-           "should be separate from the 'Snap to chord tones' button and it's features." -->
-      <div id="cpModes"></div>
-      <div class="cpMatHead" id="cpMainHead"></div><!-- 20n [61] [62]: the song scale's name + its drop-down (Search → the Browser; then its mode family) -->
-      <div id="cpMain" class="cpg"></div>
-      <div id="cpRel"></div><!-- 20n [63] [64]: the relative matrices — default ONE, a third from the song's scale (major → its relative melodic minor; minor → its relative major a third up); each with its own name + drop-down; the fixed "Parallel" title is gone -->
-      <button id="cpAddMat" type="button" title="Add another relative scale and its matrix below this one">+</button>
-      <div class="cp-title" id="cpHmTitle" style="display:none;"></div>
-      <div id="cpHm" class="cpg cp-par" style="display:none;"></div>
-    </div>
     <div class="parts" id="parts"></div>
     <div class="prov" id="prov"></div>
   </div>
+  </div>
+
+  <!-- MODULAR_WINDOWS_SPEC Phase 1 (73rd, CORRECTED on his first look, his words verbatim in the
+       spec's Decisions made): the Chord Palette is its OWN boxed window in the column, directly
+       below the Multi-Track Grid window, with the page's black gap between them — "separate the
+       way that the current Modulation Window is separate. Just the same. That's all. Nothing
+       fancy." NOT floating, NOT overlapping — no window in this app overlaps another unless a
+       feature explicitly says "pop-up window". Still extracted (never nested in the grid), still
+       ✕-closable / 🎹-reopenable / minimizable, still a connection-graph pairing. -->
+  <!-- 3.3: the chord palette window — lengthwise below the grid. Three column-aligned
+       rows (diatonic / V of x / V of V of x) for the current key AND its parallel
+       set; mode chips with paired relative/parallel keys; passing °7 behind the
+       expand triangle; Jimi 7♯9; quick quality modifiers; Harmonic Minor behind
+       (Show). Click a block = apply to the selected chord (mousedown auditions);
+       drag = drop onto a chord-lane block or expand onto the grid. -->
+  <div id="chordPanel">
+    <!-- [M23c] (71st): window CHROME on the dock — minimizable, movable above or below the grid.
+         NOT a WINDOW_DEFS promotion (landmine ② + the one-window law): the palette must stay usable
+         while another window is open, so it keeps its dock identity and never steals the open slot.
+         Position/minimize ride cp_pal.win; the dock never leaves #gridWrap, so [77]/[78] lane-top
+         alignment survives in BOTH positions by construction. -->
+    <div class="winHead" id="palWinHead" title="The Chord Palette — a free-standing window. Drag this bar to move it; it stays linked to its grid (the colored border arrives with groups).">
+      <span class="picon">🎹</span><span class="wtitle">Chord Palette</span>
+      <span class="wbtn" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
+      <span class="wbtn" id="palCloseChip" title="Delete the Chord Palette window (Delete does it too while it&#8217;s selected) — the 🎹 icon at the grid&#8217;s left brings it back. A modified palette offers to save a template first.">✕</span>
+    </div>
+    <div id="cpHead">
+      <span class="cp-title" style="margin:0;display:none;">Chord palette · <span id="cpKey" style="color:var(--text);"></span></span><!-- 20b: dock title + key readout hidden (client request); #cpKey kept in DOM for the updater -->
+      <div id="cpCtl">
+        <span class="cpchip" id="cpDimsChip" title="Reveal the passing diminished chords that live a semitone above every degree a whole step from its neighbor">▸ passing °7</span>
+        <span class="cpchip" id="cpJimiChip" title="Jimi chord: every dominant in the palette renders and plays as a 7♯9 — the Hendrix chord">🎸 Jimi</span>
+        <label class="cpchip" id="cpFollowSel" title="When switched on, any chord in the chord lane will become the new key of the Chord Pallet." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpFollowSelBox" style="accent-color:var(--accent);margin:0;">Switch Chord Pallet to Selected chord</label><!-- 20l [54] (client, Aug 21): default OFF -->
+        <label class="cpchip" id="cpLaneTop" title="Chord lane as the top row: each matrix hides its In-key row and takes the chord lane instead — the columns follow the lane's rate of chord change, so V of x and V of V line up under every lane chord, and each column's ▶ ends on the lane's chord." style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cpLaneTopBox" style="accent-color:var(--accent);margin:0;">Chord lane as top row</label><!-- 20n [65] (client, Aug 21): default OFF -->
+        <span class="cp-mklab">Make:</span><span class="cpchip cpmod" data-kind="maj" title="Rebuild the selected chord as a major triad (root stays)">Major</span><span class="cpchip cpmod" data-kind="min" title="Rebuild the selected chord as a minor triad (root stays)">Minor</span><span class="cpchip cpmod" data-kind="hdim" title="Rebuild the selected chord as a half-diminished 7th (root stays)">m7♭5</span><span class="cpchip cpmod" data-kind="aug" title="Rebuild the selected chord as an augmented triad (root stays)">Augmented</span>
+        <span class="cplink" id="cpHmLink">(Show) Harmonic minor</span>
+        <span class="cplink" id="cpCadLink" title="Open the 𝄂 Cadence Window — it opens between the Chord Palette and the Multi-Track Grid (client spec). A cadence: the chords at the end of a musical phrase. Nothing more or less.">𝄂 Cadences</span>
+      </div>
+    </div>
+    <!-- [M23d] (71st): #cpTools — the Scale menu, the Snap button and the Conform machinery —
+         moved OUT of this dock into #snapPanel, directly below the grid. His words: the palette
+         "should be separate from the 'Snap to chord tones' button and it's features." -->
+    <div id="cpModes"></div>
+    <div class="cpMatHead" id="cpMainHead"></div><!-- 20n [61] [62]: the song scale's name + its drop-down (Search → the Browser; then its mode family) -->
+    <div id="cpMain" class="cpg"></div>
+    <div id="cpRel"></div><!-- 20n [63] [64]: the relative matrices — default ONE, a third from the song's scale (major → its relative melodic minor; minor → its relative major a third up); each with its own name + drop-down; the fixed "Parallel" title is gone -->
+    <button id="cpAddMat" type="button" title="Add another relative scale and its matrix below this one">+</button>
+    <div class="cp-title" id="cpHmTitle" style="display:none;"></div>
+    <div id="cpHm" class="cpg cp-par" style="display:none;"></div>
   </div>
 
   <div class="gridwrap" id="clipPanel" style="margin-top:12px;display:none;">
@@ -9032,14 +9040,12 @@ function focusedGridNode(){
  return 'grid:main';
 }
 function palWinNorm(o){
- /* [M23c] (71st) → Phase 1 (73rd): the palette window's persisted shape. The docked
-    {pos:'below'|'above'} model is RETIRED — the palette is a FREE-STANDING modular window
-    now: {x,y,w: numbers or null (null = the default spot below the grid), min, closed}.
-    An old saved {pos,min} normalizes cleanly (min kept, position falls to the default).
-    Junk in → the default out. Pure; the cp_pal loader consumes it. */
+ /* [M23c] (71st) → Phase 1 (73rd, corrected): the palette window's persisted shape —
+    {min:bool, closed:bool}. The docked {pos} and the one-evening float {x,y,w} shapes both
+    normalize cleanly (their min/closed survive, the rest drops). Junk in → the default out
+    (open, full). Pure; the cp_pal loader consumes it. */
  const p=o&&typeof o==='object'?o:{};
- const num=v=>(typeof v==='number'&&isFinite(v))?v:null;
- return {x:num(p.x),y:num(p.y),w:num(p.w),min:!!p.min,closed:!!p.closed};
+ return {min:!!p.min,closed:!!p.closed};
 }
 const palState=(()=>{try{const o=JSON.parse(localStorage.getItem('cp_pal')||'{}');
  return {dims:!!o.dims,jimi:!!o.jimi,hm:!!o.hm,mmAll:!!o.mmAll,followSel:!!o.followSel,laneTop:!!o.laneTop,
@@ -9200,9 +9206,15 @@ function buildPaletteGrid(el,scale,tonic){
   let chrome=4;try{const cb0=document.querySelector('#chordlane .cb');if(cb0){const s=getComputedStyle(cb0);chrome=(parseFloat(s.paddingLeft)||0)+(parseFloat(s.paddingRight)||0)+(parseFloat(s.borderLeftWidth)||0)+(parseFloat(s.borderRightWidth)||0);}}catch(e){}
   const sum=gs.reduce((a,b)=>a+b,0)||1,freePx=LOOP*PPB-(gs.length-1)*2-chrome*gs.length;
   let inset=13;try{const cs=getComputedStyle(document.getElementById('chordPanel'));inset=(parseFloat(cs.paddingLeft)||12)+(parseFloat(cs.borderLeftWidth)||1);}catch(e){}
+  /* Phase 1 (73rd): the panel is a SIBLING of #gridWrap now, not a child — its border box
+     no longer starts at the grid's content origin, so the margin absorbs the measured
+     difference (gridWrap's border+padding plus any residual x between the two boxes) */
+  let sibOff=0;try{const gw=document.getElementById('gridWrap'),cpEl=document.getElementById('chordPanel');
+   if(gw&&cpEl){const gs=getComputedStyle(gw);
+    sibOff=(gw.clientLeft||0)+(parseFloat(gs.paddingLeft)||0)+Math.round(gw.getBoundingClientRect().left-cpEl.getBoundingClientRect().left);}}catch(e){}
   el.style.gridTemplateColumns=(GUT-2)+'px '+gs.map(g=>(chrome+g/sum*freePx).toFixed(2)+'px').join(' ');
   el.style.gap='3px 2px';                 /* the lane's own 2px column gap; rows keep the palette's 3px */
-  el.style.marginLeft=(76-inset)+'px';
+  el.style.marginLeft=(76-inset+sibOff)+'px';
   el.classList.add('lanepx');
   const row=(label,pick,cls)=>{
    const lab=document.createElement('div');lab.className='cpl'+(cls?' '+cls:'');lab.textContent=label;el.appendChild(lab);
@@ -9404,72 +9416,30 @@ function applyTogglesToSelection(){
   noteEngine('extension-toggle-snap');
  }
 }
-/* MODULAR_WINDOWS_SPEC Phase 1 (73rd): THE CHORD PALETTE IS A FREE-STANDING MODULAR WINDOW.
-   The REAL #chordPanel node moves OUT of #gridWrap into #winLayer (the floating-window
-   layer, z-band 90) — draggable by its title bar, resizable, closable (✕ / Delete), the
-   🎹 gutter icon brings it back. The grid↔palette pairing is a CONNECTION-GRAPH entry
-   (uiState.links), never a hard-coded reference. [77]/[78] "Match always" survives the
-   extraction as a behavior of the LINKED pair: with the lane-top toggle ON the window
-   x-locks to the grid's content origin, matches its width, and the two scroll as one
-   (two-way scrollLeft sync). The [M23c] docked ▲/▼ model is RETIRED — free drag replaced it. */
-let palWinSel=false,palWinRzT=null;
+/* MODULAR_WINDOWS_SPEC Phase 1 (73rd, CORRECTED the same night on his first look — his words
+   verbatim in the spec's Decisions made): THE CHORD PALETTE IS ITS OWN BOXED WINDOW in the
+   page column, directly below the Multi-Track Grid window, with the page's black gap between
+   them — "separate the way that the current Modulation Window is separate. Just the same.
+   That's all. Nothing fancy." ⛔ NOT floating, NOT overlapping: no window in this app overlaps
+   another unless a feature explicitly says "pop-up window" (his rule, same sitting). The first
+   cut's floating layer / title-bar drag / corner resize / anchored spacer were built and
+   REMOVED on his word within the hour — the spec's stop-at-phase-end rule doing its job.
+   What stands: the extraction (a SIBLING of #gridWrap, never nested), ✕/Delete close with the
+   template offer, the 🎹 gutter icon reopen, − minimize (the winCollapsed idiom — the
+   Modulation window's kind, HIS reference), the connection-graph pairing, and [77]/[78]
+   "Match always" via the sibling panel's measured margin + the two-way scroll sync. */
+let palWinSel=false;
 function palWinApply(){
- const cp=document.getElementById('chordPanel'),gw=document.getElementById('gridWrap');
- if(!cp||!gw)return;
- let wl=document.getElementById('winLayer');
- if(!wl){wl=document.createElement('div');wl.id='winLayer';document.body.appendChild(wl);}
- if(cp.parentNode!==wl)wl.appendChild(cp);
- cp.classList.add('palFloat');
+ const cp=document.getElementById('chordPanel');
+ if(!cp)return;
  const w=palState.win=palWinNorm(palState.win);
  cp.classList.toggle('winCollapsed',!!w.min);
  cp.style.display=w.closed?'none':'';
  const ic=document.getElementById('palIcon');if(ic)ic.style.display=w.closed?'':'none';
  const mc=document.getElementById('palMinChip');if(mc)mc.textContent=w.min?'+':'−';
- /* THE ANCHORED DEFAULT (the no-regressions rule): until the user drags it, the free
-    window sits exactly in its old slot and a spacer RESERVES that space in the page —
-    the boot looks byte-identical to the docked era and nothing underneath is covered
-    (a floating default over the modulation lane ate verify-p4's drop, which is how this
-    rule was earned). The first drag collapses the spacer and true free-window life begins. */
- const anchored=!w.closed&&w.x==null&&w.y==null;
- let spc=document.getElementById('palSpacer');
- if(anchored){
-  if(!spc){spc=document.createElement('div');spc.id='palSpacer';
-   const parts=document.getElementById('parts');
-   if(parts&&parts.parentNode===gw)gw.insertBefore(spc,parts);else gw.appendChild(spc);}
-  spc.style.display='';
- }else if(spc)spc.style.display='none';
- if(w.closed)return;
- const lock=!!(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length);
- cp.classList.toggle('palLock',lock);
- /* geometry — measured, not assumed: the LOCKED x aligns the panel's BORDER BOX with
-    #gridWrap's content origin, exactly where the docked panel used to sit (measured: an
-    inset-subtracted first cut was off by exactly 13px, the inset), which is what makes
-    the lane-branch column math land on the lane's own pixels */
- let gwX=40,gwY=300,gwW=800;
- try{const gr=gw.getBoundingClientRect(),gs=getComputedStyle(gw);
-  gwX=gr.left+(window.scrollX||0)+(gw.clientLeft||0)+(parseFloat(gs.paddingLeft)||0);
-  gwY=gr.bottom+(window.scrollY||0)+10;gwW=gw.clientWidth;}catch(e){}
- let x,y,wid=null;
- if(anchored&&spc){
-  const sr=spc.getBoundingClientRect();
-  x=sr.left+(window.scrollX||0);y=sr.top+(window.scrollY||0)+14;   /* the old margin:14px 0 */
-  wid=spc.offsetWidth||null;
- }else{
-  x=w.x==null?gwX:w.x;y=w.y==null?gwY:w.y;wid=w.w;
- }
- if(lock)x=gwX;
- cp.style.left=Math.max(0,Math.round(x))+'px';
- cp.style.top=Math.max(0,Math.round(y))+'px';
- if(lock)cp.style.width=gwW+'px';
- else if(wid)cp.style.width=wid+'px';
- else cp.style.width='';
- if(anchored&&spc){
-  /* the spacer wears the window's real height (+ the old vertical margins) so the page
-     below stands where it always did; it follows every resize through this same path */
-  const h=cp.offsetHeight;
-  if(h)spc.style.height=(h+28)+'px';
- }
- if(lock)cp.scrollLeft=gw.scrollLeft;   /* arrive already in sync */
+ /* lane-top ON: the LINKED pair scrolls as one (the palLock class arms the sync) */
+ cp.classList.toggle('palLock',!!(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length));
+ if(cp.classList.contains('palLock')){const gw=document.getElementById('gridWrap');if(gw)cp.scrollLeft=gw.scrollLeft;}
 }
 function palWinModified(){
  /* "changes to the default Chord Palette" — any matrix chosen by hand, or any palette
@@ -9513,37 +9483,20 @@ function snapDockApply(anim){
  else{p.style.display=hid?'none':'';p.classList.toggle('snapZoom',hid);ic.style.display=hid?'':'none';}
 }
 document.getElementById('palMinChip').onclick=()=>{palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();};
+/* Phase 1 (73rd): the Multi-Track Grid window minimizes like the Modulation window */
+function gridMinApply(){
+ const gw=document.getElementById('gridWrap');if(!gw)return;
+ gw.classList.toggle('winCollapsed',!!uiState.gridMin);
+ const mc=document.getElementById('gridMinChip');if(mc)mc.textContent=uiState.gridMin?'+':'−';
+}
+document.getElementById('gridMinChip').onclick=()=>{
+ uiState.gridMin=!uiState.gridMin;
+ try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ gridMinApply();
+};
+/* (the boot apply runs after uiState initializes — see the boot seed block) */
 document.getElementById('palCloseChip').onclick=e=>{e.stopPropagation();palWinClose();};
 document.getElementById('palIcon').onclick=()=>palWinReopen();
-/* Phase 1: drag the window by its title bar (a locked window — lane-top ON — keeps its x
-   glued to the grid and drags in y only) */
-document.getElementById('palWinHead').addEventListener('mousedown',e=>{
- if(e.target.closest&&e.target.closest('.wbtn'))return;
- e.preventDefault();
- const cp=document.getElementById('chordPanel');if(!cp)return;
- palWinSel=true;cp.classList.add('winSel');
- const w=palState.win=palWinNorm(palState.win);
- const r=cp.getBoundingClientRect();
- const x0=e.clientX,y0=e.clientY,left0=r.left+(window.scrollX||0),top0=r.top+(window.scrollY||0);
- const lock=cp.classList.contains('palLock');
- let moved=false;
- const mm=ev=>{
-  if(!moved&&Math.abs(ev.clientX-x0)+Math.abs(ev.clientY-y0)<3)return;
-  moved=true;
-  if(!lock)cp.style.left=Math.max(0,left0+(ev.clientX-x0))+'px';
-  cp.style.top=Math.max(0,top0+(ev.clientY-y0))+'px';
- };
- const mu=()=>{
-  document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);
-  if(moved){
-   const r2=cp.getBoundingClientRect();
-   if(!lock)w.x=Math.round(r2.left+(window.scrollX||0));
-   w.y=Math.round(r2.top+(window.scrollY||0));
-   persistPal();
-  }
- };
- document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
-});
 /* selection: click the window = selected (Delete deletes it); click anywhere else clears */
 document.addEventListener('mousedown',e=>{
  const cp=document.getElementById('chordPanel');if(!cp)return;
@@ -9566,19 +9519,6 @@ document.addEventListener('keydown',e=>{
  gw.addEventListener('scroll',()=>{if(syncing||!cp.classList.contains('palLock'))return;syncing=true;cp.scrollLeft=gw.scrollLeft;syncing=false;});
  cp.addEventListener('scroll',()=>{if(syncing||!cp.classList.contains('palLock'))return;syncing=true;gw.scrollLeft=cp.scrollLeft;syncing=false;});
 })();
-/* a native corner resize persists (free mode only — a locked width belongs to the grid) */
-try{new ResizeObserver(()=>{
- const cp=document.getElementById('chordPanel');
- if(!cp)return;
- /* an anchored window's spacer follows its height, so the page below never jumps */
- const spc=document.getElementById('palSpacer');
- if(spc&&spc.style.display!=='none'){const h=cp.offsetHeight;if(h)spc.style.height=(h+28)+'px';}
- if(cp.classList.contains('palLock'))return;
- const w=palState.win;if(!w||w.closed)return;
- const ow=cp.offsetWidth;
- if(ow&&Math.abs((w.w||0)-ow)>2){w.w=ow;clearTimeout(palWinRzT);palWinRzT=setTimeout(persistPal,300);}
-}).observe(document.getElementById('chordPanel'))}catch(e){}
-window.addEventListener('resize',()=>{try{palWinApply();}catch(e){}});
 document.getElementById('snapHideBtn').onclick=()=>{palState.snapHide=true;persistPal();snapDockApply(true);};
 document.getElementById('snapIcon').onclick=()=>{palState.snapHide=false;persistPal();snapDockApply(true);};
 try{palWinApply();snapDockApply(false);}catch(e){}   /* landmine ⑪'s general defence: a saved state must never take the boot down */
@@ -23149,7 +23089,7 @@ const RAIL_DEFS=[
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
    unchanged, it simply starts as the open one. A saved state (incl. an explicit close)
    always wins over the default. */
-function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false,trips:null,links:[]};}   /* Phase 1: links = THE CONNECTION GRAPH */
+function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false};}   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized (his ask, 73rd) */
 function parseUiState(str,defs){
  const def=uiDefault(),ids=(defs||WINDOW_DEFS).map(d=>d.id);
  try{
@@ -23163,6 +23103,7 @@ function parseUiState(str,defs){
     for(const k of ids)if(typeof o.heights[k]==='number')def.heights[k]=Math.max(120,Math.min(1000,o.heights[k]));
    if(o.iconsHidden===true)def.iconsHidden=true;
    if(Array.isArray(o.links))def.links=linkNorm(o.links);   /* Phase 1: the graph persists in cp_ui */
+   if(o.gridMin===true)def.gridMin=true;
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
    if(o.trips==='min'||o.trips==='full')def.trips=o.trips;
    if(def.open==='tripsPanel'){def.open=null;if(!def.trips)def.trips='full';}
@@ -23174,7 +23115,8 @@ function uiReduce(state,action,defs){
  const s={open:state.open,collapsed:Object.assign({},state.collapsed),
   heights:Object.assign({},state.heights),iconsHidden:state.iconsHidden,
   trips:state.trips===undefined?null:state.trips,
-  links:Array.isArray(state.links)?state.links.slice():[]};   /* Phase 1: the graph rides every reduce */
+  links:Array.isArray(state.links)?state.links.slice():[],
+  gridMin:!!state.gridMin};   /* Phase 1: the graph + the grid-minimize ride every reduce */
  if(!action||typeof action!=='object')return s;
  /* WINDOW-SHELL · RAW [69][72][75]: Trips is the one-window-law EXCEPTION — a companion
     that opens BETWEEN the top window and the one below. Toggle never steals `open`. */
@@ -23209,6 +23151,7 @@ try{uiState=parseUiState(localStorage.getItem('cp_ui'));}catch(e){}
    entry at all, so a future unlink verb is not resurrected at every boot. */
 try{if(!linkedTo(uiState.links,'win:chordPalette').length&&!(palState&&palState.win&&palState.win.closed))
  uiState.links=linkAdd(uiState.links,'win:chordPalette',focusedGridNode(),true);}catch(e){}
+try{gridMinApply();}catch(e){}   /* the grid window's saved minimize — applied HERE, after uiState exists (a pre-init call sat in TDZ and silently never ran; landmine ⑪'s try/catch hid it until the suite's reload check caught the state not restoring) */
 function uiDispatch(action){
  const prevOpen=uiState.open;
  uiState=uiReduce(uiState,action);
