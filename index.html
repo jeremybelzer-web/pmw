@@ -550,7 +550,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26m</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26n</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6362,6 +6362,23 @@ function drawGridView(v,svgEl){
    out+=`<rect x="${bx(n[0])+1}" y="${viewRowY(v,gr)+5}" width="${Math.max(n[1]*PPB-2,5)}" height="${CELLH-10}" rx="3" fill="${gc}" opacity=".2" pointer-events="none"/>`;
   }
  }
+ /* 78th R2 (his words): CHORD-LANE GHOSTS — a melody-window audition rig hides its chord
+    lane and shows the chords as ghost notes behind the melody instead. Chain voicings
+    (laneVoicingsTop — the same pitches the band plays), dimmed, pointer-events off. */
+ if(typeof chordGhosts!=='undefined'&&chordGhosts&&!v.laneOnly&&Array.isArray(project.chords)&&project.chords.length){
+  const cgV=laneVoicingsTop(project.chords,secStarts());
+  let cgT=0;
+  project.chords.forEach((c,ci)=>{
+   const cg0=cgT;cgT+=c.d;
+   if(c.off)return;
+   if(cg0>=W.bEnd||cg0+c.d<=W.b0)return;
+   const cgX=bx(Math.max(cg0,W.b0)),cgW=(Math.min(cg0+c.d,W.bEnd)-Math.max(cg0,W.b0))*PPB;
+   for(const m of (cgV[ci]||[])){
+    const gr2=withKeyAt(cg0,()=>rowOfK(midiToK(m,v),v));
+    out+=`<rect class="cgGhost" x="${cgX+1}" y="${viewRowY(v,gr2)+5}" width="${Math.max(cgW-2,5)}" height="${CELLH-10}" rx="3" fill="#8b93a8" opacity=".22" pointer-events="none"/>`;
+   }
+  });
+ }
  /* notes */
  const L6=audioLinks[v.track||activeTrack];   /* linked track → per-block transpose badges */
  (project.melody||[]).forEach((nn,i)=>{
@@ -6691,6 +6708,10 @@ function paperMouseDown(e){
    Hidden state persists per browser (view state, like cp_ui — not project data). */
 var chordLaneHidden=false;
 try{chordLaneHidden=localStorage.getItem('cp_chordlane')==='hidden';}catch(e){}
+/* 78th R2 (his words): the melody-window audition rigs hide the chord lane and show its
+   chords as GHOST NOTES behind the melody instead. A world slot (per grid), never
+   persisted to cp_chordlane — Grid 1's own value stays false. */
+var chordGhosts=false;
 var chordRz=null;
 function setChordLaneHidden(v){
  chordLaneHidden=!!v;
@@ -23221,7 +23242,7 @@ function gridSlotsCapture(){
   selNotes,selChordSet,selChord,
   views:Object.assign({},GRID_VIEWS),activeGridView,LANE_VIEWS,
   armedTrack,stripPPB,stripLOOP,stripPaper,
-  chordLaneHidden,paperView,zimOn,playheadBeat};
+  chordLaneHidden,chordGhosts,paperView,zimOn,playheadBeat};
 }
 function gridSlotsApply(s){
  project=s.project;activeTrack=s.activeTrack;renderTrack=null;selOwner=s.selOwner;selSurface=s.selSurface;
@@ -23233,7 +23254,7 @@ function gridSlotsApply(s){
  for(const k in GRID_VIEWS)delete GRID_VIEWS[k];Object.assign(GRID_VIEWS,s.views);
  activeGridView=s.activeGridView;LANE_VIEWS=s.LANE_VIEWS;
  armedTrack=s.armedTrack;stripPPB=s.stripPPB;stripLOOP=s.stripLOOP;stripPaper=s.stripPaper;
- chordLaneHidden=s.chordLaneHidden;paperView=s.paperView;zimOn=s.zimOn;playheadBeat=s.playheadBeat;
+ chordLaneHidden=s.chordLaneHidden;chordGhosts=!!s.chordGhosts;paperView=s.paperView;zimOn=s.zimOn;playheadBeat=s.playheadBeat;
 }
 let _gridEnterStack=[];
 function enterGridWorld(id){
@@ -23269,16 +23290,22 @@ function gridWorldSlotsFresh(opts){
  Object.defineProperty(p,'melody',{get(){return p.tracks[edTrack()];},set(v){p.tracks[edTrack()]=v;},configurable:true});
  const vw={main:makeGridView('main',NROWS0,ROWSTART0)};
  const act=(opts&&typeof opts.active==='string'&&p.tracks[opts.active]!==undefined)?opts.active:'melody';
+ /* 78th R2 (his words): a melody-window rig shows ONLY the track its window transforms —
+    every other track hides (drums + comping stay AUDIBLE: hidden ≠ muted), the chord
+    lane hides, and its chords render as ghost notes instead (opts.rig from
+    auditionRigDefaults). Without a rig the 74th's blank-boot shape stands. */
+ const rig=(opts&&opts.rig)?opts.rig:null;
+ const hid=rig&&rig.soloTrack?new Set(Object.keys(p.tracks).filter(t=>t!==rig.soloTrack)):new Set(['bass','pad']);
  return {project:p,activeTrack:act,selOwner:'main',selSurface:'grid',
   LOOP:32,PPB:34,stripH:{},trackOrder:null,
-  hiddenTracks:new Set(['bass','pad']),trackBigH:{},trackSmallH:{},selHead:null,selHeads:new Set(),chordKeyOv:null,
+  hiddenTracks:hid,trackBigH:{},trackSmallH:{},selHead:null,selHeads:new Set(),chordKeyOv:null,
   undo:[],redoStack:[],lastSnap:null,redoStash:null,
   mutes:{drums:false,bass:false,comping:false,pad:false,melody:false},
   gridTriplets:false,swingOn:false,theadW:null,
   selNotes:new Set(),selChordSet:new Set(),selChord:null,
   views:vw,activeGridView:vw.main,LANE_VIEWS:[],
   armedTrack:null,stripPPB:0,stripLOOP:0,stripPaper:null,
-  chordLaneHidden:false,paperView:false,zimOn:false,playheadBeat:0};
+  chordLaneHidden:!!(rig&&rig.chordLaneHidden),chordGhosts:!!(rig&&rig.chordGhosts),paperView:false,zimOn:false,playheadBeat:0};
 }
 function gridWireClone(w){
  /* the clone carries no listeners (cloneNode) — re-attach the composite's static wiring.
@@ -23433,6 +23460,20 @@ function gridWorldClose(id){
  delete GRID_WORLDS[id];
  if(_wasUser&&typeof gridsPersistSoon==='function')gridsPersistSoon();
 }
+function auditionRigDefaults(winId){
+ /* 78th R2, his words verbatim in the spec's Decisions made: "The only visible track on
+    the multi-track grids should be the type of track that window transforms." Scale /
+    Modulation / Melisma transform MELODY — a single melody track with ghost notes from
+    the chord lane, the chord lane itself hidden, the other tracks hidden, drums +
+    polyphonic + melody all AUDIBLE (hidden ≠ muted). His examples name those three plus
+    the future Rhythm Window (rhythm track, ghosts from polyphonic+melody — recorded for
+    when it exists); Cadence keeps its 75th boot (comping expanded, drums+melody strips)
+    until he says otherwise [that reading is recorded in the spec]. Pure — unit-tested. */
+ if(winId==='modPanel'||winId==='melPanel'||winId==='ragaPanel')
+  return {active:'melody',soloTrack:'melody',chordLaneHidden:true,chordGhosts:true};
+ if(winId==='cadPanel')return {active:'comping'};
+ return null;
+}
 function gridAuditionSpawn(winId){
  /* the spec's AUTO-SPAWN: opening the Modulation / Melisma / Cadence (and, when they
     exist, Search) windows creates a linked audition grid directly ABOVE the window — no
@@ -23446,9 +23487,11 @@ function gridAuditionSpawn(winId){
  for(const gid in GRID_WORLDS)
   if(gid!=='main'&&GRID_WORLDS[gid]&&GRID_WORLDS[gid].pairFor===winId)return GRID_WORLDS[gid];
  const panel=_gridGetById(winId);
- /* 75th fix ③, his words verbatim in the spec's Decisions made: the Cadence pair boots
-    with the Polyphonic Instrument track EXPANDED (drums + melody ride as strips) */
- const w=gridWorldSpawn({before:panel,active:winId==='cadPanel'?'comping':null});
+ /* 75th fix ③ + 78th R2: the per-window rig defaults (auditionRigDefaults) pick the
+    expanded track AND the visible set — the melody windows boot melody-only with the
+    chord lane hidden and chord ghosts on; Cadence boots comping-expanded. */
+ const _rig=auditionRigDefaults(winId);
+ const w=gridWorldSpawn({before:panel,active:_rig?_rig.active:null,rig:_rig});
  if(!w)return null;
  w.pairFor=winId;   /* 78th: the pair's OWNER — reuse/close/verbs resolve by this, never by link scans */
  /* 78th (his words): a shipped pair FUSES — no background between the two, the adjoining
@@ -23475,6 +23518,16 @@ function gridSongLoad(id){
  loadSong(id);
  if(typeof CUR_GRID==='string'&&CUR_GRID!=='main'){
   for(const t of auditionExtraTracks(Object.keys(project.tracks))){mutes[t]=true;hiddenTracks.add(t);}
+  /* 78th R2: a melody-window rig re-asserts its solo view across the load — every track
+     other than the transformed one hides (drums+comping stay audible, the mute loop
+     above never touches them), the chord lane stays hidden, its ghosts stay on */
+  const _d=(GRID_WORLDS[CUR_GRID]&&typeof auditionRigDefaults==='function')?auditionRigDefaults(GRID_WORLDS[CUR_GRID].pairFor):null;
+  if(_d&&_d.soloTrack){
+   /* drums named explicitly — a loaded song's drums are style-backed with no
+      tracks.drums key, yet the lane renders (hiddenTracks honors 'drums' regardless) */
+   for(const t of Object.keys(project.tracks).concat(['drums']))if(t!==_d.soloTrack)hiddenTracks.add(t);
+   chordLaneHidden=true;chordGhosts=true;
+  }
   /* 75th round two: the rig keeps ITS expanded track across a load (the Cadence pair
      boots Polyphonic-expanded, fix ③) — loadSong's melody reset is Grid 1's own law */
   if(act0&&act0!=='melody'&&project.tracks[act0]!==undefined)switchTrack(act0);
