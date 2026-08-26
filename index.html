@@ -168,8 +168,8 @@
   #palette input{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;width:256px;outline:none;}
   #palette input:focus{border-color:var(--accent);}
   /* 3.3: the palette dock runs lengthwise below the grid */
-  #chordPanel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-  #chordPanel .cp-title{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin:2px 0 1px;}
+  .palWin{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}   /* 75th r3: the class covers palette INSTANCES too (clones carry it) */
+  .palWin .cp-title{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin:2px 0 1px;}
   #cpHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   #cpCtl{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto;}
   .cpchip{font-size:10.5px;padding:3px 8px;border:1px solid var(--line);border-radius:20px;color:var(--dim);cursor:pointer;user-select:none;white-space:nowrap;}
@@ -190,14 +190,14 @@
      [M24] (71st round two, his call: "its own boxed window, docked"): the palette wears the app's own
      WINDOW dress — the #cadPanel margin idiom, a lifted shadow, and the real .winHead/.wbtn header —
      while staying inside #gridWrap so the [77]/[78] alignment survives a pan/zoom. */
-  #chordPanel{margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}   /* Fix 4: the standard 12px column gap — the palette's 14px bottom made its gap read wider */
+  .palWin{margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}   /* Fix 4: the standard 12px column gap — the palette's 14px bottom made its gap read wider */
   /* MODULAR_WINDOWS_SPEC Phase 1 (73rd, corrected on his look): the palette is its OWN boxed
      window in the column — a SIBLING of the Multi-Track Grid window with the page's black gap
      between them (his "separate the way that the current Modulation Window is separate").
      NOT floating, NOT overlapping. .palLock = lane-top ON: the linked pair scrolls as one. */
-  #chordPanel{margin-top:12px;}
-  #chordPanel.palLock{overflow-x:auto;}
-  #chordPanel.winSel{outline:2px solid var(--accent);outline-offset:1px;}
+  .palWin{margin-top:12px;}
+  .palWin.palLock{overflow-x:auto;}
+  .palWin.winSel{outline:2px solid var(--accent);outline-offset:1px;}
   .colGrip{cursor:grab;user-select:none;-webkit-user-select:none;margin-right:7px;color:var(--dim);font-size:11px;letter-spacing:-1px;}
   .colGrip:hover{color:var(--text);}
   .colGrip:active{cursor:grabbing;}
@@ -514,9 +514,16 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26d</span></div>
 
   <div class="controls">
+    <!-- 75th r3 (the spec's second creation route): the File menu at the top -->
+    <div class="ctl" id="fileMenuCtl" style="position:relative;">
+      <button id="fileMenuBtn" type="button" style="font-size:12px;padding:4px 12px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer;">File ▾</button>
+      <div id="fileMenu" style="display:none;position:absolute;left:0;top:100%;margin-top:4px;z-index:110;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.45);white-space:nowrap;">
+        <div id="fmNewGrid" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="A new Multi-Track Grid with its own Chord Palette — linked to Grid 1 by default (one tempo, one key, one transport); unlink it from its title bar for its own.">＋ Create Multi-Track Grid</div>
+      </div>
+    </div>
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
          window's source boxes own song selection now (dotted [+] Select music, unlimited
          songs, per-song track tables). The hidden selects keep every handler, project-file
@@ -856,7 +863,7 @@
        expand triangle; Jimi 7♯9; quick quality modifiers; Harmonic Minor behind
        (Show). Click a block = apply to the selected chord (mousedown auditions);
        drag = drop onto a chord-lane block or expand onto the grid. -->
-  <div id="chordPanel">
+  <div id="chordPanel" class="palWin">
     <!-- [M23c] (71st): window CHROME on the dock — minimizable, movable above or below the grid.
          NOT a WINDOW_DEFS promotion (landmine ② + the one-window law): the palette must stay usable
          while another window is open, so it keeps its dock identity and never steals the open slot.
@@ -8585,7 +8592,7 @@ function openPalette(ev,i){
 }
 function closePalette(){paletteEl.style.display='none';palIdx=null;}
 document.addEventListener('mousedown',e=>{
- if(!paletteEl.contains(e.target)&&!e.target.closest('.cb')&&!e.target.closest('#chordPanel')&&!e.target.closest('#modPanel')){
+ if(!paletteEl.contains(e.target)&&!e.target.closest('.cb')&&!e.target.closest('.palWin')&&!e.target.closest('#modPanel')){
   closePalette();
   if(selChord!=null){selChord=null;drawChordLane();}
  }
@@ -9110,10 +9117,10 @@ function mkPalCell(ch,opts){
    direction — works across the In-key/V rows, the parallel grid and harmonic minor) and
    audition each chord. Esc, or any grid/lane click, leaves the palette. ---- */
 let palSelIdx=null;
-function palCells(){return [...document.querySelectorAll('#chordPanel .cpb')].filter(el=>el.__ch);}
+function palCells(){const cp=document.getElementById('chordPanel');return cp?[...cp.querySelectorAll('.cpb')].filter(el=>el.__ch):[];}   /* 75th r3: world-first — each palette numbers its own cells */
 function markPalSel(){
  const cells=palCells();
- document.querySelectorAll('#chordPanel .cpb.psel').forEach(el=>el.classList.remove('psel'));
+ document.querySelectorAll('.palWin .cpb.psel').forEach(el=>el.classList.remove('psel'));
  if(palSelIdx==null)return;
  const el=cells.find(c=>+c.dataset.pi===palSelIdx);
  if(el)el.classList.add('psel');else palSelIdx=null;
@@ -9431,7 +9438,14 @@ let palWinSel=false;
 function palWinApply(){
  const cp=document.getElementById('chordPanel');
  if(!cp)return;
- const w=palState.win=palWinNorm(palState.win);
+ /* 75th r3: a palette INSTANCE keeps its own min/closed on ITS world (w.palWin) — the
+    shared palState.win is the MAIN palette's alone (closing one must not close them all).
+    ⚠ The world check sits in its OWN try: this function's boot call (9533-region) runs
+    BEFORE the let/const world declarations, and a TDZ throw here was silently eaten by
+    the boot's catch — taking snapDockApply down with it (found by verify-palw71). */
+ let _iw=null;
+ try{_iw=(CUR_GRID!=='main'&&GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].palWin)||null;}catch(e){}
+ const w=_iw||(palState.win=palWinNorm(palState.win));
  cp.classList.toggle('winCollapsed',!!w.min);
  cp.style.display=w.closed?'none':'';
  const ic=document.getElementById('palIcon');if(ic)ic.style.display=w.closed?'':'none';
@@ -9449,16 +9463,9 @@ function palWinModified(){
 function palWinClose(){
  /* the spec's deletion law: a MODIFIED palette offers a Chord Palette Template first; an
     untouched one deletes silently. (Template LOADING is the 3.3 GEMS save-as round —
-    the saved shapes wait for it in cp_pal.templates.) */
- if(palWinModified()&&confirm('You’ve modified this Chord Palette. Save it as a Chord Palette Template before deleting?')){
-  const name=prompt('Template name:','My Chord Palette');
-  if(name===null)return;   /* cancel = keep the window */
-  if(name)palState.templates=(Array.isArray(palState.templates)?palState.templates:[])
-   .concat([{name:String(name).slice(0,60),ts:Date.now(),
-     mats:JSON.parse(JSON.stringify(Array.isArray(palState.mats)?palState.mats:[null])),
-     dims:!!palState.dims,jimi:!!palState.jimi,hm:!!palState.hm,
-     laneTop:!!palState.laneTop,followSel:!!palState.followSel}]);
- }
+    the saved shapes wait for it in cp_pal.templates.) 75th r3: the offer is factored
+    (palTemplateOffer) — instance palettes run the same law through their own ✕. */
+ if(!palTemplateOffer())return;   /* cancel = keep the window */
  const w=palState.win=palWinNorm(palState.win);
  w.closed=true;palWinSel=false;persistPal();
  /* the graph mirrors reality: a deleted window's links go with it */
@@ -9570,8 +9577,9 @@ document.addEventListener('mouseup',ev=>{
   if(cb)applyPanelChord(+cb.id.slice(2),p.ch);
   else{
    /* 3.1: palette block dropped on the GRID = expand its voicing there (one bar,
-      clamped), in the active track */
-   const gr=svg.getBoundingClientRect();
+      clamped), in the active track. 75th r3: the hit-test asks the CURRENT world's svg
+      (curSvg) — an instance palette drops onto its own grid; main is unchanged. */
+   const gr=(typeof curSvg==='function'?curSvg():svg).getBoundingClientRect();
    if(!paperView&&ev.clientY>gr.top+viewTop(GRID_VIEWS.main)&&ev.clientY<gr.top+viewTop(GRID_VIEWS.main)+GRID_VIEWS.main.px
      &&ev.clientX>gr.left+GUT&&ev.clientX<Math.min(gr.right,gr.left+GUT+LOOP*PPB)){
     const st=gridStep();
@@ -22216,7 +22224,12 @@ async function togglePlay(){
     claims ownership for the world the spacebar/▶ arrived in. */
  if(playing&&typeof transportGrid==='string'&&transportGrid!==CUR_GRID&&GRID_WORLDS[transportGrid])
   return withGridWorld(transportGrid,()=>togglePlay());
- if(!playing)transportGrid=CUR_GRID;
+ if(!playing){transportGrid=CUR_GRID;
+  /* 75th r3 (the spec's unlink law): an UNLINKED user grid owns its OWN tempo — the claim
+     applies it; a linked world (main included) claims at the shared transport tempo */
+  const _uw=(typeof GRID_WORLDS==='object')?GRID_WORLDS[CUR_GRID]:null;
+  try{Tone.Transport.bpm.value=(_uw&&_uw.user&&_uw.linked===false&&_uw.bpm)?_uw.bpm:(+tempo.value||96);}catch(e){}
+ }
  if(!audioReady){const _tg=CUR_GRID;playBtn.disabled=true;playBtn.textContent='Loading…';await ensureAudio();playBtn.disabled=false;
   if(CUR_GRID!==_tg&&GRID_WORLDS[_tg])return withGridWorld(_tg,()=>togglePlay());}   /* the await left the routed world — re-enter and restart */
  if(playing){
@@ -22540,11 +22553,14 @@ function currentViewH(){
  if(hiddenTracks.size)out.hidden=[...hiddenTracks];   /* v3: the hidden set replaces viewH.min (collapse retired) */
  return Object.keys(out).length?out:undefined;}
 function currentProjectRecord(){
- return buildProjectRecord({songId:project.song.id,mode:project.mode,tonic:project.tonic,base:project.base,
+ return buildProjectRecord({songId:project.song?project.song.id:null,mode:project.mode,tonic:project.tonic,base:project.base,
   bpm:+tempo.value,styleId:project.style.id,loop:LOOP,chords:project.chords,tracks:project.tracks,
   sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,trips:project.trips,mixer:mixerRecord(),variations,ts:Date.now()});}
 function autosaveSoon(){
- if(typeof CUR_GRID==='string'&&CUR_GRID!=='main')return;   /* Phase 2 R2: a grid instance never writes THE autosave — its world is session-local */
+ if(typeof CUR_GRID==='string'&&CUR_GRID!=='main'){   /* Phase 2 R2: a grid instance never writes THE autosave; 75th r3: a USER grid persists into cp_grids instead */
+  const _w=(typeof GRID_WORLDS==='object')?GRID_WORLDS[CUR_GRID]:null;
+  if(_w&&_w.user&&typeof gridsPersistSoon==='function')gridsPersistSoon();
+  return;}
  projectDirty=true;
  if(!SETTINGS.autosave)return;
  clearTimeout(autosaveTimer);
@@ -22561,11 +22577,15 @@ function saveProjectFile(){
  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
  projectDirty=false;}
 function applyProjectFile(o){
- const s=SONGS.find(x=>x.id===o.songId)||SONGS[0];
+ /* 75th r3: this loader also restores a USER grid's world at boot (gridUserSpawn under
+    withGridWorld) — the _gwMain gates mirror loadSong's: app chrome, the shared transport,
+    the shared mixer and the globals are Grid 1's alone. */
+ const _gwMain=(typeof CUR_GRID!=='string'||CUR_GRID==='main');
+ const s=SONGS.find(x=>x.id===o.songId)||(_gwMain?SONGS[0]:null);
  project.song=s;project.tonic=o.tonic;project.base=o.base;
  LOOP=(typeof o.loop==='number'&&o.loop>=16&&o.loop<=256)?o.loop:32;syncBarsInp();
  if(typeof ensureModeOption==='function')ensureModeOption(o.mode);   /* 3.5: raga modes ride saved files */
- project.mode=o.mode;selMode.value=project.mode;
+ project.mode=o.mode;if(_gwMain)selMode.value=project.mode;
  project.sections=normalizeSections(o.sections,LOOP,{tonic:o.tonic,mode:o.mode,base:o.base});
  /* 3.2: files with lanes restore them all; legacy files load as a single lane */
  const LN=normalizeLanes(o.lanes?JSON.parse(JSON.stringify(o.lanes)):null,JSON.parse(JSON.stringify(o.chords)),o.lane);
@@ -22581,13 +22601,13 @@ function applyProjectFile(o){
  project.srcs=srcsNormalize(o.srcs,SONGS.map(x=>x.id));   /* 4.4: sources ride project files */
  project.groups=groupsNormalize(o.groups,MIX_TRACKS.concat(customTrackIds(project.tracks)));   /* ⌘G: groups ride them too */
  project.shelf=validShelf(o.shelf)?JSON.parse(JSON.stringify(o.shelf)):[];   /* 5.1: the Shelf rides project files */
- project.trips=normalizeTrips(o.trips);orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;   /* 4.7 R3: the itinerary rides project files; a load grounds the fleet */
- mixer=(o.mixer&&typeof o.mixer==='object')?normalizeMixer(o.mixer,MIX_TRACKS.concat(Object.keys(o.tracks||{}))):mixerFromDevice();   /* 2.6 R0a: the file's mix wins; cp_mixer is the fallback for old files (Q2) */
- persistMixer();if(typeof applyPans==='function')applyPans();if(mixerOpen)drawMixer();
+ project.trips=normalizeTrips(o.trips);if(_gwMain){orbTrips.run=false;orbTrips.idx=0;orbTrips.next=null;}   /* 4.7 R3: the itinerary rides project files; a load grounds the fleet (the fleet is Grid 1's) */
+ if(_gwMain){mixer=(o.mixer&&typeof o.mixer==='object')?normalizeMixer(o.mixer,MIX_TRACKS.concat(Object.keys(o.tracks||{}))):mixerFromDevice();   /* 2.6 R0a: the file's mix wins; cp_mixer is the fallback for old files (Q2); 75th r3: the mixer is SHARED, so an instance restore never writes it */
+ persistMixer();if(typeof applyPans==='function')applyPans();if(mixerOpen)drawMixer();}
  selHeads.clear();selHead=null;
- selSong.value=s.id;selStyle.value=project.style.id;selChords.value='none';
- setTempo(o.bpm);selNotes.clear();undoStack.length=0;redoStack.length=0;
- clearPsych();closeSectionEditor();closeVoicingEditor();
+ if(_gwMain){selSong.value=s.id;selStyle.value=project.style.id;selChords.value='none';
+ setTempo(o.bpm);}selNotes.clear();undoStack.length=0;redoStack.length=0;
+ if(_gwMain)clearPsych();closeSectionEditor();closeVoicingEditor();
  hardResetViews();   /* 2.1b: project files carry their own view heights (#12c) */
  if(o.viewH&&validViewH(o.viewH)){
   const m=GRID_VIEWS.main;
@@ -22599,10 +22619,10 @@ function applyProjectFile(o){
   if(Array.isArray(o.viewH.order))trackOrder=o.viewH.order.slice();
   if(Array.isArray(o.viewH.hidden))for(const t of o.viewH.hidden)hiddenTracks.add(t);
  }
- if(Array.isArray(o.variations)&&o.variations.length){
+ if(_gwMain&&Array.isArray(o.variations)&&o.variations.length){
   variations=o.variations;ensureVarIds(variations);persistVars();drawVars();}
- lineage={parent:null,engine:null,params:null};
- if(typeof buildSources==='function')buildSources();   /* 4.4: the source boxes follow the file */
+ if(_gwMain)lineage={parent:null,engine:null,params:null};
+ if(_gwMain&&typeof buildSources==='function')buildSources();   /* 4.4: the source boxes follow the file */
  drawTrackSel();refresh(true);}
 function openProjectFile(){
  const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
@@ -22939,12 +22959,27 @@ function gridIdsetBuild(){
 /* ⛔ COMPOSITE ids resolve INSIDE THE CURRENT WORLD'S ROOT — for main too. The clones
    duplicate inner ids on purpose (CSS), and a clone REORDERED ABOVE Grid 1 would win a
    document-order getElementById — verify-27a caught exactly that within the hour. */
+let PAL_IDSET=null;   /* 75th r3: the Chord Palette composite's id vocabulary — instance palettes resolve world-first exactly like the grid */
+function palIdsetBuild(){
+ const real=_gridGetById('chordPanel');if(!real)return null;
+ const s=new Set(['chordPanel']);
+ real.querySelectorAll('[id]').forEach(e=>s.add(e.id));
+ return s;
+}
 document.getElementById=function(id){
  if(GRID_IDSET&&GRID_IDSET.has(id)){
   const w=GRID_WORLDS[CUR_GRID];
   if(w&&w.els&&w.els.root){
    if(id==='gridRowWrap')return w.els.root;
    const el=w.els.root.querySelector('[id="'+id+'"]');
+   if(el)return el;
+  }
+ }
+ if(PAL_IDSET&&PAL_IDSET.has(id)){
+  const w=GRID_WORLDS[CUR_GRID];
+  if(w&&w.els&&w.els.palRoot){
+   if(id==='chordPanel')return w.els.palRoot;
+   const el=w.els.palRoot.querySelector('[id="'+id+'"]');
    if(el)return el;
   }
  }
@@ -23075,10 +23110,12 @@ function gridWireClone(w){
 }
 function gridWorldSpawn(opts){
  /* mint a real second grid: clone Grid 1's composite, scrub what is Grid 1's alone,
-    park a fresh blank world behind it, render it whole under that world. */
+    park a fresh blank world behind it, render it whole under that world.
+    75th r3: opts.id restores a PERSISTED user grid under its saved id (cp_grids);
+    opts.user marks it a user-created grid (persists, link chip, own palette). */
  const me=gridMainEls();if(!me)return null;
  if(!GRID_IDSET)GRID_IDSET=gridIdsetBuild();
- const id='g'+(++_gridWSeq);
+ const id=(opts&&typeof opts.id==='string'&&/^g\d+$/.test(opts.id)&&!GRID_WORLDS[opts.id])?opts.id:'g'+(++_gridWSeq);
  const root=me.root.cloneNode(true);
  root.id='gridRowWrap_'+id;
  root.setAttribute('data-gridworld',id);
@@ -23091,14 +23128,50 @@ function gridWorldSpawn(opts){
  for(const hid of ['modlane','tempolane','sectionlane','tsiglane','chordlane','laneRows',
   'trackStrips','trackStripsB','songOv','trackSel'])
   {const h=root.querySelector('[id="'+hid+'"]');if(h)h.innerHTML='';}
- const w={id,slots:gridWorldSlotsFresh(opts),els:null,min:false};
+ const w={id,slots:gridWorldSlotsFresh(opts),els:null,min:false,
+  user:!!(opts&&opts.user),linked:true,bpm:null,palWin:{min:false,closed:false}};
  w.els={root,wrap:root.querySelector('[id="gridWrap"]'),svg:root.querySelector('[id="grid"]')};
  /* window chrome: retitle, per-instance minimize, a real ✕, the ⠿ column grip */
  const head=root.querySelector('[id="gridWinHead"]');
  if(head){
-  const tt=head.querySelector('.wtitle');if(tt)tt.textContent='Multi-Track Grid '+(_gridWSeq);
+  const tt=head.querySelector('.wtitle');if(tt)tt.textContent='Multi-Track Grid '+id.slice(1);
   const chip=head.querySelector('[id="gridMinChip"]');
   if(chip)chip.onclick=()=>{w.min=!w.min;if(w.els.wrap)w.els.wrap.classList.toggle('winCollapsed',w.min);chip.textContent=w.min?'+':'−';};   /* Fix 3: '+' when minimized */
+  if(w.user){
+   /* 75th r3, the spec's user-grid chrome: its own ▶, the Link/Unlink toggle, and — only
+      while UNLINKED — its own BPM box ("it gets its own transport controls, and its own
+      independent key and tempo"). One state, many controls: the chip and box read w. */
+   const pb=document.createElement('span');
+   pb.className='wbtn gwPlay';pb.textContent='▶';pb.title='Play / stop this grid (the spacebar plays whichever grid is selected)';
+   pb.onclick=e=>{e.stopPropagation();withGridWorld(id,()=>togglePlay());};
+   head.appendChild(pb);
+   const bp=document.createElement('input');
+   bp.type='number';bp.className='gwBpm';bp.min=40;bp.max=220;bp.step=1;
+   bp.title='This grid’s own tempo — it applies whenever this grid plays (unlinked grids only)';
+   bp.style.cssText='width:52px;display:none;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:1px 4px;font-size:11px;margin-left:4px;';
+   bp.onclick=e=>e.stopPropagation();
+   bp.onchange=e=>{e.stopPropagation();const v=Math.round(+bp.value);
+    if(isFinite(v)){w.bpm=Math.max(40,Math.min(220,v));bp.value=w.bpm;
+     if(playing&&transportGrid===id){try{Tone.Transport.bpm.value=w.bpm;}catch(err){}}
+     if(typeof gridsPersistSoon==='function')gridsPersistSoon();}
+    bp.blur();};
+   head.appendChild(bp);
+   const lk=document.createElement('span');
+   lk.className='wbtn gwLink';
+   lk.title='Linked: one tempo, one key, one transport with Grid 1 — a single playable unit. Unlinked: this grid gets its own transport controls and its own independent key and tempo.';
+   lk.onclick=e=>{e.stopPropagation();
+    w.linked=!w.linked;
+    if(typeof uiState==='object'&&uiState){
+     uiState.links=w.linked?linkAdd(uiState.links,'grid:'+id,'grid:main',true)
+      :linkRemove(uiState.links,'grid:'+id,'grid:main');
+     try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
+    }
+    if(!w.linked&&!w.bpm)w.bpm=Math.round(+tempo.value)||96;
+    if(w.linked&&playing&&transportGrid===id){try{Tone.Transport.bpm.value=+tempo.value||96;}catch(err){}}
+    gridChromeSync(w);
+    if(typeof gridsPersistSoon==='function')gridsPersistSoon();};
+   head.appendChild(lk);
+  }
   const x=document.createElement('span');
   x.className='wbtn';x.textContent='✕';x.title='Close this grid';
   x.onclick=()=>gridWorldClose(id);
@@ -23109,8 +23182,18 @@ function gridWorldSpawn(opts){
  document.body.insertBefore(root,before);
  GRID_WORLDS[id]=w;
  gridWireClone(w);
- withGridWorld(id,()=>{drawTrackSel();refresh(false);if(typeof updatePlayheadLine==='function')updatePlayheadLine();});
+ if(w.user){gridChromeSync(w);if(typeof palCloneFor==='function')palCloneFor(w);}
+ withGridWorld(id,()=>{drawTrackSel();refresh(false);if(typeof updatePlayheadLine==='function')updatePlayheadLine();
+  if(w.els.palRoot&&typeof drawChordPanel==='function')try{drawChordPanel();}catch(e){console.error('instance palette draw failed',e);}});
  return w;
+}
+function gridChromeSync(w){
+ /* the user-grid head chrome reads ONE state: w.linked / w.bpm */
+ if(!w||!w.els||!w.els.root)return;
+ const head=w.els.root.querySelector('[id="gridWinHead"]');if(!head)return;
+ const lk=head.querySelector('.gwLink'),bp=head.querySelector('.gwBpm');
+ if(lk)lk.textContent=w.linked?'⛓ Linked':'⛓ Unlinked';
+ if(bp){bp.style.display=w.linked?'none':'';if(!w.linked)bp.value=w.bpm||Math.round(+tempo.value)||96;}
 }
 function gridWorldClose(id){
  const w=GRID_WORLDS[id];
@@ -23124,7 +23207,10 @@ function gridWorldClose(id){
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  }
  if(w.els&&w.els.root&&w.els.root.parentNode)w.els.root.parentNode.removeChild(w.els.root);
+ if(w.els&&w.els.palRoot&&w.els.palRoot.parentNode)w.els.palRoot.parentNode.removeChild(w.els.palRoot);   /* 75th r3: a user grid's palette leaves with it */
+ const _wasUser=!!w.user;
  delete GRID_WORLDS[id];
+ if(_wasUser&&typeof gridsPersistSoon==='function')gridsPersistSoon();
 }
 function gridAuditionSpawn(winId){
  /* the spec's AUTO-SPAWN: opening the Modulation / Melisma / Cadence (and, when they
@@ -23179,6 +23265,165 @@ function modVerbWorld(fn){
  if(gid&&withGridWorld(gid,()=>project.chords.length>0))return withGridWorld(gid,fn);
  return fn();
 }
+/* ==== PHASE 2 · USER-CREATED GRIDS (the spec: Ctrl+click empty space · the File menu;
+   its OWN Chord Palette; linked to Grid 1 by default; unlink = own transport controls,
+   key and tempo; per-grid persistence — auto-spawn rigs stay session-local) ==== */
+function palCloneFor(w){
+ /* the palette instance: the REAL #chordPanel cloned, world-first-resolved (PAL_IDSET),
+    glued directly below its grid. Inner ids DUPLICATED on purpose (the grid-clone law);
+    the ROOT id is renamed so main-world lookups and the column stay unambiguous. */
+ const real=_gridGetById('chordPanel');if(!real||!w||!w.els||!w.els.root)return null;
+ if(!PAL_IDSET)PAL_IDSET=palIdsetBuild();
+ const pr=real.cloneNode(true);
+ pr.id='chordPanel_'+w.id;
+ pr.setAttribute('data-gridworld',w.id);
+ pr.classList.remove('winCollapsed','winSel','palLock');
+ pr.style.display='';pr.style.marginTop='12px';
+ for(const hid of ['cpMain','cpRel','cpHm'])
+  {const h=pr.querySelector('[id="'+hid+'"]');if(h)h.innerHTML='';}
+ w.els.root.parentNode.insertBefore(pr,w.els.root.nextSibling);
+ w.els.palRoot=pr;
+ palWireClone(w);
+ return pr;
+}
+function palWireClone(w){
+ /* cloneNode carries no listeners. The shared-state chips REUSE the real elements'
+    handler functions (one body, lockstep by reference — the router has already entered
+    this world, so drawChordPanel inside them redraws THIS palette). The window chrome
+    (min/close/head/🎹) is per-instance and reads w.palWin. */
+ const q=id=>w.els.palRoot.querySelector('[id="'+id+'"]');
+ for(const cid of ['cpDimsChip','cpJimiChip','cpHmLink'])
+  {const r=_gridGetById(cid),c=q(cid);if(r&&c&&r.onclick)c.onclick=r.onclick;}
+ for(const cid of ['cpFollowSelBox','cpLaneTopBox'])
+  {const r=_gridGetById(cid),c=q(cid);if(r&&c&&r.onchange)c.onchange=r.onchange;}
+ const apply=()=>withGridWorld(w.id,()=>palWinApply());
+ const mc=q('palMinChip');
+ if(mc)mc.onclick=e=>{e.stopPropagation();w.palWin.min=!w.palWin.min;apply();gridsPersistSoon();};
+ const head=q('palWinHead');
+ if(head)head.onclick=e=>{
+  if(e.target&&e.target.classList&&(e.target.classList.contains('wbtn')||e.target.classList.contains('colGrip')))return;
+  w.palWin.min=!w.palWin.min;apply();gridsPersistSoon();};
+ const x=q('palCloseChip');
+ if(x)x.onclick=e=>{e.stopPropagation();
+  if(!palTemplateOffer())return;   /* cancel = keep the window */
+  w.palWin.closed=true;apply();
+  if(typeof uiState==='object'&&uiState){
+   uiState.links=linkRemove(uiState.links,'pal:'+w.id,'grid:'+w.id);
+   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
+  }
+  gridsPersistSoon();};
+ const ic=w.els.root.querySelector('[id="palIcon"]');
+ if(ic)ic.onclick=()=>{w.palWin.closed=false;
+  if(typeof uiState==='object'&&uiState){
+   uiState.links=linkAdd(uiState.links,'pal:'+w.id,'grid:'+w.id,true);
+   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
+  }
+  withGridWorld(w.id,()=>{palWinApply();drawChordPanel();});gridsPersistSoon();};
+}
+function palTemplateOffer(){
+ /* the deletion law, factored (main + instances): a MODIFIED palette offers a Chord
+    Palette Template first. Returns false when the user cancels the whole close. */
+ if(palWinModified()&&confirm('You’ve modified this Chord Palette. Save it as a Chord Palette Template before deleting?')){
+  const name=prompt('Template name:','My Chord Palette');
+  if(name===null)return false;
+  if(name){palState.templates=(Array.isArray(palState.templates)?palState.templates:[])
+   .concat([{name:String(name).slice(0,60),ts:Date.now(),
+     mats:JSON.parse(JSON.stringify(Array.isArray(palState.mats)?palState.mats:[null])),
+     dims:!!palState.dims,jimi:!!palState.jimi,hm:!!palState.hm,
+     laneTop:!!palState.laneTop,followSel:!!palState.followSel}]);persistPal();}
+ }
+ return true;
+}
+function palGlueAll(){
+ /* an instance palette RIDES its grid — after any column reorder, re-glue each one
+    directly below its grid root (the pair moves as one unit under the grid's ⠿ grip) */
+ for(const gid in GRID_WORLDS){const w=GRID_WORLDS[gid];
+  if(w&&w.els&&w.els.palRoot&&w.els.root&&w.els.root.parentNode)
+   w.els.root.parentNode.insertBefore(w.els.palRoot,w.els.root.nextSibling);}
+}
+function gridUserSpawn(opts){
+ /* both creation routes land here (Ctrl+click empty space · File ▾ Create Multi-Track
+    Grid) — and the cp_grids boot restore (opts.id + opts.rec). */
+ const before=(function(){const cp=_gridGetById('chordPanel');
+  return (cp&&cp.parentNode===document.body)?cp.nextSibling:null;})();
+ const w=gridWorldSpawn({user:true,id:opts&&opts.id,before});
+ if(!w)return null;
+ if(opts&&opts.rec)withGridWorld(w.id,()=>{try{applyProjectFile(opts.rec);}catch(e){console.error('user-grid restore failed',e);}});
+ if(typeof uiState==='object'&&uiState){
+  uiState.links=linkAdd(uiState.links,'grid:'+w.id,'grid:main',true);   /* linked to Grid 1 by default */
+  uiState.links=linkAdd(uiState.links,'pal:'+w.id,'grid:'+w.id,true);   /* its own palette, linked */
+  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ }
+ gridsPersistSoon();
+ return w;
+}
+/* per-grid persistence — ONE key (cp_grids, the 26th cp_ key): user grids ride reloads;
+   auto-spawn audition rigs stay session-local by design (the R2 law stands) */
+let _gridsTimer=null;
+function gridsPersistSoon(){clearTimeout(_gridsTimer);_gridsTimer=setTimeout(gridsPersist,600);}
+function gridsPersist(){
+ try{
+  const rows=[];
+  for(const gid in GRID_WORLDS){
+   const w=GRID_WORLDS[gid];
+   if(gid==='main'||!w||!w.user)continue;
+   let rec=null;
+   try{rec=withGridWorld(gid,()=>currentProjectRecord());}catch(e){rec=null;}
+   rows.push({id:gid,rec,min:!!w.min,linked:w.linked!==false,bpm:(typeof w.bpm==='number')?w.bpm:null,
+    pal:{min:!!(w.palWin&&w.palWin.min),closed:!!(w.palWin&&w.palWin.closed)}});
+  }
+  localStorage.setItem('cp_grids',JSON.stringify({v:1,seq:_gridWSeq,grids:rows}));
+ }catch(e){}
+}
+function gridsRecParse(str){
+ /* pure guard for the cp_grids record — junk in, null out; rows keep only sane shapes */
+ try{
+  const o=typeof str==='string'?JSON.parse(str||'null'):str;
+  if(!o||o.v!==1||!Array.isArray(o.grids))return null;
+  const grids=o.grids.filter(r=>r&&typeof r==='object'&&typeof r.id==='string'&&/^g\d+$/.test(r.id))
+   .map(r=>({id:r.id,rec:(r.rec&&typeof r.rec==='object')?r.rec:null,min:!!r.min,
+    linked:r.linked!==false,bpm:(typeof r.bpm==='number'&&isFinite(r.bpm))?r.bpm:null,
+    pal:{min:!!(r.pal&&r.pal.min),closed:!!(r.pal&&r.pal.closed)}}));
+  const mx=grids.reduce((a,r)=>Math.max(a,+r.id.slice(1)||0),0);
+  return {seq:Math.max((typeof o.seq==='number'&&isFinite(o.seq))?o.seq:0,mx),grids};
+ }catch(e){return null;}
+}
+function gridAddMenuShow(x,y){
+ /* the spec's add-window dropdown at blank space — Phase 2 ships its Multi-Track Grid
+    entry; later phases grow the list */
+ let m=_gridGetById('gridAddMenu');
+ if(!m){
+  m=document.createElement('div');m.id='gridAddMenu';
+  m.style.cssText='position:absolute;z-index:110;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.45);display:none;';
+  const it=document.createElement('div');
+  it.textContent='＋ Multi-Track Grid';
+  it.style.cssText='padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);';
+  it.onmouseenter=()=>{it.style.background='var(--panel2)';};
+  it.onmouseleave=()=>{it.style.background='';};
+  it.onclick=()=>{m.style.display='none';gridUserSpawn();};
+  m.appendChild(it);
+  document.body.appendChild(m);
+  document.addEventListener('mousedown',e=>{if(m.style.display!=='none'&&!m.contains(e.target))m.style.display='none';},true);
+ }
+ m.style.left=Math.round(x+(window.scrollX||0))+'px';
+ m.style.top=Math.round(y+(window.scrollY||0))+'px';
+ m.style.display='block';
+}
+document.body.addEventListener('contextmenu',e=>{
+ /* Ctrl+click IS the Mac's right-click — one handler covers both (the spec's both-ways rule) */
+ if(e.target!==document.body)return;
+ e.preventDefault();
+ gridAddMenuShow(e.clientX,e.clientY);
+});
+(function wireFileMenu(){
+ const btn=_gridGetById('fileMenuBtn'),menu=_gridGetById('fileMenu'),ng=_gridGetById('fmNewGrid');
+ if(!btn||!menu||!ng)return;
+ btn.onclick=e=>{e.stopPropagation();menu.style.display=menu.style.display==='none'?'block':'none';};
+ ng.onmouseenter=()=>{ng.style.background='var(--panel2)';};
+ ng.onmouseleave=()=>{ng.style.background='';};
+ ng.onclick=()=>{menu.style.display='none';gridUserSpawn();};
+ document.addEventListener('mousedown',e=>{if(menu.style.display!=='none'&&!menu.contains(e.target)&&e.target!==btn)menu.style.display='none';},true);
+})();
 /* the event router: enter the world a gesture belongs to BEFORE its handlers run
    (document capture fires first), leave after the dispatch (a document bubble listener
    registered last). A handler's stopPropagation can eat the bubble exit — the next
@@ -23256,6 +23501,7 @@ function applyColOrder(){
   const el=document.getElementById(id);
   if(el&&el.parentNode===document.body)document.body.insertBefore(el,anchor);
  }
+ if(typeof palGlueAll==='function')palGlueAll();   /* 75th r3: instance palettes ride their grids through any reorder */
 }
 function colGripAdd(head,memberId){
  if(!head||head.querySelector('.colGrip'))return;
@@ -24124,8 +24370,27 @@ document.getElementById('patchClear').onclick=e=>{
 try{
  if(typeof uiState==='object'&&uiState&&Array.isArray(uiState.openWins)){
   /* every persisted grid:gN link is stale by definition (instances die with the session) —
-     strip first so the respawn mints clean pairs instead of accumulating duplicates */
-  uiState.links=linkNorm(uiState.links).filter(l=>!(/^grid:g\d+$/.test(l.a)||/^grid:g\d+$/.test(l.b)));
+     strip first so the respawn mints clean pairs instead of accumulating duplicates.
+     75th r3: USER grids are the exception — they restore from cp_grids right after the
+     strip (same ids, so the saved column order still names them) and re-add their links. */
+  uiState.links=linkNorm(uiState.links).filter(l=>!(/^grid:g\d+$/.test(l.a)||/^grid:g\d+$/.test(l.b)||/^pal:g\d+$/.test(l.a)||/^pal:g\d+$/.test(l.b)));
+  const _gp=gridsRecParse(localStorage.getItem('cp_grids'));
+  if(_gp){
+   _gridWSeq=Math.max(_gridWSeq,_gp.seq);
+   for(const _r of _gp.grids){
+    const _w=gridUserSpawn({id:_r.id,rec:_r.rec});
+    if(!_w)continue;
+    _w.linked=_r.linked!==false;
+    if(!_w.linked)uiState.links=linkRemove(uiState.links,'grid:'+_w.id,'grid:main');
+    _w.bpm=_r.bpm;
+    if(_r.min){_w.min=true;if(_w.els.wrap)_w.els.wrap.classList.add('winCollapsed');
+     const _mc=_w.els.root.querySelector('[id="gridMinChip"]');if(_mc)_mc.textContent='+';}
+    if(_r.pal){_w.palWin.min=!!_r.pal.min;_w.palWin.closed=!!_r.pal.closed;
+     withGridWorld(_w.id,()=>{try{palWinApply();}catch(e){}});}
+    gridChromeSync(_w);
+   }
+   if(typeof applyColOrder==='function')applyColOrder();   /* the saved order names the restored ids */
+  }
   for(const _aw of ['modPanel','melPanel','cadPanel'])
    if(uiState.openWins.indexOf(_aw)>=0&&uiWinShown(_aw))gridAuditionSpawn(_aw);
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
