@@ -514,7 +514,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26c</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -563,6 +563,11 @@
        under the icon bar when open (the one-window law is unchanged; docks 〜 Slide) -->
   <div class="gridwrap" id="melPanel" style="margin:12px 0;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Variation engine · Melody Melisma Machine</div>
+    <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
+    <div id="melSongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above. Every track other than Drums, the Polyphonic Instrument and Melody arrives muted and hidden — unhide and unmute them any time.">Load a song into the audition grid</label>
+      <select id="melSongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
+    </div>
     <div style="border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 10px 0;font-size:12px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">
       “<b>Techniques, ornaments, articulations, contours, interval patterns, and scales are not copyrightable. Specific melodic expression is.</b>”
       <span style="color:var(--dim);">— the line this engine is built on. Every entry below is generic musical vocabulary, organized by tradition and era, never by artist. Curves are derived approximations until ear-approved.</span>
@@ -893,6 +898,11 @@
        opens with it, like Modulation and Melisma) when Grid 2 exists. -->
     <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadences — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><button id="cadSearchBtn" type="button" style="margin-left:auto;font-size:10px;letter-spacing:.6px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:none;color:var(--dim);cursor:pointer;" title="The Cadence SEARCH Window — coming: whichever set of cadences you select there will populate this window. Its spec lives in the roadmap; this button marks its home.">SEARCH</button></div>
+    <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
+    <div id="cadSongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above. Every track other than Drums, the Polyphonic Instrument and Melody arrives muted and hidden — unhide and unmute them any time.">Load a song into the audition grid</label>
+      <select id="cadSongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
+    </div>
     <div id="cadEndsRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>
     <div id="cadTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
     <div id="cadSongsRow" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
@@ -10556,20 +10566,27 @@ document.getElementById('modFav').onclick=e=>{
  e.target.blur();
 };
 drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
-/* PHASE 2 · SONG LOADING — the window's song selector fills from the app's own SONGS
-   and loads into the linked audition grid, under its world, through the REAL loader */
+/* PHASE 2 · SONG LOADING — each auto-spawn window's song selector fills from the app's
+   own SONGS and loads into ITS linked audition grid, under that world, through the REAL
+   loader. 75th round two, his YES ×2: Melisma and Cadence join Modulation. */
 (function(){
- const sel=document.getElementById('modSongSel');if(!sel)return;
- sel.add(new Option('— pick a song —',''));
- SONGS.forEach(s=>sel.add(new Option(s.name,s.id)));
- sel.onchange=()=>{
-  const id=sel.value;if(!id)return;
-  const w=(typeof gridAuditionSpawn==='function')?gridAuditionSpawn('modPanel'):null;
-  if(!w){setModStatus('No audition grid to load into.');return;}
-  withGridWorld(w.id,()=>gridSongLoad(id));
-  setModStatus('Loaded into the audition grid above — extra tracks arrive muted & hidden (unhide/unmute them any time).');
-  sel.blur();
- };
+ const statusFor={modPanel:m=>setModStatus(m),
+  melPanel:m=>{const e=document.getElementById('melStatus');if(e)e.textContent=m;},
+  cadPanel:m=>{const e=document.getElementById('cadStatus');if(e)e.textContent=m;}};
+ for(const [selId,winId] of [['modSongSel','modPanel'],['melSongSel','melPanel'],['cadSongSel','cadPanel']]){
+  const sel=document.getElementById(selId);if(!sel)continue;
+  sel.add(new Option('— pick a song —',''));
+  SONGS.forEach(s=>sel.add(new Option(s.name,s.id)));
+  sel.onchange=()=>{
+   const id=sel.value;if(!id)return;
+   const w=(typeof gridAuditionSpawn==='function')?gridAuditionSpawn(winId):null;
+   const say=statusFor[winId]||(()=>{});
+   if(!w){say('No audition grid to load into.');return;}
+   withGridWorld(w.id,()=>gridSongLoad(id));
+   say('Loaded into the audition grid above — extra tracks arrive muted & hidden (unhide/unmute them any time).');
+   sel.blur();
+  };
+ }
 })();
 /* 24b — the preview lane's boot wiring: settings load, the two toggles, ▶ and ▤ */
 try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
@@ -23137,10 +23154,14 @@ function gridSongLoad(id){
  /* runs UNDER the target world (withGridWorld) — the REAL loader does the work, so a
     grid instance loads exactly what Grid 1 would ("one component, many instances").
     loadSong itself gates its app-chrome side effects on the main world. */
+ const act0=(typeof CUR_GRID==='string'&&CUR_GRID!=='main')?activeTrack:null;
  loadSong(id);
  if(typeof CUR_GRID==='string'&&CUR_GRID!=='main'){
   for(const t of auditionExtraTracks(Object.keys(project.tracks))){mutes[t]=true;hiddenTracks.add(t);}
-  drawTrackSel();refresh(false);
+  /* 75th round two: the rig keeps ITS expanded track across a load (the Cadence pair
+     boots Polyphonic-expanded, fix ③) — loadSong's melody reset is Grid 1's own law */
+  if(act0&&act0!=='melody'&&project.tracks[act0]!==undefined)switchTrack(act0);
+  else{drawTrackSel();refresh(false);}
  }
 }
 function modLinkedGrid(){
