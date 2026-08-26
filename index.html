@@ -514,7 +514,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26e</span></div>
 
   <div class="controls">
     <!-- 75th r3 (the spec's second creation route): the File menu at the top -->
@@ -9503,6 +9503,14 @@ function gridMinApply(){
  const mc=document.getElementById('gridMinChip');if(mc)mc.textContent=uiState.gridMin?'+':'−';
 }
 document.getElementById('gridMinChip').onclick=()=>{
+ uiState.gridMin=!uiState.gridMin;
+ try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ gridMinApply();
+};
+/* 75th round four (his fix, the palette Fix-1 idiom): the grid's title bar ITSELF
+   minimizes on click — the chips and the ⠿ grip keep their own jobs */
+document.getElementById('gridWinHead').onclick=e=>{
+ if(e.target&&e.target.classList&&(e.target.classList.contains('wbtn')||e.target.classList.contains('colGrip')))return;
  uiState.gridMin=!uiState.gridMin;
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  gridMinApply();
@@ -22779,7 +22787,7 @@ function uiDispatch(action){
     audition grid (it arrived with it; a lone audition grid over a closed window is clutter) */
  if(action&&action.type==='toggle'&&typeof action.id==='string'
   &&prevWins.indexOf(action.id)>=0&&(!Array.isArray(uiState.openWins)||uiState.openWins.indexOf(action.id)<0)
-  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel')
+  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel'||action.id==='ragaPanel')
   &&typeof gridWorldClose==='function'&&typeof linkedTo==='function'){
   for(const other of linkedTo(uiState.links,'win:'+action.id))
    if(/^grid:g\d+$/.test(other)&&typeof GRID_WORLDS==='object'&&GRID_WORLDS[other.slice(5)])
@@ -22802,11 +22810,12 @@ function uiDispatch(action){
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
  if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel')){
-  /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation and Melisma windows arrive with a
-     linked audition grid directly ABOVE them — no Chord Palette, spawn-linked through the
-     ONE graph. (Search windows join when the search surface ships — ROADMAP 3.3.) */
+  /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation, Melisma and — 75th round four,
+     his words — SCALES windows arrive with a linked audition grid directly ABOVE them —
+     no Chord Palette, spawn-linked through the ONE graph. (The palette's 3.3 search
+     surface still joins when it ships.) */
   let _ag=null;
-  if((uiState.open==='modPanel'||uiState.open==='melPanel')&&typeof gridAuditionSpawn==='function')
+  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel')&&typeof gridAuditionSpawn==='function')
    _ag=gridAuditionSpawn(uiState.open);
   const p=(_ag&&_ag.els&&_ag.els.root)||document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
@@ -23136,7 +23145,14 @@ function gridWorldSpawn(opts){
  if(head){
   const tt=head.querySelector('.wtitle');if(tt)tt.textContent='Multi-Track Grid '+id.slice(1);
   const chip=head.querySelector('[id="gridMinChip"]');
-  if(chip)chip.onclick=()=>{w.min=!w.min;if(w.els.wrap)w.els.wrap.classList.toggle('winCollapsed',w.min);chip.textContent=w.min?'+':'−';};   /* Fix 3: '+' when minimized */
+  const _minTog=()=>{w.min=!w.min;if(w.els.wrap)w.els.wrap.classList.toggle('winCollapsed',w.min);if(chip)chip.textContent=w.min?'+':'−';if(w.user&&typeof gridsPersistSoon==='function')gridsPersistSoon();};
+  if(chip)chip.onclick=e=>{e.stopPropagation();_minTog();};   /* Fix 3: '+' when minimized */
+  /* 75th round four (his fix): the instance grid's title bar minimizes on click too —
+     chips, the ⠿ grip and the BPM input keep their own jobs */
+  head.onclick=e=>{
+   if(e.target&&e.target.classList&&(e.target.classList.contains('wbtn')||e.target.classList.contains('colGrip')))return;
+   if(e.target&&e.target.tagName==='INPUT')return;
+   _minTog();};
   if(w.user){
    /* 75th r3, the spec's user-grid chrome: its own ▶, the Link/Unlink toggle, and — only
       while UNLINKED — its own BPM box ("it gets its own transport controls, and its own
@@ -24391,7 +24407,7 @@ try{
    }
    if(typeof applyColOrder==='function')applyColOrder();   /* the saved order names the restored ids */
   }
-  for(const _aw of ['modPanel','melPanel','cadPanel'])
+  for(const _aw of ['modPanel','melPanel','cadPanel','ragaPanel'])
    if(uiState.openWins.indexOf(_aw)>=0&&uiWinShown(_aw))gridAuditionSpawn(_aw);
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  }
