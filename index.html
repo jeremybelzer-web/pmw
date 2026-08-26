@@ -198,6 +198,10 @@
   #chordPanel{margin-top:12px;}
   #chordPanel.palLock{overflow-x:auto;}
   #chordPanel.winSel{outline:2px solid var(--accent);outline-offset:1px;}
+  .colGrip{cursor:grab;user-select:none;-webkit-user-select:none;margin-right:7px;color:var(--dim);font-size:11px;letter-spacing:-1px;}
+  .colGrip:hover{color:var(--text);}
+  .colGrip:active{cursor:grabbing;}
+  #colDropLine{position:absolute;left:8px;right:8px;height:3px;background:var(--accent);border-radius:2px;display:none;z-index:110;box-shadow:0 0 8px var(--accent);pointer-events:none;}
   .cpSearchBtn{font-size:9px;letter-spacing:.6px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--dim);cursor:pointer;padding:2px 2px;align-self:stretch;writing-mode:horizontal-tb;}
   .cpSearchBtn:hover{color:var(--text);border-color:#4a5060;}
   #palWinHead .picon{font-size:12px;}
@@ -423,43 +427,11 @@
 .modShape svg{display:block;transition:transform .32s ease,filter .18s;}
 .modShape.modLit svg{filter:brightness(1.65) saturate(1.25) drop-shadow(0 0 5px rgba(255,230,150,.9));}
 .modShape.modSpin svg{}   /* retired at 24c ([M7b] replaced the continuous spin); the class survives one build for any stale reader */
-/* [M3b]/[M5]/[M6e-f]: the embedded preview lane at the top of the window */
-#modPrevRow{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
-/* [M21]: the SELECTED grid wears the ring — spacebar plays this one */
-#modPrevRow.gridFocused #modPrevScroll{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px;}
-#modPrevPlay{padding:6px 11px;font-size:13px;align-self:center;}
-#modPrevRuler{display:flex;height:14px;font-size:8.5px;color:var(--dim);border-bottom:1px solid var(--line);}
-#modPrevRuler .mprTick{border-left:1px solid var(--line);padding-left:2px;box-sizing:border-box;overflow:hidden;white-space:nowrap;}
-#modPrevRuler .mprTick.bar{border-left-color:var(--dim);color:var(--text);font-weight:700;}
-#modPrevScroll{overflow-x:auto;overflow-y:hidden;}
-/* [M10a]: the lane's left-side grip — the textured grab surface */
-#modPrevGripL{flex:0 0 11px;align-self:stretch;cursor:grab;border-radius:3px;border:1px solid var(--line);
- background:repeating-linear-gradient(45deg,var(--line),var(--line) 2px,transparent 2px,transparent 5px);}
-#modPrevGripL:hover{border-color:var(--accent);}
-/* [M14d] R1: the second grid's track rows — name boxes left, strips right (the main
-   grid's minimized-lane idiom); rows wider than the panel ride #modPrevScroll */
-#modPrevScroll .mgRow{display:flex;align-items:stretch;margin:0 0 3px 0;width:max-content;min-width:100%;}
-.mgHead{display:flex;align-items:center;margin-right:5px;cursor:pointer;user-select:none;-webkit-user-select:none;}   /* [M14d] R2: sizing/chrome come from the REAL .thead.nbox classes */
-.mgHead.off{opacity:.45;}
-.mgHead.mgSpacer{cursor:default;background:none !important;border:none !important;}
-#modPrevMel,#modPrevDrums,[id^="modPrevX_"]{position:relative;box-sizing:border-box;}   /* [M14d] R2: real .tstrip lanes — the class supplies the look */
-.mgNoteGrid{overflow:hidden;border-radius:4px;}   /* R2 (72nd): the expanded excerpt note grid — the GUT gutter clips off so beat 0 shares the ruler's x=0 */
-.mgExp{position:absolute;right:3px;bottom:3px;width:0;height:0;border-left:7px solid rgba(255,255,255,.55);border-top:4.5px solid transparent;border-bottom:4.5px solid transparent;cursor:pointer;}   /* R2: text-free expand triangle (suites read the box's textContent) */
-.mgExp.on{border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:7px solid rgba(255,255,255,.75);border-bottom:none;}
-#modPrevCursor{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;opacity:.75;display:none;z-index:3;pointer-events:none;}
+/* Phase 2 R1: the embedded preview lane's CSS is gone with its surface (⚠ the first cut
+   left an UNTERMINATED comment here that silently ate every rule below it — the gesture
+   suites caught it as broken bar-lane and marquee hit-areas) */
 #modBigShape{position:absolute;z-index:5;pointer-events:none;transition:left .6s ease,top .6s ease,width .6s ease,height .6s ease;}
 .part.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
-#modPrevRuler{cursor:ns-resize;}
-#modPrevLaneWrap{position:relative;}
-#modPrevLane{height:46px;position:relative;}   /* [M14c] absolute blocks at exact beat x — 46 fits the real .cb's two labels */
-#modPrevGrid{position:absolute;left:0;top:0;bottom:0;right:0;pointer-events:none;z-index:2;}
-#modPrevPh{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--accent);display:none;z-index:3;box-shadow:0 0 7px var(--accent);pointer-events:none;}
-#modPrevLane .cb{position:absolute;top:0;bottom:0;}   /* [M14c]: EXACT beat x — the real .cb look, the lane's own geometry */
-#modPrevLane .cb.mpcTgt{box-shadow:0 0 0 2px var(--accent) inset;}
-#modPrevLane .cb.mpcNow{filter:brightness(1.45);}
-#modPrevExp{border:1px solid var(--line);border-radius:6px;margin-top:4px;padding:4px 6px;font-size:10.5px;}
-#modPrevExp .mpeRow{display:flex;gap:8px;align-items:center;padding:2px 0;}
-#modPrevExp .mpeNotes{color:var(--dim);flex:1;}
 .modTogs{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--dim);margin-bottom:10px;}
 .modTogs label{display:flex;gap:5px;align-items:center;cursor:pointer;}
 .mimCard:not(.psyRow){width:216px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:8px 10px;cursor:pointer;box-sizing:border-box;}
@@ -541,7 +513,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25k</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -714,7 +686,7 @@
     </details>
   </div>
 
-  <div style="display:flex;gap:12px;align-items:flex-start;">
+  <div id="gridRowWrap" style="display:flex;gap:12px;align-items:flex-start;"><!-- Phase 2 R0: the grid's movable unit in the reorderable column -->
   <div id="rail" title=""></div>
   <div class="gridwrap" id="gridWrap" style="flex:1;min-width:0;"><!-- MG round: the MAIN wrap has an id now — .gridwrap first-match grabbed the melPanel/varPanel boxes (same class, earlier in the DOM since 27a/30d) and silently unbound the zoom strip -->
     <!-- Phase 1 (73rd, his ask in the same sitting): the Multi-Track Grid is minimize-able
@@ -938,43 +910,15 @@
 
   <div class="gridwrap" id="modPanel" style="margin-top:12px;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">The Modulation Engine · psych-outs &amp; Mimic Modulations</div>
-    <!-- 4.3 R-WINDOW (build 2026-08-24b, MODULATION-INJECT-RAW [M3b][M5][M6e-g]): the embedded
-         preview chord lane — bars-and-beats ruler above, ▶ at its left, always ENDING on the
-         selected chord in the multi-track lane (else the playhead's chord); expandable for
-         inversion editing; the two toggles beneath. -->
-    <div id="modPrevRow">
-      <span class="part" id="modPrevPlay" title="▶ Play the previewed moment exactly as the lane shows it — the audition convention: nothing is written. Spacebar does the same while this window is SELECTED (click it to select).">▶</span>
-      <span id="modPrevGripL" title="Grab — drag the whole lane up into the multi-track grid. The LANDING chord rides the cursor tip; the earlier chords trail left at their own rate. Drop it on its destination chord."></span>
-      <div style="flex:1;min-width:0;">
-        <!-- [M14d] R1 (68th entry): the SECOND MULTI-TRACK GRID — the window's own track
-             stack, always present, blank until a Modulation Source is selected; then the
-             three default tracks populate: DRUMS on top, CHORDS, MELODY — minimized,
-             reading as chord lanes; unlinked from the song's playback (audition-only). -->
-        <div id="modPrevScroll">
-          <div class="mgRow"><div class="thead mgHead mgSpacer" title="The audition grid — the Modulation window&#8217;s own second multi-track with its OWN transport. Click anywhere in this window to SELECT it: spacebar then plays THIS grid (the accent ring shows which grid owns the spacebar). Click the main grid to hand it back."></div><div id="modPrevRuler" title="The lane&#8217;s own bars and beats — disconnected from the song. Click = park the playhead; click + drag ⬍ = zoom; nothing else ever moves this grid."></div></div>
-          <!-- R2 (72nd): optional tracks ("+ Track") insert their .mgRow.mgXtra rows here, ABOVE the drums row -->
-          <div class="mgRow" id="mgRowDrums"><div class="mgHead" id="mgHeadDrums"></div><div class="mgCell" id="modPrevDrums" style="display:none;"></div></div>
-          <div class="mgRow"><div class="mgHead" id="mgHeadChords"></div><div id="modPrevLaneWrap">
-            <div id="modPrevLane"></div>
-            <div id="modPrevGrid"></div>
-            <div id="modPrevPh"></div>
-            <div id="modPrevCursor" title="The lane&#8217;s own playhead — click anywhere in the lane to park it; ▶ plays from here (the grey context plays too)."></div>
-          </div></div>
-          <div class="mgRow"><div class="mgHead" id="mgHeadMel"></div><div id="modPrevMel" title="[M11d] The melody lane — your song&#8217;s melody around the landing, laid over the excerpt for auditioning (Snap to chord notes bends it to the sounding chord). Audition-only, nothing written." style="display:none;"></div></div>
-        </div>
-        <div id="modPrevExp" style="display:none;"></div>
-      </div>
-      <span class="part" id="modPrevExpB" title="Expand the lane — edit each chord&#8217;s inversion, like an expanded multi-track lane.">▤</span>
-    </div>
+    <!-- PHASE 2 R1 (his go, MODULAR_WINDOWS_SPEC): the embedded multi-track grid is DELETED —
+         "Delete the embedded multi-track grid inside the Modulation Window. All of it. I've
+         changed my mind about that approach — do not try to salvage or refactor it, remove it
+         and start clean." The window keeps its own modulation controls; pressing a psych row
+         or a Mimic card still auditions the moment (chords + the 3D shape). The linked
+         audition Grid 2 arrives with the auto-spawn slice of this phase. -->
     <div class="modTogs">
-      <label id="modRateTog" title="ON: the lane shows the ORIGINAL song&#8217;s rate of chord change — quantized, neat on the grid (the inject still lands at YOUR lane&#8217;s rate, the slot law). OFF: drag the chord boundaries above — your own rate, for the preview and the inject alike.">
-        <input type="checkbox" id="modRateChk" checked> Use the original rate of chord change from the song</label>
       <label id="modHideTog" title="Audition modulations and psych out modulations on the fly without accidentally recording what you do as an automation.">
         <input type="checkbox" id="modHideChk" checked> Hide from performance record mode</label>
-      <span class="part" id="modMelChip" title="[M11d] Show and audition YOUR melody (from around the landing in your song) over these chords.">🎵 Melody</span>
-      <span class="part" id="modSnapChip" title="Snap → chord tones — this grid&#8217;s own Snap button (the main grid&#8217;s twin): every auditioned pitched lane (your melody and any added tracks) bends to the sounding chord&#8217;s tones (the Conform set). Audition-only, nothing written.">Snap → chord tones</span>
-      <span class="part" id="modDrumChip" title="[M11d] A drum beat under the audition — kick, snare and hats, for groove context. Audition-only.">🥁 Drums</span>
-      <span class="part" id="modAddChip" title="R2: add one of YOUR song&#8217;s other tracks to the audition grid — it appears ABOVE the three defaults as a real minimized lane (its notes from around the landing, laid over the excerpt). Audition-only; pick it again to remove it.">＋ Track</span>
       <label id="modAdvTog" title="[M14a] With nothing selected, opening this window advances the song to the FIRST CHORD OF THE NEXT SONG SECTION — modulating a whole section to a new key is a real modulation.">
         <input type="checkbox" id="modAdvChk" checked> Advance to the next section</label>
     </div>
@@ -6155,7 +6099,7 @@ const undoStack=[];
    snapshot preemptively cleared — so a stray click never eats your redos. */
 let redoStack=[],_lastSnap=null,_redoStash=null;
 function captureState(){return {tracks:JSON.parse(JSON.stringify(project.tracks)),chords:JSON.parse(JSON.stringify(project.chords)),at:activeTrack,tonic:project.tonic,base:project.base,loop:(typeof LOOP==='number'?LOOP:undefined),sections:(Array.isArray(project.sections)?JSON.parse(JSON.stringify(project.sections)):undefined),lanes:(Array.isArray(project.lanes)?JSON.parse(JSON.stringify(project.lanes)):undefined),laneIdx:(typeof project.lane==='number'?project.lane:undefined),clipMap:(project.clipMap&&Object.keys(project.clipMap).length?JSON.parse(JSON.stringify(project.clipMap)):undefined),tempoMap:(Array.isArray(project.tempoMap)&&project.tempoMap.length?JSON.parse(JSON.stringify(project.tempoMap)):undefined),markers:(Array.isArray(project.markers)&&project.markers.length?JSON.parse(JSON.stringify(project.markers)):undefined),tsigMap:(Array.isArray(project.tsigMap)&&project.tsigMap.length?JSON.parse(JSON.stringify(project.tsigMap)):undefined),autoLanes:(Array.isArray(project.autoLanes)&&project.autoLanes.length?JSON.parse(JSON.stringify(project.autoLanes)):undefined),styleId:(project.style&&project.style.id)||undefined,groups:(Array.isArray(project.groups)&&project.groups.length?JSON.parse(JSON.stringify(project.groups)):undefined),shelf:(Array.isArray(project.shelf)&&project.shelf.length?JSON.parse(JSON.stringify(project.shelf)):undefined),trips:(Array.isArray(project.trips)&&project.trips.length?JSON.parse(JSON.stringify(project.trips)):undefined),mixer:(typeof mixer==='object'&&mixer?JSON.parse(JSON.stringify(mixer)):undefined),srcs:(Array.isArray(project.srcs)&&project.srcs.length?JSON.parse(JSON.stringify(project.srcs)):undefined),songId:(project.song&&typeof project.song.id==='string'?project.song.id:undefined),bpm:(typeof tempo!=='undefined'&&tempo&&isFinite(+tempo.value)?Math.round(+tempo.value):undefined),lin:(typeof lineage==='object'&&lineage?JSON.parse(JSON.stringify(lineage)):undefined)};}   /* 4.4: style swaps ride undo · ⌘G: groups ride it too · 5.1: the Shelf rides it too · 4.7 R3: the trips itinerary rides it too · 2.6 R0a: the mixer rides it too (db/pan restored; solo is a session toggle and applyState leaves it alone) · SETUP R0: srcs ride it too (client call, Aug 19), and songId/bpm/lineage ride so a Keep-load is one whole undo step */
-function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};if(s&&s.mixer&&typeof s.mixer==='object'&&typeof mixer==='object'&&mixer){for(const _mt in s.mixer){const _me=s.mixer[_mt];if(!_me)continue;const _m=mixer[_mt]||(mixer[_mt]={db:0,pan:0,solo:false});_m.db=_me.db;_m.pan=_me.pan;}if(typeof persistMixer==='function')persistMixer();if(typeof applyPans==='function')applyPans();if(typeof mixerOpen!=='undefined'&&mixerOpen&&typeof drawMixer==='function')drawMixer();}project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}project.srcs=(s&&Array.isArray(s.srcs))?JSON.parse(JSON.stringify(s.srcs)):[];if(typeof srcOpen!=='undefined'&&srcOpen&&srcOpen.forEach){const _sids=new Set((project.srcs||[]).map(r=>r.id));for(const _sid of [...srcOpen])if(!_sids.has(_sid))srcOpen.delete(_sid);}if(typeof buildSources==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='importPanel')buildSources();if(s&&typeof s.songId==='string'&&typeof SONGS!=='undefined'&&(!project.song||project.song.id!==s.songId)){const _sg=SONGS.find(x=>x.id===s.songId);if(_sg){project.song=_sg;if(typeof selSong!=='undefined'&&selSong)selSong.value=_sg.id;}}if(s&&typeof s.bpm==='number'&&isFinite(s.bpm)&&typeof setTempo==='function'&&typeof tempo!=='undefined'&&tempo&&Math.round(+tempo.value)!==s.bpm){setTempo(s.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=s.bpm;}if(s&&s.lin&&typeof s.lin==='object'&&typeof lineage!=='undefined'&&lineage){lineage={parent:s.lin.parent||null,engine:s.lin.engine||null,params:s.lin.params===undefined?null:s.lin.params};if(typeof drawVars==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='varPanel')drawVars();}drawTrackSel();refresh(true);}   /* SETUP R0: srcs/song/bpm/lineage restore — srcs reset like trips; song+bpm only when they differ (a load's undo), so ordinary edits see no change; lineage rides so a Keep after an undo records honest provenance */
+function applyState(s){project.tracks=s.tracks;project.clipMap=(s&&s.clipMap)?s.clipMap:{};if(s&&s.mixer&&typeof s.mixer==='object'&&typeof mixer==='object'&&mixer){for(const _mt in s.mixer){const _me=s.mixer[_mt];if(!_me)continue;const _m=mixer[_mt]||(mixer[_mt]={db:0,pan:0,solo:false});_m.db=_me.db;_m.pan=_me.pan;}if(typeof persistMixer==='function')persistMixer();if(typeof applyPans==='function')applyPans();if(typeof mixerOpen!=='undefined'&&mixerOpen&&typeof drawMixer==='function')drawMixer();}project.groups=(s&&Array.isArray(s.groups))?s.groups:[];project.shelf=(s&&Array.isArray(s.shelf))?s.shelf:[];project.trips=(s&&Array.isArray(s.trips))?s.trips:[];if(typeof orbTrips==='object'&&orbTrips){orbTrips.run=false;orbTrips.next=null;orbTrips.idx=0;}project.tempoMap=(s&&Array.isArray(s.tempoMap))?s.tempoMap:[];project.markers=(s&&Array.isArray(s.markers))?s.markers:[];project.tsigMap=(s&&Array.isArray(s.tsigMap))?s.tsigMap:[];project.autoLanes=(s&&Array.isArray(s.autoLanes))?s.autoLanes:[];if(s&&typeof s.styleId==='string'&&typeof STYLES!=='undefined'&&(!project.style||project.style.id!==s.styleId)){const _st=STYLES.find(x=>x.id===s.styleId);if(_st){project.style=_st;if(typeof selStyle!=='undefined'&&selStyle)selStyle.value=_st.id;}}if(Array.isArray(s.lanes)&&s.lanes.length){project.lanes=s.lanes;if(typeof s.laneIdx==='number')project.lane=Math.max(0,Math.min(s.laneIdx,s.lanes.length-1));}project.chords=s.chords;activeTrack=s.at;if(s.tonic!==undefined){project.tonic=s.tonic;project.base=s.base;}if(typeof s.loop==='number'){LOOP=s.loop;if(typeof syncBarsInp==='function')syncBarsInp();}if(Array.isArray(s.sections)&&s.sections.length)project.sections=s.sections;if(typeof closeSectionEditor==='function')closeSectionEditor();if(typeof closeVoicingEditor==='function')closeVoicingEditor();selNotes.clear();selChordSet.clear();selChord=null;if(typeof selOwner==='string'&&selOwner!=='main'){selOwner='main';if(typeof GRID_VIEWS==='object')activeGridView=GRID_VIEWS.main;}project.srcs=(s&&Array.isArray(s.srcs))?JSON.parse(JSON.stringify(s.srcs)):[];if(typeof srcOpen!=='undefined'&&srcOpen&&srcOpen.forEach){const _sids=new Set((project.srcs||[]).map(r=>r.id));for(const _sid of [...srcOpen])if(!_sids.has(_sid))srcOpen.delete(_sid);}if(typeof buildSources==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('importPanel'))buildSources();if(s&&typeof s.songId==='string'&&typeof SONGS!=='undefined'&&(!project.song||project.song.id!==s.songId)){const _sg=SONGS.find(x=>x.id===s.songId);if(_sg){project.song=_sg;if(typeof selSong!=='undefined'&&selSong)selSong.value=_sg.id;}}if(s&&typeof s.bpm==='number'&&isFinite(s.bpm)&&typeof setTempo==='function'&&typeof tempo!=='undefined'&&tempo&&Math.round(+tempo.value)!==s.bpm){setTempo(s.bpm);if(typeof tempoCommitted!=='undefined')tempoCommitted=s.bpm;}if(s&&s.lin&&typeof s.lin==='object'&&typeof lineage!=='undefined'&&lineage){lineage={parent:s.lin.parent||null,engine:s.lin.engine||null,params:s.lin.params===undefined?null:s.lin.params};if(typeof drawVars==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('varPanel'))drawVars();}drawTrackSel();refresh(true);}   /* SETUP R0: srcs/song/bpm/lineage restore — srcs reset like trips; song+bpm only when they differ (a load's undo), so ordinary edits see no change; lineage rides so a Keep after an undo records honest provenance */
 function snapshot(){
  if(typeof snv==='object'&&snv)snv.active=false;   /* any new edit ends an SNV cycling run */
  if(typeof aretha==='object'&&aretha)aretha.active=false;   /* …and an Aretha re-roll run */
@@ -9370,7 +9314,7 @@ function palMatHead(el,m,i){
 function palMatPick(i,id,m){
  if(id==='__search'){
   palSearchFor=i;
-  if(typeof uiState==='object'&&uiState&&uiState.open!=='ragaPanel')uiDispatch({type:'toggle',id:'ragaPanel'});
+  if(typeof uiState==='object'&&uiState&&!uiWinShown('ragaPanel'))uiDispatch({type:'toggle',id:'ragaPanel'});
   if(typeof ragaStatus==='function')ragaStatus('Pick a scale — it replaces the '+(i===0?'song\u2019s':PCN[m.tonic]+' '+SCALE_DB[m.id].name)+' matrix in the Chord Palette.');
   drawChordPanel();
   return;
@@ -9949,7 +9893,7 @@ function mimicAudition(tpl){
    its bars-and-beats ruler, the ▶, inversion expansion, the two toggles, and the 3D
    shape badges (face count = chord count; a geometric fox inside; the shape spins while
    its moment auditions and the fox's backdrop recolours on every chord). */
-let modPrev={exp:false,durs:null,inv:{},ph:0,mel:true,snap:true,drums:true,xtra:[],big:{}};   /* R2 (72nd): xtra = optional tracks above the defaults · big = per-track expand-to-note-grid */
+let modPrev={inv:{}};   /* PHASE 2 R1: the embedded grid's state is GONE — this stub keeps the inject's guarded reads (spanKey/selA/selB/inv) harmless until Grid 2 carries the selection */
 /* [M21] FOCUS-BASED TRANSPORT (his change of mind, Aug 25): whichever grid is SELECTED
    owns the spacebar. Click the Modulation window = select ITS grid (accent ring); click
    the main grid = hand the spacebar back. Session state — never persisted. */
@@ -10394,402 +10338,18 @@ function modPrevModel(){
  const total=rows.reduce((a,c)=>a+c.d,0);
  return {tpl,tgt,srcKey,seq,durs,first,startBeat,endBeat,rows,pre,post,preSpan,total};
 }
-function modProjectBuild(M){
- /* [M14d] R2 (his Aug 25 call: "simply copy the code for the multi-track grid") — the
-    excerpt AS a project. The second grid renders through the REAL builders over this
-    object (the withModProject swap), so the two grids CANNOT drift apart visually.
-    Sections carry the excerpt's real keys: the source key up to the landing, the new
-    key from it — so every block's degree color and roman resolve honestly. */
- const chords=M.rows.map(r=>({r:((r.r%12)+12)%12,iv:r.iv.slice(),d:r.d,lbl:r.lbl}));
- const momSpan=M.durs.reduce((a,b)=>a+b,0);
- const off=M.endBeat-(M.preSpan+momSpan);
- const mel=[];
- for(const n of (project.melody||[]))
-  if(n&&n[0]-off>=-1e-6&&n[0]-off<M.total-1e-6){const c2=n.slice();c2[0]=+(n[0]-off).toFixed(6);mel.push(c2);}
- const drs=[];
- for(let b=0;b<M.total-1e-6;b+=.5){
-  const on=(b%1===0),kick=on&&(b%4===0||b%4===2),snare=on&&(b%4===1||b%4===3);
-  drs.push([b,.25,kick?36:snare?38:42]);
- }
- /* R2 (72nd): the OPTIONAL tracks — the user's other tracks, their notes from around the
-    landing laid over the excerpt exactly like the melody (materialize is read-only for a
-    style track that has never been opened; the REAL project is never written from here) */
- const xtr={};
- for(const t of (modPrev.xtra||[])){
-  let src=null;
-  try{src=(project.tracks&&project.tracks[t])||((typeof materialize==='function')?materialize(t):null);}catch(e){src=null;}
-  if(!Array.isArray(src))continue;
-  const list=[];
-  for(const n of src)
-   if(n&&n[0]-off>=-1e-6&&n[0]-off<M.total-1e-6){const c2=n.slice();c2[0]=+(n[0]-off).toFixed(6);list.push(c2);}
-  xtr[t]=list;
- }
- const landStart=+(M.preSpan+momSpan-M.durs[M.durs.length-1]).toFixed(6);
- const tgtTonic=((M.srcKey.tonic+(M.tpl.interval||0))%12+12)%12;
- const base=(typeof M.srcKey.base==='number')?M.srcKey.base:project.base;
- /* the excerpt's MODE comes from its OWN chords (is the home triad minor?), not from
-    the user's song — else a major original inside a minor song striped every block
-    chromatic (found by screenshot the night this shipped) */
- const modeOf=(list,ton)=>{const h=list.find(c2=>c2&&c2.r===ton);return h?(h.iv&&h.iv[1]===3?'aeolian':'ionian'):null;};
- const srcMode=modeOf(chords.slice(0,M.pre.length),M.srcKey.tonic)||'ionian';
- const landing=chords[M.pre.length+M.seq.length-1];
- const tgtMode=M.tpl.tgtMode||(landing&&landing.iv&&landing.iv[1]===3?'aeolian':'ionian');
- const sections=[{start:0,name:'around the moment',tonic:M.srcKey.tonic,mode:srcMode,base}];
- if(M.tpl.interval)sections.push({start:landStart,name:'the new key',tonic:tgtTonic,mode:tgtMode,base});
- const MP={chords,tracks:Object.assign({melody:mel,drums:drs},xtr),sections,clipMap:{},loop:M.total,landStart,
-  tonic:M.srcKey.tonic,mode:M.srcKey.mode||project.mode,base,style:project.style};
- /* R2 (72nd): the REAL project's `melody` is an ACCESSOR onto tracks[edTrack()] (the
-    per-view render seam) — the excerpt project must wear the same one, or drawGridView
-    reads `project.melody` under the swap and finds nothing */
- Object.defineProperty(MP,'melody',{
-  get(){return MP.tracks[(typeof edTrack==='function')?edTrack():'melody'];},
-  set(v2){MP.tracks[(typeof edTrack==='function')?edTrack():'melody']=v2;},
-  configurable:true});
- return MP;
-}
-function withModProject(MP,fn){
- /* the swap idiom (withTrack's shape, one level up): the REAL grid renderers run over
-    the excerpt project — audition-only, restored in finally, nothing global escapes */
- const oP=project,oL=LOOP,oPPB=PPB;
- project=MP;LOOP=MP.loop;PPB=modPrev.zoom||28;
- try{return fn();}finally{project=oP;LOOP=oL;PPB=oPPB;}
-}
-function modGridHeadsDraw(){
- /* [M14d] R1: the second grid's name boxes — DRUMS on top, then CHORDS, then MELODY,
-    wearing the main grid's colored-name-box idiom. Drums/Melody boxes toggle their
-    audition strips (the 🥁/🎵 chips' law, one more affordance); Chords is the moment
-    itself and never hides. */
- const mk=(id,col,label,on,tip,tog)=>{
-  const h=document.getElementById(id);if(!h)return;
-  /* [M14d] R2: the REAL name-box chrome — .thead.nbox, the main grid's own classes */
-  h.innerHTML='<span class="tname" style="font-weight:700;font-size:10.5px;">'+label+'</span>';
-  h.className='thead nbox mgHead'+(on?'':' off');
-  h.style.background=hexA(col,.24);h.style.borderLeft='3px solid '+col;
-  h.title=tip;h.onclick=tog||null;
- };
- /* boot-safe (landmine ⑪'s family): drawModPrev runs before the color store initializes —
-    a TDZ throw here would take the whole boot down, so the lookup wears a try/catch */
- const tc=t=>{try{return trackColorOf(t)||'#8a8f9f';}catch(e){return '#8a8f9f';}};
- mk('mgHeadDrums',tc('drums'),'Drums',!!modPrev.drums,
-  'The audition DRUM track (kick · snare · hats over the excerpt) — click to show/hide. Audition-only; never the song’s playback.',
-  ()=>{modPrev.drums=!modPrev.drums;drawModPrev();});
- mk('mgHeadChords','#e8a33d','Chords',true,
-  'The modulating CHORDS — the selected moment with 4 bars of its original song either side (grey). The landing rides the selected chord in YOUR grid.');
- mk('mgHeadMel',tc('melody'),'Melody',!!modPrev.mel,
-  'YOUR melody from around the landing, auditioned over the new chords — click to show/hide. Audition-only; nothing is written.',
-  ()=>{modPrev.mel=!modPrev.mel;drawModPrev();});
- /* R2 (72nd): the expand affordance rides the boxes (Chords is the lane itself — never) */
- modHeadExpandGlyph(document.getElementById('mgHeadDrums'),'drums');
- modHeadExpandGlyph(document.getElementById('mgHeadMel'),'melody');
-}
-function modHeadExpandGlyph(h,t){
- /* R2 (72nd): the expand-to-note-grid affordance on a stack track's name box — a
-    TEXT-FREE CSS triangle (the suites read the boxes' textContent; a glyph character
-    would change it), ▸ minimized / ▾ expanded. Chords never gets one. */
- if(!h)return;
- const g=document.createElement('span');
- g.className='mgExp'+(modPrev.big[t]?' on':'');
- g.title=modPrev.big[t]
-  ?'Minimize — back to the one-line lane.'
-  :'Expand — this lane as a REAL note grid (the main grid’s own renderer over the excerpt). Audition-only, nothing written.';
- g.onmousedown=ev=>ev.stopPropagation();
- g.onclick=ev=>{ev.stopPropagation();modPrev.big[t]=!modPrev.big[t];drawModPrev();};
- h.appendChild(g);
-}
-/* R2 (72nd): per-track LOCAL views for the second grid's expanded note grids. ⛔ NEVER
-   registered in GRID_VIEWS — drawGrid would redraw them over the SONG (the swap only
-   lives inside drawModPrev), and the main gesture surface must never resolve a click
-   here to a song view. Gestures are audition-local: click parks the lane's playhead,
-   wheel pans pitch. */
-const modGridViews={};
-function modNoteGridBuild(el,t,MP,total,mppb){
- let v=modGridViews[t];
- if(!v){v=makeGridView('mod_'+String(t).replace(/\W/g,'_'),NROWS0,ROWSTART0);v.track=t;v.top=0;v.px=8*CELLH;modGridViews[t]=v;}
- el.className='mgNoteGrid';
- el.style.height=v.px+'px';el.style.width=(total*mppb).toFixed(1)+'px';
- const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
- /* the GUT gutter (labels + piano roll) is CLIPPED off so beat 0 sits at the row's own
-    x=0 — the ruler, the chord lane and every strip share that origin, and a 34px drift
-    here is exactly the misalignment [M14c] existed to kill */
- sv.style.cssText='display:block;user-select:none;cursor:pointer;background:#191b22;border-radius:4px;margin-left:-'+GUT+'px;';
- el.appendChild(sv);
- withModProject(MP,()=>{
-  const ns=project.tracks[t]||[];
-  let lo=Infinity;for(const n of ns)if(n&&typeof n[2]==='number'&&n[2]<lo)lo=n[2];
-  if(isFinite(lo))ensureGridRange(lo,v);
-  if(!v.userScrolled)centerViewOnContent(v);
-  drawGridView(v,sv);
- });
- const cur=document.createElement('div');
- cur.style.cssText='position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.8;pointer-events:none;'
-  +((typeof modPrev.ph==='number'&&modPrev.ph>=0&&modPrev.ph<total-1e-6)?('left:'+(modPrev.ph*mppb).toFixed(1)+'px;'):'display:none;');
- el.appendChild(cur);
- el.onmousedown=ev=>{ev.preventDefault();ev.stopPropagation();
-  const r=el.getBoundingClientRect();
-  const b=Math.max(0,Math.min(total-1e-3,(ev.clientX-r.left)/mppb));
-  modPrev.ph=Math.round(b*4)/4;drawModPrev();};
- el.onwheel=ev=>{ev.preventDefault();ev.stopPropagation();
-  v.scroll=clampScroll(v,v.scroll+ev.deltaY);v.userScrolled=true;
-  withModProject(MP,()=>drawGridView(v,sv));};
- el.title=trackLabel(t)+' — the excerpt as a REAL note grid (the main grid’s own renderer over the audition project). Click = park the lane’s playhead · scroll = pan pitch · the ▾ on the name box minimizes. Audition-only, nothing written.';
-}
-function modXtraRowsDraw(MP,total,mppb,cellBuild){
- /* R2 (72nd): the OPTIONAL tracks — one .mgRow.mgXtra per entry, ABOVE the drums row
-    (his slot). The head wears the real name-box idiom; clicking it removes the track. */
- const scroll=document.getElementById('modPrevScroll'),anchor=document.getElementById('mgRowDrums');
- if(!scroll||!anchor)return;
- const want=(modPrev.xtra||[]).slice();
- scroll.querySelectorAll('.mgRow.mgXtra').forEach(r=>{if(want.indexOf(r.dataset.xt)<0)r.remove();});
- const tc=t=>{try{return trackColorOf(t)||'#8a8f9f';}catch(e){return '#8a8f9f';}};
- want.forEach(t=>{
-  let row=scroll.querySelector('.mgRow.mgXtra[data-xt="'+t+'"]');
-  if(!row){
-   row=document.createElement('div');row.className='mgRow mgXtra';row.dataset.xt=t;
-   const h0=document.createElement('div');h0.id='mgHeadX_'+t;
-   const c0=document.createElement('div');c0.id='modPrevX_'+t;
-   row.appendChild(h0);row.appendChild(c0);
-   scroll.insertBefore(row,anchor);
-  }
-  const h=row.children[0];
-  h.innerHTML='<span class="tname" style="font-weight:700;font-size:10.5px;">'+trackLabel(t)+'</span>';
-  h.className='thead nbox mgHead mgXtraHead';
-  h.style.background=hexA(tc(t),.24);h.style.borderLeft='3px solid '+tc(t);
-  h.title=trackLabel(t)+' — an optional audition track: your song’s '+trackLabel(t)+' from around the landing, over the excerpt. Click the box = remove it from this grid. Audition-only; nothing is written.';
-  h.onclick=()=>{modPrev.xtra=(modPrev.xtra||[]).filter(x=>x!==t);delete modPrev.big[t];drawModPrev();};
-  modHeadExpandGlyph(h,t);
-  const cell=row.children[1];
-  cell.style.display='block';
-  cellBuild(cell,t);
- });
-}
-function drawModPrev(){
- const lane=document.getElementById('modPrevLane');if(!lane)return;
- const ruler=document.getElementById('modPrevRuler'),exp=document.getElementById('modPrevExp');
- const rc=document.getElementById('modRateChk'),hc=document.getElementById('modHideChk');
- if(rc)rc.checked=!!modWinSettings.rate;
- if(hc)hc.checked=!!modWinSettings.hide;
- modGridHeadsDraw();
- const M=modPrevModel();
- if(M.err){
-  /* [M14d]: the grid is ALWAYS PRESENT — blank rows until a Modulation Source is
-     selected; the hint rides the chords lane */
-  const blankW='420px';
-  lane.innerHTML='<span style="font-size:10.5px;color:var(--dim);position:absolute;left:8px;top:9px;right:8px;">'+M.err+'</span>';
-  lane.style.width=blankW;ruler.innerHTML='';ruler.style.width=blankW;exp.style.display='none';
-  const wrap0=document.getElementById('modPrevLaneWrap');if(wrap0)wrap0.style.width=blankW;
-  const grid0=document.getElementById('modPrevGrid');if(grid0)grid0.innerHTML='';
-  const ph0=document.getElementById('modPrevPh');if(ph0)ph0.style.display='none';
-  const cur0=document.getElementById('modPrevCursor');if(cur0)cur0.style.display='none';
-  const mel0=document.getElementById('modPrevMel'),dr0=document.getElementById('modPrevDrums');
-  if(mel0){mel0.innerHTML='';mel0.className='';mel0.onmousedown=null;mel0.onwheel=null;mel0.style.height='';mel0.style.width=blankW;mel0.style.display=modPrev.mel?'block':'none';}
-  if(dr0){dr0.innerHTML='';dr0.className='';dr0.onmousedown=null;dr0.onwheel=null;dr0.style.height='';dr0.style.width=blankW;dr0.style.display=modPrev.drums?'block':'none';}
-  document.querySelectorAll('#modPrevScroll .mgRow.mgXtra').forEach(r=>r.remove());   /* R2: no source → no optional rows */
-  return;}
- const total=M.total;
- /* [M8a] THE FIXED-GRID LAW: the lane owns its pixels-per-beat (modPrev.zoom). Only the
-    ruler's own ⬍ drag changes it ([M8c]). [M11]: the timeline is the EXCERPT's own —
-    ≥4 bars of the moment's original-song context either side, grey but playable. */
- const mppb=modPrev.zoom||(modPrev.zoom=28);
- let rh='';
- for(let b2=0;b2<total-1e-6;b2++){
-  const isBar=(b2%4)===0;
-  const w=Math.min(b2+1,total)-b2;
-  rh+='<span class="mprTick'+(isBar?' bar':'')+'" style="width:'+(w*mppb).toFixed(1)+'px;flex:0 0 auto;">'+(isBar?('bar '+(Math.floor(b2/4)+1)):(b2%4)+1)+'</span>';
- }
- ruler.innerHTML=rh;
- ruler.style.width=(total*mppb).toFixed(1)+'px';
- /* the lane — [M14d] R2 (his Aug 25 law): REAL chord-lane blocks (.cb, the main
-    lane's own classes and color law) over the excerpt project. The grey context is
-    RETIRED — every chord wears its real degree color against its section's key — and
-    the PIVOTS are simply SELECTED (.sel, the real ring); click narrows, \u21e7-click
-    extends the selection left or right, context included. */
- lane.innerHTML='';
- lane.style.width=(total*mppb).toFixed(1)+'px';
- const wrapEl0=document.getElementById('modPrevLaneWrap');
- if(wrapEl0)wrapEl0.style.width=(total*mppb).toFixed(1)+'px';
- const MP=modProjectBuild(M);
- /* the selection span defaults to the MOMENT's rows; a new source/target resets it */
- const spanKey=(M.tpl.id||'')+':'+M.tgt+':'+M.rows.length;
- if(modPrev.spanKey!==spanKey){modPrev.spanKey=spanKey;modPrev.selA=M.pre.length;modPrev.selB=M.pre.length+M.seq.length-1;}
- let acc=0;
- withModProject(MP,()=>{
- M.rows.forEach((m,k)=>{
-  const d=document.createElement('div');
-  const isTgtRow=(!m.ctx&&m.mk===M.seq.length-1);
-  const inSel=k>=modPrev.selA&&k<=modPrev.selB;
-  d.className='cb'+(inSel?' sel':'')+(m.ctx?' mpcCtx':'')+(isTgtRow?' mpcTgt':'')+((!m.ctx&&modPrev.sel===m.mk)?' mpcSel':'');
-  d.style.left=(acc*mppb).toFixed(1)+'px';   /* [M14c]: EXACT beat x — the edges sit ON the lines */
-  d.style.width=(m.d*mppb-1).toFixed(1)+'px';
-  const c=MP.chords[k];
-  withKeyAt(acc,()=>{
-   const chroma=chordIsChromatic(c);
-   d.classList.toggle('chroma',chroma);
-   if(chroma)d.style.background=chromaStripeCSS(c);
-   else{const di=curScale().pcs.indexOf(((c.r-project.tonic)%12+12)%12);d.style.background=degColor(di<0?0:di);}
-  });
-  if(!m.ctx&&!M.tpl.interval){d.style.borderColor='var(--accent)';d.style.borderStyle='dashed';}
-  const chordName=PCN[((c.r%12)+12)%12]+ivName(c.iv);
-  const big=SETTINGS.laneLabel==='name'?chordName:dispLbl(c.lbl);
-  const small=SETTINGS.laneLabel==='name'?dispLbl(c.lbl):chordName;
-  d.innerHTML='<span class="cbBr cbBrL">[</span><span class="cbBr cbBrR">]</span><div class="rn">'+big+'</div><div class="ab">'+small+'</div>';
-  d.title=(m.ctx?m.lbl+' \u2014 the original song\u2019s own chord around the moment (it plays under the lane\u2019s playhead; \u21e7-click widens the selection to include it).':(isTgtRow?'The LANDING \u2014 the inject puts this ON the selected chord in your song.':m.lbl))+' \u00b7 '+m.d+' beat'+(m.d===1?'':'s')+' \u00b7 click = select \u00b7 \u21e7-click = extend the selection \u00b7 drag an edge ([ ]) = move the boundary.';
-  const rowStart=acc;acc+=m.d;
-  d.onclick=ev=>{
-   modPrev.ph=rowStart;   /* [M11c]: the lane\u2019s own playhead parks where you click */
-   if(ev.shiftKey){   /* his law: extend the selection left or right, context included */
-    modPrev.selA=Math.min(modPrev.selA,k);modPrev.selB=Math.max(modPrev.selB,k);
-   }else{
-    modPrev.selA=k;modPrev.selB=k;
-    if(!m.ctx)modPrev.sel=(modPrev.sel===m.mk?null:m.mk);
-   }
-   drawModPrev();
-  };
-
-  if(!m.ctx){
-   /* [M8b]: boundary moves on the MOMENT\u2019s chords only — the lane\u2019s [ ] law */
-   const EDGE=7;
-   d.onmousemove=ev=>{
-    if(modAud.active)return;
-    const r=d.getBoundingClientRect();
-    const nearL=m.mk>0&&ev.clientX-r.left<EDGE,nearR=m.mk<M.seq.length-1&&r.right-ev.clientX<EDGE;
-    d.style.cursor=nearL?CURS_L:nearR?CURS_R:'pointer';
-   };
-   d.onmousedown=e=>{
-    const r=d.getBoundingClientRect();
-    const nearL=m.mk>0&&e.clientX-r.left<EDGE,nearR=m.mk<M.seq.length-1&&r.right-e.clientX<EDGE;
-    if(!nearL&&!nearR)return;
-    e.preventDefault();e.stopPropagation();
-    if(modWinSettings.rate){modWinSettings.rate=false;persistModWin();
-     setModStatus('Your rate now — the toggle switched off as you dragged; the boundary moves, the grid does not.');}
-    const bnd=nearL?m.mk-1:m.mk;
-    if(!modPrev.durs||modPrev.durs.length!==M.seq.length)modPrev.durs=M.durs.slice();
-    const x0=e.clientX,dl0=modPrev.durs[bnd],dr0=modPrev.durs[bnd+1];
-    const mm=ev=>{
-     let dx=Math.round(((ev.clientX-x0)/mppb)*4)/4;
-     dx=Math.max(.5-dl0,Math.min(dr0-.5,dx));
-     modPrev.durs[bnd]=+(dl0+dx).toFixed(4);modPrev.durs[bnd+1]=+(dr0-dx).toFixed(4);
-     drawModPrev();};
-    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
-    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
-   };
-  }
-  lane.appendChild(d);
- });
- });   /* /withModProject — the chord blocks */
- /* the beat + bar grid overlay ([M7d]) — excerpt-local, bars every 4 */
- const grid=document.getElementById('modPrevGrid');
- if(grid){
-  let gh2='';
-  const width=total*mppb;
-  for(let b2=1;b2<total-1e-6;b2++)
-   gh2+='<div style="position:absolute;top:0;bottom:0;left:'+(b2*mppb).toFixed(1)+'px;width:0;border-left:1px solid rgba(255,255,255,'+((b2%4===0)?'.32':'.13')+');"></div>';
-  grid.innerHTML=gh2;grid.style.width=width.toFixed(1)+'px';
- }
- /* the lane\u2019s own playhead marker ([M11c]) */
- const cur=document.getElementById('modPrevCursor');
- if(cur){
-  if(typeof modPrev.ph==='number'&&modPrev.ph>=0&&modPrev.ph<total-1e-6){cur.style.left=(modPrev.ph*mppb).toFixed(1)+'px';cur.style.display='block';}
-  else cur.style.display='none';
- }
- /* [M14d] R2: the melody and drum rows are REAL minimized lanes now — built by the
-    grid's OWN buildStripContent over the excerpt project (the swap), so they cannot
-    drift from the main grid's look: chord-tinted clip cells, labels, the MIDI
-    thumbnail for melody, [M15b]'s lines-and-dots for drums. Cell presses park the
-    lane's playhead (audition-local — the real stripCellDown belongs to the song). */
- const modStripBuild=(el,t)=>{
-  el.className='tstrip';el.dataset.trk='mod_'+t;
-  el.style.height=((typeof nboxNaturalH==='function')?Math.max(26,nboxNaturalH()-8):40)+'px';
-  el.style.width=(total*mppb).toFixed(1)+'px';
-  buildStripContent(el,t);
-  const spans=trackCellSpans(t);
-  el.querySelectorAll('.scell').forEach((cell,ci)=>{
-   const sp=spans[ci];
-   cell.onmousedown=ev=>{ev.preventDefault();ev.stopPropagation();
-    if(sp){modPrev.ph=sp.a;drawModPrev();}};
-   cell.oncontextmenu=ev=>{ev.preventDefault();ev.stopPropagation();};
-  });
-  el.title=(t==='melody'
-   ?'Your melody around the landing, over the excerpt — a real minimized lane. Press a clip = park the lane’s playhead there; ▶ auditions (Snap bends it to the sounding chord).'
-   :'The audition drum beat over the excerpt — a real minimized lane ([M15b]’s look). Press a clip = park the lane’s playhead there.');
- };
- /* R2 (72nd): one cell builder for every stack track — a minimized strip by default, or
-    (the name box's text-free triangle) the excerpt as a REAL note grid */
- const modCellBuild=(el,t)=>{
-  el.innerHTML='';el.onwheel=null;el.onmousedown=null;
-  if(modPrev.big[t])modNoteGridBuild(el,t,MP,total,mppb);
-  else withModProject(MP,()=>modStripBuild(el,t));
- };
- const mel=document.getElementById('modPrevMel');
- if(mel){
-  mel.style.display=modPrev.mel?'block':'none';
-  if(modPrev.mel)modCellBuild(mel,'melody');
- }
- const drs=document.getElementById('modPrevDrums');
- if(drs){
-  drs.style.display=modPrev.drums?'block':'none';
-  if(modPrev.drums)modCellBuild(drs,'drums');
- }
- modXtraRowsDraw(MP,total,mppb,modCellBuild);
- /* the expansion ([M5]) — per-chord inversion editing */
- exp.style.display=modPrev.exp?'block':'none';
- if(modPrev.exp){
-  exp.innerHTML='';
-  M.seq.forEach((m,k)=>{
-   const inv=modPrev.inv[k]||0;
-   const notes=modPrevVoicing(m,inv).map(md=>PCN[((md%12)+12)%12]).join(' · ');
-   const row=document.createElement('div');row.className='mpeRow';
-   if(modPrev.sel===k)row.style.background='rgba(232,163,61,.14)';   /* the lane's selection follows into the expansion */
-   row.innerHTML='<span style="min-width:64px;font-weight:700;">'+m.lbl+'</span>'
-    +'<span class="mpeNotes">'+notes+' <span style="opacity:.6;">('+(inv===0?'root position':'inversion '+inv)+')</span></span>'
-    +'<span class="part mpeUp" title="Cycle the inversion up">▲</span><span class="part mpeDn" title="Cycle the inversion down">▼</span>';
-   row.querySelector('.mpeUp').onclick=()=>{modPrev.inv[k]=((modPrev.inv[k]||0)+1)%m.iv.length;drawModPrev();};
-   row.querySelector('.mpeDn').onclick=()=>{modPrev.inv[k]=(((modPrev.inv[k]||0)-1)%m.iv.length+m.iv.length)%m.iv.length;drawModPrev();};
-   exp.appendChild(row);
-  });
- }
-}
-function modPrevAudition(){
- /* ▶ — plays the EXCERPT from the lane's own playhead ([M11c]: grey context plays too),
-    with the melody lane (snapped if asked) and the drum beat under it. Esc or a click
-    away stops it ([M7c]). Nothing is written. */
+/* PHASE 2 R1 (his go): the embedded grid's whole render/audition machinery is DELETED —
+   modProjectBuild · withModProject · the head/expand/optional-track builders · drawModPrev ·
+   the per-lane audition. What survives: modPrevModel (the moment resolved onto the target —
+   the inject and the audition both read it), modResolveCtx, and the press-to-hear convention
+   below. The linked audition Grid 2 arrives with this phase's auto-spawn slice. */
+function modAudition(){
  const M=modPrevModel();
  if(M.err){setModStatus(M.err);return;}
- let startIdx=0,startBeat=0;
- if(typeof modPrev.ph==='number'&&modPrev.ph>0){
-  let t=0;
-  for(let i=0;i<M.rows.length;i++){
-   if(modPrev.ph<t+M.rows[i].d-1e-6){startIdx=i;startBeat=t;break;}
-   t+=M.rows[i].d;startIdx=i+1;startBeat=t;
-  }
- }
- const rows=M.rows.slice(startIdx).map(m=>({d:m.d,r:m.r,iv:m.iv,ctx:m.ctx,mk:m.mk,
-  bass:(!m.ctx&&modPrev.inv[m.mk])||0,lbl:m.lbl}));
- if(!rows.length){setModStatus('The playhead sits at the end of the lane — click earlier in it.');return;}
- let melody=null;
- if(modPrev.mel){
-  const momSpan=M.durs.reduce((x,y)=>x+y,0);
-  const off=M.endBeat-(M.preSpan+momSpan);
-  melody=(project.melody||[]).filter(n=>n&&n[0]-off>=startBeat-1e-6&&n[0]-off<M.total-1e-6)
-   .map(n=>({t:n[0]-off-startBeat,d:n[1],midi:n[2]}));
- }
- /* R2 (72nd): the OPTIONAL tracks audition too — their excerpt-local notes come off the
-    same modProjectBuild copy the rows render from, so what you see is what you hear */
- let xtras=null;
- if((modPrev.xtra||[]).length){
-  const MPa=modProjectBuild(M);
-  xtras=[];
-  for(const t of modPrev.xtra){
-   const list=(MPa.tracks[t]||[]).filter(n=>n&&n[0]>=startBeat-1e-6)
-    .map(n=>({t:n[0]-startBeat,d:n[1],midi:n[2]}));
-   if(list.length)xtras.push({trk:t,notes:list});
-  }
-  if(!xtras.length)xtras=null;
- }
- const go=()=>{modAudPlay(M.tpl.id,rows,{lane:true,laneSkip:startIdx,
-  voicing:c=>modPrevVoicing(c,c.bass),melody,xtras,snap:modPrev.snap,drums:modPrev.drums,
-  faceCount:M.seq.length});};
+ const rows=M.rows.map(m=>({d:m.d,r:m.r,iv:m.iv,ctx:m.ctx,mk:m.mk,bass:0,lbl:m.lbl}));
+ const go=()=>{modAudPlay(M.tpl.id,rows,{faceCount:M.seq.length});};
  if(audioReady)go();else ensureAudio().then(go).catch(go);
- setModStatus('▶ from the lane\u2019s playhead — the grey context plays too · Esc (or a click away) stops it · nothing is written.');
+ setModStatus('▶ the moment in its original context · Esc (or a click away) stops it · nothing is written.');
 }
 /* the psych-out rows (above the divider) */
 function drawPsyRows(){
@@ -10805,7 +10365,7 @@ function drawPsyRows(){
    +'<span class="psyName">'+t.name+'</span><span class="psyChain">'+t.bridge.map(s=>s.lbl).join(' → ')+'</span>'
    +'<span class="part psyArm" title="'+(armed?'Disarm the psych-out':'Arm at the selected chord — the burst replaces it during playback only, the chord lane stays untouched')+'">'+(armed?'⚡ Disarm':'⚡ Arm at selected chord')+'</span>';
   row.querySelector('.psyArm').onclick=e=>{e.stopPropagation();modState.psySel=t.id;togglePsych(t.id);};
-  row.onclick=()=>{modState.psySel=t.id;modState.lastPick='psy';drawPsyRows();drawModPrev();modPrevAudition();};   /* [M7d]: the audition happens IN the lane */
+  row.onclick=()=>{modState.psySel=t.id;modState.lastPick='psy';drawPsyRows();modAudition();};   /* the press-to-hear convention */
   host.appendChild(row);
  });
 }
@@ -10827,7 +10387,7 @@ function drawMimicCards(){
    +(t.tgtMode==='aeolian'?' · lands minor':t.tgtMode?' · lands major':'')+'</span>'
    +(t.derived?' <span class="mimDer" title="Derived by ear from the record — awaiting your approval (decision #6)">✎ derived</span>':'')+'</span>'
    +'<span class="mimMeta" style="flex:0 0 auto;">'+t.source+'</span>';
-  d.onclick=()=>{modState.sel=t.id;modState.lastPick='mim';drawMimicCards();updateModDesc();drawModPrev();modPrevAudition();};   /* [M7d]: the audition happens IN the lane */
+  d.onclick=()=>{modState.sel=t.id;modState.lastPick='mim';drawMimicCards();updateModDesc();modAudition();};   /* the press-to-hear convention */
   host.appendChild(d);
  });
 }
@@ -10960,132 +10520,16 @@ try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
  if(typeof _mw.hide==='boolean')modWinSettings.hide=_mw.hide;
  if(typeof _mw.adv==='boolean')modWinSettings.adv=_mw.adv;}catch(e){}
 modState.lastPick=modState.lastPick||'mim';
-(()=>{const rc=document.getElementById('modRateChk'),hc=document.getElementById('modHideChk'),
-  pb=document.getElementById('modPrevPlay'),xb=document.getElementById('modPrevExpB');
- if(rc)rc.onchange=e=>{modWinSettings.rate=!!e.target.checked;persistModWin();drawModPrev();
-  setModStatus(modWinSettings.rate?'The song’s own rate of chord change — the slot law, untouched.':'Your rate — drag the chord boundaries in the lane above; the moment still ends on the target.');};
+(()=>{const hc=document.getElementById('modHideChk');
  const ac=document.getElementById('modAdvChk');
  if(ac){ac.checked=!!modWinSettings.adv;
   ac.onchange=e=>{modWinSettings.adv=!!e.target.checked;persistModWin();};}
- if(hc)hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
-  setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};
- if(pb)pb.onclick=modPrevAudition;
- /* [M21]: clicking a grid SELECTS it — the whole Modulation window counts as its grid's
-    territory; the main grid's wrap hands the spacebar back */
- const mpEl=document.getElementById('modPanel'),gwEl=document.getElementById('gridWrap');
- if(mpEl)mpEl.addEventListener('mousedown',()=>setGridFocus('mod'),true);
- if(gwEl)gwEl.addEventListener('mousedown',()=>setGridFocus('main'),true);
- /* [M11d]: the melody / snap / drums chips */
- const mc=document.getElementById('modMelChip'),sc=document.getElementById('modSnapChip'),dc=document.getElementById('modDrumChip');
- const chipSync=()=>{if(mc)mc.classList.toggle('on',!!modPrev.mel);if(sc){sc.classList.toggle('on',!!modPrev.snap);
-   /* R2 (72nd) Snap parity: the chip wears the MAIN Snap button's green when armed */
-   sc.style.background=modPrev.snap?'#5bb98c':'';sc.style.color=modPrev.snap?'#0c1f16':'';}
-  if(dc)dc.classList.toggle('on',!!modPrev.drums);};
- if(mc)mc.onclick=()=>{modPrev.mel=!modPrev.mel;chipSync();drawModPrev();};
- if(sc)sc.onclick=()=>{modPrev.snap=!modPrev.snap;chipSync();setModStatus(modPrev.snap?'Snap ON — every auditioned pitched lane (melody and added tracks) bends to the sounding chord’s tones (nothing written).':'Snap OFF — the lanes play as written.');};
- if(dc)dc.onclick=()=>{modPrev.drums=!modPrev.drums;chipSync();drawModPrev();};
- /* R2 (72nd): ＋ Track — add one of the song's other tracks ABOVE the defaults */
- const xc=document.getElementById('modAddChip');
- if(xc)xc.onclick=ev=>{
-  ev.stopPropagation();
-  const old=document.getElementById('modAddMenu');if(old){old.remove();return;}
-  const panel=document.getElementById('modPanel');if(!panel)return;
-  if(getComputedStyle(panel).position==='static')panel.style.position='relative';
-  const m=document.createElement('div');m.id='modAddMenu';
-  m.style.cssText='position:absolute;z-index:90;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;display:flex;flex-direction:column;gap:2px;box-shadow:0 6px 18px rgba(0,0,0,.45);min-width:130px;';
-  const opts=((typeof pitchedTrackIds==='function')?pitchedTrackIds(project.tracks):['bass','comping','pad']).filter(t=>t!=='melody');
-  if(!opts.length){const it=document.createElement('div');it.style.cssText='font-size:10.5px;color:var(--dim);padding:4px 6px;';it.textContent='No other tracks in this song yet.';m.appendChild(it);}
-  opts.forEach(t=>{
-   const on=(modPrev.xtra||[]).includes(t);
-   const it=document.createElement('div');it.className='part';
-   it.textContent=(on?'✓ ':'')+trackLabel(t);
-   it.title=on?'Remove '+trackLabel(t)+' from the audition grid.':'Add '+trackLabel(t)+' above the default tracks — its notes from around the landing, over the excerpt. Audition-only.';
-   it.onclick=()=>{m.remove();
-    if(on){modPrev.xtra=(modPrev.xtra||[]).filter(x=>x!==t);delete modPrev.big[t];}
-    else modPrev.xtra=(modPrev.xtra||[]).concat([t]);
-    drawModPrev();};
-   m.appendChild(it);
-  });
-  const pr=panel.getBoundingClientRect(),cr=xc.getBoundingClientRect();
-  m.style.left=Math.max(0,cr.left-pr.left)+'px';m.style.top=(cr.bottom-pr.top+4)+'px';
-  panel.appendChild(m);
-  setTimeout(()=>{const off2=e2=>{if(!m.contains(e2.target)){m.remove();document.removeEventListener('mousedown',off2,true);}};document.addEventListener('mousedown',off2,true);},0);
- };
- chipSync();
- /* [M10]: the left grip — drag the WHOLE lane up into the grid; the LANDING chord rides
-    the cursor tip, the earlier chords trail left at their own rate; the drop picks the
-    inject's target (the slot law fired by drag) */
- const gl=document.getElementById('modPrevGripL');
- if(gl)gl.onmousedown=e=>{
-  e.preventDefault();
-  const M=modPrevModel();
-  if(M.err){setModStatus(M.err);return;}
-  const mz=modPrev.zoom||28;
-  const gh=document.createElement('div');
-  gh.style.cssText='position:fixed;z-index:130;pointer-events:none;display:flex;height:30px;opacity:.88;left:-9999px;top:-9999px;';
-  let wsum=0;const ws=[];
-  M.seq.forEach((m,k)=>{
-   const w=M.durs[k]*mz;ws.push(w);wsum+=w;
-   const b=document.createElement('div');
-   const di=curScale().pcs.indexOf(((m.r-project.tonic)%12+12)%12);
-   b.style.cssText='box-sizing:border-box;border:1px solid rgba(0,0,0,.45);border-radius:4px;margin-right:1px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden;flex:0 0 auto;width:'+w.toFixed(1)+'px;background:'+degColor(di<0?0:di)+(k===M.seq.length-1?';box-shadow:0 0 0 2px var(--accent) inset':'');
-   b.textContent=m.lbl;gh.appendChild(b);
-  });
-  document.body.appendChild(gh);
-  const anchor=wsum-ws[ws.length-1]/2;   /* [M10b]: the LAST chord centered on the cursor tip */
-  const mv=ev=>{gh.style.left=(ev.clientX-anchor)+'px';gh.style.top=(ev.clientY-15)+'px';};
-  mv(e);
-  setModStatus('Drop the LANDING chord on its destination in the chord lane — the earlier chords trail left at their own rate. Esc lets go.');
-  const done=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);document.removeEventListener('keydown',esc,true);gh.remove();};
-  const esc=ev=>{if(ev.key==='Escape'){done();setModStatus('Let go — nothing written.');}};
-  const up=ev=>{
-   done();
-   const elu=document.elementFromPoint(ev.clientX,ev.clientY);
-   const cb=elu&&elu.closest?elu.closest('#chordlane .cb'):null;
-   let idx=null;
-   if(cb)idx=[...document.querySelectorAll('#chordlane .cb')].indexOf(cb);
-   else{
-    const cl=document.getElementById('chordlane');
-    if(cl){const r=cl.getBoundingClientRect();
-     if(ev.clientY>r.top-44&&ev.clientY<r.bottom+44&&ev.clientX>=r.left&&ev.clientX<=r.right)
-      idx=chordIdxAtBeat(project.chords,Math.max(0,Math.min(LOOP-1e-6,(ev.clientX-r.left+(document.getElementById('gridWrap')?document.getElementById('gridWrap').scrollLeft:0)*0)/PPB)));
-    }
-   }
-   if(idx==null||idx<0||!project.chords[idx]){setModStatus('Dropped clear of the chord lane — nothing written. Drag again and land the LAST chord on its destination chord.');return;}
-   selChord=idx;   /* the drop IS the selection */
-   const ok=injectModulationAtChord(idx);
-   if(ok)drawModPrev();
-  };
-  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);document.addEventListener('keydown',esc,true);
- };
- /* [M8c]: the ruler's ⬍ drag is the ONE thing that moves the bars and beats — the zoom */
- const ru=document.getElementById('modPrevRuler');
- if(ru)ru.onmousedown=e=>{
-  e.preventDefault();
-  const y0=e.clientY,x0=e.clientX,z0=modPrev.zoom||28;
-  let dragged=false;
-  const mm=ev=>{
-   if(!dragged&&Math.abs(ev.clientY-y0)<4)return;
-   dragged=true;
-   modPrev.zoom=Math.max(10,Math.min(64,Math.round(z0-(ev.clientY-y0)*0.25)));drawModPrev();};
-  const mu=ev=>{
-   document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);
-   if(!dragged){
-    /* [M13a]: a plain CLICK on the bars and beats parks the lane's playhead there —
-       the multi-track grid's own method; the ⬍ drag is still the zoom */
-    const r=ru.getBoundingClientRect();
-    const sc=document.getElementById('modPrevScroll');
-    const beat=Math.max(0,Math.round((ev.clientX-r.left)/(modPrev.zoom||28)));
-    modPrev.ph=beat;drawModPrev();
-    setModStatus('Playhead at beat '+(beat+1)+' of the lane — ▶ plays from here.');
-   }};
-  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
- };
- /* [M7c]: Escape — or clicking away from the window — stops the audition */
+ if(hc){hc.checked=!!modWinSettings.hide;
+  hc.onchange=e=>{modWinSettings.hide=!!e.target.checked;persistModWin();
+   setModStatus(modWinSettings.hide?'Hidden from performance record mode — auditions and arms here never land in an automation take.':'⚠ Not hidden — a future performance-record round may capture what you do here.');};}
+ /* [M7c] survives the deletion: Escape — or clicking away from the window — stops the audition */
  document.addEventListener('keydown',e=>{if(e.key==='Escape')modAudStop();});
- document.addEventListener('mousedown',e=>{if(modAud.active&&!(e.target&&e.target.closest&&e.target.closest('#modPanel')))modAudStop();},true);
- if(xb)xb.onclick=()=>{modPrev.exp=!modPrev.exp;xb.classList.toggle('on',modPrev.exp);drawModPrev();};})();
-drawModPrev();
+ document.addEventListener('mousedown',e=>{if(modAud.active&&!(e.target&&e.target.closest&&e.target.closest('#modPanel')))modAudStop();},true);})();
 
 /* ==== 5.3 THE CADENCE WINDOW (UI layer) ==== ONE window, four categories. Press a
    card = audition the cadence in the target phrase's key (psych-out convention —
@@ -11482,7 +10926,7 @@ function przApply(strand,data){
   const o=Array.isArray(project.shelf)?project.shelf.find(x=>x.strand==='travel'&&x.data===data):null;
   if(!o){setPrzStatus('That travel essence is not on the Shelf any more.');return false;}
   orbState.ghost='shelf:'+o.id;orbState.sel=0;
-  if(uiState.open!=='orbPanel')uiDispatch({type:'toggle',id:'orbPanel'});else renderOrb();
+  if(!uiWinShown('orbPanel'))uiDispatch({type:'toggle',id:'orbPanel'});else renderOrb();
   setPrzStatus('★ '+o.name+' is aboard the Orbits window as its sun — the moments ring the planet; click one to land it (one undo).');
   return true;
  }
@@ -14901,7 +14345,7 @@ function toggleSlidePanel(){
  if(slidePanelOpen){
   /* July 27a: Slide lives inside the Melisma window now — opening it opens Melisma
      FIRST (the curve editor needs real, visible dimensions to build against) */
-  if(typeof uiState==='object'&&uiState&&uiState.open!=='melPanel')uiDispatch({type:'toggle',id:'melPanel'});
+  if(typeof uiState==='object'&&uiState&&!uiWinShown('melPanel'))uiDispatch({type:'toggle',id:'melPanel'});
   P.style.display='block';
   if(!slideEditor)buildSlidePanel();
   syncSlidePanel(true);
@@ -15960,7 +15404,7 @@ function openSharedScale(){
   const known=ragaAllEntries().some(e=>e.sid===sid);
   if(!known)return false;
   ragaState.sel=sid;
-  if(uiState.open!=='ragaPanel')uiDispatch({type:'toggle',id:'ragaPanel'});
+  if(!uiWinShown('ragaPanel'))uiDispatch({type:'toggle',id:'ragaPanel'});
   renderRagaResults();renderRagaInfo();
   return true;
  }catch(e){return false;}
@@ -16097,7 +15541,7 @@ function ragaSingleGamaka(e,melIdx){
 /* ② play it yourself — letter keys (home row = scale degrees, QWERTY row = the octave
    above; #13d pinned at build time) and MIDI (the ensureMidiIn hook in onMidiIn) */
 function ragaKeyAud(ev){
- if(typeof uiState!=='object'||uiState.open!=='ragaPanel')return;
+ if(typeof uiState!=='object'||!uiWinShown('ragaPanel'))return;
  if(!ragaState.self||ev.metaKey||ev.ctrlKey||ev.altKey||ev.repeat)return;
  const tag=ev.target&&ev.target.tagName;
  if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA')return;
@@ -16114,7 +15558,7 @@ function ragaKeyAud(ev){
 function ragaMidiAudition(note,vel){
  /* returns true when the browser CONSUMED the note (window open + toggle ② + Setting);
     recording always wins — the hook only runs when recTaking() is false */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='ragaPanel')return false;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('ragaPanel'))return false;
  if(!ragaState.self)return false;
  if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.ragaMidiAud===false)return false;
  const e=ragaSelEntry();if(!e)return false;
@@ -16576,7 +16020,7 @@ function wanPlayGroup(g){
 }
 function wanSyncFollow(){
  /* refresh hook: with ⟲ follow on and the window open, the board tracks the playhead */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='wanPanel'||!wanState.follow)return;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('wanPanel')||!wanState.follow)return;
  const k=wanFollowKey();
  if(k.tonic!==wanState.tonic||k.mode!==wanState.mode){
   wanState.tonic=k.tonic;wanState.mode=(SCALE_DB[k.mode]?k.mode:'ionian');
@@ -16585,7 +16029,7 @@ function wanSyncFollow(){
  }
 }
 function wanKeydown(e){
- if(typeof uiState!=='object'||!uiState||uiState.open!=='wanPanel')return false;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('wanPanel'))return false;
  const t=e.target;
  if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'||t.isContentEditable))return false;
  const n=wanScale().pcs.length;
@@ -17783,7 +17227,7 @@ function orbActivate(item){
 function orbMidiTravel(note){
  /* travel by MIDI-controller grid — pads index the clickable map (ring chords, pivots,
     planets, in draw order). Recording always wins (the caller checks). */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel'||!orbState.midi)return false;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel')||!orbState.midi)return false;
  const list=orbState.clicks||[];
  if(!list.length)return false;
  orbState.sel=note%list.length;
@@ -17801,7 +17245,7 @@ function orbBotPick(cands,cur){
 }
 function orbBotTick(){
  if(!orbState.auto||!playing)return;
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return;
  const b=transportBeat();
  if(b+1e-6<orbBot.next)return;
  const cands=(orbState.clicks||[]).filter(c=>c.k==='planet'||c.k==='pivot')
@@ -17881,7 +17325,7 @@ function orbShipRideTo(x,y,ms,done){
 }
 function orbShipTick(){
  /* the ship rides the chord the grid is playing — cheap positional update, no re-render */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return;
  if(orbState.shipBusy&&performance.now()<orbState.shipBusy)return;   /* R5: mid-flight to a clicked moon or along a road */
  const ship=document.getElementById('orbShip');if(!ship)return;
  const geo=orbState.geo;if(!geo)return;
@@ -17925,7 +17369,7 @@ function orbRotTick(){
  /* GEMS R1 — the cinematic rotation. Rides the SAME 150ms interval as the bot and the
     🚀 (the one-tick-source law): Solar view + Orbit Mode + 🔄 on, else it does nothing
     at all — toggled off, no styles are written and no frames are requested. */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return;
  if(!orbRotActive())return;
  const st=orbRotTickStep();
  orbState.rotDeg=((orbState.rotDeg||0)+st)%360;
@@ -17937,7 +17381,7 @@ function orbRotActive(){
     Solar/3D + 🔄 on + not the twins. ⚪ Equal orbit no longer freezes the sky (client, Aug 20:
     "What does the Equal Orbit button do? It seems to just make all the moons bigger" — now it
     only does that). */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return false;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return false;
  if(orbState.view==='circles'||!orbState.rotate)return false;
  if(orbTwinOn())return false;   /* GEMS R2: rotation rests while the twins are docked — the half-arcs don't spin */
  return true;
@@ -18385,7 +17829,7 @@ function orbKeyTick(){
     undo), it flies there — from the new key's world if the map has one, else a plain
     cross-fade. Before this the planet only changed on a click (a stale planet whenever
     playback crossed a key change). Rides the one 150ms tick. */
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return;
  if(orbState.tripAnim||orbTrips.drag)return;
  const sh=orbState.shown;if(!sh)return;
  const k=orbCurrentKey();
@@ -19593,7 +19037,7 @@ function orbEcoRun(write){
  setOrbStatus('Hearing the progression from degree '+(k+1)+' — nothing written until ✓.');
 }
 function orbKeydown(e){
- if(typeof uiState!=='object'||!uiState||uiState.open!=='orbPanel')return false;
+ if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return false;
  const t=e.target;
  if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'||t.isContentEditable))return false;
  const list=orbState.clicks||[];
@@ -19616,7 +19060,7 @@ function buildOrbPanel(){
  B.dataset.built='1';
  renderOrb();
  document.addEventListener('keydown',orbKeydown);
- document.addEventListener('fullscreenchange',()=>{if(typeof uiState==='object'&&uiState&&uiState.open==='orbPanel')renderOrb();});
+ document.addEventListener('fullscreenchange',()=>{if(typeof uiState==='object'&&uiState&&uiWinShown('orbPanel'))renderOrb();});
  setInterval(()=>{for(const f of [orbBotTick,orbRotTick,orbShipTick,orbTripsTick,orbKeyTick]){try{f();}catch(e){if(!orbState._tickErr){orbState._tickErr=1;console.warn('orbit tick',f.name,e);}}}},150);   /* 4.7 R3: the itinerary rides the same tick — one clock source · R5 (20g): each tick in its OWN try — one throwing tick no longer silences the others (the rotation and the ship used to die with the bot) */
  requestAnimationFrame(orbRotFrame);   /* R5 (20g): the rAF smoother (it idles when the gate is shut) */
 }
@@ -22662,9 +22106,9 @@ function refresh(reschedule){
  if(typeof syncVelControl==='function')syncVelControl();   /* 2.3: Vel readout follows the selection */
  if(typeof syncSlidePanel==='function')syncSlidePanel();
  /* 5.0 r5: the flip-book tracks selection + edits live while it's the open view */
- if(typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='melPanel'&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
+ if(typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('melPanel')&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
  if(typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: ⟲ follow — the board tracks the playhead's key */
- if(typeof syncSetupTempoBox==='function'&&typeof uiState==='object'&&uiState&&uiState.open==='setupPanel')syncSetupTempoBox();   /* SETUP R1: the 🔧 BPM box + meter select follow edits/undo while the window is up */
+ if(typeof syncSetupTempoBox==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('setupPanel'))syncSetupTempoBox();   /* SETUP R1: the 🔧 BPM box + meter select follow edits/undo while the window is up */
  if(typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.trips)orbTripsRefresh();   /* WINDOW-SHELL: itinerary follows undo while Trips is up */
  /* multi-track strips follow zoom / song length / paper toggles */
  if(typeof stripPPB!=='undefined'&&(stripPPB!==PPB||stripLOOP!==LOOP||stripPaper!==paperView))drawTrackSel();
@@ -22677,9 +22121,9 @@ async function togglePlay(){
     With the Modulation window selected and open, spacebar toggles ITS transport; the
     main grid's transport is untouched. Clicking the main grid selects it back. */
  if(typeof gridFocus!=='undefined'&&gridFocus==='mod'
-  &&typeof uiState==='object'&&uiState&&uiState.open==='modPanel'){
+  &&typeof uiState==='object'&&uiState&&uiWinShown('modPanel')){
   if(typeof modAud==='object'&&modAud.active){if(typeof modAudStop==='function')modAudStop();}
-  else if(typeof modPrevAudition==='function')modPrevAudition();
+  else if(typeof modAudition==='function')modAudition();   /* Phase 2 R1: the lane-less audition */
   return;
  }
  if(typeof modAudStop==='function')modAudStop();   /* [M14b]'s surviving half: the MAIN grid taking over silences the window's audition — two transports never overlap */
@@ -22771,7 +22215,7 @@ selMode.onchange=()=>{
  if(selMode.value==='__browse'){
   ensureModeOption(project.mode);
   selMode.value=project.mode;selMode.blur();
-  if(typeof uiState==='object'&&uiState&&uiState.open!=='ragaPanel')uiDispatch({type:'toggle',id:'ragaPanel'});
+  if(typeof uiState==='object'&&uiState&&!uiWinShown('ragaPanel'))uiDispatch({type:'toggle',id:'ragaPanel'});
   return;
  }
  /* 2.2b: the scale menu edits the ACTIVE SECTION's mode (reinterprets — notes stay put) */
@@ -23112,14 +22556,28 @@ const RAIL_DEFS=[
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
    unchanged, it simply starts as the open one. A saved state (incl. an explicit close)
    always wins over the default. */
-function uiDefault(){return {open:'varPanel',collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false};}   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized (his ask, 73rd) */
+/* PHASE 2 R0 (his answer, verbatim in the spec's Decisions made): MULTIPLE windows may be
+   open at once, stacked in the column — "no, I don't want to only allow 1 window open at a
+   time." uiState.openWins is the set; uiState.open stays as the MOST RECENTLY opened window
+   (focus for the greeters, the Trips stacking and the spawn-link law). uiWinShown() is the
+   one visibility question — every redraw gate and opener asks it, never the open slot. */
+function uiWinShown(id){
+ if(typeof uiState!=='object'||!uiState)return false;
+ return Array.isArray(uiState.openWins)?uiState.openWins.indexOf(id)>=0:uiState.open===id;
+}
+function uiDefault(){return {open:'varPanel',openWins:['varPanel'],collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false,colOrder:null};}   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized; Phase 2 R0: openWins = the multi-open set */
 function parseUiState(str,defs){
  const def=uiDefault(),ids=(defs||WINDOW_DEFS).map(d=>d.id);
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
-   if(o.open===null)def.open=null;   /* the user closed it — closed stays closed */
-   if(typeof o.open==='string'&&ids.indexOf(o.open)>=0)def.open=o.open;
+   if(o.open===null){def.open=null;def.openWins=[];}   /* the user closed it — closed stays closed */
+   if(typeof o.open==='string'&&ids.indexOf(o.open)>=0){def.open=o.open;def.openWins=[o.open];}
+   /* Phase 2 R0: the multi-open set (whitelisted, deduped); a legacy save fell through above */
+   if(Array.isArray(o.openWins)){
+    def.openWins=o.openWins.filter((x,i)=>typeof x==='string'&&ids.indexOf(x)>=0&&x!=='tripsPanel'&&o.openWins.indexOf(x)===i);
+    def.open=(typeof o.open==='string'&&def.openWins.indexOf(o.open)>=0)?o.open:(def.openWins[def.openWins.length-1]||null);
+   }
    if(o.collapsed&&typeof o.collapsed==='object')
     for(const k of ids)if(o.collapsed[k]===true)def.collapsed[k]=true;
    if(o.heights&&typeof o.heights==='object')
@@ -23127,6 +22585,7 @@ function parseUiState(str,defs){
    if(o.iconsHidden===true)def.iconsHidden=true;
    if(Array.isArray(o.links))def.links=linkNorm(o.links);   /* Phase 1: the graph persists in cp_ui */
    if(o.gridMin===true)def.gridMin=true;
+   if(Array.isArray(o.colOrder))def.colOrder=o.colOrder.filter(x=>typeof x==='string');   /* Phase 2 R0: the column order (normalized at apply) */
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
    if(o.trips==='min'||o.trips==='full')def.trips=o.trips;
    if(def.open==='tripsPanel'){def.open=null;if(!def.trips)def.trips='full';}
@@ -23139,7 +22598,9 @@ function uiReduce(state,action,defs){
   heights:Object.assign({},state.heights),iconsHidden:state.iconsHidden,
   trips:state.trips===undefined?null:state.trips,
   links:Array.isArray(state.links)?state.links.slice():[],
-  gridMin:!!state.gridMin};   /* Phase 1: the graph + the grid-minimize ride every reduce */
+  openWins:Array.isArray(state.openWins)?state.openWins.slice():(state.open?[state.open]:[]),
+  gridMin:!!state.gridMin,
+  colOrder:Array.isArray(state.colOrder)?state.colOrder.slice():null};   /* Phase 1: the graph + the grid-minimize; Phase 2 R0: the multi-open set */
  if(!action||typeof action!=='object')return s;
  /* WINDOW-SHELL · RAW [69][72][75]: Trips is the one-window-law EXCEPTION — a companion
     that opens BETWEEN the top window and the one below. Toggle never steals `open`. */
@@ -23149,10 +22610,19 @@ function uiReduce(state,action,defs){
   if(s.trips==='full')delete s.collapsed.tripsPanel;
  }
  else if(action.type==='toggle'&&ids.indexOf(action.id)>=0){
-  s.open=state.open===action.id?null:action.id;      /* one window at a time (Trips excepted) */
-  if(s.open)delete s.collapsed[s.open];              /* opening un-collapses */
-  /* [75] opening Wanderer or Orbits auto-launches minimized Trips under them */
-  if((s.open==='wanPanel'||s.open==='orbPanel')&&!s.trips)s.trips='min';
+  /* PHASE 2 R0 (his answer): windows STACK — a toggle adds to or removes from the open
+     SET; `open` tracks the most recently opened (focus). The one-window law is retired. */
+  const at=s.openWins.indexOf(action.id);
+  if(at>=0){
+   s.openWins.splice(at,1);
+   if(s.open===action.id)s.open=s.openWins[s.openWins.length-1]||null;
+  }else{
+   s.openWins.push(action.id);
+   s.open=action.id;
+   delete s.collapsed[action.id];                    /* opening un-collapses */
+   /* [75] opening Wanderer or Orbits auto-launches minimized Trips under them */
+   if((action.id==='wanPanel'||action.id==='orbPanel')&&!s.trips)s.trips='min';
+  }
  }
  else if(action.type==='collapse'&&action.id==='tripsPanel'){
   /* collapse on Trips = min ↔ full (the slim strip ↔ the full itinerary) */
@@ -23201,7 +22671,7 @@ function uiDispatch(action){
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
-  if(uiState.open==='modPanel'&&typeof drawModPrev==='function'){
+  if(uiState.open==='modPanel'){
    /* [M14a]: nothing selected + the toggle ON → the song advances to the next section's first chord */
    if(typeof modWinSettings==='object'&&modWinSettings.adv&&(typeof selChord==='undefined'||selChord==null)){
     const ss=Array.isArray(project.sections)?project.sections:[];
@@ -23209,7 +22679,8 @@ function uiDispatch(action){
     if(st!=null&&st<LOOP-1e-6){playheadBeat=st;if(typeof refresh==='function')refresh(false);
      if(typeof setModStatus==='function')setModStatus('Advanced to the next section (beat '+Math.round(st)+') — modulating a whole section is a real modulation. Untick “Advance” to stay put.');}
    }
-   drawModPrev();       /* 4.3 24b: the preview lane re-reads its target on open */
+   /* Phase 2 R1: the preview lane is deleted — nothing to redraw on open; the linked
+      audition Grid 2 takes this seam in the auto-spawn slice */
   }
  }
  /* 5.3: the Cadence Window lives BETWEEN the palette and the grid — opening it scrolls
@@ -23220,7 +22691,7 @@ function uiDispatch(action){
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'center'});}catch(e){}
  }}
 function applyUiState(){
- if(typeof palSearchFor!=='undefined'&&palSearchFor!=null&&uiState.open!=='ragaPanel')palSearchFor=null;   /* 20n: a closed Browser forgets which matrix asked */
+ if(typeof palSearchFor!=='undefined'&&palSearchFor!=null&&!uiWinShown('ragaPanel'))palSearchFor=null;   /* 20n: a closed Browser forgets which matrix asked */
  for(const d of WINDOW_DEFS){
   const p=document.getElementById(d.id);if(!p)continue;
   if(d.id==='tripsPanel'){
@@ -23228,7 +22699,7 @@ function applyUiState(){
    p.style.display=uiState.trips?'':'none';
    p.classList.toggle('winCollapsed',uiState.trips==='min'||!!uiState.collapsed.tripsPanel);
   }else{
-   p.style.display=uiState.open===d.id?'':'none';
+   p.style.display=uiWinShown(d.id)?'':'none';   /* Phase 2 R0: windows stack */
    p.classList.toggle('winCollapsed',!!uiState.collapsed[d.id]);
   }
   const body=p.querySelector('.winBodyWrap');
@@ -23237,7 +22708,7 @@ function applyUiState(){
    else{body.style.maxHeight='';body.classList.remove('winBody-limit');}
   }
   const chip=document.getElementById('pchip_'+d.id);
-  if(chip)chip.classList.toggle('on',d.id==='tripsPanel'?!!uiState.trips:uiState.open===d.id);
+  if(chip)chip.classList.toggle('on',d.id==='tripsPanel'?!!uiState.trips:uiWinShown(d.id));
  }
  /* RAW [72]: Trips stacks BETWEEN the open top window and whatever follows it */
  const tripsEl=document.getElementById('tripsPanel');
@@ -23297,9 +22768,84 @@ function initUiShell(){
    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
   p.appendChild(head);p.appendChild(wrap);p.appendChild(rez);
+  colGripAdd(head,d.id);   /* Phase 2 R0: every window reorders in the column by its ⠿ grip */
  }
+ colGripAdd(document.getElementById('gridWinHead'),'gridRowWrap');
+ colGripAdd(document.getElementById('palWinHead'),'chordPanel');
+ applyColOrder();
  applyUiState();
  wireDockDrag();buildDocks();   /* vertical docking (2.1b-e ⑦) */
+}
+/* ==== PHASE 2 R0 · THE REORDERABLE COLUMN (his answer, verbatim in the spec's Decisions
+   made: "the user should be able to move around any window in the column including the
+   multi-track grid which is itself just another window. Yes, reorder the stack where
+   necessary when a window is deposited in a new location.") ====
+   Members are the BODY's window blocks; the grid's unit is #gridRowWrap (the rail rides
+   along); tripsPanel is EXCLUDED — it keeps its [72] auto-stacking under the focused
+   window. Drag the ⠿ grip vertically; the gold line (the §3 motion law) shows the
+   deposit; the order persists in uiState.colOrder. */
+const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];
+function colOrderNorm(list){
+ const seen={},out=[];
+ for(const x of (Array.isArray(list)?list:[]))
+  if(typeof x==='string'&&COL_MEMBERS.indexOf(x)>=0&&!seen[x]){seen[x]=1;out.push(x);}
+ for(const m of COL_MEMBERS)if(!seen[m])out.push(m);
+ return out;
+}
+function colMembersNow(){
+ return [...document.body.children].map(el=>el.id).filter(id=>COL_MEMBERS.indexOf(id)>=0);
+}
+function applyColOrder(){
+ if(typeof uiState!=='object'||!uiState||!Array.isArray(uiState.colOrder)||!uiState.colOrder.length)return;
+ const ord=colOrderNorm(uiState.colOrder);
+ const cur=colMembersNow();
+ if(!cur.length)return;
+ /* re-insert every member, in order, before the element that follows the LAST member now */
+ const lastEl=document.getElementById(cur[cur.length-1]);
+ const anchor=lastEl?lastEl.nextSibling:null;
+ for(const id of ord){
+  const el=document.getElementById(id);
+  if(el&&el.parentNode===document.body)document.body.insertBefore(el,anchor);
+ }
+}
+function colGripAdd(head,memberId){
+ if(!head||head.querySelector('.colGrip'))return;
+ const g=document.createElement('span');
+ g.className='colGrip';g.textContent='⠿';
+ g.title='Drag ↕ to move this window up or down the column — the stack reorders around where you drop it.';
+ g.onmousedown=e=>{
+  e.preventDefault();e.stopPropagation();
+  let line=document.getElementById('colDropLine');
+  if(!line){line=document.createElement('div');line.id='colDropLine';document.body.appendChild(line);}
+  let at=null;
+  const vis=()=>colMembersNow().map(id=>document.getElementById(id))
+   .filter(el=>el&&el.id!==memberId&&el.getClientRects().length>0);
+  const mm=ev=>{
+   const els=vis();let idx=els.length,y=null;
+   for(let i=0;i<els.length;i++){
+    const r=els[i].getBoundingClientRect();
+    if(ev.clientY<r.top+r.height/2){idx=i;y=r.top+(window.scrollY||0);break;}
+   }
+   if(y==null&&els.length){const r=els[els.length-1].getBoundingClientRect();y=r.bottom+(window.scrollY||0);}
+   at={idx,before:idx<els.length?els[idx].id:null};
+   line.style.display='block';line.style.top=Math.round((y||0)-2)+'px';
+  };
+  const done=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('keydown',esc,true);line.style.display='none';};
+  const esc=ev=>{if(ev.key==='Escape'){at=null;done();}};
+  const mu=()=>{
+   done();
+   if(!at)return;
+   const cur=colMembersNow().filter(id=>id!==memberId);
+   const idx=at.before?cur.indexOf(at.before):cur.length;
+   cur.splice(idx<0?cur.length:idx,0,memberId);
+   uiState.colOrder=cur;
+   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+   applyColOrder();
+  };
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);document.addEventListener('keydown',esc,true);
+  mm(e);
+ };
+ head.insertBefore(g,head.firstChild);
 }
 /* ==== VERTICAL DOCKING (2.1b-e ⑦, its own round — July 30) ====
    Drag any window's HEADER toward the left or right screen edge — a gold line
@@ -23326,7 +22872,7 @@ function dockWin(id,side){
  if(dockedWins.right===id)dockedWins.right=null;
  dockedWins[side]=id;
  persistDocks();
- if(uiState.open===id)uiDispatch({type:'toggle',id});   /* leaves the top flow */
+ if(uiWinShown(id))uiDispatch({type:'toggle',id});   /* leaves the top flow (R0: visibility, not the slot) */
  buildDocks();
 }
 function undockWin(side,open){
@@ -23334,7 +22880,7 @@ function undockWin(side,open){
  if(!id)return;
  dockedWins[side]=null;
  persistDocks();buildDocks();
- if(open&&uiState.open!==id)uiDispatch({type:'toggle',id});
+ if(open&&!uiWinShown(id))uiDispatch({type:'toggle',id});
 }
 function buildDocks(){
  document.querySelectorAll('.vdock').forEach(el=>el.remove());
@@ -23649,7 +23195,7 @@ function varSaveFly(rec){
  try{
   const gr=document.getElementById('grid');
   const start=gr?gr.getBoundingClientRect():null;
-  const panelOpen=(typeof uiState==='object'&&uiState&&uiState.open==='varPanel');
+  const panelOpen=(typeof uiState==='object'&&uiState&&uiWinShown('varPanel'));
   const tgtEl=panelOpen?document.getElementById('varPanel'):document.getElementById('pchip_varPanel');
   if(!start||!tgtEl||tgtEl.offsetParent===null)return;
   const tr=tgtEl.getBoundingClientRect();
