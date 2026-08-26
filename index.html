@@ -34,7 +34,15 @@
      grows and shrinks with its track (the name/S/R/On row stays its own size at the top,
      like #gridRow always did) */
   .trow{display:flex;align-items:stretch;margin-bottom:3px;}
-  .thead{width:76px;min-width:76px;box-sizing:border-box;padding-right:8px;}
+  .thead{width:var(--theadW,76px);min-width:var(--theadW,76px);box-sizing:border-box;padding-right:8px;}   /* 76th R3: the name-box column width is per-grid (--theadW) */
+  .nbox{position:relative;}
+  .nboxMicro{display:flex;flex-direction:row;align-items:center;gap:4px;}
+  .nboxMicro .tctl{order:-1;margin-top:0;padding-left:2px;gap:3px;}
+  .nboxMicro .texp{font-size:9px;}
+  .tonbox{width:10px;height:10px;border-radius:2px;background:#555a68;cursor:pointer;flex:0 0 auto;border:1px solid var(--line);}
+  .tonbox.on{background:#e8d24a;}
+  .nboxWRz{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:ew-resize;}
+  .nboxHRz{position:absolute;left:0;right:6px;bottom:0;height:5px;cursor:ns-resize;}
   /* ⌘G groups: slim header rows for open groups · the closed group's one lane */
   .ghrow{min-height:20px;}
   .ghrow .thead{height:20px;min-height:20px;border-radius:5px;position:relative;}
@@ -42,7 +50,7 @@
   .gstrip{background:#191b22;border-radius:4px;overflow:hidden;}
   .gstrip:hover{background:#1d2028;}
   /* vertical docking: the docked window's grey-at-rest edge bar (gold is for motion) */
-  .vdock{position:fixed;top:0;bottom:0;width:22px;z-index:70;background:#22242c;
+  .vdock{position:fixed;top:0;bottom:0;width:22px;z-index:95;background:#22242c;   /* 76th: above the fixed rail/chrome (z-90) — an explicit dock owns its edge */
    border:1px solid #34384a;cursor:pointer;display:flex;align-items:center;
    justify-content:center;user-select:none;}
   .vdock:hover{background:#262a34;border-color:#4a5060;}
@@ -64,7 +72,7 @@
   .thead.nbox.hsel{outline:2px solid var(--accent);outline-offset:1px;}
   .texp{font-size:9px;color:var(--dim);cursor:pointer;user-select:none;width:9px;flex:0 0 auto;display:inline-block;}
   .texp:hover{color:var(--text);}
-  .tcorner{position:absolute;right:1px;bottom:1px;width:0;height:0;cursor:pointer;z-index:3;
+  .tcorner{position:absolute;right:1px;bottom:1px;width:0;height:0;cursor:pointer;z-index:7;   /* 76th: above the .rzh resize lines (z-6) — the corner owns its 8×8 pixels (the stolen-mousedown family, §2 ④'s cure) */
    border-left:8px solid transparent;border-bottom:8px solid var(--dim);opacity:.5;}
   .tcorner:hover{opacity:1;border-bottom-color:var(--accent);}
   /* MG round (client item 5): S · R · On are three matching SQUARES — lit when on,
@@ -181,7 +189,8 @@
   /* [M23d] the Snap split (71st): the Snap surface is its own dock directly below the grid. The "−" zooms it
      back to the icon in the 76px gutter at the grid's left; the transform-origin IS the zoom-to-icon animation. */
   #snapDock{display:flex;align-items:flex-start;margin-top:10px;}
-  #snapPanel{flex:1;min-width:0;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 26px 8px 12px;transition:transform .28s ease,opacity .28s ease;transform-origin:left center;}
+  #snapPanel{min-width:0;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:12px 0;transition:transform .28s ease,opacity .28s ease;transform-origin:left center;}   /* 76th R4: a column window now (the 12px gap law); the zoom animation stays */
+  #snapPanel.winCollapsed #cpTools{display:none;}
   #snapPanel.snapZoom{transform:scale(.04);opacity:0;}
   #snapHideBtn{position:absolute;top:3px;right:8px;cursor:pointer;color:var(--dim);font-size:14px;line-height:1;}
   #snapHideBtn:hover{color:var(--text);}
@@ -510,12 +519,36 @@
 .orbSw.on{background:var(--accent);}
 .orbSw.on::after{left:13px;background:#0a0c12;}
 #orbBody:fullscreen #orbMapWrap svg{max-width:min(94vw,150vh)!important;margin:0 auto;}
+  /* ==== 76th R2 · THE FIXED CHROME (his words: the transport and the navigation
+       section become fixed windows at the top; the left icon rail stops scrolling) ==== */
+  #transportWin,#navWin{position:fixed;left:0;right:0;z-index:90;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  #transportWin{top:0;}
+  #transportWin .winHead,#navWin .winHead{padding:2px 10px;min-height:20px;}
+  #transportWin.winCollapsed .controls{display:none;}
+  #navWin.winCollapsed #navBody{display:none;}
+  #transportWin .controls{padding:4px 10px 6px;margin:0;}
+  #navBody{padding:4px 10px 6px;}
+  #transportLink,#navLink{position:fixed;z-index:90;top:3px;font-size:11px;color:var(--accent);cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:2px 10px;}
+  #transportLink{left:8px;}
+  #navLink{left:128px;}
+  [id^="gridRowWrap_g"] [id="zoomStrip"]{display:none;}   /* instance grids: the Navigator is THE nav — the clone strips retire */
+  #navBody input,#navBody select,#navBody textarea{user-select:text;-webkit-user-select:text;}   /* the wrap's field exception rides the strip's move */
+  #rail{position:fixed;left:4px;z-index:90;}
 </style>
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26j</span></div>
 
+  <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
+       and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
+       routes its events through the selected grid's world) -->
+  <div id="transportWin" data-gwfocus="1">
+  <div class="winHead" id="trWinHead" title="The Transport — fixed at the top; it controls whichever linked group of windows is selected. Click the bar to minimize.">
+    <span class="picon">▶</span><span class="wtitle">Transport</span>
+    <span class="wbtn" id="trMinChip" title="Minimize the Transport window to its title bar">−</span>
+    <span class="wbtn" id="trCloseChip" title="Delete the Transport window — a &#8220;Show transport&#8221; link stays at the top to bring it back">✕</span>
+  </div>
   <div class="controls">
     <!-- 75th r3 (the spec's second creation route): the File menu at the top -->
     <div class="ctl" id="fileMenuCtl" style="position:relative;">
@@ -552,6 +585,20 @@
       <button id="setBtn" title="Settings — display options, project save/open, legal" style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">⚙</button>
     </div></div>
   </div>
+  </div><!-- /transportWin -->
+  <span id="transportLink" style="display:none;" title="Bring the Transport window back">Show transport</span>
+  <!-- 76th R2 (his words): the navigation section from the top of every grid becomes ONE
+       fixed Navigator window under the Transport — it controls the focused linked group.
+       Grid 1's #zoomStrip MOVES in here at boot (handlers ride); the clones' copies hide. -->
+  <div id="navWin" data-gwfocus="1">
+    <div class="winHead" id="navWinHead" title="The Navigator — fixed under the Transport; it controls whichever linked group of windows is selected. Click the bar to minimize.">
+      <span class="picon">🧭</span><span class="wtitle">Navigator</span>
+      <span class="wbtn" id="navMinChip" title="Minimize the Navigator to its title bar">−</span>
+      <span class="wbtn" id="navCloseChip" title="Delete the Navigator — a &#8220;Navigator&#8221; link stays at the top to bring it back">✕</span>
+    </div>
+    <div id="navBody"></div>
+  </div>
+  <span id="navLink" style="display:none;" title="Bring the Navigator back">Navigator</span>
 
   <div id="panelBar"></div>
 
@@ -823,22 +870,7 @@
          gutter at the grid's left; the icon's click brings it back. State rides cp_pal.snapHide. -->
     <div id="snapDock">
       <div class="thead" style="display:flex;align-items:flex-start;padding-top:4px;flex-direction:column;gap:4px;"><span class="cpchip" id="snapIcon" style="display:none;" title="Snap to chord tones — click to bring the Snap window back">⇒ Snap</span><span class="cpchip" id="palIcon" style="display:none;" title="Bring the Chord Palette window back — it reopens linked to this grid">🎹 Palette</span></div>
-      <div id="snapPanel">
-        <span id="snapHideBtn" title="Hide the Snap window — it zooms back to the ⇒ Snap icon at the grid&#8217;s left">−</span>
-        <!-- 19y (client request): Scale menu + Conform/extension toggles. The extension checkboxes
-             EDIT the selection live: with a chord selected they rebuild its quality from the toggled
-             degrees; with notes selected they snap each note to the nearest allowed tone. They remain
-             the Conform degree set for the Snap button. ([M23d]: moved here from the palette dock.) -->
-        <div id="cpTools">
-          <label class="cp-toollab">Scale (background)</label><select id="selMode" style="min-width:190px;"></select>
-          <button id="snapBtn" style="background:#5bb98c;color:#0c1f16;">Snap → chord tones</button>
-          <label class="cp-toollab" title="Chord extensions — 1·9·3·11·5·13·7. Toggle with a chord selected to rebuild it from these degrees; with notes selected, each snaps to the nearest allowed tone. The Snap button uses the same set.">Extensions</label>
-          <div id="confDegs" style="display:flex;gap:6px;font-size:11px;color:var(--dim);align-items:center;"></div>
-          <!-- 3.4 Feature 1: the four-detent conformance law (Absolute · Scale · Function · Contour) -->
-          <label class="cp-toollab" title="The conformance law: what the melody does when the chords change under it (chord swaps, source-box chords, source melodies) — and what ⇒ now applies on demand. Absolute = the shipped behavior: notes stay, harmony recolors them.">Conformance</label>
-          <div id="confDet" style="display:flex;gap:4px;font-size:11px;align-items:center;"></div>
-        </div>
-      </div>
+      <!-- 76th R4 (his words): the Snap window moved OUT to the column as its own modular window; the ⇒ Snap gutter icon here stays its restore link -->
     </div>
     <!-- 5.3: THE CADENCE WINDOW — physically between the Multi-Track Grid and the
          Chord Palette (client spec: the palette's 𝄂 link opens it exactly here). ONE
@@ -903,6 +935,30 @@
        This is not right." Opened from its top-rail 𝄂 button; carries the SEARCH stub for the
        coming Cadence Search Window; joins the Phase-2 auto-spawn list (a linked audition grid
        opens with it, like Modulation and Melisma) when Grid 2 exists. -->
+  <!-- 76th R4 (his words): "The ‘Snap to chord tones’ button and controls should be it’s own
+       modular window ... when it is deleted it shows up as a link in the bottom of the
+       multi-track grid." — the palette idiom: winHead, minimize, ✕ → the ⇒ Snap gutter icon. -->
+  <div id="snapPanel">
+    <div class="winHead" id="snapWinHead" title="Snap to chord tones — its own modular window. Click the bar to minimize.">
+      <span class="picon">⇒</span><span class="wtitle">Snap to chord tones</span>
+      <span class="wbtn" id="snapMinChip" title="Minimize the Snap window to its title bar">−</span>
+      <span class="wbtn" id="snapCloseChip" title="Delete the Snap window — the ⇒ Snap link at the grid’s left brings it back">✕</span>
+    </div>
+
+        <!-- 19y (client request): Scale menu + Conform/extension toggles. The extension checkboxes
+             EDIT the selection live: with a chord selected they rebuild its quality from the toggled
+             degrees; with notes selected they snap each note to the nearest allowed tone. They remain
+             the Conform degree set for the Snap button. ([M23d]: moved here from the palette dock.) -->
+        <div id="cpTools">
+          <label class="cp-toollab">Scale (background)</label><select id="selMode" style="min-width:190px;"></select>
+          <button id="snapBtn" style="background:#5bb98c;color:#0c1f16;">Snap → chord tones</button>
+          <label class="cp-toollab" title="Chord extensions — 1·9·3·11·5·13·7. Toggle with a chord selected to rebuild it from these degrees; with notes selected, each snaps to the nearest allowed tone. The Snap button uses the same set.">Extensions</label>
+          <div id="confDegs" style="display:flex;gap:6px;font-size:11px;color:var(--dim);align-items:center;"></div>
+          <!-- 3.4 Feature 1: the four-detent conformance law (Absolute · Scale · Function · Contour) -->
+          <label class="cp-toollab" title="The conformance law: what the melody does when the chords change under it (chord swaps, source-box chords, source melodies) — and what ⇒ now applies on demand. Absolute = the shipped behavior: notes stay, harmony recolors them.">Conformance</label>
+          <div id="confDet" style="display:flex;gap:4px;font-size:11px;align-items:center;"></div>
+        </div>
+  </div>
     <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadences — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><button id="cadSearchBtn" type="button" style="margin-left:auto;font-size:10px;letter-spacing:.6px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:none;color:var(--dim);cursor:pointer;" title="The Cadence SEARCH Window — coming: whichever set of cadences you select there will populate this window. Its spec lives in the roadmap; this button marks its home.">SEARCH</button></div>
     <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
@@ -2778,9 +2834,12 @@ function setSongBars(bars){
  if(len===LOOP){syncBarsInp();return;}
  snapshot();
  if(len>LOOP){
-  /* last chord stretches into the new bars — on EVERY lane (3.2: all lanes sum to LOOP) */
-  if(Array.isArray(project.lanes))for(const L2 of project.lanes)L2.chords[L2.chords.length-1].d+=len-LOOP;
-  else project.chords[project.chords.length-1].d+=len-LOOP;
+  /* last chord stretches into the new bars — on EVERY lane (3.2: all lanes sum to LOOP).
+     76th: a BLANK lane has nothing to stretch — the loop still grows (empty lanes are
+     real since the user-grid era; the old code threw on chords[-1].d) */
+  const _st=L=>{if(Array.isArray(L)&&L.length)L[L.length-1].d+=len-LOOP;};
+  if(Array.isArray(project.lanes))for(const L2 of project.lanes)_st(L2.chords);
+  else _st(project.chords);
  }else{
   if(Array.isArray(project.lanes))for(const L2 of project.lanes)L2.chords=trimChordsTo(L2.chords,len);
   else project.chords=trimChordsTo(project.chords,len);
@@ -5866,11 +5925,17 @@ function validViewH(o){
   &&o.hidden.every(x=>typeof x==='string'&&x.length<=24)))return false;
  return true;}
 let stripH={};   /* per-track strip/grid-view heights in px (#12c: rides project file + autosave; reset on loadSong) */
+let theadW=null;   /* 76th R3: the name-box column width (null = the 76px default); per-world slot, rides viewH */
+const TRACK_MICRO_H=18;   /* 76th R3, his words: tracks minimize SMALLER — S/R/the on-box sit LEFT of the name */
 function stripHeightOf(t){
- /* July 30 fix 2: render floor = the name-box height (old stored/default values below
-    it simply read as the floor — files never rewrite, the view just honors the law) */
+ /* July 30 fix 2 (the box floor), AMENDED at the 76th by his direction: a height the
+    user drags to MICRO (>=18, below the box) renders the compact head; legacy defaults
+    and old files (values below 18 — STRIP_DEF is 14) still read as the BOX floor, so
+    nothing changes until the user drags below the box on purpose. */
  const h=stripH[t]!=null?stripH[t]:STRIP_DEF;
- return Math.max((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H,h);
+ const box=(typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H;
+ if(h<TRACK_MICRO_H)return box;
+ return h;
 }
 function chordLaneH(){
  const el=document.getElementById('chordlane');
@@ -9069,9 +9134,9 @@ function palWinNorm(o){
 }
 const palState=(()=>{try{const o=JSON.parse(localStorage.getItem('cp_pal')||'{}');
  return {dims:!!o.dims,jimi:!!o.jimi,hm:!!o.hm,mmAll:!!o.mmAll,followSel:!!o.followSel,laneTop:!!o.laneTop,
-  win:palWinNorm(o.win),snapHide:!!o.snapHide,
+  win:palWinNorm(o.win),snapHide:!!o.snapHide,snapMin:!!o.snapMin,
   mats:Array.isArray(o.mats)?o.mats.map(m=>(m&&typeof m==='object'&&typeof m.id==='string')?{tonic:((+m.tonic||0)%12+12)%12,id:m.id}:null):[null]};}
- catch(e){return {dims:false,jimi:false,hm:false,mmAll:false,followSel:false,laneTop:false,win:palWinNorm(null),snapHide:false,mats:[null]};}})();
+ catch(e){return {dims:false,jimi:false,hm:false,mmAll:false,followSel:false,laneTop:false,win:palWinNorm(null),snapHide:false,snapMin:false,mats:[null]};}})();
 /* 20n THE CHORD PALETTE ROUND (client, Aug 21 — ORBIT-FEEDBACK-RAW [61]–[65]). palState.mats = the relative
    matrices under the song's matrix: null = AUTOMATIC (a third from the song's scale, following the key),
    {tonic,id} = a scale the drop-down or the Browser put there. laneTop = [65], the chord lane as top row. */
@@ -9569,9 +9634,15 @@ document.addEventListener('keydown',e=>{
  gw.addEventListener('scroll',()=>{if(syncing||!cp.classList.contains('palLock'))return;syncing=true;cp.scrollLeft=gw.scrollLeft;syncing=false;});
  cp.addEventListener('scroll',()=>{if(syncing||!cp.classList.contains('palLock'))return;syncing=true;gw.scrollLeft=cp.scrollLeft;syncing=false;});
 })();
-document.getElementById('snapHideBtn').onclick=()=>{palState.snapHide=true;persistPal();snapDockApply(true);};
+document.getElementById('snapCloseChip').onclick=e=>{e.stopPropagation();palState.snapHide=true;persistPal();snapDockApply(true);};   /* 76th R4: ✕ = the old hide — it zooms to the ⇒ Snap gutter link */
+function snapMinApply(){const p=document.getElementById('snapPanel');if(!p)return;p.classList.toggle('winCollapsed',!!palState.snapMin);const c=document.getElementById('snapMinChip');if(c)c.textContent=palState.snapMin?'+':'−';}
+document.getElementById('snapMinChip').onclick=e=>{e.stopPropagation();palState.snapMin=!palState.snapMin;persistPal();snapMinApply();};
+document.getElementById('snapWinHead').onclick=e=>{
+ if(e.target&&e.target.classList&&(e.target.classList.contains('wbtn')||e.target.classList.contains('colGrip')))return;
+ palState.snapMin=!palState.snapMin;persistPal();snapMinApply();
+};
 document.getElementById('snapIcon').onclick=()=>{palState.snapHide=false;persistPal();snapDockApply(true);};
-try{palWinApply();snapDockApply(false);}catch(e){}   /* landmine ⑪'s general defence: a saved state must never take the boot down */
+try{palWinApply();snapDockApply(false);snapMinApply();}catch(e){}   /* landmine ⑪'s general defence: a saved state must never take the boot down */
 /* dock controls (wired once) */
 document.getElementById('cpDimsChip').onclick=()=>{palState.dims=!palState.dims;persistPal();drawChordPanel();};
 document.getElementById('cpJimiChip').onclick=()=>{palState.jimi=!palState.jimi;persistPal();drawChordPanel();};
@@ -10016,6 +10087,7 @@ function setGridFocus(f){
   const w=GRID_WORLDS[gid];
   if(w&&w.els&&w.els.root)w.els.root.classList.toggle('gridFocused',gid===f&&gid!=='main');
  }
+ if(typeof navSyncFromFocus==='function')try{navSyncFromFocus();}catch(e){}   /* 76th R2: the fixed chrome follows the selection */
 }
 let modWinSettings={rate:true,hide:true,adv:true};
 function persistModWin(){try{localStorage.setItem('cp_modwin',JSON.stringify(modWinSettings));}catch(e){}}
@@ -20553,6 +20625,10 @@ function trackHead(t,inLane){
  const col=trackColorOf(t);
  h.style.background=hexA(col,.24);
  h.style.borderLeft='3px solid '+col;
+ /* 76th R3 (his words): below the box height the head goes MICRO — one slim row with
+    the on-box, S and R to the LEFT of the name */
+ const _micro=inLane&&stripHeightOf(t)<((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H)-2;
+ if(_micro)h.classList.add('nboxMicro');
  const top=document.createElement('div');
  top.style.cssText='display:flex;align-items:center;gap:1px;min-width:0;';
  /* July 26b: the green ACTING-CHORD-LANE square, left of the name (client copy verbatim) */
@@ -20587,6 +20663,13 @@ function trackHead(t,inLane){
  top.appendChild(nm);
  h.appendChild(top);
  const ctl=document.createElement('div');ctl.className='tctl';
+ if(_micro){
+  const ob=document.createElement('span');
+  ob.className='tonbox'+(trackOn(t)?' on':'');
+  ob.title='On/off — yellow = you can hear it (the same law as clicking the name)';
+  ob.onclick=e=>{e.stopPropagation();mutes[t]=!mutes[t];drawTrackSel();if(mixerOpen)drawMixer();};
+  ctl.appendChild(ob);
+ }
  const so=document.createElement('span');
  so.className='tsolo'+((mixer[t]&&mixer[t].solo)?' on':'');
  so.textContent='S';
@@ -20627,6 +20710,26 @@ function trackHead(t,inLane){
  del.onclick=e=>{e.stopPropagation();deleteTrackFromUI(t);};
  ctl.appendChild(del);
  h.appendChild(ctl);
+ if(inLane){
+  /* 76th R3 (his words): the name box resizes LEFT/RIGHT (the whole column width, a
+     per-grid --theadW) and UP/DOWN (the track height — the same rz gesture as the
+     yellow lines, from the box's own bottom edge; the .rzh top-edge trap avoided) */
+  const wz=document.createElement('div');wz.className='nboxWRz';
+  wz.title='Drag ↔ to set the name-box column width (this grid)';
+  wz.onmousedown=e=>{
+   e.preventDefault();e.stopPropagation();
+   const x0=e.clientX,w0=theadW||76;
+   const mv=ev=>{theadW=Math.max(40,Math.min(240,Math.round(w0+(ev.clientX-x0))));
+    const root=document.getElementById('gridRowWrap');if(root)root.style.setProperty('--theadW',theadW+'px');};
+   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+    autosaveSoon();drawTrackSel();if(typeof positionMainRz==='function')positionMainRz();};
+   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);};
+  h.appendChild(wz);
+  const hz=document.createElement('div');hz.className='nboxHRz';
+  hz.title='Drag ↕ to resize '+trackLabel(t);
+  hz.onmousedown=e=>startStripRz(e,(t===activeTrack?'__main':t),'bottom');
+  h.appendChild(hz);
+ }
  /* v3: the volume monitor — a slim level bar in the name box (drag ↔ to set the
     track's mixer volume; the Mixer window mirrors it). Live signal metering rides
     the future per-track meter tap (V1 line). */
@@ -20952,6 +21055,7 @@ function buildGroupStrip(strip,g){
 }
 function drawTrackSel(){
  /* top row: just the add-track / re-render chips now — the tracks themselves are strips */
+ try{const _rt=document.getElementById('gridRowWrap');if(_rt)_rt.style.setProperty('--theadW',((typeof theadW==='number'&&theadW)?theadW:76)+'px');}catch(e){}   /* 76th R3: the world's name-box column width */
  if(armedTrack&&armedTrack!=='drums'&&!(armedTrack in project.tracks))armedTrack=null;
  const el=document.getElementById('trackSel');el.innerHTML='';
  const add=document.createElement('div');add.className='part';
@@ -21771,10 +21875,10 @@ document.addEventListener('mousemove',ev=>{
  /* Aug 25: the kit is an editable MIDI track — drums resize (and TRANSFORM) like every
     track; the Aug 24 read-only roll is superseded by the real grid view */
  const maxH=GRIDVIEW_MAX;
- const h=Math.round(Math.max(boxH,Math.min(maxH,rz.h0+d)));
- if(rz.h0+d<boxH-4&&!rz.floorHint){
+ const h=Math.round(Math.max(TRACK_MICRO_H,Math.min(maxH,rz.h0+d)));   /* 76th R3: the floor is the MICRO row now */
+ if(rz.h0+d<TRACK_MICRO_H-4&&!rz.floorHint){
   rz.floorHint=true;
-  flashHint('Tracks never shrink below their name box — to tuck '+trackLabel(rz.t)+' away, ctrl+click its name box and choose “Hide track”.');
+  flashHint('Tracks never shrink below their micro row — to tuck '+trackLabel(rz.t)+' away, ctrl+click its name box and choose “Hide track”.');
  }
  if(h!==stripHeightOf(rz.t)){
   stripH[rz.t]=h;
@@ -21851,9 +21955,14 @@ function applyCornerPin(){
  }
  const cn=hd&&hd.querySelector('.tcorner');
  if(!cn){cornerPin=null;return;}
- const r=hd.getBoundingClientRect();
- cn.style.bottom='auto';
- cn.style.top=Math.round(cornerPin.y-r.top-6)+'px';
+ /* 76th: the pin rides position:FIXED at the cursor — the old in-head absolute top was
+    CLIPPED by #gridWrap's scroll box once the collapse pulled the wrap above the cursor
+    (the Snap window's move out of the wrap removed the buffer that had been hiding it),
+    so the promised same-spot second click fell on whatever window lay beneath. */
+ cn.style.position='fixed';
+ cn.style.left=Math.round(cornerPin.x-4)+'px';
+ cn.style.top=Math.round(cornerPin.y-4)+'px';
+ cn.style.bottom='auto';cn.style.right='auto';cn.style.zIndex='96';
  if(!cornerPinWatch){
   cornerPinWatch=true;
   const watch=ev=>{
@@ -21861,7 +21970,7 @@ function applyCornerPin(){
    const dx=ev.clientX-cornerPin.x,dy=ev.clientY-cornerPin.y;
    if(dx*dx+dy*dy>26*26){
     cornerPin=null;document.removeEventListener('mousemove',watch);cornerPinWatch=false;
-    document.querySelectorAll('.tcorner').forEach(c=>{c.style.top='';c.style.bottom='';});
+    document.querySelectorAll('.tcorner').forEach(c=>{c.style.top='';c.style.bottom='';c.style.left='';c.style.right='';c.style.position='';c.style.zIndex='';});
    }
   };
   document.addEventListener('mousemove',watch);
@@ -22242,7 +22351,19 @@ function applyChordSwap(){
  if(typeof conformAfterChordSwap==='function')conformAfterChordSwap();
  refresh(true);
 }
-function setTempo(v){tempo.value=v;tval.textContent=v+' bpm';Tone.Transport.bpm.value=v;}
+function setTempo(v){
+ try{const _w=GRID_WORLDS[CUR_GRID];
+  if(typeof CUR_GRID==='string'&&CUR_GRID!=='main'&&_w&&_w.user&&_w.linked===false){
+   /* 76th R2: the fixed Transport routed into an UNLINKED user grid writes ITS tempo
+      (the spec's own-tempo law) — the shared transport tempo never moves */
+   _w.bpm=Math.max(40,Math.min(220,Math.round(v)||96));
+   if(playing&&transportGrid===CUR_GRID){try{Tone.Transport.bpm.value=_w.bpm;}catch(e){}}
+   const bp=_w.els&&_w.els.root&&_w.els.root.querySelector('.gwBpm');if(bp)bp.value=_w.bpm;
+   const tv=_gridGetById('tval');if(tv)tv.textContent=_w.bpm+' bpm';
+   if(typeof gridsPersistSoon==='function')gridsPersistSoon();
+   return;}
+ }catch(e){}
+ tempo.value=v;tval.textContent=v+' bpm';Tone.Transport.bpm.value=v;}
 function refresh(reschedule){
  syncActiveKey();   /* 2.2b: the edit key follows the section under the selection/playhead */
  if(paperView)drawPaper();else drawGrid();   /* 2.2c: 📄 music-paper view wraps the timeline */
@@ -22616,6 +22737,7 @@ function currentViewH(){
   if(JSON.stringify(trackOrder)!==JSON.stringify(def))out.order=trackOrder.slice();
  }
  if(hiddenTracks.size)out.hidden=[...hiddenTracks];   /* v3: the hidden set replaces viewH.min (collapse retired) */
+ if(typeof theadW==='number'&&theadW&&theadW!==76)out.theadW=theadW;   /* 76th R3 */
  return Object.keys(out).length?out:undefined;}
 function currentProjectRecord(){
  return buildProjectRecord({songId:project.song?project.song.id:null,mode:project.mode,tonic:project.tonic,base:project.base,
@@ -22683,6 +22805,7 @@ function applyProjectFile(o){
      reopen; collapse no longer exists). */
   if(Array.isArray(o.viewH.order))trackOrder=o.viewH.order.slice();
   if(Array.isArray(o.viewH.hidden))for(const t of o.viewH.hidden)hiddenTracks.add(t);
+  if(typeof o.viewH.theadW==='number'&&isFinite(o.viewH.theadW))theadW=Math.max(40,Math.min(240,Math.round(o.viewH.theadW)));   /* 76th R3 */
  }
  if(_gwMain&&Array.isArray(o.variations)&&o.variations.length){
   variations=o.variations;ensureVarIds(variations);persistVars();drawVars();}
@@ -22749,7 +22872,7 @@ function uiWinShown(id){
  if(typeof uiState!=='object'||!uiState)return false;
  return Array.isArray(uiState.openWins)?uiState.openWins.indexOf(id)>=0:uiState.open===id;
 }
-function uiDefault(){return {open:'varPanel',openWins:['varPanel'],collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false,colOrder:null};}   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized; Phase 2 R0: openWins = the multi-open set */
+function uiDefault(){return {open:'varPanel',openWins:['varPanel'],collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false,colOrder:null,chrome:{tr:{min:false,closed:false},nav:{min:false,closed:false}}};}   /* 76th R2: chrome = the fixed Transport/Navigator windows' min/closed */   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized; Phase 2 R0: openWins = the multi-open set */
 function parseUiState(str,defs){
  const def=uiDefault(),ids=(defs||WINDOW_DEFS).map(d=>d.id);
  try{
@@ -22771,6 +22894,7 @@ function parseUiState(str,defs){
    if(o.gridMin===true)def.gridMin=true;
    if(Array.isArray(o.colOrder))def.colOrder=o.colOrder.filter(x=>typeof x==='string');   /* Phase 2 R0: the column order (normalized at apply) */
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
+   if(o.chrome&&typeof o.chrome==='object')for(const _k of ['tr','nav']){const _c=o.chrome[_k];if(_c&&typeof _c==='object'){if(_c.min===true)def.chrome[_k].min=true;if(_c.closed===true)def.chrome[_k].closed=true;}}   /* 76th R2 */
    if(o.trips==='min'||o.trips==='full')def.trips=o.trips;
    if(def.open==='tripsPanel'){def.open=null;if(!def.trips)def.trips='full';}
   }
@@ -22988,6 +23112,7 @@ function initUiShell(){
  }
  colGripAdd(document.getElementById('gridWinHead'),'gridRowWrap');
  colGripAdd(document.getElementById('palWinHead'),'chordPanel');
+ colGripAdd(document.getElementById('snapWinHead'),'snapPanel');   /* 76th R4 */
  applyColOrder();
  applyUiState();
  wireDockDrag();buildDocks();   /* vertical docking (2.1b-e ⑦) */
@@ -23071,7 +23196,7 @@ function gridSlotsCapture(){
     world; PLAY-time reads go through playMutes(), which resolves the transport OWNER's
     map — Tone callbacks fire under whatever world the mouse is in, which is why a bare
     swapped read was never enough. */
- return {project,activeTrack,selOwner,selSurface,LOOP,PPB,stripH,trackOrder,mutes,
+ return {project,activeTrack,selOwner,selSurface,LOOP,PPB,stripH,trackOrder,mutes,gridTriplets,swingOn,theadW,
   hiddenTracks,trackBigH,trackSmallH,selHead,selHeads,chordKeyOv,
   undo:undoStack.slice(),redoStack,lastSnap:_lastSnap,redoStash:_redoStash,
   selNotes,selChordSet,selChord,
@@ -23081,7 +23206,7 @@ function gridSlotsCapture(){
 }
 function gridSlotsApply(s){
  project=s.project;activeTrack=s.activeTrack;renderTrack=null;selOwner=s.selOwner;selSurface=s.selSurface;
- LOOP=s.LOOP;PPB=s.PPB;stripH=s.stripH;trackOrder=s.trackOrder;mutes=s.mutes;
+ LOOP=s.LOOP;PPB=s.PPB;stripH=s.stripH;trackOrder=s.trackOrder;mutes=s.mutes;gridTriplets=s.gridTriplets;swingOn=s.swingOn;theadW=s.theadW;
  hiddenTracks=s.hiddenTracks;trackBigH=s.trackBigH;trackSmallH=s.trackSmallH;selHead=s.selHead;selHeads=s.selHeads;chordKeyOv=s.chordKeyOv;
  undoStack.length=0;for(const u of s.undo)undoStack.push(u);
  redoStack=s.redoStack;_lastSnap=s.lastSnap;_redoStash=s.redoStash;
@@ -23130,6 +23255,7 @@ function gridWorldSlotsFresh(opts){
   hiddenTracks:new Set(['bass','pad']),trackBigH:{},trackSmallH:{},selHead:null,selHeads:new Set(),chordKeyOv:null,
   undo:[],redoStack:[],lastSnap:null,redoStash:null,
   mutes:{drums:false,bass:false,comping:false,pad:false,melody:false},
+  gridTriplets:false,swingOn:false,theadW:null,
   selNotes:new Set(),selChordSet:new Set(),selChord:null,
   views:vw,activeGridView:vw.main,LANE_VIEWS:[],
   armedTrack:null,stripPPB:0,stripLOOP:0,stripPaper:null,
@@ -23490,6 +23616,83 @@ document.body.addEventListener('contextmenu',e=>{
  e.preventDefault();
  gridAddMenuShow(e.clientX,e.clientY);
 });
+/* ==== 76th R2 · THE FIXED CHROME — the Transport window, the Navigator, the fixed rail
+   (his words, verbatim in the spec's Decisions made). Both windows carry data-gwfocus:
+   the router runs their events under the FOCUSED grid's world, so they control whichever
+   linked group is selected. State = uiState.chrome, riding cp_ui. ==== */
+function fixedChromeState(){
+ if(!uiState.chrome||typeof uiState.chrome!=='object')uiState.chrome={tr:{min:false,closed:false},nav:{min:false,closed:false}};
+ for(const k of ['tr','nav'])if(!uiState.chrome[k]||typeof uiState.chrome[k]!=='object')uiState.chrome[k]={min:false,closed:false};
+ return uiState.chrome;
+}
+function fixedChromeApply(){
+ const c=fixedChromeState();
+ const tw=_gridGetById('transportWin'),nw=_gridGetById('navWin');
+ if(!tw||!nw)return;
+ tw.classList.toggle('winCollapsed',!!c.tr.min);tw.style.display=c.tr.closed?'none':'';
+ nw.classList.toggle('winCollapsed',!!c.nav.min);nw.style.display=c.nav.closed?'none':'';
+ const mc=_gridGetById('trMinChip');if(mc)mc.textContent=c.tr.min?'+':'−';
+ const nc=_gridGetById('navMinChip');if(nc)nc.textContent=c.nav.min?'+':'−';
+ const tl=_gridGetById('transportLink');if(tl)tl.style.display=c.tr.closed?'':'none';
+ const nl=_gridGetById('navLink');if(nl)nl.style.display=c.nav.closed?'':'none';
+ const trH=c.tr.closed?0:tw.offsetHeight;
+ nw.style.top=trH+'px';
+ const navH=c.nav.closed?0:nw.offsetHeight;
+ const chromeH=Math.max(trH+navH,(c.tr.closed||c.nav.closed)?26:0);
+ document.body.style.paddingTop=chromeH+'px';
+ document.documentElement.style.scrollPaddingTop=(chromeH+8)+'px';   /* scrollIntoView never lands under the fixed bars */
+ const rail=_gridGetById('rail');
+ if(rail){rail.style.top=(chromeH+12)+'px';
+  document.body.style.paddingLeft=((rail.offsetWidth||44)+10)+'px';}   /* his "the other windows a bit smaller" — the room the fixed rail takes */
+}
+function fixedChromeInit(){
+ const nb=_gridGetById('navBody'),zs=_gridGetById('zoomStrip');
+ if(nb&&zs&&!nb.contains(zs)){
+  nb.appendChild(zs);   /* Grid 1's nav strip becomes THE Navigator — the handlers ride the move; the clones' copies are CSS-hidden */
+  /* the ↕ zoom drag SURVIVES the move (verify-mg pins it as a fixed regression): the
+     strip zooms the FOCUSED grid — the router routes the gesture by data-gwfocus */
+  zs.addEventListener('mousedown',e=>{
+   const t=e.target;
+   if(t!==zs&&!(t.classList&&t.classList.contains('parts')))return;
+   e.preventDefault();
+   const r=((typeof curSvg==='function')?curSvg():svg).getBoundingClientRect();
+   drag={mode:'zoom',x0:e.clientX-r.left,y0:e.clientY-r.top,p0:PPB,fromStrip:true};
+  });
+ }
+ const c=fixedChromeState();
+ const persist=()=>{try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}};
+ const wire=(headId,minId,closeId,key,linkId)=>{
+  const tog=()=>{c[key].min=!c[key].min;fixedChromeApply();persist();};
+  const head=_gridGetById(headId);
+  if(head)head.onclick=e=>{if(e.target&&e.target.classList&&e.target.classList.contains('wbtn'))return;tog();};
+  const mc=_gridGetById(minId);if(mc)mc.onclick=e=>{e.stopPropagation();tog();};
+  const x=_gridGetById(closeId);if(x)x.onclick=e=>{e.stopPropagation();c[key].closed=true;fixedChromeApply();persist();};
+  const l=_gridGetById(linkId);if(l)l.onclick=()=>{c[key].closed=false;fixedChromeApply();persist();};
+ };
+ wire('trWinHead','trMinChip','trCloseChip','tr','transportLink');
+ wire('navWinHead','navMinChip','navCloseChip','nav','navLink');
+ fixedChromeApply();
+ window.addEventListener('resize',()=>{try{fixedChromeApply();}catch(e){}});
+}
+function navSyncFromFocus(){
+ /* the Navigator + Transport readouts follow the SELECTED grid (his follow-up law) */
+ try{
+  const nb=_gridGetById('navBody');if(!nb)return;
+  const run=()=>{
+   const q=id=>{const el=document.getElementById(id);return (el&&nb.contains(el))?el:null;};
+   const b=q('barsInp');if(b)b.value=String(Math.round(LOOP/4));
+   const tr=q('chkTrip');if(tr)tr.checked=!!gridTriplets;
+   const sw=q('chkSwing');if(sw)sw.checked=!!swingOn;
+   const pp=q('chkPaper');if(pp)pp.checked=!!paperView;
+   const cc=q('chkCont');if(cc&&typeof contView!=='undefined')cc.checked=!!contView;
+  };
+  const g=(typeof gridFocus==='string'&&gridFocus!=='main'&&gridFocus!=='mod'&&GRID_WORLDS[gridFocus])?gridFocus:null;
+  g?withGridWorld(g,run):run();
+  const w=g?GRID_WORLDS[g]:null;
+  const tv=_gridGetById('tval');
+  if(tv)tv.textContent=((w&&w.user&&w.linked===false&&w.bpm)?w.bpm:Math.round(+tempo.value))+' bpm';
+ }catch(e){}
+}
 (function wireFileMenu(){
  const btn=_gridGetById('fileMenuBtn'),menu=_gridGetById('fileMenu'),ng=_gridGetById('fmNewGrid');
  if(!btn||!menu||!ng)return;
@@ -23506,11 +23709,22 @@ document.body.addEventListener('contextmenu',e=>{
    when the pointer wanders. Keyboard routes by gridFocus ([M21]'s law generalized). */
 let _gridEvtEntered=false;
 (function(){
- function worldOf(n){const r=n&&n.closest?n.closest('[data-gridworld]'):null;return r?r.getAttribute('data-gridworld'):null;}
+ function worldOf(n){
+  const r=n&&n.closest?n.closest('[data-gridworld]'):null;
+  if(r)return r.getAttribute('data-gridworld');
+  /* 76th R2, his words: the fixed Transport/Navigator control whichever linked group is
+     SELECTED — their events route through the focused grid's world */
+  const fx=n&&n.closest?n.closest('[data-gwfocus]'):null;
+  if(fx&&typeof gridFocus==='string'&&gridFocus!=='main'&&gridFocus!=='mod'&&GRID_WORLDS[gridFocus])return gridFocus;
+  return null;
+ }
  /* WINDOW level, both phases: window-capture runs before every app handler and a
     window-bubble listener registered HERE (below every app registration in the file)
     runs after them all — the app's own keyboard handler lives on window (20078-region). */
- const ptr=['mousedown','mouseup','mousemove','click','dblclick','contextmenu','wheel','mouseover','mouseout'];
+ /* 76th R2: 'change'/'input' JOIN the routed set — a control's commit fires AFTER the
+    pointer gesture ends, outside any world, so a Navigator (data-gwfocus) or clone
+    control was writing MAIN's singletons. Same enter/leave mechanism. */
+ const ptr=['mousedown','mouseup','mousemove','click','dblclick','contextmenu','wheel','mouseover','mouseout','change','input'];
  for(const t of ptr){
   window.addEventListener(t,e=>{
    if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}
@@ -23547,7 +23761,7 @@ let _gridEvtEntered=false;
    along); tripsPanel is EXCLUDED — it keeps its [72] auto-stacking under the focused
    window. Drag the ⠿ grip vertically; the gold line (the §3 motion law) shows the
    deposit; the order persists in uiState.colOrder. */
-const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];
+const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','snapPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];   /* 76th R4: the Snap window joins the column */
 function colMemberOk(id){
  /* Phase 2 R2: grid INSTANCES (gridRowWrap_g2…) are column members too — "the multi-track
     grid… is itself just another window" extends to every instance of it. They are
@@ -24428,6 +24642,7 @@ buildRagaPanel();   /* 3.5: the Browser builds at boot like Melisma */
 openSharedScale();  /* 0.2 (#13c): a ?scale= link opens the browser pre-selected */
 buildWanPanel();    /* 4.6: the Chord Wanderer builds at boot too */
 try{buildOrbPanel();}catch(e){console.error('Orbit panel failed to build at boot',e);}    /* 4.7: Interplanetary Orbits builds at boot too — 20i: and a fault in it must never abort the boot (loadSong follows) */
+try{fixedChromeInit();}catch(e){console.error('fixed chrome failed to init at boot',e);}   /* 76th R2 — the 20i defence */
 loadSong('bj');drawParts();drawVars();drawPatchRow();
 document.getElementById('patchKit').onclick=e=>{
  patchSel=Object.assign(defaultPatchSel(),PATCH_KIT);
