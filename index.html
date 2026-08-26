@@ -190,7 +190,7 @@
      [M24] (71st round two, his call: "its own boxed window, docked"): the palette wears the app's own
      WINDOW dress — the #cadPanel margin idiom, a lifted shadow, and the real .winHead/.wbtn header —
      while staying inside #gridWrap so the [77]/[78] alignment survives a pan/zoom. */
-  #chordPanel{margin:14px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}
+  #chordPanel{margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.38);}   /* Fix 4: the standard 12px column gap — the palette's 14px bottom made its gap read wider */
   /* MODULAR_WINDOWS_SPEC Phase 1 (73rd, corrected on his look): the palette is its OWN boxed
      window in the column — a SIBLING of the Multi-Track Grid window with the page's black gap
      between them (his "separate the way that the current Modulation Window is separate").
@@ -202,6 +202,7 @@
   .colGrip:hover{color:var(--text);}
   .colGrip:active{cursor:grabbing;}
   #colDropLine{position:absolute;left:8px;right:8px;height:3px;background:var(--accent);border-radius:2px;display:none;z-index:110;box-shadow:0 0 8px var(--accent);pointer-events:none;}
+  [data-gridworld].gridFocused{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px;}   /* Phase 2 R2: the SELECTED grid instance wears the [M21] accent ring */
   .cpSearchBtn{font-size:9px;letter-spacing:.6px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--dim);cursor:pointer;padding:2px 2px;align-self:stretch;writing-mode:horizontal-tb;}
   .cpSearchBtn:hover{color:var(--text);border-color:#4a5060;}
   #palWinHead .picon{font-size:12px;}
@@ -475,7 +476,7 @@
 #tripsPanel.winCollapsed #tripsBody .tripsOnlyFull{display:none!important;}
 
 .winCollapsed>*:not(.winHead){display:none !important;}
-.winCollapsed .winHead{margin:0;}
+.winCollapsed .winHead{margin:0;height:18px;overflow:hidden;align-items:center;}   /* Fix 4: ONE standard minimized-bar height — the palette head's taller 🎹 row squeezed it to 28px vs 26 */
 .winBody-limit{overflow-y:auto;}
 .winResize{height:7px;margin:6px -16px -10px -16px;cursor:ns-resize;border-radius:0 0 10px 10px;}
 .winResize:hover{background:var(--line);}
@@ -513,7 +514,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-25k</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26a</span></div>
 
   <div class="controls">
     <!-- 4.4: the three fixed source dropdowns are RETIRED from the top bar — the Import
@@ -6121,11 +6122,12 @@ function drawGrid(){
     2.5 ⑦: with Zoomed In Midi ON, the main svg hosts the LOWER view object instead —
     the same view the Lower Window renders, one code path (the transport button's whole
     promise). Gestures resolve to it through viewForEl, so editing works identically. */
+ const _sv=(typeof curSvg==='function')?curSvg():svg;   /* Phase 2 R2: the WORLD's own note svg */
  if(typeof zimOn!=='undefined'&&zimOn&&typeof lowerConfigure==='function'){
-  const lv2=lowerConfigure();lv2.el=svg;
-  drawGridView(lv2,svg);
- }else drawGridView(GRID_VIEWS.main,svg);
- for(const id in GRID_VIEWS){const gv=GRID_VIEWS[id];if(id!=='main'&&gv.el&&gv.el!==svg&&gv.el.isConnected)drawGridView(gv,gv.el);}
+  const lv2=lowerConfigure();lv2.el=_sv;
+  drawGridView(lv2,_sv);
+ }else drawGridView(GRID_VIEWS.main,_sv);
+ for(const id in GRID_VIEWS){const gv=GRID_VIEWS[id];if(id!=='main'&&gv.el&&gv.el!==_sv&&gv.el.isConnected)drawGridView(gv,gv.el);}
 }
 /* 2.1b: the renderer is parameterized on (view, svg element). Main-only pieces (bar lane,
    section flags, loop region, playhead) gate on the view; selection visuals (selBox,
@@ -8986,9 +8988,10 @@ function linkedTo(list,node){
  return out;
 }
 function focusedGridNode(){
- /* the SELECTED grid a spawning window links to. One linkable grid exists today (the
-    Modulation window's embedded surface retires in Phase 2), so this resolves to Grid 1 —
-    Phase 2 extends it when 'grid:<id>' instances arrive. */
+ /* the SELECTED grid a spawning window links to (THE SPAWN-LINK LAW). Grid instances
+    arrived at Phase 2 R2 — the focused instance is the node; Grid 1 stays the default. */
+ if(typeof gridFocus==='string'&&gridFocus!=='main'&&gridFocus!=='mod'
+  &&typeof GRID_WORLDS==='object'&&GRID_WORLDS[gridFocus])return 'grid:'+gridFocus;
  return 'grid:main';
 }
 function palWinNorm(o){
@@ -9450,6 +9453,13 @@ function snapDockApply(anim){
  else{p.style.display=hid?'none':'';p.classList.toggle('snapZoom',hid);ic.style.display=hid?'':'none';}
 }
 document.getElementById('palMinChip').onclick=()=>{palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();};
+/* Fix 1 (client, Aug 25 late): the header ITSELF minimizes on click, like every window's
+   head does — the chips keep their own jobs (they stop nothing; the guard below skips them) */
+document.getElementById('palWinHead').onclick=e=>{
+ if(e.target&&e.target.classList&&e.target.classList.contains('wbtn'))return;   /* − and ✕ own their clicks */
+ if(e.target&&e.target.classList&&e.target.classList.contains('colGrip'))return; /* the ⠿ grip drags, never toggles */
+ palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();
+};
 /* Phase 1 (73rd): the Multi-Track Grid window minimizes like the Modulation window */
 function gridMinApply(){
  const gw=document.getElementById('gridWrap');if(!gw)return;
@@ -9903,6 +9913,12 @@ function setGridFocus(f){
  gridFocus=f;
  const row=document.getElementById('modPrevRow');
  if(row)row.classList.toggle('gridFocused',f==='mod');
+ /* Phase 2 R2: a focused grid INSTANCE wears the accent ring on its own root (Grid 1,
+    the default, stays ring-less — [M21]'s look) */
+ if(typeof GRID_WORLDS==='object')for(const gid in GRID_WORLDS){
+  const w=GRID_WORLDS[gid];
+  if(w&&w.els&&w.els.root)w.els.root.classList.toggle('gridFocused',gid===f&&gid!=='main');
+ }
 }
 let modWinSettings={rate:true,hide:true,adv:true};
 function persistModWin(){try{localStorage.setItem('cp_modwin',JSON.stringify(modWinSettings));}catch(e){}}
@@ -22095,7 +22111,8 @@ function refresh(reschedule){
  if(typeof drawMainStrip==='function')drawMainStrip();   /* July 24 r2: the minimized main Grid's lane */
  if(typeof redrawBarLanes==='function')redrawBarLanes();   /* July 24 r3: docked bar lanes track loop/sections/zoom */
  if(typeof positionMainRz==='function')positionMainRz();   /* July 24 r4: the yellow lines ride the grid's real edges */
- drawChordLane();drawChordPanel();drawClipPanel();
+ const _gwMain=(typeof CUR_GRID!=='string'||CUR_GRID==='main');   /* Phase 2 R2: the singleton windows (palette, clips, flip-book, boards) belong to Grid 1's world — a grid instance refreshing must not repaint them with ITS state */
+ drawChordLane();if(_gwMain){drawChordPanel();drawClipPanel();}
  if(typeof drawModLane==='function')drawModLane();   /* 4.1: the Keys lane tracks sections/zoom/psych */
  if(typeof drawTempoLane==='function')drawTempoLane();   /* 4.2: the Tempo lane tracks zoom/undo/edits */
  if(typeof drawSectionLane==='function')drawSectionLane();   /* 2.5 ⑪f */
@@ -22106,15 +22123,17 @@ function refresh(reschedule){
  if(typeof syncVelControl==='function')syncVelControl();   /* 2.3: Vel readout follows the selection */
  if(typeof syncSlidePanel==='function')syncSlidePanel();
  /* 5.0 r5: the flip-book tracks selection + edits live while it's the open view */
- if(typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('melPanel')&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
- if(typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: ⟲ follow — the board tracks the playhead's key */
- if(typeof syncSetupTempoBox==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('setupPanel'))syncSetupTempoBox();   /* SETUP R1: the 🔧 BPM box + meter select follow edits/undo while the window is up */
- if(typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.trips)orbTripsRefresh();   /* WINDOW-SHELL: itinerary follows undo while Trips is up */
+ if(_gwMain&&typeof renderMelCtx==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('melPanel')&&typeof melState==='object'&&melState.view==='ctx')renderMelCtx();
+ if(_gwMain&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: ⟲ follow — the board tracks the playhead's key */
+ if(_gwMain&&typeof syncSetupTempoBox==='function'&&typeof uiState==='object'&&uiState&&uiWinShown('setupPanel'))syncSetupTempoBox();   /* SETUP R1: the 🔧 BPM box + meter select follow edits/undo while the window is up */
+ if(_gwMain&&typeof orbTripsRefresh==='function'&&typeof uiState==='object'&&uiState&&uiState.trips)orbTripsRefresh();   /* WINDOW-SHELL: itinerary follows undo while Trips is up */
  /* multi-track strips follow zoom / song length / paper toggles */
  if(typeof stripPPB!=='undefined'&&(stripPPB!==PPB||stripLOOP!==LOOP||stripPaper!==paperView))drawTrackSel();
- const st=project.style;
- provEl.innerHTML=`<b>Song:</b> ${project.song.prov} &nbsp;·&nbsp; <b>Style:</b> ${st.name}${useSynth?' &nbsp;·&nbsp; (offline: synth fallback sounds)':''}`;
- if(reschedule&&playing){rebuild();}
+ if(_gwMain){
+  const st=project.style;
+  provEl.innerHTML=`<b>Song:</b> ${project.song.prov} &nbsp;·&nbsp; <b>Style:</b> ${st.name}${useSynth?' &nbsp;·&nbsp; (offline: synth fallback sounds)':''}`;
+ }
+ if(reschedule&&playing&&(typeof transportGrid!=='string'||transportGrid===CUR_GRID)){rebuild();}   /* Phase 2 R2: only the transport's OWNER reschedules it */
 }
 async function togglePlay(){
  /* [M21] (supersedes [M14b]'s spacebar half): the SELECTED grid owns the spacebar.
@@ -22127,7 +22146,14 @@ async function togglePlay(){
   return;
  }
  if(typeof modAudStop==='function')modAudStop();   /* [M14b]'s surviving half: the MAIN grid taking over silences the window's audition — two transports never overlap */
- if(!audioReady){playBtn.disabled=true;playBtn.textContent='Loading…';await ensureAudio();playBtn.disabled=false;}
+ /* Phase 2 R2: ONE transport, owned by a grid ([M21] generalized). Stopping always runs
+    under the OWNER's world (finalize lands the take in the right project); starting
+    claims ownership for the world the spacebar/▶ arrived in. */
+ if(playing&&typeof transportGrid==='string'&&transportGrid!==CUR_GRID&&GRID_WORLDS[transportGrid])
+  return withGridWorld(transportGrid,()=>togglePlay());
+ if(!playing)transportGrid=CUR_GRID;
+ if(!audioReady){const _tg=CUR_GRID;playBtn.disabled=true;playBtn.textContent='Loading…';await ensureAudio();playBtn.disabled=false;
+  if(CUR_GRID!==_tg&&GRID_WORLDS[_tg])return withGridWorld(_tg,()=>togglePlay());}   /* the await left the routed world — re-enter and restart */
  if(playing){
   if(typeof finalizeTake==='function')finalizeTake();   /* commit held notes BEFORE the transport resets */
   if(typeof finalizeAutoTake==='function')finalizeAutoTake();   /* 2.7 R5b: the automation take lands the same way */
@@ -22166,12 +22192,18 @@ async function togglePlay(){
  }
 }
 function animatePlayhead(){
- if(!playing){updatePlayheadLine();return;}   /* settle back on the stopped marker */
- updatePlayheadLine();
- if(typeof followPlayhead==='function')followPlayhead();   /* July 30 fix 5: the view rides along */
- /* background follows the playhead into each section's key while nothing is selected */
- if(selChord==null&&!selChordSet.size&&!selNotes.size&&syncActiveKey())refresh(false);
- requestAnimationFrame(animatePlayhead);
+ /* Phase 2 R2: the frame runs under the transport OWNER's world — the playhead, follow
+    and key-context all read that grid's singletons (a rAF callback has no router). */
+ const _run=()=>{
+  if(!playing){updatePlayheadLine();return;}   /* settle back on the stopped marker */
+  updatePlayheadLine();
+  if(typeof followPlayhead==='function')followPlayhead();   /* July 30 fix 5: the view rides along */
+  /* background follows the playhead into each section's key while nothing is selected */
+  if(selChord==null&&!selChordSet.size&&!selNotes.size&&syncActiveKey())refresh(false);
+ };
+ if(typeof transportGrid==='string'&&transportGrid!==CUR_GRID&&typeof GRID_WORLDS==='object'&&GRID_WORLDS[transportGrid])withGridWorld(transportGrid,_run);
+ else _run();
+ if(playing)requestAnimationFrame(animatePlayhead);
 }
 /* ==== July 30 client fix 5: playhead follow, runtime half ==== zoomed out = 4-bar
    page jumps · zoomed in (PPB above the boot default 34) = centered scroll. A MANUAL
@@ -22183,7 +22215,8 @@ function followPlayhead(){
   if(typeof paperView!=='undefined'&&paperView)return;
   const w=document.getElementById('gridWrap');if(!w)return;
   const maxScroll=w.scrollWidth-w.clientWidth;if(maxScroll<=2)return;
-  const sr=svg.getBoundingClientRect(),wr=w.getBoundingClientRect();
+  const _sv=(typeof curSvg==='function')?curSvg():svg;   /* Phase 2 R2: the world's svg */
+  const sr=_sv.getBoundingClientRect(),wr=w.getBoundingClientRect();
   /* a minimized main grid has no rect — fall back to the shared row offset (14 padding + 76 header) */
   const off=sr.width>0?(sr.left-wr.left):((14+76)-w.scrollLeft);
   const phvx=off+GUT+transportBeat()*PPB;
@@ -22446,6 +22479,7 @@ function currentProjectRecord(){
   bpm:+tempo.value,styleId:project.style.id,loop:LOOP,chords:project.chords,tracks:project.tracks,
   sections:project.sections,lanes:project.lanes,lane:project.lane,viewH:currentViewH(),clipMap:project.clipMap,tempoMap:project.tempoMap,markers:project.markers,tsigMap:project.tsigMap,autoLanes:project.autoLanes,srcs:project.srcs,groups:project.groups,shelf:project.shelf,trips:project.trips,mixer:mixerRecord(),variations,ts:Date.now()});}
 function autosaveSoon(){
+ if(typeof CUR_GRID==='string'&&CUR_GRID!=='main')return;   /* Phase 2 R2: a grid instance never writes THE autosave — its world is session-local */
  projectDirty=true;
  if(!SETTINGS.autosave)return;
  clearTimeout(autosaveTimer);
@@ -22647,7 +22681,25 @@ try{if(!linkedTo(uiState.links,'win:chordPalette').length&&!(palState&&palState.
 try{gridMinApply();}catch(e){}   /* the grid window's saved minimize — applied HERE, after uiState exists (a pre-init call sat in TDZ and silently never ran; landmine ⑪'s try/catch hid it until the suite's reload check caught the state not restoring) */
 function uiDispatch(action){
  const prevOpen=uiState.open;
+ const prevWins=Array.isArray(uiState.openWins)?uiState.openWins.slice():[];
  uiState=uiReduce(uiState,action);
+ /* Fix 2 (client, Aug 25 late): closing a window must NOT jump the page to the next one —
+    "I want the user to scroll up themselves." A greeter/scroll fires only when THIS action
+    genuinely OPENED its window. His named exception: voice-command navigation (Phase 3B)
+    passes action.nav='voice' and may jump — "that is a user who doesn't want to scroll." */
+ const justOpened=!!(action&&action.type==='toggle'&&typeof action.id==='string'
+  &&Array.isArray(uiState.openWins)&&uiState.openWins.indexOf(action.id)>=0&&prevWins.indexOf(action.id)<0)
+  ||!!(action&&action.nav==='voice');
+ /* Phase 2 R2: the auto-spawn PAIR leaves together — closing the window closes its linked
+    audition grid (it arrived with it; a lone audition grid over a closed window is clutter) */
+ if(action&&action.type==='toggle'&&typeof action.id==='string'
+  &&prevWins.indexOf(action.id)>=0&&(!Array.isArray(uiState.openWins)||uiState.openWins.indexOf(action.id)<0)
+  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel')
+  &&typeof gridWorldClose==='function'&&typeof linkedTo==='function'){
+  for(const other of linkedTo(uiState.links,'win:'+action.id))
+   if(/^grid:g\d+$/.test(other)&&typeof GRID_WORLDS==='object'&&GRID_WORLDS[other.slice(5)])
+    gridWorldClose(other.slice(5));
+ }
  /* Phase 1 · THE SPAWN-LINK LAW: a window opening links to the SELECTED grid (his answer,
     Aug 25 — universal across the windows/engines; Grid 1 is the only grid at boot) */
  if(uiState.open&&uiState.open!==prevOpen)
@@ -22664,8 +22716,14 @@ function uiDispatch(action){
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
- if(action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel')){
-  const p=document.getElementById(uiState.open);
+ if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel')){
+  /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation and Melisma windows arrive with a
+     linked audition grid directly ABOVE them — no Chord Palette, spawn-linked through the
+     ONE graph. (Search windows join when the search surface ships — ROADMAP 3.3.) */
+  let _ag=null;
+  if((uiState.open==='modPanel'||uiState.open==='melPanel')&&typeof gridAuditionSpawn==='function')
+   _ag=gridAuditionSpawn(uiState.open);
+  const p=(_ag&&_ag.els&&_ag.els.root)||document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
@@ -22685,9 +22743,12 @@ function uiDispatch(action){
  }
  /* 5.3: the Cadence Window lives BETWEEN the palette and the grid — opening it scrolls
     it into view there and rebuilds against the current sections/chords */
- if(action&&action.type==='toggle'&&uiState.open==='cadPanel'){
+ if(justOpened&&action&&action.type==='toggle'&&uiState.open==='cadPanel'){
   if(typeof buildCadWindow==='function')buildCadWindow();
-  const p=document.getElementById('cadPanel');
+  /* the Cadence Window joined the auto-spawn list (his Cadences direction, Aug 25) */
+  let _cg=null;
+  if(typeof gridAuditionSpawn==='function')_cg=gridAuditionSpawn('cadPanel');
+  const p=(_cg&&_cg.els&&_cg.els.root)||document.getElementById('cadPanel');
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'center'});}catch(e){}
  }}
 function applyUiState(){
@@ -22702,6 +22763,10 @@ function applyUiState(){
    p.style.display=uiWinShown(d.id)?'':'none';   /* Phase 2 R0: windows stack */
    p.classList.toggle('winCollapsed',!!uiState.collapsed[d.id]);
   }
+  /* Fix 3 (client, Aug 25 late): EVERY minimized window's chip reads '+', like the
+     palette's — the collapse chip flips with the state */
+  const colBtn=p.querySelector('.winHead .wbtn[data-w="collapse"]');
+  if(colBtn)colBtn.textContent=p.classList.contains('winCollapsed')?'+':'▂';
   const body=p.querySelector('.winBodyWrap');
   if(body){
    if(uiState.heights[d.id]){body.style.maxHeight=uiState.heights[d.id]+'px';body.classList.add('winBody-limit');}
@@ -22776,6 +22841,272 @@ function initUiShell(){
  applyUiState();
  wireDockDrag();buildDocks();   /* vertical docking (2.1b-e ⑦) */
 }
+/* ==== PHASE 2 R2 · GRID WORLDS — one component, many instances (MODULAR_WINDOWS_SPEC) ====
+   "Grid 2 is the same component as Grid 1, instantiated a second time" (the spec). The
+   grid pipeline reads module singletons, so a second instance is a WORLD: a parked set of
+   every singleton the pipeline touches plus its own cloned composite. Entering a world
+   loads its values into the singletons; leaving restores them. The pipeline itself stays
+   untouched and becomes instance-aware. Host lookups resolve INSIDE the current world's
+   root first (the composite's inner ids are duplicated per instance ON PURPOSE — CSS #id
+   rules style every copy; only the ROOT's id is unique, and its layout style is inline).
+   ⛔ ONE registry (GRID_WORLDS); the connection graph stays the ONLY link store. */
+let CUR_GRID='main',GRID_GESTURE=null,transportGrid='main',_gridWSeq=1;
+const GRID_WORLDS={main:{id:'main',slots:null,els:null,min:false}};
+const _gridGetById=document.getElementById.bind(document);
+const _gridQSel=document.querySelector.bind(document);
+function gridMainEls(){
+ if(!GRID_WORLDS.main.els){
+  const root=_gridGetById('gridRowWrap');
+  if(!root)return null;
+  GRID_WORLDS.main.els={root,wrap:_gridGetById('gridWrap'),svg:_gridGetById('grid')};
+  root.setAttribute('data-gridworld','main');
+ }
+ return GRID_WORLDS.main.els;
+}
+function curSvg(){const w=GRID_WORLDS[CUR_GRID];return (CUR_GRID!=='main'&&w&&w.els&&w.els.svg)?w.els.svg:svg;}
+let GRID_IDSET=null;   /* the composite's id vocabulary, measured from Grid 1 at first spawn */
+function gridIdsetBuild(){
+ const me=gridMainEls();if(!me||!me.root)return null;
+ const s=new Set(['gridRowWrap']);
+ me.root.querySelectorAll('[id]').forEach(e=>s.add(e.id));
+ return s;
+}
+/* ⛔ COMPOSITE ids resolve INSIDE THE CURRENT WORLD'S ROOT — for main too. The clones
+   duplicate inner ids on purpose (CSS), and a clone REORDERED ABOVE Grid 1 would win a
+   document-order getElementById — verify-27a caught exactly that within the hour. */
+document.getElementById=function(id){
+ if(GRID_IDSET&&GRID_IDSET.has(id)){
+  const w=GRID_WORLDS[CUR_GRID];
+  if(w&&w.els&&w.els.root){
+   if(id==='gridRowWrap')return w.els.root;
+   const el=w.els.root.querySelector('[id="'+id+'"]');
+   if(el)return el;
+  }
+ }
+ return _gridGetById(id);
+};
+document.querySelector=function(sel){
+ if(GRID_IDSET&&typeof sel==='string'&&sel.charCodeAt(0)===35){
+  const m=/^#([A-Za-z_][\w-]*)\s*(.*)$/.exec(sel);
+  if(m&&GRID_IDSET.has(m[1])){
+   const base=document.getElementById(m[1]);
+   if(base)return m[2]?base.querySelector(m[2]):base;
+  }
+ }
+ return _gridQSel(sel);
+};
+function gridSlotsCapture(){
+ /* every singleton the grid pipeline reads — grown ONLY here and in gridSlotsApply, in
+    lockstep. Deliberately NOT swapped (shared app chrome / engine state, recorded in the
+    spec's deviations): mutes+mixer (Tone callbacks read them OUTSIDE any world at play
+    time), clipboard/pasteCount (copy in one grid, paste in another — a feature),
+    uiState, the Tone transport singletons (transportGrid names the owner). */
+ return {project,activeTrack,selOwner,selSurface,LOOP,PPB,stripH,trackOrder,
+  hiddenTracks,trackBigH,trackSmallH,selHead,selHeads,chordKeyOv,
+  undo:undoStack.slice(),redoStack,lastSnap:_lastSnap,redoStash:_redoStash,
+  selNotes,selChordSet,selChord,
+  views:Object.assign({},GRID_VIEWS),activeGridView,LANE_VIEWS,
+  armedTrack,stripPPB,stripLOOP,stripPaper,
+  chordLaneHidden,paperView,zimOn,playheadBeat};
+}
+function gridSlotsApply(s){
+ project=s.project;activeTrack=s.activeTrack;renderTrack=null;selOwner=s.selOwner;selSurface=s.selSurface;
+ LOOP=s.LOOP;PPB=s.PPB;stripH=s.stripH;trackOrder=s.trackOrder;
+ hiddenTracks=s.hiddenTracks;trackBigH=s.trackBigH;trackSmallH=s.trackSmallH;selHead=s.selHead;selHeads=s.selHeads;chordKeyOv=s.chordKeyOv;
+ undoStack.length=0;for(const u of s.undo)undoStack.push(u);
+ redoStack=s.redoStack;_lastSnap=s.lastSnap;_redoStash=s.redoStash;
+ selNotes=s.selNotes;selChordSet=s.selChordSet;selChord=s.selChord;
+ for(const k in GRID_VIEWS)delete GRID_VIEWS[k];Object.assign(GRID_VIEWS,s.views);
+ activeGridView=s.activeGridView;LANE_VIEWS=s.LANE_VIEWS;
+ armedTrack=s.armedTrack;stripPPB=s.stripPPB;stripLOOP=s.stripLOOP;stripPaper=s.stripPaper;
+ chordLaneHidden=s.chordLaneHidden;paperView=s.paperView;zimOn=s.zimOn;playheadBeat=s.playheadBeat;
+}
+let _gridEnterStack=[];
+function enterGridWorld(id){
+ if(!GRID_WORLDS[id]||id===CUR_GRID){_gridEnterStack.push(null);return;}
+ GRID_WORLDS[CUR_GRID].slots=gridSlotsCapture();
+ gridSlotsApply(GRID_WORLDS[id].slots);
+ _gridEnterStack.push(CUR_GRID);
+ CUR_GRID=id;
+}
+function leaveGridWorld(){
+ const prev=_gridEnterStack.pop();
+ if(prev==null)return;
+ GRID_WORLDS[CUR_GRID].slots=gridSlotsCapture();
+ gridSlotsApply(GRID_WORLDS[prev].slots);
+ CUR_GRID=prev;
+}
+function withGridWorld(id,fn){enterGridWorld(id);try{return fn();}finally{leaveGridWorld();}}
+function gridWorldSlotsFresh(){
+ /* the spec's blank boot: "an empty copy of Grid 1 — all of the functionality, none of
+    the MIDI data", 3 tracks visible (Drums · Polyphonic Instrument = comping · Melody),
+    key inherited from Grid 1 (BPM is the shared transport's). bass/pad are materialized
+    empty but HIDDEN — his own "unhide tracks" power covers them. All five tracks are
+    real arrays so no style renderer ever fills a blank grid with the style groove. */
+ const t0=project.tonic,m0=project.mode,b0=project.base,st0=project.style;
+ const p={song:null,style:st0,tonic:t0,mode:m0,base:b0,lane:0,
+  lanes:[{id:'L1',name:'Chords',chords:[]}],
+  sections:[{start:0,name:'A',tonic:t0,mode:m0,base:b0}],
+  tracks:{melody:[],drums:[],bass:[],comping:[],pad:[]},
+  tempoMap:[],markers:[],tsigMap:[],trips:[],autoLanes:[],srcs:[],shelf:[]};
+ Object.defineProperty(p,'chords',{get(){const L=p.lanes[p.lane]||p.lanes[0];return L?L.chords:[];},set(v){const L=p.lanes[p.lane]||p.lanes[0];if(L)L.chords=v;},configurable:true});
+ Object.defineProperty(p,'melody',{get(){return p.tracks[edTrack()];},set(v){p.tracks[edTrack()]=v;},configurable:true});
+ const vw={main:makeGridView('main',NROWS0,ROWSTART0)};
+ return {project:p,activeTrack:'melody',selOwner:'main',selSurface:'grid',
+  LOOP:32,PPB:34,stripH:{},trackOrder:null,
+  hiddenTracks:new Set(['bass','pad']),trackBigH:{},trackSmallH:{},selHead:null,selHeads:new Set(),chordKeyOv:null,
+  undo:[],redoStack:[],lastSnap:null,redoStash:null,
+  selNotes:new Set(),selChordSet:new Set(),selChord:null,
+  views:vw,activeGridView:vw.main,LANE_VIEWS:[],
+  armedTrack:null,stripPPB:0,stripLOOP:0,stripPaper:null,
+  chordLaneHidden:false,paperView:false,zimOn:false,playheadBeat:0};
+}
+function gridWireClone(w){
+ /* the clone carries no listeners (cloneNode) — re-attach the composite's static wiring.
+    Named handlers are REUSED; the few anonymous one-liners are mirrored here and must be
+    kept in lockstep with their boot sites (chordlane 9819-region, chk toggles 20014-
+    region). The document-capture router has already entered this world before any of
+    these fire, so the original bodies read the right singletons unchanged. */
+ const q=id=>w.els.root.querySelector('[id="'+id+'"]');
+ const sv=w.els.svg;
+ if(sv){
+  sv.addEventListener('mousedown',gridMouseDown);
+  sv.addEventListener('contextmenu',e=>{if(typeof gridCtxMenu==='function')gridCtxMenu(e);});
+  sv.addEventListener('wheel',gridWheel,{passive:false});
+ }
+ const cl=q('chordlane');
+ if(cl){
+  cl.addEventListener('mousedown',e=>{
+   if(e.target!==e.currentTarget)return;
+   selChord=null;selChordSet.clear();selSurface='chords';
+   refresh(false);
+  });
+ }
+ const bi=q('barsInp');if(bi)bi.onchange=e=>{setSongBars(e.target.value);e.target.blur();};
+ const ct=q('chkTrip');if(ct)ct.onchange=e=>{gridTriplets=e.target.checked;refresh(false);e.target.blur();};
+ const cs=q('chkSwing');if(cs)cs.onchange=e=>{swingOn=e.target.checked;refresh(true);e.target.blur();};
+ const wrap=w.els.wrap;
+ if(wrap){
+  wrap.addEventListener('scroll',()=>{if(playing&&transportGrid===w.id&&!followProg)followSusp=true;});
+  /* mirrors the zoomStrip ↕-drag wiring at its boot site — the world's own svg rect */
+  const strip=q('zoomStrip');
+  wrap.addEventListener('mousedown',e=>{
+   const t=e.target;
+   const bg=t===wrap||t===strip||(t.classList&&t.classList.contains('parts'));
+   if(!bg)return;
+   e.preventDefault();
+   const r=w.els.svg.getBoundingClientRect();
+   drag={mode:'zoom',x0:e.clientX-r.left,y0:e.clientY-r.top,p0:PPB,fromStrip:true};
+  });
+ }
+}
+function gridWorldSpawn(opts){
+ /* mint a real second grid: clone Grid 1's composite, scrub what is Grid 1's alone,
+    park a fresh blank world behind it, render it whole under that world. */
+ const me=gridMainEls();if(!me)return null;
+ if(!GRID_IDSET)GRID_IDSET=gridIdsetBuild();
+ const id='g'+(++_gridWSeq);
+ const root=me.root.cloneNode(true);
+ root.id='gridRowWrap_'+id;
+ root.setAttribute('data-gridworld',id);
+ const rail=root.querySelector('[id="rail"]');if(rail)rail.remove();   /* the icon rail is app chrome, not grid chrome */
+ root.classList.remove('gridFocused');
+ /* the clone carries Grid 1's RENDERED pixels — wipe the dynamic hosts so a renderer
+    that early-returns on empty data leaves them honestly blank, never showing Grid 1's
+    stale content in a blank instance (verify-43's keys-lane count caught this) */
+ for(const hid of ['modlane','tempolane','sectionlane','tsiglane','chordlane','laneRows',
+  'trackStrips','trackStripsB','songOv','trackSel'])
+  {const h=root.querySelector('[id="'+hid+'"]');if(h)h.innerHTML='';}
+ const w={id,slots:gridWorldSlotsFresh(),els:null,min:false};
+ w.els={root,wrap:root.querySelector('[id="gridWrap"]'),svg:root.querySelector('[id="grid"]')};
+ /* window chrome: retitle, per-instance minimize, a real ✕, the ⠿ column grip */
+ const head=root.querySelector('[id="gridWinHead"]');
+ if(head){
+  const tt=head.querySelector('.wtitle');if(tt)tt.textContent='Multi-Track Grid '+(_gridWSeq);
+  const chip=head.querySelector('[id="gridMinChip"]');
+  if(chip)chip.onclick=()=>{w.min=!w.min;if(w.els.wrap)w.els.wrap.classList.toggle('winCollapsed',w.min);chip.textContent=w.min?'+':'−';};   /* Fix 3: '+' when minimized */
+  const x=document.createElement('span');
+  x.className='wbtn';x.textContent='✕';x.title='Close this grid';
+  x.onclick=()=>gridWorldClose(id);
+  head.appendChild(x);
+  if(typeof colGripAdd==='function')colGripAdd(head,root.id);
+ }
+ const before=(opts&&opts.before&&opts.before.parentNode===document.body)?opts.before:me.root.nextSibling;
+ document.body.insertBefore(root,before);
+ GRID_WORLDS[id]=w;
+ gridWireClone(w);
+ withGridWorld(id,()=>{drawTrackSel();refresh(false);if(typeof updatePlayheadLine==='function')updatePlayheadLine();});
+ return w;
+}
+function gridWorldClose(id){
+ const w=GRID_WORLDS[id];
+ if(!w||id==='main')return;
+ if(playing&&transportGrid===id)withGridWorld(id,()=>{togglePlay();});   /* stop under the owner's world */
+ if(transportGrid===id)transportGrid='main';
+ if(GRID_GESTURE===id)GRID_GESTURE=null;
+ if(typeof gridFocus==='string'&&gridFocus===id)setGridFocus('main');
+ if(typeof uiState==='object'&&uiState&&Array.isArray(uiState.links)){
+  uiState.links=linkNorm(uiState.links).filter(l=>l.a!=='grid:'+id&&l.b!=='grid:'+id);
+  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ }
+ if(w.els&&w.els.root&&w.els.root.parentNode)w.els.root.parentNode.removeChild(w.els.root);
+ delete GRID_WORLDS[id];
+}
+function gridAuditionSpawn(winId){
+ /* the spec's AUTO-SPAWN: opening the Modulation / Melisma / Cadence (and, when they
+    exist, Search) windows creates a linked audition grid directly ABOVE the window — no
+    Chord Palette (nothing to clone: the palette is its own window), spawn-linked through
+    the ONE graph. Reopening the window finds its living grid instead of minting another. */
+ if(typeof uiState!=='object'||!uiState)return null;
+ for(const other of linkedTo(uiState.links,'win:'+winId))
+  if(/^grid:g\d+$/.test(other)&&GRID_WORLDS[other.slice(5)])return GRID_WORLDS[other.slice(5)];
+ const panel=_gridGetById(winId);
+ const w=gridWorldSpawn({before:panel});
+ if(!w)return null;
+ uiState.links=linkAdd(uiState.links,'win:'+winId,'grid:'+w.id,true);
+ try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ return w;
+}
+/* the event router: enter the world a gesture belongs to BEFORE its handlers run
+   (document capture fires first), leave after the dispatch (a document bubble listener
+   registered last). A handler's stopPropagation can eat the bubble exit — the next
+   capture's failsafe restores. A gesture (mousedown→mouseup) stays in its world even
+   when the pointer wanders. Keyboard routes by gridFocus ([M21]'s law generalized). */
+let _gridEvtEntered=false;
+(function(){
+ function worldOf(n){const r=n&&n.closest?n.closest('[data-gridworld]'):null;return r?r.getAttribute('data-gridworld'):null;}
+ /* WINDOW level, both phases: window-capture runs before every app handler and a
+    window-bubble listener registered HERE (below every app registration in the file)
+    runs after them all — the app's own keyboard handler lives on window (20078-region). */
+ const ptr=['mousedown','mouseup','mousemove','click','dblclick','contextmenu','wheel','mouseover','mouseout'];
+ for(const t of ptr){
+  window.addEventListener(t,e=>{
+   if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}
+   gridMainEls();
+   let g;
+   if(t==='mousedown'){
+    GRID_GESTURE=worldOf(e.target);
+    g=GRID_GESTURE;
+    if(g&&GRID_WORLDS[g]&&typeof setGridFocus==='function')setGridFocus(g);
+   }else g=GRID_GESTURE||worldOf(e.target);
+   if(g&&g!=='main'&&GRID_WORLDS[g]){enterGridWorld(g);_gridEvtEntered=true;}
+  },true);
+  window.addEventListener(t,e=>{
+   if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}
+   if(t==='mouseup')GRID_GESTURE=null;
+  },false);
+ }
+ for(const t of ['keydown','keyup']){
+  window.addEventListener(t,e=>{
+   if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}
+   const g=(typeof gridFocus==='string'&&gridFocus!=='main'&&gridFocus!=='mod'&&GRID_WORLDS[gridFocus])?gridFocus:null;
+   if(g){enterGridWorld(g);_gridEvtEntered=true;}
+  },true);
+  window.addEventListener(t,e=>{if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}},false);
+ }
+})();
+/* ==== /GRID WORLDS ==== */
+
 /* ==== PHASE 2 R0 · THE REORDERABLE COLUMN (his answer, verbatim in the spec's Decisions
    made: "the user should be able to move around any window in the column including the
    multi-track grid which is itself just another window. Yes, reorder the stack where
@@ -22785,15 +23116,21 @@ function initUiShell(){
    window. Drag the ⠿ grip vertically; the gold line (the §3 motion law) shows the
    deposit; the order persists in uiState.colOrder. */
 const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];
+function colMemberOk(id){
+ /* Phase 2 R2: grid INSTANCES (gridRowWrap_g2…) are column members too — "the multi-track
+    grid… is itself just another window" extends to every instance of it. They are
+    session-local, so colOrderNorm's backfill never invents one. */
+ return COL_MEMBERS.indexOf(id)>=0||/^gridRowWrap_g\d+$/.test(id);
+}
 function colOrderNorm(list){
  const seen={},out=[];
  for(const x of (Array.isArray(list)?list:[]))
-  if(typeof x==='string'&&COL_MEMBERS.indexOf(x)>=0&&!seen[x]){seen[x]=1;out.push(x);}
+  if(typeof x==='string'&&colMemberOk(x)&&!seen[x]){seen[x]=1;out.push(x);}
  for(const m of COL_MEMBERS)if(!seen[m])out.push(m);
  return out;
 }
 function colMembersNow(){
- return [...document.body.children].map(el=>el.id).filter(id=>COL_MEMBERS.indexOf(id)>=0);
+ return [...document.body.children].map(el=>el.id).filter(id=>colMemberOk(id));
 }
 function applyColOrder(){
  if(typeof uiState!=='object'||!uiState||!Array.isArray(uiState.colOrder)||!uiState.colOrder.length)return;
@@ -23668,6 +24005,20 @@ document.getElementById('patchClear').onclick=e=>{
  for(const t of PATCH_TRACKS)disposePatch(t);
  persistPatches();drawPatchRow();
  e.target.blur();};
+/* Phase 2 R2 · the auto-spawn pairs survive a reload: a window restored OPEN gets its
+   linked audition grid back at boot (grid worlds are session-local, so the pair is
+   re-minted rather than resurrected). Wrapped: a fault here must never abort the boot —
+   the 20i defence, landmine ⑪'s class. */
+try{
+ if(typeof uiState==='object'&&uiState&&Array.isArray(uiState.openWins)){
+  /* every persisted grid:gN link is stale by definition (instances die with the session) —
+     strip first so the respawn mints clean pairs instead of accumulating duplicates */
+  uiState.links=linkNorm(uiState.links).filter(l=>!(/^grid:g\d+$/.test(l.a)||/^grid:g\d+$/.test(l.b)));
+  for(const _aw of ['modPanel','melPanel','cadPanel'])
+   if(uiState.openWins.indexOf(_aw)>=0&&uiWinShown(_aw))gridAuditionSpawn(_aw);
+  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+ }
+}catch(e){console.error('audition-grid respawn failed at boot',e);}
 </script>
 </body>
 </html>
