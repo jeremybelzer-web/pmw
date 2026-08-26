@@ -540,11 +540,17 @@
   [id^="gridRowWrap_g"] [id="zoomStrip"]{display:none;}   /* instance grids: the Navigator is THE nav — the clone strips retire */
   #navBody input,#navBody select,#navBody textarea{user-select:text;-webkit-user-select:text;}   /* the wrap's field exception rides the strip's move */
   #rail{position:fixed;left:4px;z-index:90;}
+  /* 78th · FUSED PAIRS + THE LIT GROUP BORDER (his words): a shipped pair reads as ONE
+     block — no background between, right-angle adjoining corners; the border LIGHTS as
+     the window/pair touches the top of the screen (the transport controls it there) */
+  .pairTop{margin-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;border-bottom:none!important;}
+  .pairBottom{border-top-left-radius:0!important;border-top-right-radius:0!important;}
+  .gLit{border-color:var(--accent)!important;box-shadow:0 0 0 1px var(--accent);}
 </style>
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26k</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26m</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11780,7 +11786,8 @@ function modGripDown(e,secIdx){
 function drawModLane(){
  const row=document.getElementById('modLaneRow'),lane=document.getElementById('modlane');
  if(!row||!lane)return;
- if(typeof paperView!=='undefined'&&paperView){row.style.display='none';return;}
+ const _hide=(typeof paperView!=='undefined'&&paperView)||(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showKeysLane!==true);   /* 78th (his words): the grid-top nav rows retire by default — Settings re-enables */
+ if(_hide){row.style.display='none';return;}
  row.style.display='flex';
  lane.innerHTML='';
  lane.style.width=(LOOP*PPB)+'px';lane.style.marginLeft=GUT+'px';
@@ -11870,7 +11877,8 @@ function tempoLaneBpmAtY(y,range){return clampBpm(range.lo+(22-y)/18*Math.max(1,
 function drawTempoLane(){
  const row=document.getElementById('tempoLaneRow'),lane=document.getElementById('tempolane');
  if(!row||!lane)return;
- if(typeof paperView!=='undefined'&&paperView){row.style.display='none';return;}
+ const _hide=(typeof paperView!=='undefined'&&paperView)||(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.showTempoLane!==true);   /* 78th */
+ if(_hide){row.style.display='none';return;}
  row.style.display='flex';
  lane.innerHTML='';
  lane.style.width=(LOOP*PPB)+'px';lane.style.marginLeft=GUT+'px';
@@ -22557,7 +22565,7 @@ function parseSettings(str){
  const def={numerals:'roman',laneLabel:'function',autosave:true,recordOver:false,clipAlign:'chords',clipDrop:'ask',clipChordNames:true,chordLaneCanHide:true,ragaFamFirst:'carnatic',ragaTerms:'',ragaMidiAud:true,
   /* 2.5: the transport-fold + chrome preferences — DEVICE data (§2d: these ride
      cp_settings, never the project file; the workspace-vs-device line for 1.7 R0) */
-  showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,
+  showOverview:false,showScrub:true,showSecLane:false,showTsig:false,showKeysLane:false,showTempoLane:false,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,   /* 78th (his words): the grid-top nav rows default OFF — the global Navigator + the bars/beats lane carry navigation; every row re-enables in Settings */
   /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
   countIn:0,latencyPref:'interactive',sinkId:'',
   classicHeads:false};   /* 77th (his words): the MICRO name box is the default standard; classic two-row boxes are the Settings opt-in */
@@ -22576,10 +22584,12 @@ function parseSettings(str){
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
    if(o.ragaMidiAud===false)def.ragaMidiAud=false;   /* 3.5: toggle ② defaults ON (client call, #13d) */   /* v3 (client §3): default ON — the lane may tuck away */
-   if(o.showOverview===false)def.showOverview=false;   /* 2.5 ⑪e */
+   if(o.showOverview===true)def.showOverview=true;   /* 2.5 ⑪e — 78th: default OFF, an explicit true re-enables */
    if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
-   if(o.showSecLane===false)def.showSecLane=false;   /* 2.5 ⑪f */
-   if(o.showTsig===false)def.showTsig=false;   /* 2.5 ④ */
+   if(o.showSecLane===true)def.showSecLane=true;   /* 2.5 ⑪f — 78th: default OFF */
+   if(o.showTsig===true)def.showTsig=true;   /* 2.5 ④ — 78th: default OFF */
+   if(o.showKeysLane===true)def.showKeysLane=true;   /* 78th */
+   if(o.showTempoLane===true)def.showTempoLane=true;   /* 78th */
    if(o.showPianoRoll===false)def.showPianoRoll=false;   /* 2.5 ③ */
    if(o.markerLines==='off'||o.markerLines==='all')def.markerLines=o.markerLines;   /* 2.5 ⑪f: three-state, 'active' is the default */
    if(o.continuous===true)def.continuous=true;   /* 2.5 ⑧: default OFF — the clip model rules */
@@ -22979,9 +22989,9 @@ function uiDispatch(action){
   &&prevWins.indexOf(action.id)>=0&&(!Array.isArray(uiState.openWins)||uiState.openWins.indexOf(action.id)<0)
   &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel'||action.id==='ragaPanel')
   &&typeof gridWorldClose==='function'&&typeof linkedTo==='function'){
-  for(const other of linkedTo(uiState.links,'win:'+action.id))
-   if(/^grid:g\d+$/.test(other)&&typeof GRID_WORLDS==='object'&&GRID_WORLDS[other.slice(5)])
-    gridWorldClose(other.slice(5));
+  if(typeof GRID_WORLDS==='object')for(const _gid in GRID_WORLDS)
+   if(_gid!=='main'&&GRID_WORLDS[_gid]&&GRID_WORLDS[_gid].pairFor===action.id)
+    gridWorldClose(_gid);   /* 78th: close the OWNED rig only — a law-link to a foreign rig must not take it down */
  }
  /* Phase 1 · THE SPAWN-LINK LAW: a window opening links to the SELECTED grid (his answer,
     Aug 25 — universal across the windows/engines; Grid 1 is the only grid at boot) */
@@ -23418,6 +23428,7 @@ function gridWorldClose(id){
  }
  if(w.els&&w.els.root&&w.els.root.parentNode)w.els.root.parentNode.removeChild(w.els.root);
  if(w.els&&w.els.palRoot&&w.els.palRoot.parentNode)w.els.palRoot.parentNode.removeChild(w.els.palRoot);   /* 75th r3: a user grid's palette leaves with it */
+ if(w.els&&w.els.pairWin){w.els.pairWin.classList.remove('pairBottom','gLit');w.els.pairWin.style.marginTop=w.els.pairWin.dataset.pairMt||'12px';}   /* 78th: the corners revert when the pair breaks */
  const _wasUser=!!w.user;
  delete GRID_WORLDS[id];
  if(_wasUser&&typeof gridsPersistSoon==='function')gridsPersistSoon();
@@ -23428,13 +23439,23 @@ function gridAuditionSpawn(winId){
     Chord Palette (nothing to clone: the palette is its own window), spawn-linked through
     the ONE graph. Reopening the window finds its living grid instead of minting another. */
  if(typeof uiState!=='object'||!uiState)return null;
- for(const other of linkedTo(uiState.links,'win:'+winId))
-  if(/^grid:g\d+$/.test(other)&&GRID_WORLDS[other.slice(5)])return GRID_WORLDS[other.slice(5)];
+ /* 78th: reuse by PAIR OWNERSHIP (w.pairFor), never by a bare link scan — the scroll-focus
+    law can law-link a window to a FOREIGN rig sitting at the top (the spawn-link law
+    writes win:X ↔ the focused grid at open), and the scan once adopted Melisma's grid
+    as Cadence's pair (verify-mw75b caught it) */
+ for(const gid in GRID_WORLDS)
+  if(gid!=='main'&&GRID_WORLDS[gid]&&GRID_WORLDS[gid].pairFor===winId)return GRID_WORLDS[gid];
  const panel=_gridGetById(winId);
  /* 75th fix ③, his words verbatim in the spec's Decisions made: the Cadence pair boots
     with the Polyphonic Instrument track EXPANDED (drums + melody ride as strips) */
  const w=gridWorldSpawn({before:panel,active:winId==='cadPanel'?'comping':null});
  if(!w)return null;
+ w.pairFor=winId;   /* 78th: the pair's OWNER — reuse/close/verbs resolve by this, never by link scans */
+ /* 78th (his words): a shipped pair FUSES — no background between the two, the adjoining
+    corners squared; either one closing reverts the other's corners */
+ const _gw2=w.els.root.querySelector('[id="gridWrap"]');
+ if(_gw2)_gw2.classList.add('pairTop');
+ if(panel){panel.classList.add('pairBottom');panel.dataset.pairMt=panel.style.marginTop||'';panel.style.marginTop='0px';w.els.pairWin=panel;}
  uiState.links=linkAdd(uiState.links,'win:'+winId,'grid:'+w.id,true);
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  return w;
@@ -23461,6 +23482,9 @@ function gridSongLoad(id){
  }
 }
 function modLinkedGrid(){
+ /* 78th: the OWNED pair first (w.pairFor) — the link scan stays as the fallback */
+ if(typeof GRID_WORLDS==='object')for(const gid in GRID_WORLDS)
+  if(gid!=='main'&&GRID_WORLDS[gid]&&GRID_WORLDS[gid].pairFor==='modPanel')return gid;
  if(typeof uiState!=='object'||!uiState)return null;
  for(const other of linkedTo(uiState.links,'win:modPanel'))
   if(/^grid:g\d+$/.test(other)&&GRID_WORLDS[other.slice(5)])return other.slice(5);
@@ -23683,6 +23707,39 @@ function fixedChromeInit(){
  fixedChromeApply();
  window.addEventListener('resize',()=>{try{fixedChromeApply();}catch(e){}});
 }
+/* 78th (his words): "the global navigator will switch to whichever multi-track grid it
+   is currently touching at the top of the app" — the SCROLL-FOCUS LAW: the grid (or
+   fused pair) under the line just below the fixed chrome takes the focus, and its
+   border LIGHTS to say the transport controls it. Click-focus ([M21]) still works;
+   the last gesture wins. */
+function scrollFocusTick(){
+ try{
+  const topY=(parseFloat(document.body.style.paddingTop)||0)+16;
+  const cand=[{gid:'main',root:_gridGetById('gridRowWrap'),win:null}];
+  for(const gid in GRID_WORLDS){
+   if(gid==='main')continue;
+   const w=GRID_WORLDS[gid];
+   if(w&&w.els&&w.els.root&&w.els.root.isConnected)
+    cand.push({gid,root:w.els.root,win:(w.els.pairWin&&w.els.pairWin.isConnected)?w.els.pairWin:null});
+  }
+  let best=null;
+  for(const c of cand){
+   const r=c.root.getBoundingClientRect();
+   if(r.height<=0)continue;
+   const bottom=c.win?c.win.getBoundingClientRect().bottom:r.bottom;
+   if(r.top<=topY&&bottom>topY){best=c;break;}
+  }
+  for(const c of cand){
+   const on=!!(best&&c.gid===best.gid);
+   const box=c.root.querySelector('[id="gridWrap"]')||c.root;
+   if(box&&box.classList)box.classList.toggle('gLit',on);
+   if(c.win)c.win.classList.toggle('gLit',on);
+  }
+  if(best&&typeof gridFocus==='string'&&best.gid!==gridFocus&&typeof setGridFocus==='function')setGridFocus(best.gid);
+ }catch(e){}
+}
+let _sfPend=false;
+window.addEventListener('scroll',()=>{if(_sfPend)return;_sfPend=true;requestAnimationFrame(()=>{_sfPend=false;scrollFocusTick();});},{passive:true});
 function navSyncFromFocus(){
  /* the Navigator + Transport readouts follow the SELECTED grid (his follow-up law) */
  try{
@@ -23744,7 +23801,12 @@ let _gridEvtEntered=false;
     g=GRID_GESTURE;
     if(g&&GRID_WORLDS[g]&&typeof setGridFocus==='function')setGridFocus(g);
    }else g=GRID_GESTURE||worldOf(e.target);
-   if(g&&g!=='main'&&GRID_WORLDS[g]){enterGridWorld(g);_gridEvtEntered=true;}
+   if(g&&g!=='main'&&GRID_WORLDS[g]){enterGridWorld(g);_gridEvtEntered=true;
+    /* 78th: a handler's stopPropagation can eat the window-bubble exit and the stuck
+       world then leaks into anything that runs BETWEEN events (suite evaluates read a
+       rig's empty project as the live one — verify-43 caught it). The microtask fires
+       when THIS dispatch completes, so the exit is unconditional. */
+    setTimeout(()=>{if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}},0);}   /* a TASK, not a microtask — trusted dispatches run microtask checkpoints BETWEEN listeners and an early exit broke real-key routing (mw74 caught it) */
   },true);
   window.addEventListener(t,e=>{
    if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}
@@ -23755,7 +23817,8 @@ let _gridEvtEntered=false;
   window.addEventListener(t,e=>{
    if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}
    const g=(typeof gridFocus==='string'&&gridFocus!=='main'&&gridFocus!=='mod'&&GRID_WORLDS[gridFocus])?gridFocus:null;
-   if(g){enterGridWorld(g);_gridEvtEntered=true;}
+   if(g){enterGridWorld(g);_gridEvtEntered=true;
+    setTimeout(()=>{if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}},0);}   /* 78th: the unconditional exit — a TASK (see the pointer block above) */
   },true);
   window.addEventListener(t,e=>{if(_gridEvtEntered){leaveGridWorld();_gridEvtEntered=false;}},false);
  }
@@ -24594,6 +24657,8 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
  <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
+ <p><label><input type="checkbox" id="setKeysLane" ${SETTINGS.showKeysLane===true?'checked':''}> <b>Keys lane</b> — the key-region strip above the grid (off by default since the grids slimmed)</label>
+ <label style="margin-left:14px;"><input type="checkbox" id="setTempoLane" ${SETTINGS.showTempoLane===true?'checked':''}> <b>Tempo lane</b> — the tempo envelope strip (off by default)</label></p>
  <p><b>Marker lines</b> — vertical lines through the tracks at each position marker (off by default):<br>
  <select id="setMkLines">
   <option value="off" ${SETTINGS.markerLines==='off'?'selected':''}>Off — markers show only in the section lane</option>
@@ -24634,6 +24699,8 @@ function openSettings(){
  if(g('setSecLane'))g('setSecLane').onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
  if(g('setTsigLane'))g('setTsigLane').onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
  if(g('setPRoll'))g('setPRoll').onchange=e=>{SETTINGS.showPianoRoll=!!e.target.checked;persistSettings();refresh(false);};
+ if(g('setKeysLane'))g('setKeysLane').onchange=e=>{SETTINGS.showKeysLane=!!e.target.checked;persistSettings();refresh(false);};
+ if(g('setTempoLane'))g('setTempoLane').onchange=e=>{SETTINGS.showTempoLane=!!e.target.checked;persistSettings();refresh(false);};
  if(g('setMkLines'))g('setMkLines').onchange=e=>{SETTINGS.markerLines=(e.target.value==='off'||e.target.value==='all')?e.target.value:'active';persistSettings();refresh(false);};
  if(g('setNew'))g('setNew').onclick=()=>{if(confirm('Start fresh from the current song? (Saved variations stay on the shelf.)')){loadSong(project.song.id);projectDirty=false;document.getElementById('infoOverlay').style.display='none';}};
  if(g('setOpen'))g('setOpen').onclick=openProjectFile;
