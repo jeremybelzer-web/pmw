@@ -514,7 +514,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26f</span></div>
 
   <div class="controls">
     <!-- 75th r3 (the spec's second creation route): the File menu at the top -->
@@ -6791,6 +6791,15 @@ function drawChordLane(){
  lane.style.width=(LOOP*PPB)+'px';lane.style.marginLeft=GUT+'px';
  if(selChord!=null&&selChord>=project.chords.length)selChord=null;
  const chs=effectiveChords(),overlay=chs!==project.chords;
+ if(!chs.length){
+  /* 75th r5 (spec flag ⑦, his go): an EMPTY lane is a real DROP TARGET now — without
+     this it rendered ~6px tall and the first-chord drop had nothing to land on */
+  const ph=document.createElement('div');
+  ph.className='cbEmpty';
+  ph.textContent='Drop a chord from the Chord Palette here to start the progression';
+  ph.style.cssText='flex:1;min-height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim);border:1px dashed var(--line);border-radius:6px;pointer-events:none;';
+  lane.appendChild(ph);
+ }
  let t=0;
  chs.forEach((c,i)=>{
   if(t>=LOOP)return;
@@ -6840,6 +6849,18 @@ function drawChordLane(){
   }else d.title='Psych-out preview — toggle ⚡ off to edit chords';
   lane.appendChild(d);t+=c.d;
  });
+ if(chs.length&&t<LOOP-1e-6){
+  /* 75th r5 (flag ⑦): a PARTIAL lane keeps a dashed '+' tail flexed by the REMAINING
+     beats — the chords sit at their true beat widths (the blocks flex by duration, so
+     without the tail one chord would stretch across the whole lane) and the tail is
+     the append drop target. pointer-events:none — the LANE takes the drop. */
+  const tail=document.createElement('div');
+  tail.className='cbEmpty cbTail';
+  tail.textContent='+';
+  tail.style.cssText='flex:'+(LOOP-t)+' 1 0%;min-height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--dim);border:1px dashed var(--line);border-radius:6px;pointer-events:none;';
+  tail.title='';
+  lane.appendChild(tail);
+ }
  drawLaneRows();   /* 3.2: the alternate-lane rows redraw with every lane redraw */
  /* 20l [54]: the palette follows the selected chord when the switch is on — redrawn only when its target changes (never per drag frame) */
  try{if(typeof palState==='object'&&palState&&palState.followSel){const fo=palFollowTarget();const k=fo?fo.tonic+':'+fo.scale.id:'';if(window.__palFollowK!==k){window.__palFollowK=k;drawChordPanel();}}}catch(e){}
@@ -9582,7 +9603,27 @@ document.addEventListener('mouseup',ev=>{
  }else{
   const el=document.elementFromPoint(ev.clientX,ev.clientY);
   const cb=el&&el.closest?el.closest('.cb'):null;
+  const lane=(!cb&&el&&el.closest)?el.closest('#chordlane'):null;
   if(cb)applyPanelChord(+cb.id.slice(2),p.ch);
+  else if(lane){
+   /* 75th r5 (spec flag ⑦, his go): a palette chord dropped on the LANE ITSELF — an
+      empty lane, or the space after the last chord — APPENDS it (one bar, clamped to
+      the loop), the first-chord gesture a blank lane never had. A drop ON a chord
+      block still replaces (the branch above); a full lane refuses honestly. */
+   const _lw=(function(){const r=lane.closest&&lane.closest('[data-gridworld]');return r?r.getAttribute('data-gridworld'):'main';})();
+   const _gw=(typeof CUR_GRID==='string')?CUR_GRID:'main';
+   const tot=project.chords.reduce((a,c)=>a+(+c.d||0),0);
+   const d=Math.min(4,LOOP-tot);
+   if(_lw!==_gw){if(typeof flashHint==='function')flashHint('That lane belongs to another grid — drag from THAT grid’s own Chord Palette.');}
+   else if(d<=1e-6){if(typeof flashHint==='function')flashHint('The chord lane is full — drop onto a chord block to replace it, or extend the song with the Bars control.');}
+   else{
+    snapshot();
+    project.chords.push({d,r:p.ch.r,iv:p.ch.iv.slice(),lbl:p.ch.lbl,bass:0});
+    selChord=project.chords.length-1;selChordSet.clear();
+    if(typeof noteEngine==='function')noteEngine('palette-chord-append',{lbl:p.ch.lbl});
+    refresh(true);
+   }
+  }
   else{
    /* 3.1: palette block dropped on the GRID = expand its voicing there (one bar,
       clamped), in the active track. 75th r3: the hit-test asks the CURRENT world's svg
