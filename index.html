@@ -212,7 +212,7 @@
      NOT floating, NOT overlapping. .palLock = lane-top ON: the linked pair scrolls as one. */
   .palWin{margin-top:12px;}
   .palWin.palLock{overflow-x:auto;}
-  .palWin.winSel{outline:2px solid var(--accent);outline-offset:1px;}
+  .palWin.winSel,.gridwrap.winSel{outline:2px solid var(--accent);outline-offset:1px;}   /* 78th R4b: click-to-select rides every window */
   .colGrip{cursor:grab;user-select:none;-webkit-user-select:none;margin-right:7px;color:var(--dim);font-size:11px;letter-spacing:-1px;}
   .colGrip:hover{color:var(--text);}
   .colGrip:active{cursor:grabbing;}
@@ -221,6 +221,8 @@
   .commitTri{color:var(--accent);font-size:11px;}   /* 78th R3: the group's commit-to-Grid-1 triangle */
   #colDropLine{position:absolute;left:8px;right:8px;height:3px;background:var(--accent);border-radius:2px;display:none;z-index:110;box-shadow:0 0 8px var(--accent);pointer-events:none;}
   [data-gridworld].gridFocused{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px;}   /* Phase 2 R2: the SELECTED grid instance wears the [M21] accent ring */
+  .melFCol{display:flex;flex-direction:column;gap:2px;flex:0 0 132px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);overflow:auto;max-height:420px;}   /* 78th R4e: the Melisma Search columns */
+  .melFCol .cpchip{display:block;text-align:left;}
   .cpSearchBtn{font-size:9px;letter-spacing:.6px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--dim);cursor:pointer;padding:2px 2px;align-self:stretch;writing-mode:horizontal-tb;}
   .cpSearchBtn:hover{color:var(--text);border-color:#4a5060;}
   #palWinHead .picon{font-size:12px;}
@@ -263,7 +265,7 @@
   .cb.chroma .rn{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.65);} .cb.chroma .ab{color:rgba(255,255,255,.85);}
   .cb.active{outline:2px solid #fff;filter:brightness(1.28);}
   /* mixer (channel strips) */
-  #mixerPop{position:fixed;left:16px;top:110px;z-index:40;background:#111318;border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.65);display:none;flex-direction:column;gap:8px;}
+  #mixerPop{position:fixed;left:16px;top:110px;z-index:120;background:#111318;border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 40px rgba(0,0,0,.65);display:none;flex-direction:column;gap:8px;}
   #mixerBody{display:flex;gap:10px;}
   .mxstrip{display:flex;flex-direction:column;align-items:center;gap:5px;background:#191c22;border:1px solid var(--line);border-radius:8px;padding:8px 7px 6px;}
   .mxrow{display:flex;gap:7px;align-items:flex-start;}
@@ -283,7 +285,7 @@
   .mxrec{color:#c25050;} .mxrec.off{opacity:.4;cursor:not-allowed;}
   .mxname{font-size:10.5px;color:var(--text);}
   /* Help / About overlays */
-  #infoOverlay{display:none;position:fixed;inset:0;background:rgba(10,11,14,.74);z-index:70;}
+  #infoOverlay{display:none;position:fixed;inset:0;background:rgba(10,11,14,.74);z-index:120;}   /* 78th R4 (his fix): ABOVE the four fixed chrome windows (z-90) — Help/About/Settings were opening behind them */
   #infoBox{max-width:680px;max-height:78vh;overflow-y:auto;margin:7vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 26px;box-shadow:0 10px 44px rgba(0,0,0,.6);}
   #infoBox h2{font-size:16px;margin-bottom:10px;} #infoBox h2 span{color:var(--accent);}
   #infoBox h3{font-size:13px;margin:14px 0 5px;color:var(--accent);}
@@ -560,7 +562,7 @@
 </head>
 <body>
   <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26s</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26y</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -799,6 +801,9 @@
     <!-- Phase 1 (73rd, his ask in the same sitting): the Multi-Track Grid is minimize-able
          like the Modulation window — the same winCollapsed idiom, persisted in cp_ui. -->
     <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span></div>
+    <!-- 78th R4 (his words): "The song description in the multi-track grid should be
+         across the top not the bottom" — the provenance line moved up here -->
+    <div class="prov" id="prov" style="margin:0 0 8px 0;"></div>
     <div id="zoomStrip" title="Drag ↕ here to zoom the grid (same as the bar-number lane)" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px 0;cursor:ns-resize;">
       <div class="parts" id="trackSel" style="margin:0;"></div>
       <div class="parts" id="gridCtlRow" style="margin:0;align-items:center;">
@@ -925,7 +930,6 @@
          Psych-out · Curated most-prominent. The banner is the client definition,
          verbatim. Managed by WINDOW_DEFS like every window (one-window law). -->
     <div class="parts" id="parts"></div>
-    <div class="prov" id="prov"></div>
   </div>
   </div>
 
@@ -6090,7 +6094,12 @@ function sizeSvg(){
  const strip=typeof mainIsStrip==='function'&&mainIsStrip();
  const _sv=(typeof curSvg==='function')?curSvg():svg;
  _sv.setAttribute('width',gridW());
- _sv.setAttribute('height',viewTop(GRID_VIEWS.main)+(strip?0:GRID_VIEWS.main.px));
+ /* 78th R4: under Zoomed-in-Midi the main svg hosts the LOWER view — size by ITS px.
+    ⚠ TDZ (the record's lesson-class, its FIFTH visit): sizeSvg runs at BOOT before
+    zimOn's let — typeof still throws inside a TDZ, so the read sits in its own try. */
+ let _zim=false;try{_zim=!!zimOn;}catch(e){}
+ const _px=(_zim&&GRID_VIEWS.lower&&GRID_VIEWS.lower.px)?GRID_VIEWS.lower.px:GRID_VIEWS.main.px;
+ _sv.setAttribute('height',viewTop(GRID_VIEWS.main)+(strip?0:_px));
 }
 /* the one bar-lane renderer (July 24 r3): used by the main grid when it starts a run of
    grids, and by the docked lane rows everywhere else. Same gestures in every home. */
@@ -6274,6 +6283,7 @@ function drawGrid(){
  const _sv=(typeof curSvg==='function')?curSvg():svg;   /* Phase 2 R2: the WORLD's own note svg */
  if(typeof zimOn!=='undefined'&&zimOn&&typeof lowerConfigure==='function'){
   const lv2=lowerConfigure();lv2.el=_sv;
+  lv2.zimMain=true;   /* 78th R4 (his fix): the zoomed view IS the main surface — it keeps the bar-number ruler, the boundary lines and the main sizing (they vanished with the isMain gate) */
   drawGridView(lv2,_sv);
  }else drawGridView(GRID_VIEWS.main,_sv);
  for(const id in GRID_VIEWS){const gv=GRID_VIEWS[id];if(id!=='main'&&gv.el&&gv.el!==_sv&&gv.el.isConnected)drawGridView(gv,gv.el);}
@@ -6283,7 +6293,7 @@ function drawGrid(){
    rubber band) draw in the view that OWNS the selection (selOwner); scroll-dependent
    content sits inside a clip group so a panned view never paints over the bar lane. */
 function drawGridView(v,svgEl){
- const isMain=(v===GRID_VIEWS.main);
+ const isMain=(v===GRID_VIEWS.main)||!!v.zimMain;   /* 78th R4: zim's hosted lower view wears the main chrome */
  /* July 24 round: a view may be beat-WINDOWED (the pop-up clip editor edits [b0,b0+bN)).
     Unwindowed views (main, strip-grids) get b0=0/bN=LOOP — every formula reduces to the
     old one, so their rendering is untouched. */
@@ -7298,7 +7308,11 @@ function schedTrackGain(track){
 let mixerOpen=false;
 function toggleMixer(){
  mixerOpen=!mixerOpen;
- document.getElementById('mixerPop').style.display=mixerOpen?'flex':'none';
+ const mp=document.getElementById('mixerPop');
+ mp.style.display=mixerOpen?'flex':'none';
+ /* 78th R4 (his "the mixer button doesn't do anything"): it opened at a FIXED top:110 —
+    under the four-window chrome — z-40 under z-90. Raised above and seated below it. */
+ if(mixerOpen)mp.style.top=((parseFloat(document.body.style.paddingTop)||0)+12)+'px';
  if(mixerOpen)drawMixer();}
 function fmtDb(db){return db<=-59.5?'-Inf':db.toFixed(1);}
 function drawMixer(){
@@ -9413,10 +9427,13 @@ function buildPaletteGrid(el,scale,tonic){
   cols.forEach(col=>el.appendChild(pick(col)||blankPalCell()));
  };
  const mkSearchBtn=()=>{
+  /* 78th R4c (his words): "the 'SEARCH' button ... should say 'Pivot Chord Search': and
+     it should open up the Pivot Chord Search Window" — still spanning the two pivot
+     rows' label cells (the 73rd placement, left of the row descriptions). */
   const b=document.createElement('button');b.type='button';b.id='cpSearchBtn';b.className='cpl cpSearchBtn';
-  b.textContent='SEARCH';b.style.gridRow='span 2';
+  b.textContent='Pivot Chord Search';b.style.gridRow='span 2';
   b.title='The Pivot Chord / Cadence SEARCH Window — coming. It will search chord changes (your curated songs, cadence families, chromatic and Coltrane mediants, eras and cultures) and land them in these two pivot rows. Its spec lives in the roadmap; this button marks its home.';
-  b.onclick=()=>{flashHint('The SEARCH window is coming — its spec lives in the roadmap. This button marks its home.');};
+  b.onclick=()=>{if(typeof pcsWinToggle==='function')pcsWinToggle();};
   return b;
  };
  const isMain=el&&el.id==='cpMain';
@@ -9505,9 +9522,20 @@ function palMatHead(el,m,i){
     active section's scale, as the mode chips did); the relatives carry a ✕. */
  el.innerHTML='';
  const sc=SCALE_DB[m.id];
+ /* 78th R4c (his words): a SEARCH button ABOVE the matrix's role ("the song" / relative),
+    a "Scale / Raga" label above the menu — and THE MENU IS THE TITLE ("There is no
+    reason to name the scale and then have a drop down menu that also names the scale"). */
+ const colL=document.createElement('span');colL.style.cssText='display:inline-flex;flex-direction:column;gap:2px;align-items:flex-start;';
+ const sb=document.createElement('button');sb.type='button';sb.className='cpSearchBtn cpMatSearch';sb.textContent='SEARCH';
+ sb.title='Open the Scale/Raga Browser — its pick replaces this matrix\u2019s scale.';
+ sb.onclick=()=>palMatPick(i,'__search',m);
  const name=document.createElement('span');name.className='cpMatName';
- name.innerHTML='<b>'+PCN[m.tonic]+' '+sc.name+'</b>'+(i===0?' · the song':m.auto?' · '+(m.rel||'relative'):' · relative');
- el.appendChild(name);
+ name.textContent=(i===0?'the song':m.auto?(m.rel||'relative'):'relative');
+ colL.appendChild(sb);colL.appendChild(name);
+ el.appendChild(colL);
+ const colR=document.createElement('span');colR.style.cssText='display:inline-flex;flex-direction:column;gap:2px;align-items:flex-start;';
+ const srLab=document.createElement('span');srLab.className='cpMatName';srLab.textContent='Scale / Raga';
+ colR.appendChild(srLab);
  const sel=document.createElement('select');sel.className='cpMatSel';sel.dataset.mat=i;
  sel.appendChild(new Option('⌕ Search…','__search'));
  const fam=palFamilyOf(m.id);if(fam.indexOf(m.id)<0)fam.unshift(m.id);
@@ -9515,12 +9543,34 @@ function palMatHead(el,m,i){
  sel.value=m.id;
  sel.title=i===0?'This matrix\u2019s scale — Search opens the Browser (its pick replaces this scale); the rest are the scale\u2019s mode family. Sets the active section\u2019s scale.':'This matrix\u2019s scale — Search opens the Browser (its pick replaces this scale); the rest are the scale\u2019s mode family.';
  sel.onchange=()=>{palMatPick(i,sel.value,m);sel.blur();};
- el.appendChild(sel);
+ colR.appendChild(sel);
+ el.appendChild(colR);
  if(i>0){
   const x=document.createElement('span');x.className='cpMatX';x.textContent='✕';x.title='Remove this matrix';
   x.onclick=()=>{palState.mats.splice(i-1,1);persistPal();drawChordPanel();};
   el.appendChild(x);
  }
+}
+function pcsWinToggle(){
+ /* 78th R4c: THE PIVOT CHORD SEARCH WINDOW — the shell, standing in the column like the
+    palette (deliberately NOT a WINDOW_DEFS promotion; the one-window-era count stands).
+    The §10.2 rabbit-hole columns are scaffolded; their progression DATA (his verbatim
+    lists in the resolved brain-drain doc) lands in its own round, recorded in the spec. */
+ let w=document.getElementById('pcsPanel');
+ if(w){w.style.display=w.style.display==='none'?'':'none';if(w.style.display!=='none')try{w.scrollIntoView({block:'center'});}catch(e){}return;}
+ w=document.createElement('div');
+ w.id='pcsPanel';w.className='gridwrap';w.style.margin='12px 0';
+ const COLS=['Your Curated Songs: Chord Changes','Default Songs Chord Changes','Simple Cadences','Chromatic Mediant Changes','Coltrane Mediant Changes','Romantic Era Moments'];
+ w.innerHTML='<div class="winHead" id="pcsWinHead"><span class="picon">🔎</span><span class="wtitle">Pivot Chord Search</span>'
+  +'<span class="wbtn" id="pcsCloseChip" title="Close">✕</span></div>'
+  +'<div style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:140px;">'
+  +COLS.map(c=>'<div style="flex:1 1 0;padding:8px;border-right:1px solid var(--line);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;">'+c+'</div><div style="font-size:11px;color:var(--dim);">…</div></div>').join('')
+  +'</div>'
+  +'<div style="font-size:11px;color:var(--dim);margin-top:8px;">The multi-column chord-changes search — the progression families land here in their own round; the shell marks the window his Chord Palette button opens.</div>';
+ const anchor=document.getElementById('chordPanel');
+ (anchor&&anchor.parentNode?anchor.parentNode:document.body).insertBefore(w,anchor?anchor.nextSibling:null);
+ w.querySelector('#pcsCloseChip').onclick=e=>{e.stopPropagation();w.style.display='none';};
+ try{w.scrollIntoView({block:'center'});}catch(e){}
 }
 function palMatPick(i,id,m){
  if(id==='__search'){
@@ -9625,6 +9675,7 @@ function palWinApply(){
  /* lane-top ON: the LINKED pair scrolls as one (the palLock class arms the sync) */
  cp.classList.toggle('palLock',!!(palState.laneTop&&project&&Array.isArray(project.chords)&&project.chords.length));
  if(cp.classList.contains('palLock')){const gw=document.getElementById('gridWrap');if(gw)cp.scrollLeft=gw.scrollLeft;}
+ if(typeof mainPairFuse==='function')try{mainPairFuse();}catch(e){}   /* 78th R4: the fusion follows every palette min/close/reopen */
 }
 function palWinModified(){
  /* "changes to the default Chord Palette" — any matrix chosen by hand, or any palette
@@ -9703,6 +9754,47 @@ document.addEventListener('keydown',e=>{
  if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
  e.preventDefault();e.stopPropagation();
  palWinClose();
+},true);
+/* 78th R4b (his words): "Selecting a window like Melisma and pressing 'Delete' does not
+   delete it.  It should.  Unless something inside the window is selected, and then
+   delete should delete that. ... It should default to deleting all of the linked
+   windows when you delete one, but that should be changeable in the settings menu."
+   The palette's click-select idiom, generalized to every WINDOW_DEFS window. The inner-
+   selection guard covers the selection stores (notes · chords · track heads · strip
+   cells · cross-track); per-window object selections (shelf cards, contour shapes)
+   keep their own ✕ verbs — their Delete integration is recorded for its round. */
+let winSelId=null;
+document.addEventListener('mousedown',e=>{
+ const t=e.target;if(!t||!t.closest)return;
+ let hit=null;
+ const w=t.closest('.gridwrap');
+ if(w&&w.id&&w.id!=='gridWrap'&&typeof WINDOW_DEFS!=='undefined'&&WINDOW_DEFS.some(d=>d.id===w.id))hit=w.id;
+ if(hit!==winSelId){
+  const old=winSelId?document.getElementById(winSelId):null;
+  if(old)old.classList.remove('winSel');
+  winSelId=hit;
+  const el=hit?document.getElementById(hit):null;
+  if(el)el.classList.add('winSel');
+ }
+},true);
+document.addEventListener('keydown',e=>{
+ if((e.key!=='Delete'&&e.key!=='Backspace')||!winSelId)return;
+ const t=e.target;
+ if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+ let inner=false;
+ try{inner=(selNotes&&selNotes.size>0)||(selChordSet&&selChordSet.size>0)||selChord!=null
+  ||(selHeads&&selHeads.size>0)
+  ||(typeof stripSel!=='undefined'&&stripSel&&stripSel.i!=null)
+  ||(typeof stripMulti!=='undefined'&&stripMulti&&stripMulti.t!=null)
+  ||(typeof xselAny==='function'&&xselAny());}catch(err){}
+ if(inner)return;   /* the inner selection wins — the app's own delete takes it */
+ if(typeof uiWinShown!=='function'||!uiWinShown(winSelId))return;
+ e.preventDefault();e.stopPropagation();
+ const one=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.delLinked===false);
+ const grp=one?[winSelId]:((typeof linkedColGroup==='function')?linkedColGroup(winSelId):[winSelId]);
+ for(const id of grp)if(WINDOW_DEFS.some(d=>d.id===id)&&uiWinShown(id))uiDispatch({type:'toggle',id});
+ const el=document.getElementById(winSelId);if(el)el.classList.remove('winSel');
+ winSelId=null;
 },true);
 /* the LINKED pair scrolls as one while lane-top is on — two-way, guarded */
 (function(){
@@ -14678,18 +14770,32 @@ async function previewSlide(v){
  fake[7]={sc:(v||slideEditor.get()).pts.slice(),semis:slideSemis};
  inst.slide(activeTrack,fake,Tone.now()+.03,.7);
 }
+function slideWinInit(){
+ /* 78th R4f (his words): "The Slide engine should be it's own window." The July 27a
+    melPanel dock retires — the panel moves into a standalone column window (the
+    palette's new-model idiom, not a WINDOW_DEFS promotion). */
+ const P=document.getElementById('slidePanel');
+ if(!P||document.getElementById('slideWin'))return;
+ const w=document.createElement('div');
+ w.id='slideWin';w.className='gridwrap';w.style.cssText='margin:12px 0;display:none;';
+ w.innerHTML='<div class="winHead" id="slideWinHead"><span class="picon">〜</span><span class="wtitle">Slide Engine</span><span class="wbtn" id="slideCloseChip" title="Close">✕</span></div>';
+ const anchor=document.getElementById('melPanel');
+ (anchor&&anchor.parentNode?anchor.parentNode:document.body).insertBefore(w,anchor);
+ w.appendChild(P);
+ w.querySelector('#slideCloseChip').onclick=e=>{e.stopPropagation();if(slidePanelOpen)toggleSlidePanel();};
+}
 function toggleSlidePanel(){
  slidePanelOpen=!slidePanelOpen;
- const P=document.getElementById('slidePanel');
+ slideWinInit();
+ const P=document.getElementById('slidePanel'),W=document.getElementById('slideWin');
  if(slidePanelOpen){
-  /* July 27a: Slide lives inside the Melisma window now — opening it opens Melisma
-     FIRST (the curve editor needs real, visible dimensions to build against) */
-  if(typeof uiState==='object'&&uiState&&!uiWinShown('melPanel'))uiDispatch({type:'toggle',id:'melPanel'});
+  if(W)W.style.display='';
   P.style.display='block';
   if(!slideEditor)buildSlidePanel();
+  try{(W||P).scrollIntoView({block:'center'});}catch(e){}   /* 78th R4 (his fix): the panel opened a full column below the fold — "doesn't do anything" was "opens off-screen" */
   syncSlidePanel(true);
  }
- else P.style.display='none';
+ else{P.style.display='none';if(W)W.style.display='none';}
  drawParts();
 }
 /* selection → panel sync: selecting a single slid note loads ITS curve for independent
@@ -15392,13 +15498,25 @@ function buildMelismaPanel(){
     <button id="melViewBtn" title="Flip between the ornament browser and the tradition table — where and when each ornament family lives" style="background:#3a3e4d;color:#e9eaef;padding:5px 10px;font-size:11.5px;">🌍 Time &amp; Place</button>
     <button id="melCtxBtn" title="The Contour Rise &amp; Fall flip-book: your melody in context, the ornamented notes highlighted — click any note to MOVE the live run's melisma onto it (rule-bound Gamakas stay FIXED unless you break the rules)" style="background:#3a3e4d;color:#e9eaef;padding:5px 10px;font-size:11.5px;">📖 In context</button>
     <input id="melSearch" placeholder="search ornaments…" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;width:130px;">
-    <select id="melTrad" title="Filter by tradition" style="max-width:150px;"></select>
-    <select id="melEra" title="Filter by era of origin" style="max-width:130px;"></select>
-    <select id="melFam" title="Filter by ornament family" style="max-width:120px;"></select>
+    <select id="melTrad" title="Filter by tradition" style="display:none;max-width:150px;"></select>
+    <select id="melEra" title="Filter by era of origin" style="display:none;max-width:130px;"></select>
+    <select id="melFam" title="Filter by ornament family" style="display:none;max-width:120px;"></select>
     <button id="melAll" title="Tier-1 essentials by default — expand to the full library" style="background:#3a3e4d;color:#e9eaef;padding:5px 10px;font-size:11.5px;"></button>
    </div>
    <div id="melExp" style="display:none;border:1px solid var(--accent);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:rgba(232,163,61,.06);"></div>
-   <div id="melList" style="display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;"></div>
+   <!-- 78th R4e (his words): "The actual Melisma Window should just be the Melisma Search
+        Window: Omnisphere Style search with multiple columns" — Source · Tradition · Era ·
+        Family filter columns (All bypass on top), the results list as the wide column;
+        the hidden dropdowns keep their handlers alive (the record's precedent). -->
+   <div id="melCols" style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:200px;margin-bottom:8px;">
+    <div id="melColSrc" class="melFCol"></div>
+    <div id="melColTrad" class="melFCol"></div>
+    <div id="melColEra" class="melFCol"></div>
+    <div id="melColFam" class="melFCol"></div>
+    <div id="melColRes" style="flex:1 1 auto;padding:8px;overflow:auto;max-height:420px;">
+     <div id="melList" style="display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;"></div>
+    </div>
+   </div>
    <div id="melCount" style="font-size:10.5px;color:var(--dim);margin-top:6px;"></div>
    <div id="melTP" style="display:none;max-height:340px;overflow:auto;"></div>
    <div id="melCtx" style="display:none;"></div>
@@ -15431,6 +15549,29 @@ function buildMelismaPanel(){
  selFam.onchange=e=>{melState.fam=e.target.value;renderMelismaList();};
  document.getElementById('melSearch').oninput=e=>{melState.search=e.target.value;renderMelismaList();};
  document.getElementById('melAll').onclick=()=>{melState.all=!melState.all;renderMelismaList();};
+ /* 78th R4e: the Omnisphere columns drive the SAME melState the dropdowns always drove.
+    The SOURCE column: the default library is live; his user-curated / overall-database
+    scopes await their data round (recorded in the spec). */
+ const melColBuild=(host,items,get,set)=>{
+  const h=document.getElementById(host);if(!h)return;
+  h.innerHTML='';
+  items.forEach(it=>{
+   const val=it[0],lbl=it[1],dis=it[2];
+   const c=document.createElement('span');
+   c.className='cpchip'+(!dis&&get()===val?' on':'');
+   if(dis){c.style.opacity='.45';c.style.cursor='default';c.title='This source scope lands in its own round — recorded in the spec.';}
+   c.textContent=lbl;
+   if(!dis)c.onclick=()=>{set(val);melColsSync();renderMelismaList();};
+   h.appendChild(c);
+  });
+ };
+ window.melColsSync=function(){
+  melColBuild('melColSrc',[['','Default library'],['cur','Your curated songs',1],['db','Overall database',1]],()=>'',()=>{});
+  melColBuild('melColTrad',[['','All traditions']].concat(MELISMA_TRADS.map(t=>[t.id,t.name])),()=>melState.trad,v=>{melState.trad=v;selTrad.value=v;});
+  melColBuild('melColEra',[['','All eras']].concat(MELISMA_ERAS.map(e2=>[e2[0],e2[1]])),()=>melState.era,v=>{melState.era=v;selEra.value=v;});
+  melColBuild('melColFam',[['','All families']].concat(MELISMA_FAMS.map(f=>[f[0],f[1]])),()=>melState.fam,v=>{melState.fam=v;selFam.value=v;});
+ };
+ melColsSync();
  const melSetView=v=>{
   melState.view=v;
   document.getElementById('melList').style.display=v==='browse'?'flex':'none';
@@ -19784,6 +19925,7 @@ svg.addEventListener('contextmenu',e=>{
   ['♻ Invert ↑ (lowest note up an octave)',canInv?'Classic chord inversion on the grid — repeat to keep cycling voicings upward':'Select 2+ notes first',()=>invert(1),canInv],
   ['♻ Invert ↓ (highest note down an octave)',canInv?'Chord inversion downward — repeat to keep cycling':'Select 2+ notes first',()=>invert(-1),canInv],
   /* 5.0 r2: SLIDE ↔ NOTES A/B (client: "quickly swap them back and forth to hear the difference") */
+  ['〜 Slide pitch…',selIdxs.length===1?'A miniature Slide pop-up for THIS note — pick a glide target or draw the curve':'Select ONE note',(ev)=>openSlidePitchPop(selIdxs[0],ev||e),selIdxs.length===1],
   ['〜 Convert to SLIDE',canToSlide?'The selected run becomes ONE note carrying a pitch-slide (➿) through every pitch — Convert to NOTES brings it back':'Select 2+ notes first (a run to fuse into one slide)',doNotesToSlide,canToSlide],
   ['♪ Convert to NOTES',oneWithPb?'This slide expands back into discrete notes — one per plateau of its curve':'Select exactly one note carrying a ➿/〜 slide first',doSlideToNotes,!!oneWithPb],
   ['〜 Slide: first note → second note',canLink?'The earlier note glides into the later note’s pitch across its own duration (both notes stay) — the slide wears a draggable line: drag it to re-slope, ctrl+click it for preset angles or Draw':'Select exactly 2 notes first',doSlideLink,canLink],
@@ -19945,6 +20087,33 @@ slDrawEl.id='slDraw';
 slDrawEl.style.cssText='position:fixed;z-index:61;display:none;flex-direction:column;gap:6px;background:#111318;border:1px solid var(--accent);border-radius:10px;padding:10px;box-shadow:0 10px 40px rgba(0,0,0,.6);';
 document.body.appendChild(slDrawEl);
 let slDrawSamples=[];
+function openSlidePitchPop(i,evt){
+ /* 78th R4f (his words): "a miniature slide window should be in the form of a pop-up
+    window when a user control+clicks on a note and selects 'slide pitch'" — quick glide
+    targets over the note's own duration (slidePbLine, one undo), the drawer, and the
+    full Slide Engine window a click away. */
+ const n=project.melody[i];if(!n)return;
+ closeTempoDraw&&0;
+ let box=document.getElementById('slPitchPop');
+ if(box)box.remove();
+ box=document.createElement('div');
+ box.id='slPitchPop';
+ box.style.cssText='position:fixed;z-index:150;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:10px 12px;box-shadow:0 10px 32px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;';
+ box.style.left=Math.min((evt&&evt.pageX)||200,window.innerWidth-240)+'px';
+ box.style.top=Math.min(((evt&&evt.pageY)||200)-(window.scrollY||0),window.innerHeight-220)+'px';
+ box.innerHTML='<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">〜 Slide pitch</div>';
+ const mk=(lbl,tip,fn)=>{const b2=document.createElement('button');b2.type='button';b2.style.cssText='padding:5px 10px;font-size:12px;text-align:left;';b2.textContent=lbl;b2.title=tip;b2.onclick=()=>{fn();box.remove();};box.appendChild(b2);};
+ const setLine=dc=>{snapshot();noteEngine('slide-pitch-pop',{dc});n[7]={pb:slidePbLine(dc,.3),orn:'slideTo',line:1};hideSelMenu();refresh(true);};
+ mk('⟋ Up a whole step','Glide +2 semitones across the note',()=>setLine(200));
+ mk('⟋ Up a half step','Glide +1 semitone',()=>setLine(100));
+ mk('⟍ Down a half step','Glide −1 semitone',()=>setLine(-100));
+ mk('⟍ Down a whole step','Glide −2 semitones',()=>setLine(-200));
+ mk('✏ Draw the curve…','Set a starter glide, then draw your own shape',()=>{if(!(n[7]&&n[7].pb))setLine(200);openSlideDraw(i,evt||{pageX:200,pageY:200});});
+ mk('〜 Open the Slide Engine window','The full editor — curves, presets, per-note editing',()=>{if(!slidePanelOpen)toggleSlidePanel();});
+ const xb=document.createElement('button');xb.type='button';xb.style.cssText='padding:4px 10px;font-size:11px;background:#3a3e4d;color:#e9eaef;';xb.textContent='✕ Close';xb.onclick=()=>box.remove();
+ box.appendChild(xb);
+ document.body.appendChild(box);
+}
 function openSlideDraw(i,evt){
  const n=project.melody[i];
  if(!n||!n[7]||!n[7].pb)return;
@@ -21945,7 +22114,7 @@ let rz=null;
 function startStripRz(e,t,edge){
  if(e.button!==0)return;
  e.preventDefault();e.stopPropagation();
- rz={t,edge,y0:e.clientY,h0:t==='__main'?GRID_VIEWS.main.px:stripHeightOf(t),raf:false,warned:false};
+ rz={t,edge,y0:e.clientY,h0:t==='__main'?((typeof zimOn!=='undefined'&&zimOn&&GRID_VIEWS.lower&&GRID_VIEWS.lower.px)||GRID_VIEWS.main.px):stripHeightOf(t),raf:false,warned:false};   /* 78th R4: under zim the gesture starts from the ZOOMED height */
 }
 (function(){
  const mr=document.getElementById('mainRz');
@@ -21978,6 +22147,16 @@ document.addEventListener('mousemove',ev=>{
  if(!rz)return;
  const d=(rz.edge==='top')?(rz.y0-ev.clientY):(ev.clientY-rz.y0);
  if(rz.t==='__main'){
+  /* 78th R4 (his "can no longer resize" under Zoomed-in-Midi): zim renders the LOWER
+     view's px, so the resize writes THAT (SETTINGS.lowerPx, the lower window's own knob) */
+  if(typeof zimOn!=='undefined'&&zimOn){
+   const zpx=Math.max(100,Math.min(600,rz.h0+d));
+   if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.lowerPx!==zpx){
+    SETTINGS.lowerPx=zpx;if(typeof persistSettings==='function')persistSettings();
+    if(!rz.raf){rz.raf=true;requestAnimationFrame(()=>{if(rz)rz.raf=false;
+     if(!paperView){drawTrackSel();drawGrid();drawMainStrip();positionMainRz();}});}}
+   return;
+  }
   /* July 24 r2: all lanes are equal — the main Grid minimizes right down to a clip lane
      (July 30 fix 2: …but never below its own name box, like every other lane) */
   const m=GRID_VIEWS.main;
@@ -22625,10 +22804,14 @@ const loopBtn=document.getElementById('loopBtn');
 function drawLoopBtn(){loopBtn.classList.toggle('on',loopOn);}
 loopBtn.onclick=e=>{
  /* ⑪b: the brace always exists now — with no region of its own the toggle loops the
-    whole arrangement (⑪b's law: an empty brace covers everything) */
- loopOn=!loopOn;drawLoopBtn();
- applyLoopToTransport();
- refresh(false);e.target.blur();
+    whole arrangement (⑪b's law: an empty brace covers everything).
+    78th R4 (his "the Loop button appears to not work"): the click routes by FOCUS
+    (data-gwfocus), but a playing transport belongs to its OWNER — apply the loop under
+    the owner's world or the toggle re-aims a foreign grid's length. */
+ const _run=()=>{loopOn=!loopOn;drawLoopBtn();applyLoopToTransport();refresh(false);};
+ if(typeof playing!=='undefined'&&playing&&typeof transportGrid==='string'&&typeof CUR_GRID==='string'&&transportGrid!==CUR_GRID&&typeof withGridWorld==='function'&&GRID_WORLDS[transportGrid])withGridWorld(transportGrid,_run);
+ else _run();
+ e.target.blur();
 };
 selSong.onchange=()=>{loadSong(selSong.value);selSong.blur();};
 selChords.onchange=()=>{applyChordSwap();noteEngine('chord-swap',{src:selChords.value});selChords.blur();};
@@ -22680,7 +22863,8 @@ function parseSettings(str){
   /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
   countIn:0,latencyPref:'interactive',sinkId:'',
   classicHeads:false,
- gcPerGrid:false};   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ gcPerGrid:false,
+ delLinked:true};   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -22700,6 +22884,7 @@ function parseSettings(str){
    if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
    if(o.showSecLane===true)def.showSecLane=true;   /* 2.5 ⑪f — 78th: default OFF */
    if(o.gcPerGrid===true)def.gcPerGrid=true;   /* 78th R3: the per-grid Grid Controls opt-in */
+   if(o.delLinked===false)def.delLinked=false;   /* 78th R4b: Delete-one opt-out */
    if(o.showTsig===true)def.showTsig=true;   /* 2.5 ④ — 78th: default OFF */
    if(o.showKeysLane===true)def.showKeysLane=true;   /* 78th */
    if(o.showTempoLane===true)def.showTempoLane=true;   /* 78th */
@@ -23362,7 +23547,11 @@ function gridSlotsApply(s){
 let _gridEnterStack=[];
 function enterGridWorld(id){
  if(!GRID_WORLDS[id]||id===CUR_GRID){_gridEnterStack.push(null);return;}
- GRID_WORLDS[CUR_GRID].slots=gridSlotsCapture();
+ /* 78th R4b: the CURRENT world can be a corpse — gridWorldClose ran INSIDE its own
+    routed event (Delete closed the window whose rig we are standing in). A deleted
+    world's state is garbage: skip the capture, never throw (the throw left CUR_GRID
+    dangling and every later enter died on it). */
+ if(GRID_WORLDS[CUR_GRID])GRID_WORLDS[CUR_GRID].slots=gridSlotsCapture();
  gridSlotsApply(GRID_WORLDS[id].slots);
  _gridEnterStack.push(CUR_GRID);
  CUR_GRID=id;
@@ -23370,9 +23559,9 @@ function enterGridWorld(id){
 function leaveGridWorld(){
  const prev=_gridEnterStack.pop();
  if(prev==null)return;
- GRID_WORLDS[CUR_GRID].slots=gridSlotsCapture();
- gridSlotsApply(GRID_WORLDS[prev].slots);
- CUR_GRID=prev;
+ if(GRID_WORLDS[CUR_GRID])GRID_WORLDS[CUR_GRID].slots=gridSlotsCapture();   /* 78th R4b: same corpse guard */
+ gridSlotsApply(GRID_WORLDS[prev&&GRID_WORLDS[prev]?prev:'main'].slots);
+ CUR_GRID=(prev&&GRID_WORLDS[prev])?prev:'main';
 }
 function withGridWorld(id,fn){enterGridWorld(id);try{return fn();}finally{leaveGridWorld();}}
 function gridWorldSlotsFresh(opts){
@@ -23563,6 +23752,11 @@ function gridWorldClose(id){
  if(w.els&&w.els.essWin&&w.els.essWin.parentNode)w.els.essWin.parentNode.removeChild(w.els.essWin);   /* 78th R2b: the shelf window leaves with its stack */
  const _wasUser=!!w.user;
  delete GRID_WORLDS[id];
+ /* 78th R4b: closing the world we are STANDING IN (Delete inside its routed event) —
+    step home to main immediately; the router's exit then no-ops through the guards */
+ if(typeof CUR_GRID==='string'&&CUR_GRID===id&&GRID_WORLDS.main){
+  gridSlotsApply(GRID_WORLDS.main.slots);CUR_GRID='main';
+ }
  if(_wasUser&&typeof gridsPersistSoon==='function')gridsPersistSoon();
 }
 function essShelfWinDraw(w){
@@ -23574,8 +23768,26 @@ function essShelfWinDraw(w){
  const body=w.els.essWin.querySelector('.essBody');if(!body)return;
  const sh=(typeof CUR_GRID==='string'&&CUR_GRID!=='main')?withGridWorld('main',()=>project.shelf):project.shelf;
  body.innerHTML='';
+ /* 78th R4e (his words): "All of the default melismas in the Melisma Window should
+    actually be populating the Essence Shelf that it ships with." The tier-1 defaults
+    land as cards — press = audition, ✓ = select it in the search window. Their landing
+    as project.shelf STRANDS (drag-to-grid objects) rides the strand law's own round. */
+ if(w.pairFor==='melPanel'&&typeof MELISMA_LIB!=='undefined'){
+  for(const o of MELISMA_LIB.filter(x=>x.tier===1)){
+   const d=document.createElement('div');
+   d.className='mimCard melEssCard';
+   d.title=(o.note||'')+' — press = audition · ✓ selects it in the Melisma Search window.';
+   d.innerHTML='<div class="mimName">'+o.name+'</div><div style="font-size:10px;color:var(--dim);margin:2px 0;">melisma · '+o.fam+'</div>'
+    +'<div style="display:flex;gap:8px;"><span class="cpchip melEssSel">✓</span></div>';
+   d.onclick=e=>{
+    if(e.target.classList.contains('melEssSel')){e.stopPropagation();melState.sel=o.id;if(typeof renderMelismaList==='function')renderMelismaList();if(typeof renderMelismaInfo==='function')renderMelismaInfo(o);return;}
+    if(typeof melismaAudition==='function')melismaAudition(o);
+   };
+   body.appendChild(d);
+  }
+ }
  if(!Array.isArray(sh)||!sh.length){
-  body.innerHTML='<span style="font-size:11.5px;color:var(--dim);">Empty — ★ Keep any essence (Prism · Orbits · the engines) and it lives here, riding the project file.</span>';
+  if(!body.children.length)body.innerHTML='<span style="font-size:11.5px;color:var(--dim);">Empty — ★ Keep any essence (Prism · Orbits · the engines) and it lives here, riding the project file.</span>';
   return;
  }
  sh.forEach(o=>{
@@ -23910,11 +24122,16 @@ function fixedChromeApply(){
  for(const [key,winId] of defs){
   const w=_gridGetById(winId);if(!w)continue;
   if(w.style.display==='none')continue;
-  w.style.top=y+'px';
+  /* 78th R4d (his words): "I'd like to try having the 'Grid Controls Window' at the
+     bottom of the screen: still fixed and not moving with the rest of the app." */
+  if(key==='gc'){w.style.top='auto';w.style.bottom='0px';continue;}
+  w.style.top=y+'px';w.style.bottom='';
   y+=w.offsetHeight;
  }
  const chromeH=Math.max(y,anyClosed?26:0);
  document.body.style.paddingTop=chromeH+'px';
+ const _gcw=_gridGetById('gcWin');
+ document.body.style.paddingBottom=(_gcw&&_gcw.style.display!=='none')?(_gcw.offsetHeight+12)+'px':'';
  document.documentElement.style.scrollPaddingTop=(chromeH+8)+'px';   /* scrollIntoView never lands under the fixed bars */
  const rail=_gridGetById('rail');
  if(rail){rail.style.top=(chromeH+12)+'px';
@@ -24233,6 +24450,20 @@ function applyColOrder(){
  }
  if(typeof palGlueAll==='function')palGlueAll();   /* 75th r3: instance palettes ride their grids through any reorder */
  if(typeof pairGlueAll==='function')pairGlueAll();   /* 78th R3: engine stacks ride whole */
+ if(typeof mainPairFuse==='function')mainPairFuse();   /* 78th R4 (his fix): Grid 1 + the palette fuse when adjacent */
+}
+function mainPairFuse(){
+ /* 78th R4, his words: "The multi-track grid and the Chord Palette, though they ship
+    together, the lower corners of the grid are not yet straight and it is not yet
+    touching the chord palette." The shipped-pair fusion (the stacks' law) applies to
+    the Grid 1 + palette pair whenever the palette sits DIRECTLY below the grid, open. */
+ const root=document.getElementById('gridRowWrap'),cp=document.getElementById('chordPanel'),gw=document.getElementById('gridWrap');
+ if(!root||!cp||!gw)return;
+ const adjacent=root.nextElementSibling===cp&&cp.getClientRects().length>0&&!cp.classList.contains('winCollapsed');
+ gw.classList.toggle('pairTop',adjacent);
+ cp.classList.toggle('pairBottom',adjacent);
+ if(adjacent){if(cp.dataset.fuseMt===undefined)cp.dataset.fuseMt=cp.style.marginTop||'';cp.style.marginTop='0px';}
+ else if(cp.dataset.fuseMt!==undefined){cp.style.marginTop=cp.dataset.fuseMt;delete cp.dataset.fuseMt;}
 }
 function colGripAdd(head,memberId){
  if(!head||head.querySelector('.colGrip'))return;
@@ -25045,6 +25276,7 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setScrubLane" ${SETTINGS.showScrub!==false?'checked':''}> <b>Scrub area</b> — the strip under the ruler (click: play from that bar · hold: repeat it · drag: scrub)</label></p>
  <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
  <p><label><input type="checkbox" id="setGcPerGrid" ${SETTINGS.gcPerGrid===true?'checked':''}> Grid Controls ride each grid</label> <span class="dim">— create the Grid Controls with the Multi-Track Grids instead of the fixed window at the top (default: fixed at the top).</span></p>
+ <p><label><input type="checkbox" id="setDelLinked" ${SETTINGS.delLinked!==false?'checked':''}> Delete closes the whole linked group</label> <span class="dim">— with a window selected and nothing inside it selected, Delete closes it AND its linked windows (uncheck: just the one).</span></p>
  <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
  <p><label><input type="checkbox" id="setKeysLane" ${SETTINGS.showKeysLane===true?'checked':''}> <b>Keys lane</b> — the key-region strip above the grid (off by default since the grids slimmed)</label>
@@ -25087,7 +25319,8 @@ function openSettings(){
  if(g('setOvLane'))g('setOvLane').onchange=e=>{SETTINGS.showOverview=!!e.target.checked;persistSettings();drawOverview();};
  if(g('setScrubLane'))g('setScrubLane').onchange=e=>{SETTINGS.showScrub=!!e.target.checked;persistSettings();refresh(false);drawTrackSel();};
  if(g('setSecLane'))g('setSecLane').onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
- if(g('setGcPerGrid'))g('setGcPerGrid').onchange=e=>{SETTINGS.gcPerGrid=!!e.target.checked;persistSettings();if(typeof gcPerGridApply==='function')gcPerGridApply();};   /* 78th R3: his fixed-vs-per-grid option */
+ if(g('setGcPerGrid'))g('setGcPerGrid').onchange=e=>{SETTINGS.gcPerGrid=!!e.target.checked;persistSettings();if(typeof gcPerGridApply==='function')gcPerGridApply();};
+ if(g('setDelLinked'))g('setDelLinked').onchange=e=>{SETTINGS.delLinked=!!e.target.checked;persistSettings();};   /* 78th R3: his fixed-vs-per-grid option */
  if(g('setTsigLane'))g('setTsigLane').onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
  if(g('setPRoll'))g('setPRoll').onchange=e=>{SETTINGS.showPianoRoll=!!e.target.checked;persistSettings();refresh(false);};
  if(g('setKeysLane'))g('setKeysLane').onchange=e=>{SETTINGS.showKeysLane=!!e.target.checked;persistSettings();refresh(false);};
