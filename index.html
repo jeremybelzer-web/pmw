@@ -10,6 +10,8 @@
   #gridMixTog span.on{background:var(--panel2);color:var(--accent);}
   #gridFixTog.on{color:var(--accent);text-shadow:0 0 6px var(--accent),0 0 14px rgba(232,163,61,.55);}   /* 79th R4 (his words): "Fixed In Place ... glowing signifying it is on" */
   #gridRowWrap.gridFixed{position:sticky;top:var(--fixTop,162px);left:0;z-index:50;background:var(--bg);box-shadow:0 8px 18px rgba(0,0,0,.45);}
+  .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
+  .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
   body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
   body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
   body.swipeH #gridRowWrap~#chordPanel{display:inline-flex;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}   /* the palette IS a flex container — inline-flex keeps its inner layout (a blanket inline-block broke it; scoped to the real column members so hidden menus stay hidden) */
@@ -585,7 +587,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -9910,7 +9912,7 @@ function canvasRecParse(raw){
  /* the cp_canvas guard — pure: junk in, the defaults out. zoom values clamp to 0–200,
     the swipe choice to the four splits, colors to #rrggbb only, templates normalized
     {name,zoom,swipe,colors}. */
- const def={suite:'standard',zoom:{},swipe:'v',colors:{},templates:[],x:null,y:null};
+ const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null};
  let o=raw;
  if(typeof raw==='string'){try{o=JSON.parse(raw);}catch(e){return def;}}
  if(!o||typeof o!=='object'||Array.isArray(o))return def;
@@ -9921,8 +9923,10 @@ function canvasRecParse(raw){
   zoom:zoomOf(o.zoom),
   swipe:SW.includes(o.swipe)?o.swipe:'v',
   colors:colOf(o.colors),
+  layout:(o.layout&&typeof o.layout==='object'&&!Array.isArray(o.layout))?o.layout:null,
   templates:Array.isArray(o.templates)?o.templates.filter(t=>t&&typeof t==='object'&&typeof t.name==='string').slice(0,64)
-    .map(t=>({name:t.name.slice(0,60),zoom:zoomOf(t.zoom),swipe:SW.includes(t.swipe)?t.swipe:'v',colors:colOf(t.colors)})):[],
+    .map(t=>({name:t.name.slice(0,60),zoom:zoomOf(t.zoom),swipe:SW.includes(t.swipe)?t.swipe:'v',colors:colOf(t.colors),
+      layout:(t.layout&&typeof t.layout==='object'&&!Array.isArray(t.layout))?t.layout:null})):[],
   x:(typeof o.x==='number'&&isFinite(o.x))?o.x:null,y:(typeof o.y==='number'&&isFinite(o.y))?o.y:null};
 }
 const CNV_SUITES=[
@@ -9968,12 +9972,13 @@ function canvasApplyZoom(){
 function cnvTplDiffers(){
  if(cnvSel==null||!canvasState.templates[cnvSel])return false;
  const t=canvasState.templates[cnvSel];
- return JSON.stringify({z:canvasState.zoom,s:canvasState.swipe,c:canvasState.colors})!==JSON.stringify({z:t.zoom,s:t.swipe,c:t.colors||{}});
+ return JSON.stringify({z:canvasState.zoom,s:canvasState.swipe,c:canvasState.colors,l:canvasState.layout})!==JSON.stringify({z:t.zoom,s:t.swipe,c:t.colors||{},l:t.layout||null});
 }
 function cnvTplCreate(){
  canvasState.templates.push({name:'Template '+(canvasState.templates.length+1),
   zoom:JSON.parse(JSON.stringify(canvasState.zoom)),swipe:canvasState.swipe,
-  colors:JSON.parse(JSON.stringify(canvasState.colors))});
+  colors:JSON.parse(JSON.stringify(canvasState.colors)),
+  layout:canvasState.layout?JSON.parse(JSON.stringify(canvasState.layout)):null});
  cnvSel=canvasState.templates.length-1;
  persistCanvas();cnvBuild();
 }
@@ -9983,7 +9988,8 @@ function cnvTplApply(i){
  canvasState.zoom=JSON.parse(JSON.stringify(t.zoom));
  canvasState.swipe=t.swipe;canvasState.suite='custom';
  canvasState.colors=JSON.parse(JSON.stringify(t.colors||{}));
- canvasApplyZoom();canvasApplyColors();persistCanvas();cnvBuild();cnvColBuild();
+ canvasState.layout=t.layout?JSON.parse(JSON.stringify(t.layout)):null;
+ canvasApplyZoom();canvasApplyColors();swLayoutApply(canvasState.layout);persistCanvas();cnvBuild();cnvColBuild();
 }
 /* ==== [CP1] THE COLOR PALETTE (his second message, verbatim in the RAW) — every app
    color through the :root custom properties; the four apply-to-templates verbs; the
@@ -10107,19 +10113,6 @@ function cnvColWinToggle(){
  };
  cnvColBuild();
 }
-const CNV_SWIPES=[
- ['v','Up / down','One column — swipe up and down across both halves to reveal more windows above or below.'],
- ['h2','Two rows, each left / right','The top half and the bottom half each swipe left and right independently.'],
- ['eq3','Three equal rows','Top, middle, bottom in equal parts — the middle is the Essence Shelf.'],
- ['uneq3','Three rows, slim middle','The middle Essence Shelf takes 7.5% of the lower half of the top window and 7.5% of the upper half of the bottom one.']];
-const CNV_INFO_H2='The default is for the top box to be "Multi-Track Grids" and for the bottom to be what we call "Engines" which are windows that transform what’s in the multi-track grids. There is even a window to effect multiple-multi-track grids, and it can change the Display Canvas from inside it’s window.';
-function cnvSwipeBoxHTML(id){
- const arr='color:var(--accent);font-weight:700;';
- if(id==='v')return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:2px;"><span style="'+arr+'">↑</span><div style="width:80%;border-top:1px solid var(--line);"></div><span style="'+arr+'">↓</span></div>';
- if(id==='h2')return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;"><div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><span style="'+arr+'">←</span><span style="'+arr+'">→</span></div><div style="border-top:1px solid var(--line);"></div><div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><span style="'+arr+'">←</span><span style="'+arr+'">→</span></div></div>';
- if(id==='eq3')return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;"><div style="flex:1;"></div><div style="flex:1;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--dim);">SHELF</div><div style="flex:1;"></div></div>';
- return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;"><div style="flex:1 1 46%;"></div><div style="flex:0 0 15%;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:7px;color:var(--dim);">SHELF 15%</div><div style="flex:1 1 46%;"></div></div>';
-}
 function cnvBuild(){
  const w=document.getElementById('cnvWin');if(!w)return;
  /* the zoom display */
@@ -10153,28 +10146,57 @@ function cnvBuild(){
   };
   zl.appendChild(row);
  }
- /* the swipe display */
+ /* [C4b] the swipe LAYOUTS (his third message — by WINDOW COUNT, with his four
+    shipped defaults; the old Box display retired the same day it shipped, on his
+    own redesign) */
  const sw=w.querySelector('#cnvSwipe');sw.innerHTML='';
- for(const [id,name] of CNV_SWIPES.map(s=>[s[0],s[1]])){
+ const curPreset=(canvasState.layout&&canvasState.layout.preset)||'d1';
+ for(const [id,name,rows,tip] of SW_DEFAULTS){
   const box=document.createElement('div');
-  box.draggable=true;
-  box.style.cssText='width:120px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid '+(canvasState.swipe===id?'var(--accent)':'transparent')+';';
-  box.innerHTML=cnvSwipeBoxHTML(id)+'<div style="font-size:9.5px;color:var(--dim);margin-top:2px;text-align:center;">'+name+(id!=='v'?' <span style="opacity:.7;">(saved — the split engine arrives in its own round)</span>':'')+'</div>';
-  box.title=CNV_SWIPES.find(s=>s[0]===id)[2];
-  box.onclick=()=>{canvasState.swipe=id;persistCanvas();cnvBuild();cnvSaveSync();};
-  box.ondragstart=e=>{e.dataTransfer.setData('text/plain','cnv/swipe:'+id);};
-  const holder=document.createElement('div');holder.style.cssText='display:flex;align-items:flex-start;gap:2px;';
-  holder.appendChild(box);
-  if(id==='h2'){
-   const inf=document.createElement('span');
-   inf.textContent='ⓘ';
-   inf.title='What the two rows hold by default';
-   inf.style.cssText='cursor:pointer;color:var(--accent);font-size:13px;';
-   inf.onclick=e=>{e.stopPropagation();showInfo('<span id="infoClose">✕</span><h2>The two-row swipe</h2><p>'+CNV_INFO_H2+'</p>');};   /* showInfo callers supply their own #infoClose — the shipped idiom */
-   holder.appendChild(inf);
-  }
-  sw.appendChild(holder);
+  box.className='cnvLay';
+  box.dataset.lay=id;
+  box.style.cssText='width:150px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid '+(curPreset===id?'var(--accent)':'var(--line)')+';';
+  let diagram='<div style="border:1px solid var(--line);border-radius:4px;height:56px;display:flex;flex-direction:column;overflow:hidden;">';
+  for(const r of (rows?rows.rows:[{cat:'grids',pct:100,swipe:'v'}]))
+   diagram+='<div style="flex:'+r.pct+' 1 0%;display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--dim);border-bottom:1px solid var(--line);">'
+    +(r.cat==='shelf'?'SHELF':(r.cat==='engines'?'ENGINES':'GRIDS'))+' '+(r.swipe==='h'?'⇄':'⇅')+'</div>';
+  diagram+='</div>';
+  box.innerHTML=diagram+'<div style="font-size:9.5px;color:var(--dim);margin-top:2px;text-align:center;">'+name+'</div>';
+  box.title=tip;
+  box.onclick=()=>{
+   canvasState.layout=rows?JSON.parse(JSON.stringify(rows)):null;
+   persistCanvas();swLayoutApply(canvasState.layout);cnvBuild();cnvSaveSync();
+  };
+  sw.appendChild(box);
  }
+ /* the drag-on patterns (his words: "the up and down and the left and right swipe
+    patterns that the user can drag onto any of the windows") — drop one on a default
+    card to re-swipe its rows, custom-izing it */
+ const pats=document.createElement('div');
+ pats.style.cssText='display:flex;gap:6px;justify-content:center;margin-top:2px;';
+ for(const [pid,plbl] of [['v','⇅ up/down'],['h','⇄ left/right']]){
+  const c=document.createElement('span');
+  c.className='cpchip';c.draggable=true;c.textContent=plbl;
+  c.title='Drag onto a layout card — every row of that layout takes this swipe. (Per-row drops and 1–4 vertical sub-splits arrive with the layout designer’s own round.)';
+  c.ondragstart=e=>{e.dataTransfer.setData('text/plain','cnv/pat:'+pid);};
+  pats.appendChild(c);
+ }
+ sw.appendChild(pats);
+ sw.querySelectorAll('.cnvLay').forEach(box=>{
+  box.ondragover=e=>{e.preventDefault();};
+  box.ondrop=e=>{
+   e.preventDefault();
+   const d=e.dataTransfer.getData('text/plain');
+   if(!d||d.slice(0,8)!=='cnv/pat:')return;
+   const pat=d.slice(8);
+   const base=SW_DEFAULTS.find(x=>x[0]===box.dataset.lay);
+   const rows=base&&base[2]?JSON.parse(JSON.stringify(base[2])):{preset:'custom',rows:[{cat:'grids',pct:100,swipe:'v'}]};
+   rows.preset='custom';
+   for(const r of rows.rows)if(r.cat!=='shelf')r.swipe=pat;
+   canvasState.layout=rows;
+   persistCanvas();swLayoutApply(canvasState.layout);cnvBuild();cnvSaveSync();
+  };
+ });
  /* the templates strip */
  const tr=w.querySelector('#cnvTplRow');tr.innerHTML='';
  canvasState.templates.forEach((t,i)=>{
@@ -10253,6 +10275,7 @@ function canvasWinToggle(){
   const t=canvasState.templates[cnvSel];if(!t)return;
   t.zoom=JSON.parse(JSON.stringify(canvasState.zoom));t.swipe=canvasState.swipe;
   t.colors=JSON.parse(JSON.stringify(canvasState.colors));
+  t.layout=canvasState.layout?JSON.parse(JSON.stringify(canvasState.layout)):null;
   persistCanvas();cnvBuild();
  };
  w.querySelector('#cnvColBtn').onclick=()=>cnvColWinToggle();
@@ -10293,7 +10316,7 @@ function canvasWinToggle(){
    runs after the whole script parses (WINDOW_DEFS and the late windows exist by then),
    and it wraps so a fault here can never take the boot down (the cp_ui lesson, §2 ⑪) */
 {const _cb=document.getElementById('canvasBtn');if(_cb)_cb.onclick=e=>{canvasWinToggle();e.target.blur();};}
-setTimeout(()=>{try{canvasApplyZoom();canvasApplyColors();}catch(e){}},0);
+setTimeout(()=>{try{canvasApplyZoom();canvasApplyColors();if(canvasState.layout)swLayoutApply(canvasState.layout);}catch(e){}},0);
 /* ==== [C5] FIXED IN PLACE + [C6] THE SWIPE BUTTON (79th R4 — his words verbatim in
    CANVAS-SWIPE-RAW-2026-08-27.md): the glowing "Fixed In Place" chip pins the top
    Multi-Track Grid (sticky under the chrome; default OFF; SETTINGS.fixedGrid flips
@@ -10355,6 +10378,160 @@ function swipeWinToggle(){
  swipePatApply();
 }
 {const _sb=document.getElementById('swipeBtn');if(_sb)_sb.onclick=e=>{swipeWinToggle();e.target.blur();};}
+/* ==== [C4b] THE SWIPE-LAYOUT ENGINE (79th R8 — his THIRD message, verbatim in the
+   RAW; it SUPERSEDES [C4]'s Box framing): layouts by WINDOW COUNT, three window
+   CATEGORIES routed into rows (Multi-Track Grids · Engines — the palette IS an engine
+   in split layouts · the Essence Shelf), the ↑↓/←→ patterns draggable onto any row,
+   and HIS FOUR SHIPPED DEFAULTS. Each row swipes independently (scroll-snap); a grids
+   row with nothing to show renders his dotted-＋ that mints a grid; swiping the grids
+   row re-aims the FOCUS to the arriving grid (the chrome, transport and keyboard
+   follow — the engine-VERB re-target is Phase 3's convergence, recorded). Vertical
+   sub-splits (1–4 per window) are recorded for their own round — none of his four
+   defaults uses one. ==== */
+function swLayoutNorm(raw){
+ /* pure — the layout guard: rows 1–4, cat in the four categories, pct 5–100, swipe v|h.
+    Junk in → null out (null = his default 1, today's column). */
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
+ const CATS=['grids','grids2','engines','shelf'];
+ if(!Array.isArray(raw.rows)||!raw.rows.length||raw.rows.length>4)return null;
+ const rows=[];
+ for(const r of raw.rows){
+  if(!r||typeof r!=='object')return null;
+  if(!CATS.includes(r.cat))return null;
+  const pct=(typeof r.pct==='number'&&isFinite(r.pct))?Math.max(5,Math.min(100,r.pct)):Math.round(100/raw.rows.length);
+  rows.push({cat:r.cat,pct,swipe:r.swipe==='h'?'h':'v'});
+ }
+ return {preset:(typeof raw.preset==='string'&&raw.preset.length<=20)?raw.preset:'custom',rows};
+}
+const SW_DEFAULTS=[
+ ['d1','1 window · up/down',null,
+  'His first default: one large screen, up-and-down swiping — the Multi-Track Grid at the top with its linked Chord Palette (today’s column).'],
+ ['d2','2 windows · each ←→',{preset:'d2',rows:[{cat:'grids',pct:50,swipe:'h'},{cat:'engines',pct:50,swipe:'h'}]},
+  'His second default: grids on top, Engine windows below, each row swiping left and right. The Chord Palette is just another Engine here — the default lower window, the rest arriving as you scroll. Swiping to a new grid aims the app at it.'],
+ ['d3','3 windows · 10% Shelf middle',{preset:'d3',rows:[{cat:'grids',pct:45,swipe:'h'},{cat:'shelf',pct:10,swipe:'v'},{cat:'engines',pct:45,swipe:'h'}]},
+  'His third default: grids above, engines below, and the middle 10% is ALWAYS the Essence Shelf — with his “Move with lower window” toggle in its upper right.'],
+ ['d4','3 equal · grid / grid / engines',{preset:'d4',rows:[{cat:'grids',pct:33.4,swipe:'h'},{cat:'grids2',pct:33.3,swipe:'h'},{cat:'engines',pct:33.3,swipe:'h'}]},
+  'His fourth default: one Multi-Track window, a second Multi-Track window, and the engines below. PRO-TIP: This setup is good for the Multiple Multi-Track Window on the bottom which can control the top two.']];
+let swLayoutState=null,_swSaved=null,_swShelfWithLower=false;
+function swRowMembers(cat){
+ /* the three window CATEGORIES (his words) resolved to live DOM members */
+ if(cat==='grids'){
+  const out=[document.getElementById('gridRowWrap')];
+  if(swLayoutState&&swLayoutState.rows.some(r=>r.cat==='grids2'))return out.filter(Boolean);
+  document.querySelectorAll('body [data-gridworld], #swRows [data-gridworld]').forEach(r=>{if(r.id&&/^gridRowWrap_/.test(r.id))out.push(r);});
+  return out.filter(Boolean);
+ }
+ if(cat==='grids2'){
+  const out=[];
+  document.querySelectorAll('[data-gridworld]').forEach(r=>{if(r.id&&/^gridRowWrap_/.test(r.id))out.push(r);});
+  return out;
+ }
+ if(cat==='engines'){
+  const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin'];
+  const out=ids.map(id=>document.getElementById(id)).filter(Boolean);
+  document.querySelectorAll('[id^="essWin_"]').forEach(e=>out.push(e));   /* the stacks' shelf windows ride with their engines */
+  return out;
+ }
+ return [];
+}
+function swShelfBlock(){
+ let d=document.getElementById('swShelf');
+ if(d)return d;
+ d=document.createElement('div');
+ d.id='swShelf';
+ d.className='gridwrap';
+ d.style.cssText='margin:0;display:flex;flex-direction:column;min-width:0;';
+ d.innerHTML='<div class="winHead" style="margin:0;"><span class="wtitle">🔷 Essence Shelf</span>'
+  +'<label id="swShelfMove" style="margin-left:auto;font-size:10px;color:var(--dim);display:flex;gap:4px;align-items:center;cursor:pointer;" title="ON — the shelf rides the lower window’s swipe. OFF — it stays fixed in its own band (his words; OFF is the boot state, a labeled inference — he named both states, not the default)."><input type="checkbox" style="accent-color:var(--accent);">Move with lower window</label></div>'
+  +'<div class="essBody" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;align-items:flex-start;"></div>';
+ d.querySelector('#swShelfMove input').onchange=e=>{_swShelfWithLower=!!e.target.checked;swLayoutApply(swLayoutState);};
+ return d;
+}
+function swLayoutTeardown(){
+ const layer=document.getElementById('swRows');
+ if(!layer)return;
+ if(_swSaved){
+  /* every member goes home in its remembered order, then the column machinery heals */
+  for(const rec of _swSaved){if(!rec.el)continue;const nx=(rec.next&&rec.next.parentNode===document.body)?rec.next:null;document.body.insertBefore(rec.el,nx);}   /* the saved next may itself have moved — only a live BODY child anchors; applyColOrder heals the rest */
+  _swSaved=null;
+ }
+ layer.remove();
+ document.body.style.overflow='';
+ try{if(typeof applyColOrder==='function')applyColOrder();}catch(e){}
+ try{if(typeof fixedChromeApply==='function')fixedChromeApply();}catch(e){}
+}
+function swLayoutApply(layout){
+ swLayoutState=swLayoutNorm(layout);
+ swLayoutTeardown();
+ if(!swLayoutState)return;   /* default 1 — today's column, no engine */
+ const padT=parseFloat(document.body.style.paddingTop)||0;
+ const padB=parseFloat(document.body.style.paddingBottom)||0;
+ const layer=document.createElement('div');
+ layer.id='swRows';
+ layer.style.cssText='position:fixed;left:0;right:0;top:'+padT+'px;bottom:'+padB+'px;display:flex;flex-direction:column;z-index:40;background:var(--bg);';
+ document.body.appendChild(layer);
+ document.body.style.overflow='hidden';
+ _swSaved=[];
+ const remember=el=>{_swSaved.push({el,next:el.nextSibling});};
+ const rows=swLayoutState.rows;
+ const shelfRides=_swShelfWithLower&&rows.some(r=>r.cat==='shelf');
+ rows.forEach((r,ri)=>{
+  if(r.cat==='shelf'&&shelfRides)return;   /* his toggle ON — the shelf joins the lower row instead */
+  const row=document.createElement('div');
+  row.className='swRow';
+  row.dataset.cat=r.cat;
+  row.style.cssText='flex:'+r.pct+' 1 0%;min-height:0;border-bottom:1px solid var(--line);position:relative;'
+   +(r.swipe==='h'?'overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x proximity;':'overflow-y:auto;overflow-x:hidden;');
+  layer.appendChild(row);
+  if(r.cat==='shelf'){
+   const d=swShelfBlock();remember(d);row.appendChild(d);d.style.height='100%';
+   try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+   return;
+  }
+  const members=swRowMembers(r.cat);
+  const grids=r.cat==='grids'||r.cat==='grids2';
+  for(const m of members){
+   remember(m);
+   row.appendChild(m);
+   m.style.display='';
+   m.classList.add('swCell');
+   m.style.width=r.swipe==='h'?(grids?'96%':'46%'):'';
+   m.style.scrollSnapAlign=grids?'center':'';
+  }
+  if(grids&&!members.length){
+   /* his dotted-＋ (the first message): nothing here yet — one click mints a grid */
+   const plus=document.createElement('div');
+   plus.style.cssText='margin:20px auto;width:60%;height:70%;border:3px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:42px;color:var(--dim);cursor:pointer;';
+   plus.textContent='＋';
+   plus.title='Create a new Multi-Track Grid here.';
+   plus.onclick=()=>{try{gridUserSpawn();}catch(e){}swLayoutApply(swLayoutState);};
+   row.appendChild(plus);
+  }
+  if(grids&&r.swipe==='h'){
+   /* swiping to a grid AIMS the app at it — the chrome/transport/keyboard follow via
+      the focus law (his "all of the engine windows will now affect the new multi-track
+      grid"; the engine-VERB convergence is Phase 3's, recorded in the spec) */
+   let pend=false;
+   row.addEventListener('scroll',()=>{if(pend)return;pend=true;requestAnimationFrame(()=>{pend=false;
+    const cx=row.getBoundingClientRect().left+row.clientWidth/2;
+    let best=null,bd=1e9;
+    row.querySelectorAll('#gridRowWrap,[data-gridworld]').forEach(g=>{
+     const b=g.getBoundingClientRect();const d2=Math.abs((b.left+b.right)/2-cx);
+     if(d2<bd){bd=d2;best=g;}});
+    if(best&&typeof setGridFocus==='function')setGridFocus(best.id==='gridRowWrap'?'main':(best.getAttribute('data-gridworld')||'main'));
+   });},{passive:true});
+  }
+  if(shelfRides&&r.cat==='engines'){
+   const d=swShelfBlock();remember(d);
+   row.insertBefore(d,row.firstChild);
+   d.classList.add('swCell');
+   d.style.width='30%';d.style.height='';
+   try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+  }
+ });
+ const chk=document.querySelector('#swShelfMove input');
+ if(chk)chk.checked=_swShelfWithLower;
+}
 /* ==== [W1] THE CHORD PROGRESSIONS WINDOW (79th R5 — his words verbatim in the RAW):
    "exactly like the Cadences window, only instead of Cadences meant to modify the END
    of a musical phrase, these are chord progressions meant to be the STRUCTURE of the
@@ -25384,6 +25561,10 @@ function fixedChromeInit(){
    the last gesture wins. */
 function scrollFocusTick(){
  try{
+  /* 79th R8: while a SWIPE LAYOUT is active the rows own focus (the grids row assigns
+     it by horizontal position) — the column's vertical law stands down, or a stray
+     window scroll snatches the focus straight back to main (caught by the g2 trace) */
+  if(typeof swLayoutState!=='undefined'&&swLayoutState)return;
   const topY=(parseFloat(document.body.style.paddingTop)||0)+16;
   const cand=[{gid:'main',root:_gridGetById('gridRowWrap'),win:null}];
   for(const gid in GRID_WORLDS){
