@@ -5,6 +5,14 @@
 <title>CrossPollinate — Phase 0.5 Grid Editor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <style>
+  #gridWinHead .wtitle{flex:0 0 auto;}
+  #gridWinHead #prov{flex:1 1 auto;min-width:0;margin:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;}   /* 79th R6 (his words): the song title + description sit RIGHT of the label — less vertical space */
+  #gridMixTog span.on{background:var(--panel2);color:var(--accent);}
+  #gridFixTog.on{color:var(--accent);text-shadow:0 0 6px var(--accent),0 0 14px rgba(232,163,61,.55);}   /* 79th R4 (his words): "Fixed In Place ... glowing signifying it is on" */
+  #gridRowWrap.gridFixed{position:sticky;top:var(--fixTop,162px);left:0;z-index:50;background:var(--bg);box-shadow:0 8px 18px rgba(0,0,0,.45);}
+  body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
+  body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
+  body.swipeH #gridRowWrap~#chordPanel{display:inline-flex;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}   /* the palette IS a flex container — inline-flex keeps its inner layout (a blanket inline-block broke it; scoped to the real column members so hidden menus stay hidden) */
   :root{--bg:#17181d;--panel:#20222a;--panel2:#2a2d38;--line:#3a3e4d;--text:#e9eaef;--dim:#98a0b2;--accent:#e8a33d;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;padding:22px 26px;}
@@ -577,7 +585,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27g</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -620,6 +628,9 @@
     <div class="ctl" style="display:none;"><label>Vary</label><button id="arethaBtn" style="background:#c78ac2;color:#230d21;" title="Aretha — the last note of the selected phrase (or track) holds across the next chord change and resolves onto a tone of the new chord. Click again to cycle the resolution target; ⌥-click to cycle a 1–2-note diatonic run into the landing.">➰ Aretha</button></div>
     <div class="ctl" style="display:none;"><label>Keep</label><button id="saveVar" title="Snapshot the current chords + tracks to the Saved variations shelf (kept between sessions)" style="background:#6fa8dc;color:#0c1826;">★ Save this variation</button></div>
     <div class="ctl"><label>&nbsp;</label><div style="display:flex;gap:6px;">
+      <button id="canvasBtn" title="The Canvas — zoom suites (how zoomed in each window is, 0–200%, live), the swipe layouts, and your saved Canvas Templates, in a floating window you can move out of the way." style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">🖼 Canvas</button>
+      <button id="swipeBtn" title="How the app scrolls — up/down (the default), or the top grid pinned with everything else swiping horizontally." style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">⇅ Swipe</button>
+      <button id="eduBtn" title="Education — the music theory behind every button, and how the curiosities fit together into whole pieces of music." style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">🎓 Education</button>
       <button id="helpBtn" title="Gestures & shortcuts reference" style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">? Help</button>
       <button id="aboutBtn" title="What the app does and the intended workflow" style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">ℹ About</button>
       <button id="setBtn" title="Settings — display options, project save/open, legal" style="background:#3a3e4d;color:#e9eaef;padding:9px 14px;">⚙</button>
@@ -815,7 +826,7 @@
   <div class="gridwrap" id="gridWrap" style="flex:1;min-width:0;"><!-- MG round: the MAIN wrap has an id now — .gridwrap first-match grabbed the melPanel/varPanel boxes (same class, earlier in the DOM since 27a/30d) and silently unbound the zoom strip -->
     <!-- Phase 1 (73rd, his ask in the same sitting): the Multi-Track Grid is minimize-able
          like the Modulation window — the same winCollapsed idiom, persisted in cp_ui. -->
-    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span></div>
+    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMixTog" title="Multi-tracks ⇄ Mixer — the same window, two faces: ≡ the tracks, 🎚 the mixer in the grid’s own dimensions. Press again to come back." style="display:inline-flex;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;"><span data-mv="grid" class="on" style="padding:2px 8px;font-size:11px;">≡</span><span data-mv="mix" style="padding:2px 8px;font-size:11px;">🎚</span></span><span class="wbtn" id="gridPalBtn" title="The Chord Palette — open or close it.">🎨</span><span class="wbtn" id="gridFixTog" title="Fixed In Place — the top Multi-Track Grid pins where it is and stops moving while the rest of the app scrolls. Glowing = on. The Settings menu can make it the default." style="width:auto;padding:0 8px;font-size:10px;letter-spacing:.5px;">Fixed In Place</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span></div>
     <!-- 78th R4 (his words): "The song description in the multi-track grid should be
          across the top not the bottom" — the provenance line moved up here -->
     <div class="prov" id="prov" style="margin:0 0 8px 0;"></div>
@@ -7173,17 +7184,9 @@ function hlChord(idx){document.querySelectorAll('.cb').forEach(e=>e.classList.re
 function drawParts(){
  const el=document.getElementById('parts');el.innerHTML='';
  /* per-track mutes moved into the Mixer (activator boxes) — client direction July 12 */
- const mx=document.createElement('div');mx.className='part';
- mx.innerHTML='🎚 Mixer';
- mx.title='Open the mixer — channel strips: volume fader (dB), pan, track activator, solo';
- mx.onclick=toggleMixer;
- el.appendChild(mx);
- const sl=document.createElement('div');sl.className='part';
- sl.innerHTML='〜 Slide';
- sl.title='Slide Engine — per-note pitch glides via the curve editor (select notes, shape a curve, Apply)';
- if(slidePanelOpen){sl.style.borderColor='var(--accent)';sl.style.background='rgba(232,163,61,.12)';}
- sl.onclick=toggleSlidePanel;
- el.appendChild(sl);
+ /* 79th R6 (his words): the Mixer chip became the winHead's ≡/🎚 toggle and the Slide
+    chip LEFT the grid (the Slide window's button rides the Engines group) — toggleMixer
+    and toggleSlidePanel stay alive: the suites and the note-menu call them directly */
  /* (3.2's "+ Chord lane" chip retired with the July 19 multi-track restructure — the
     lane model stays dormant under the hood; files with extra lanes still load fine) */
  /* Minimal 🔗 pills (progressive disclosure — everything else lives in the Linked-clip
@@ -9894,6 +9897,705 @@ function pcsWinToggle(){
  pcsBuild();
  try{w.scrollIntoView({block:'center'});}catch(e){}
 }
+/* ==== THE CANVAS WINDOW (79th R2) — [C1]–[C4], his words verbatim in
+   CANVAS-SWIPE-RAW-2026-08-27.md: the Canvas button left of HELP opens a FLOATING
+   pop-up (movable out of the way — the pop-up class the no-overlap law names as its
+   own thing); ZOOM SUITES = per-window 0–200%, sliders live; the Templates strip
+   (drag-or-click-＋ · click applies · double-click renames · Delete removes · ⌘Z
+   restores · "Template From Current Set-Up" · Save on edits); the SWIPE DISPLAY
+   selector (his four splits; the ⓘ dialogue verbatim). ⚠ The non-default splits
+   store the CHOICE — the split-screen display engine is its own recorded round. */
+function canvasZoomClamp(v){const n=+v;return (typeof n==='number'&&isFinite(n)&&n>=0&&n<=200)?Math.round(n):100;}
+function canvasRecParse(raw){
+ /* the cp_canvas guard — pure: junk in, the defaults out. zoom values clamp to 0–200,
+    the swipe choice to the four splits, colors to #rrggbb only, templates normalized
+    {name,zoom,swipe,colors}. */
+ const def={suite:'standard',zoom:{},swipe:'v',colors:{},templates:[],x:null,y:null};
+ let o=raw;
+ if(typeof raw==='string'){try{o=JSON.parse(raw);}catch(e){return def;}}
+ if(!o||typeof o!=='object'||Array.isArray(o))return def;
+ const SW=['v','h2','eq3','uneq3'];
+ const zoomOf=z=>{const out={};if(z&&typeof z==='object'&&!Array.isArray(z))for(const k of Object.keys(z)){if(typeof k==='string'&&k.length<=40)out[k]=canvasZoomClamp(z[k]);}return out;};
+ const colOf=c=>{const out={};if(c&&typeof c==='object'&&!Array.isArray(c))for(const k of Object.keys(c)){if(typeof k==='string'&&k.length<=40&&typeof c[k]==='string'&&/^#[0-9a-fA-F]{6}$/.test(c[k]))out[k]=c[k].toLowerCase();}return out;};
+ return {suite:(typeof o.suite==='string'&&o.suite.length<=40)?o.suite:'standard',
+  zoom:zoomOf(o.zoom),
+  swipe:SW.includes(o.swipe)?o.swipe:'v',
+  colors:colOf(o.colors),
+  templates:Array.isArray(o.templates)?o.templates.filter(t=>t&&typeof t==='object'&&typeof t.name==='string').slice(0,64)
+    .map(t=>({name:t.name.slice(0,60),zoom:zoomOf(t.zoom),swipe:SW.includes(t.swipe)?t.swipe:'v',colors:colOf(t.colors)})):[],
+  x:(typeof o.x==='number'&&isFinite(o.x))?o.x:null,y:(typeof o.y==='number'&&isFinite(o.y))?o.y:null};
+}
+const CNV_SUITES=[
+ ['standard','Standard',{all:100}],
+ ['compact','Compact',{all:80}],
+ ['big','Big Controls',{all:130}],
+ ['focus','Focus the Grid',{all:90,grid:120}]];
+let canvasState=canvasRecParse((()=>{try{return localStorage.getItem('cp_canvas');}catch(e){return null;}})());
+let cnvUndoStack=[],cnvSel=null;
+function persistCanvas(){try{localStorage.setItem('cp_canvas',JSON.stringify(canvasState));}catch(e){}}
+function cnvWins(){
+ /* the zoomable-window roster — WINDOW_DEFS is read, never copied (one home).
+    ⚠ Its declaration sits far BELOW this block, so the read guards in its own try —
+    the TDZ lesson-class (typeof throws too; only try/catch is safe pre-declaration). */
+ let defs=[];try{defs=WINDOW_DEFS;}catch(e){}
+ return [{id:'all',name:'Everything'},{id:'grid',name:'Multi-Track Grid(s)'},{id:'chordPanel',name:'Chord Palette'},
+  {id:'transportWin',name:'Transport'},{id:'navWin',name:'Navigator'},{id:'engWin',name:'Engines'},
+  {id:'snapPanel',name:'Snap'},{id:'slideWin',name:'Slide Engine'},{id:'pcsPanel',name:'Pivot Chord Search'}]
+  .concat(defs.map(d=>({id:d.id,name:d.name})));
+}
+function canvasZoomFor(id){const v=canvasState.zoom[id];return (typeof v==='number')?v:100;}
+function canvasApplyZoom(){
+ /* live, per his words — css zoom scales every child element (buttons, icons, words).
+    A 5% render floor keeps a 0% window findable rather than gone (labeled inference:
+    a vanished window with no handle is a lock-out, not a zoom). */
+ const z=p=>Math.max(p,5)/100;
+ const all=canvasZoomFor('all');
+ try{document.body.style.zoom=z(all);}catch(e){}
+ const cw=document.getElementById('cnvWin');
+ if(cw)cw.style.zoom=(100/Math.max(all,25));   /* counter-zoom: the Canvas window stays usable at any Everything value */
+ for(const w of cnvWins()){
+  if(w.id==='all')continue;
+  const pct=canvasZoomFor(w.id);
+  if(w.id==='grid'){
+   const g=document.getElementById('gridRowWrap');if(g)g.style.zoom=z(pct);
+   document.querySelectorAll('[data-gridworld]').forEach(r=>{r.style.zoom=z(pct);});
+   continue;
+  }
+  const el=document.getElementById(w.id);
+  if(el)el.style.zoom=z(pct);
+ }
+}
+function cnvTplDiffers(){
+ if(cnvSel==null||!canvasState.templates[cnvSel])return false;
+ const t=canvasState.templates[cnvSel];
+ return JSON.stringify({z:canvasState.zoom,s:canvasState.swipe,c:canvasState.colors})!==JSON.stringify({z:t.zoom,s:t.swipe,c:t.colors||{}});
+}
+function cnvTplCreate(){
+ canvasState.templates.push({name:'Template '+(canvasState.templates.length+1),
+  zoom:JSON.parse(JSON.stringify(canvasState.zoom)),swipe:canvasState.swipe,
+  colors:JSON.parse(JSON.stringify(canvasState.colors))});
+ cnvSel=canvasState.templates.length-1;
+ persistCanvas();cnvBuild();
+}
+function cnvTplApply(i){
+ const t=canvasState.templates[i];if(!t)return;
+ cnvSel=i;
+ canvasState.zoom=JSON.parse(JSON.stringify(t.zoom));
+ canvasState.swipe=t.swipe;canvasState.suite='custom';
+ canvasState.colors=JSON.parse(JSON.stringify(t.colors||{}));
+ canvasApplyZoom();canvasApplyColors();persistCanvas();cnvBuild();cnvColBuild();
+}
+/* ==== [CP1] THE COLOR PALETTE (his second message, verbatim in the RAW) — every app
+   color through the :root custom properties; the four apply-to-templates verbs; the
+   fixed-but-floating template picker with click / re-click / shift+click-range. ⚠ The
+   CSS-variable layer is the shipped surface — colors hardcoded inside svg paints are
+   recorded for their own cut (the spec notes). ==== */
+const CNV_COLORS=[['--bg','Background'],['--panel','Panels'],['--panel2','Controls & cells'],
+ ['--line','Borders & lines'],['--text','Text'],['--dim','Secondary text'],['--accent','Accent / highlights']];
+function canvasApplyColors(){
+ for(const [v] of CNV_COLORS){
+  const ov=canvasState.colors[v];
+  if(ov)document.documentElement.style.setProperty(v,ov);
+  else document.documentElement.style.removeProperty(v);
+ }
+}
+function cnvColDefault(v){
+ /* the stylesheet's own value, resolved with any live override lifted */
+ const live=document.documentElement.style.getPropertyValue(v);
+ document.documentElement.style.removeProperty(v);
+ const d=getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+ if(live)document.documentElement.style.setProperty(v,live);
+ return d;
+}
+function cnvColBuild(){
+ const w=document.getElementById('cnvColWin');if(!w||w.style.display==='none')return;
+ const rows=w.querySelector('#cnvColRows');rows.innerHTML='';
+ for(const [v,name] of CNV_COLORS){
+  const cur=canvasState.colors[v]||cnvColDefault(v);
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:8px;margin:3px 0;';
+  row.innerHTML='<span style="flex:0 0 150px;font-size:11px;color:var(--dim);">'+name+'</span>'
+   +'<input type="color" value="'+cur+'" data-cnvcol="'+v+'" style="flex:0 0 40px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;cursor:pointer;">'
+   +'<span style="font-size:10.5px;color:var(--dim);flex:1 1 auto;">'+cur+(canvasState.colors[v]?' · edited':'')+'</span>'
+   +'<span class="wbtn" data-cnvrst="'+v+'" title="Back to the app’s own color">↺</span>';
+  const inp=row.querySelector('input');
+  inp.oninput=()=>{canvasState.colors[v]=inp.value;canvasApplyColors();persistCanvas();cnvSaveSync();};
+  inp.onchange=()=>cnvColBuild();
+  row.querySelector('[data-cnvrst]').onclick=()=>{delete canvasState.colors[v];canvasApplyColors();persistCanvas();cnvColBuild();cnvSaveSync();};
+  rows.appendChild(row);
+ }
+}
+function cnvTplPick(mode){
+ /* the fixed-but-floating selector (his words): click selects · a second click
+    de-selects · shift+click selects the range from the last click · Apply runs the
+    verb — 'apply' writes the palette into the picks, 'copy' pushes painted copies */
+ let w=document.getElementById('cnvTplPick');
+ if(w)w.remove();
+ w=document.createElement('div');
+ w.id='cnvTplPick';
+ w.style.cssText='position:fixed;z-index:121;top:50%;left:50%;transform:translate(-50%,-50%);width:340px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.55);padding:0 0 10px;';
+ w.innerHTML='<div class="winHead"><span class="picon">🎨</span><span class="wtitle">'+(mode==='copy'?'Copy & paint templates':'Paint templates')+'</span><span class="wbtn" id="cnvPickX" title="Close">✕</span></div>'
+  +'<div style="font-size:10.5px;color:var(--dim);padding:6px 12px 2px;">Click selects · click again de-selects · ⇧-click selects the range. Then Apply.</div>'
+  +'<div id="cnvPickRow" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;padding:6px 12px;"></div>'
+  +'<div style="padding:4px 12px 0;"><button id="cnvPickGo" style="font-size:11.5px;padding:5px 14px;">Apply</button></div>';
+ document.body.appendChild(w);
+ const picks=new Set();let last=-1;
+ const row=w.querySelector('#cnvPickRow');
+ canvasState.templates.forEach((t,i)=>{
+  const b=document.createElement('button');
+  b.style.cssText='text-align:left;font-size:11.5px;padding:5px 10px;border-radius:6px;border:2px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;';
+  b.textContent=t.name;
+  b.onclick=e=>{
+   if(e.shiftKey&&last>=0){
+    for(let k=Math.min(last,i);k<=Math.max(last,i);k++)picks.add(k);
+   }else{
+    if(picks.has(i))picks.delete(i);else picks.add(i);
+    last=i;
+   }
+   [...row.children].forEach((el,k)=>{el.style.borderColor=picks.has(k)?'var(--accent)':'var(--line)';});
+  };
+  row.appendChild(b);
+ });
+ if(!canvasState.templates.length)row.innerHTML='<span style="font-size:11px;color:var(--dim);">No templates yet — make one in the Canvas window first.</span>';
+ w.querySelector('#cnvPickX').onclick=()=>w.remove();
+ w.querySelector('#cnvPickGo').onclick=()=>{
+  const cols=JSON.parse(JSON.stringify(canvasState.colors));
+  const sel=[...picks].sort((a,b)=>a-b);
+  if(mode==='copy')for(const i of sel){const t=canvasState.templates[i];
+   canvasState.templates.push({name:(t.name+' (painted)').slice(0,60),zoom:JSON.parse(JSON.stringify(t.zoom)),swipe:t.swipe,colors:JSON.parse(JSON.stringify(cols))});}
+  else for(const i of sel){canvasState.templates[i].colors=JSON.parse(JSON.stringify(cols));}
+  persistCanvas();cnvBuild();w.remove();
+ };
+}
+function cnvColWinToggle(){
+ let w=document.getElementById('cnvColWin');
+ if(w){w.style.display=w.style.display==='none'?'':'none';if(w.style.display!=='none')cnvColBuild();return;}
+ w=document.createElement('div');
+ w.id='cnvColWin';
+ w.style.cssText='position:fixed;z-index:120;top:110px;left:140px;width:380px;max-width:92vw;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.5);';
+ w.innerHTML='<div class="winHead" id="cnvColHead" style="cursor:grab;"><span class="picon">🎨</span><span class="wtitle">Color Palette</span>'
+  +'<span class="wbtn" id="cnvColX" title="Close">✕</span></div>'
+  +'<div id="cnvColRows" style="padding:8px 12px;"></div>'
+  +'<div style="display:flex;flex-direction:column;gap:6px;padding:2px 12px 12px;">'
+  +'<button id="cnvColSel"  style="font-size:11px;padding:5px 10px;">Apply to selected “Canvas Templates”</button>'
+  +'<button id="cnvColAll"  style="font-size:11px;padding:5px 10px;">Apply to All Canvas Templates</button>'
+  +'<button id="cnvColCpSel" style="font-size:11px;padding:5px 10px;">Create Copies of Selected Canvas Templates and Apply</button>'
+  +'<button id="cnvColCpAll" style="font-size:11px;padding:5px 10px;">Create Copies of All Canvas Templates and Apply</button>'
+  +'</div>';
+ document.body.appendChild(w);
+ w.querySelector('#cnvColX').onclick=()=>{w.style.display='none';};
+ const head=w.querySelector('#cnvColHead');
+ head.onmousedown=e=>{
+  if(e.target.classList.contains('wbtn'))return;
+  const sx=e.clientX-w.offsetLeft,sy=e.clientY-w.offsetTop;
+  const mv=ev=>{w.style.left=Math.max(0,ev.clientX-sx)+'px';w.style.top=Math.max(0,ev.clientY-sy)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  e.preventDefault();
+ };
+ const cols=()=>JSON.parse(JSON.stringify(canvasState.colors));
+ w.querySelector('#cnvColSel').onclick=()=>cnvTplPick('apply');
+ w.querySelector('#cnvColCpSel').onclick=()=>cnvTplPick('copy');
+ w.querySelector('#cnvColAll').onclick=()=>{
+  for(const t of canvasState.templates)t.colors=cols();
+  persistCanvas();cnvBuild();
+ };
+ w.querySelector('#cnvColCpAll').onclick=()=>{
+  const src=[...canvasState.templates];
+  for(const t of src)canvasState.templates.push({name:(t.name+' (painted)').slice(0,60),zoom:JSON.parse(JSON.stringify(t.zoom)),swipe:t.swipe,colors:cols()});
+  persistCanvas();cnvBuild();
+ };
+ cnvColBuild();
+}
+const CNV_SWIPES=[
+ ['v','Up / down','One column — swipe up and down across both halves to reveal more windows above or below.'],
+ ['h2','Two rows, each left / right','The top half and the bottom half each swipe left and right independently.'],
+ ['eq3','Three equal rows','Top, middle, bottom in equal parts — the middle is the Essence Shelf.'],
+ ['uneq3','Three rows, slim middle','The middle Essence Shelf takes 7.5% of the lower half of the top window and 7.5% of the upper half of the bottom one.']];
+const CNV_INFO_H2='The default is for the top box to be "Multi-Track Grids" and for the bottom to be what we call "Engines" which are windows that transform what’s in the multi-track grids. There is even a window to effect multiple-multi-track grids, and it can change the Display Canvas from inside it’s window.';
+function cnvSwipeBoxHTML(id){
+ const arr='color:var(--accent);font-weight:700;';
+ if(id==='v')return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:2px;"><span style="'+arr+'">↑</span><div style="width:80%;border-top:1px solid var(--line);"></div><span style="'+arr+'">↓</span></div>';
+ if(id==='h2')return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;"><div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><span style="'+arr+'">←</span><span style="'+arr+'">→</span></div><div style="border-top:1px solid var(--line);"></div><div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 4px;"><span style="'+arr+'">←</span><span style="'+arr+'">→</span></div></div>';
+ if(id==='eq3')return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;"><div style="flex:1;"></div><div style="flex:1;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--dim);">SHELF</div><div style="flex:1;"></div></div>';
+ return '<div style="border:1px solid var(--line);border-radius:4px;height:64px;display:flex;flex-direction:column;"><div style="flex:1 1 46%;"></div><div style="flex:0 0 15%;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:7px;color:var(--dim);">SHELF 15%</div><div style="flex:1 1 46%;"></div></div>';
+}
+function cnvBuild(){
+ const w=document.getElementById('cnvWin');if(!w)return;
+ /* the zoom display */
+ const zh=w.querySelector('#cnvSuites');zh.innerHTML='';
+ for(const [k,name] of CNV_SUITES.map(s=>[s[0],s[1]]).concat([['custom','Custom']])){
+  const c=document.createElement('span');
+  c.className='cpchip'+(canvasState.suite===k?' on':'');
+  c.textContent=name;
+  if(k!=='custom')c.onclick=()=>{
+   const s=CNV_SUITES.find(x=>x[0]===k);
+   canvasState.suite=k;canvasState.zoom=JSON.parse(JSON.stringify(s[2]));
+   canvasApplyZoom();persistCanvas();cnvBuild();
+  };
+  else c.title='Move any slider — the Custom suite is whatever you set. Save it as a template below.';
+  zh.appendChild(c);
+ }
+ const zl=w.querySelector('#cnvSliders');zl.innerHTML='';
+ for(const win of cnvWins()){
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:8px;margin:2px 0;';
+  const pct=canvasZoomFor(win.id);
+  row.innerHTML='<span style="flex:0 0 130px;font-size:11px;color:'+(win.id==='all'?'var(--text);font-weight:700':'var(--dim)')+';">'+win.name+'</span>'
+   +'<input type="range" min="0" max="200" step="5" value="'+pct+'" data-cnv="'+win.id+'" style="flex:1 1 auto;">'
+   +'<span style="flex:0 0 40px;font-size:11px;text-align:right;" data-cnvpct="'+win.id+'">'+pct+'%</span>';
+  const r=row.querySelector('input');
+  r.oninput=()=>{
+   canvasState.zoom[win.id]=canvasZoomClamp(r.value);
+   canvasState.suite='custom';
+   row.querySelector('[data-cnvpct]').textContent=canvasZoomClamp(r.value)+'%';
+   canvasApplyZoom();persistCanvas();cnvSuiteSync();cnvSaveSync();
+  };
+  zl.appendChild(row);
+ }
+ /* the swipe display */
+ const sw=w.querySelector('#cnvSwipe');sw.innerHTML='';
+ for(const [id,name] of CNV_SWIPES.map(s=>[s[0],s[1]])){
+  const box=document.createElement('div');
+  box.draggable=true;
+  box.style.cssText='width:120px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid '+(canvasState.swipe===id?'var(--accent)':'transparent')+';';
+  box.innerHTML=cnvSwipeBoxHTML(id)+'<div style="font-size:9.5px;color:var(--dim);margin-top:2px;text-align:center;">'+name+(id!=='v'?' <span style="opacity:.7;">(saved — the split engine arrives in its own round)</span>':'')+'</div>';
+  box.title=CNV_SWIPES.find(s=>s[0]===id)[2];
+  box.onclick=()=>{canvasState.swipe=id;persistCanvas();cnvBuild();cnvSaveSync();};
+  box.ondragstart=e=>{e.dataTransfer.setData('text/plain','cnv/swipe:'+id);};
+  const holder=document.createElement('div');holder.style.cssText='display:flex;align-items:flex-start;gap:2px;';
+  holder.appendChild(box);
+  if(id==='h2'){
+   const inf=document.createElement('span');
+   inf.textContent='ⓘ';
+   inf.title='What the two rows hold by default';
+   inf.style.cssText='cursor:pointer;color:var(--accent);font-size:13px;';
+   inf.onclick=e=>{e.stopPropagation();showInfo('<span id="infoClose">✕</span><h2>The two-row swipe</h2><p>'+CNV_INFO_H2+'</p>');};   /* showInfo callers supply their own #infoClose — the shipped idiom */
+   holder.appendChild(inf);
+  }
+  sw.appendChild(holder);
+ }
+ /* the templates strip */
+ const tr=w.querySelector('#cnvTplRow');tr.innerHTML='';
+ canvasState.templates.forEach((t,i)=>{
+  const b=document.createElement('button');
+  b.className='cnvTpl';
+  b.style.cssText='flex:0 0 auto;font-size:11px;padding:6px 12px;border-radius:6px;border:2px '+(cnvSel===i?'solid var(--accent)':'solid var(--line)')+';background:var(--panel2);color:var(--text);cursor:pointer;';
+  b.textContent=t.name;
+  b.title='Click = this session jumps to this template. Double-click = rename. Delete = remove (⌘Z restores). Drop a swipe box on it to change its swipe.';
+  b.onclick=()=>cnvTplApply(i);
+  b.ondblclick=()=>{
+   const inp=document.createElement('input');
+   inp.value=t.name;inp.style.cssText='font-size:11px;width:110px;';
+   b.textContent='';b.appendChild(inp);inp.focus();inp.select();
+   const done=()=>{t.name=(inp.value.trim()||t.name).slice(0,60);persistCanvas();cnvBuild();};
+   inp.onblur=done;inp.onkeydown=e=>{if(e.key==='Enter')done();e.stopPropagation();};
+  };
+  b.ondragover=e=>{e.preventDefault();};
+  b.ondrop=e=>{
+   e.preventDefault();
+   const d=e.dataTransfer.getData('text/plain');
+   if(d&&d.slice(0,10)==='cnv/swipe:'){t.swipe=d.slice(10);persistCanvas();cnvBuild();}
+  };
+  tr.appendChild(b);
+ });
+ const plus=document.createElement('div');
+ plus.id='cnvTplPlus';
+ plus.style.cssText='flex:0 0 auto;min-width:84px;height:34px;border:2px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--dim);cursor:pointer;';
+ plus.textContent='＋';
+ plus.title='Click — or drag the Zoom Suite’s title (or a swipe box) in — to save the current set-up as a template.';
+ plus.onclick=()=>cnvTplCreate();
+ plus.ondragover=e=>{e.preventDefault();plus.style.borderColor='var(--accent)';};
+ plus.ondragleave=()=>{plus.style.borderColor='var(--line)';};
+ plus.ondrop=e=>{e.preventDefault();plus.style.borderColor='var(--line)';cnvTplCreate();};
+ tr.appendChild(plus);
+ cnvSaveSync();
+}
+function cnvSuiteSync(){
+ const w=document.getElementById('cnvWin');if(!w)return;
+ w.querySelectorAll('#cnvSuites .cpchip').forEach(c=>c.classList.toggle('on',c.textContent===(canvasState.suite==='custom'?'Custom':(CNV_SUITES.find(s=>s[0]===canvasState.suite)||['','?'])[1])));
+}
+function cnvSaveSync(){
+ const sb=document.getElementById('cnvSaveBtn');if(!sb)return;
+ sb.style.display=cnvTplDiffers()?'':'none';
+}
+function canvasWinToggle(){
+ let w=document.getElementById('cnvWin');
+ if(w){w.style.display=w.style.display==='none'?'':'none';if(w.style.display!=='none'){cnvBuild();w.focus();}return;}
+ w=document.createElement('div');
+ w.id='cnvWin';w.tabIndex=-1;
+ w.style.cssText='position:fixed;z-index:119;top:70px;left:70px;width:660px;max-width:92vw;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.5);outline:none;';
+ if(canvasState.x!=null&&canvasState.y!=null){w.style.left=canvasState.x+'px';w.style.top=canvasState.y+'px';}
+ w.innerHTML='<div class="winHead" id="cnvWinHead" style="cursor:grab;"><span class="picon">🖼</span><span class="wtitle">Canvas</span>'
+  +'<span class="wbtn" id="cnvCloseChip" title="Close the Canvas window">✕</span></div>'
+  +'<div style="display:flex;gap:14px;padding:10px 12px;align-items:stretch;">'
+  +'<div style="flex:1 1 auto;min-width:0;">'
+  +'<div id="cnvZoomHead" draggable="true" title="The Zoom Suite — drag this title into the Templates box below to save it as a template." style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;cursor:grab;">Zoom suite <span style="opacity:.6;">(0–200% per window, live)</span></div>'
+  +'<div id="cnvSuites" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"></div>'
+  +'<div id="cnvSliders" style="max-height:240px;overflow:auto;padding-right:4px;"></div>'
+  +'</div>'
+  +'<div style="flex:0 0 auto;">'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;">Swipe</div>'
+  +'<div id="cnvSwipe" style="display:flex;flex-direction:column;gap:8px;"></div>'
+  +'<button id="cnvColBtn" title="Every app color — background, panels, borders, text, accent — in a floating window; paint templates with it." style="margin-top:10px;font-size:11px;padding:5px 10px;width:100%;">🎨 Color Palette</button>'
+  +'</div>'
+  +'</div>'
+  +'<div style="border-top:1px solid var(--line);padding:8px 12px 12px;">'
+  +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Templates</span>'
+  +'<button id="cnvFromSetup" style="font-size:11px;padding:4px 10px;">Template From Current Set-Up</button>'
+  +'<button id="cnvSaveBtn" style="display:none;font-size:11px;padding:4px 10px;background:var(--accent);color:#08131f;" title="You changed this template’s settings — save them back into it.">Save</button></div>'
+  +'<div id="cnvTplRow" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;"></div>'
+  +'</div>';
+ document.body.appendChild(w);
+ w.querySelector('#cnvCloseChip').onclick=e=>{e.stopPropagation();w.style.display='none';};
+ w.querySelector('#cnvFromSetup').onclick=()=>cnvTplCreate();
+ w.querySelector('#cnvSaveBtn').onclick=()=>{
+  const t=canvasState.templates[cnvSel];if(!t)return;
+  t.zoom=JSON.parse(JSON.stringify(canvasState.zoom));t.swipe=canvasState.swipe;
+  t.colors=JSON.parse(JSON.stringify(canvasState.colors));
+  persistCanvas();cnvBuild();
+ };
+ w.querySelector('#cnvColBtn').onclick=()=>cnvColWinToggle();
+ w.querySelector('#cnvZoomHead').ondragstart=e=>{e.dataTransfer.setData('text/plain','cnv/zoom');};
+ /* the head drag — the window moves anywhere (his "move it out of the way") */
+ const head=w.querySelector('#cnvWinHead');
+ head.onmousedown=e=>{
+  if(e.target.classList.contains('wbtn'))return;
+  const sx=e.clientX-w.offsetLeft,sy=e.clientY-w.offsetTop;
+  const mv=ev=>{w.style.left=Math.max(0,ev.clientX-sx)+'px';w.style.top=Math.max(0,ev.clientY-sy)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+   canvasState.x=w.offsetLeft;canvasState.y=w.offsetTop;persistCanvas();};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  e.preventDefault();
+ };
+ /* Delete removes the selected template; ⌘Z restores — owned per-event, never
+    propagation-stopped (the router lesson) */
+ w.addEventListener('keydown',e=>{
+  if(isTypingTarget(document.activeElement))return;
+  const mod=e.metaKey||e.ctrlKey;
+  if((e.key==='Delete'||e.key==='Backspace')&&cnvSel!=null&&canvasState.templates[cnvSel]){
+   cnvUndoStack.push({t:canvasState.templates[cnvSel],i:cnvSel});
+   canvasState.templates.splice(cnvSel,1);
+   cnvSel=null;persistCanvas();cnvBuild();
+   e._cnvOwned=true;e.preventDefault();w.focus();
+  }else if(mod&&(e.key==='z'||e.key==='Z')&&!e.shiftKey&&cnvUndoStack.length){
+   const u=cnvUndoStack.pop();
+   canvasState.templates.splice(Math.min(u.i,canvasState.templates.length),0,u.t);
+   cnvSel=Math.min(u.i,canvasState.templates.length-1);
+   persistCanvas();cnvBuild();
+   e._cnvOwned=true;e.preventDefault();
+  }
+ });
+ cnvBuild();
+ w.focus();
+}
+/* boot: the button wire + the saved canvas re-apply. The apply DEFERS a tick so it
+   runs after the whole script parses (WINDOW_DEFS and the late windows exist by then),
+   and it wraps so a fault here can never take the boot down (the cp_ui lesson, §2 ⑪) */
+{const _cb=document.getElementById('canvasBtn');if(_cb)_cb.onclick=e=>{canvasWinToggle();e.target.blur();};}
+setTimeout(()=>{try{canvasApplyZoom();canvasApplyColors();}catch(e){}},0);
+/* ==== [C5] FIXED IN PLACE + [C6] THE SWIPE BUTTON (79th R4 — his words verbatim in
+   CANVAS-SWIPE-RAW-2026-08-27.md): the glowing "Fixed In Place" chip pins the top
+   Multi-Track Grid (sticky under the chrome; default OFF; SETTINGS.fixedGrid flips
+   the boot default); the ⇅ Swipe button's floating window picks the scroll pattern —
+   Pattern 1 up/down (default) · Pattern 2 = the pin ON + everything below the grid
+   riding ONE horizontal row (body.swipeH). ⚠ His Pattern 3 arrived TRUNCATED — the
+   slot is parked, not guessed (the RAW carries the flag). ==== */
+let gridFixedNow=false,swipePatNow=1;
+function gridFixApply(){
+ const g=document.getElementById('gridRowWrap');if(!g)return;
+ g.classList.toggle('gridFixed',!!gridFixedNow);
+ if(gridFixedNow){
+  const pt=parseFloat(getComputedStyle(document.body).paddingTop)||0;
+  g.style.setProperty('--fixTop',pt+'px');
+ }
+ const chip=document.getElementById('gridFixTog');
+ if(chip)chip.classList.toggle('on',!!gridFixedNow);
+}
+function swipePatApply(){
+ document.body.classList.toggle('swipeH',swipePatNow===2);
+ const sw=document.getElementById('swipeWin');
+ if(sw)sw.querySelectorAll('[data-swpat]').forEach(el=>{
+  el.style.borderColor=(+el.dataset.swpat===swipePatNow)?'var(--accent)':'var(--line)';});
+}
+{const _ft=document.getElementById('gridFixTog');
+ if(_ft)_ft.onclick=e=>{e.stopPropagation();gridFixedNow=!gridFixedNow;gridFixApply();};}
+window.addEventListener('resize',()=>{if(gridFixedNow)try{gridFixApply();}catch(e){}});
+function swipeWinToggle(){
+ let w=document.getElementById('swipeWin');
+ if(w){w.style.display=w.style.display==='none'?'':'none';return;}
+ w=document.createElement('div');
+ w.id='swipeWin';
+ w.style.cssText='position:fixed;z-index:119;top:90px;right:40px;width:300px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.5);';
+ w.innerHTML='<div class="winHead" id="swipeWinHead" style="cursor:grab;"><span class="picon">⇅</span><span class="wtitle">Swipe</span>'
+  +'<span class="wbtn" id="swipeWinX" title="Close">✕</span></div>'
+  +'<div style="padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px;">'
+  +'<div data-swpat="1" style="border:2px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;"><b style="font-size:12px;">Pattern 1 — Up and down</b><div style="font-size:10.5px;color:var(--dim);">The default: one column, swipe up and down to reveal more windows.</div></div>'
+  +'<div data-swpat="2" style="border:2px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;"><b style="font-size:12px;">Pattern 2 — Pinned grid · horizontal below</b><div style="font-size:10.5px;color:var(--dim);">The top Multi-Track Grid is fixed (the “Fixed In Place” chip lights) and the rest of the windows swipe left and right across the lower half.</div></div>'
+  +'<div style="border:2px dashed var(--line);border-radius:8px;padding:8px 10px;opacity:.55;"><b style="font-size:12px;">Pattern 3</b><div style="font-size:10.5px;color:var(--dim);">Reserved — say the word and it lands here.</div></div>'
+  +'</div>';
+ document.body.appendChild(w);
+ w.querySelector('#swipeWinX').onclick=()=>{w.style.display='none';};
+ const head=w.querySelector('#swipeWinHead');
+ head.onmousedown=e=>{
+  if(e.target.classList.contains('wbtn'))return;
+  const sx=e.clientX-w.offsetLeft,sy=e.clientY-w.offsetTop;
+  const mv=ev=>{w.style.left=Math.max(0,ev.clientX-sx)+'px';w.style.top=Math.max(0,ev.clientY-sy)+'px';w.style.right='auto';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  e.preventDefault();
+ };
+ w.querySelectorAll('[data-swpat]').forEach(el=>{
+  el.onclick=()=>{
+   swipePatNow=+el.dataset.swpat;
+   if(swipePatNow===2&&!gridFixedNow){gridFixedNow=true;gridFixApply();}   /* his words: Pattern 2 "just press the 'fixed in place'" */
+   swipePatApply();
+  };
+ });
+ swipePatApply();
+}
+{const _sb=document.getElementById('swipeBtn');if(_sb)_sb.onclick=e=>{swipeWinToggle();e.target.blur();};}
+/* ==== [W1] THE CHORD PROGRESSIONS WINDOW (79th R5 — his words verbatim in the RAW):
+   "exactly like the Cadences window, only instead of Cadences meant to modify the END
+   of a musical phrase, these are chord progressions meant to be the STRUCTURE of the
+   entire musical phrase." One data home: PROG_LIB + CADENCE_LIB + the curated songs —
+   the same §10.2 families, resolved at the PHRASE's key, written across the WHOLE
+   phrase. A new-model column window (⛔ not a WINDOW_DEFS promotion). ==== */
+function progWritePhrase(chords,a,b,run){
+ /* pure: replace the lane region [a,b) with the run scaled to FILL it — the chords
+    crossing either boundary keep their outside fragments, the total lane length never
+    moves. Refusals: junk, a backwards span, under half a beat per chord. */
+ if(!Array.isArray(chords)||!chords.length||!Array.isArray(run)||!run.length)return null;
+ if(typeof a!=='number'||typeof b!=='number'||!(b-a>1e-9))return null;
+ if((b-a)/run.length<.5-1e-9)return null;
+ for(const c of run)if(!c||typeof c.r!=='number'||!Array.isArray(c.iv))return null;
+ const out=[];let t=0,total=0;
+ for(const c of chords){total+=c.d;}
+ if(a<-1e-9||b>total+1e-9)return null;
+ for(const c of chords){
+  const s=t,e=t+c.d;t=e;
+  if(e<=a+1e-9){out.push({...c,iv:c.iv.slice()});continue;}   /* wholly before */
+  if(s>=b-1e-9){out.push({...c,iv:c.iv.slice()});continue;}   /* wholly after */
+  if(s<a-1e-9)out.push({...c,iv:c.iv.slice(),d:a-s});         /* the head fragment */
+  if(e>b+1e-9)out.push({...c,iv:c.iv.slice(),d:e-b,_tail:1}); /* the tail fragment — placed now, moved after the run below */
+ }
+ /* seat the run between the fragments: find the insertion index (after every chord
+    ending ≤ a) */
+ let idx=0,tt=0;
+ for(const c of out){if(c._tail)break;if(tt+c.d<=a+1e-9){idx++;tt+=c.d;}else break;}
+ const w=run.map(c=>(typeof c.d==='number'&&c.d>0)?c.d:1);
+ const scale=(b-a)/w.reduce((x,y)=>x+y,0);
+ const seg=run.map((c,i)=>({d:Math.round(w[i]*scale*4)/4,r:((c.r%12)+12)%12,iv:c.iv.slice(),lbl:c.lbl,bass:typeof c.bass==='number'?c.bass:0}));
+ /* rounding drift lands on the LAST chord so the lane total is exact */
+ const segSum=seg.reduce((x,c)=>x+c.d,0);
+ seg[seg.length-1].d+=Math.round(((b-a)-segSum)*4)/4;
+ if(seg[seg.length-1].d<.25)return null;
+ out.splice(idx,0,...seg);
+ for(const c of out)delete c._tail;
+ return {chords:out};
+}
+let progState={cat:'def',sel:null,phrase:null,q:''};
+function progPhrases(){
+ const ss=Array.isArray(project.sections)?project.sections:[];
+ const bounds=[0].concat(phraseEnds(ss,LOOP).map(e=>e.beat)).filter((v,i,arr)=>i===0||v>arr[i-1]+1e-9);
+ const out=[];
+ for(let i=1;i<bounds.length;i++)out.push({a:bounds[i-1],b:bounds[i],name:(ss[i-1]&&ss[i-1].name)||('Phrase '+i),sec:Math.min(i-1,Math.max(0,ss.length-1))});
+ return out;
+}
+function progPhraseSel(){
+ const ps=progPhrases();if(!ps.length)return null;
+ if(progState.phrase!=null){const hit=ps.find(p=>Math.abs(p.a-progState.phrase)<1e-6);if(hit)return hit;}
+ const beat=activeKeyBeat();
+ for(const p of ps)if(beat<p.b-1e-6)return p;
+ return ps[ps.length-1];
+}
+function progCtxFor(p){
+ const ss=project.sections;
+ const k=(ss&&ss[p.sec])||{tonic:project.tonic,mode:project.mode};
+ return {tonic:((k.tonic%12)+12)%12,minor:modeIsMinor(k.mode),lane:null};
+}
+function progRunFor(entry,ctx){
+ if(entry.kind==='cur')return entry.chords.map(c=>({r:c.r,iv:c.iv.slice(),lbl:c.lbl,d:c.d}));
+ if(entry.kind==='smp')return (ctx.minor&&entry.t.runM?entry.t.runM:entry.t.run).map(s=>({r:((ctx.tonic+s.deg)%12+12)%12,iv:(s.q==='T'?(ctx.minor?[0,3,7]:[0,4,7]):s.iv.slice()),lbl:s.lbl,d:s.d}));
+ return progResolve(pcsEntrySteps(entry.p),ctx);
+}
+function progCards(){
+ /* the same one-home sources the Pivot Chord Search reads */
+ const out=[];
+ if(progState.cat==='cur')pcsCurated().forEach((s,i)=>out.push({kind:'cur',name:s.name,chords:s.chords,id:'cur:'+i}));
+ else if(progState.cat==='smp')CADENCE_LIB.filter(x=>x.cat==='cls').forEach((t,i)=>out.push({kind:'smp',name:t.name,t,id:'smp:'+i}));
+ else PROG_LIB.filter(p2=>p2.fam===progState.cat).forEach((p2,i)=>out.push({kind:'lib',name:p2.name||'',p:p2,id:'p:'+progState.cat+':'+i}));
+ return out;
+}
+function progAudition(run){
+ const go=()=>{try{
+  if(!audioReady||!inst||!run)return;
+  const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
+  let at=0;
+  for(const c of run){const d=(typeof c.d==='number'&&c.d>0)?Math.min(c.d,2):1;inst.note('comping',voice({r:c.r,iv:c.iv},null),d*spb*.95,t0+at*spb,.5);at+=d;}
+ }catch(e){}};
+ if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+}
+function progBuild(){
+ const w=document.getElementById('progPanel');if(!w||w.style.display==='none')return;
+ const sel=progPhraseSel();
+ /* the phrase chips — the WHOLE phrase each, not its ending */
+ const pr=w.querySelector('#progPhrases');
+ pr.innerHTML='<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Phrase</span>';
+ for(const p of progPhrases()){
+  const chip=document.createElement('span');
+  chip.className='cpchip'+(sel&&Math.abs(sel.a-p.a)<1e-6?' on':'');
+  chip.textContent=p.name+' · bars '+(Math.round(p.a/4)+1)+'–'+Math.round(p.b/4);
+  chip.onclick=()=>{progState.phrase=p.a;progBuild();};
+  pr.appendChild(chip);
+ }
+ /* the category column */
+ const tabs=w.querySelector('#progTabs');tabs.innerHTML='';
+ for(const [id,name] of PCS_CATS){
+  const c=document.createElement('span');
+  c.className='cpchip'+(progState.cat===id?' on':'');
+  c.style.display='block';c.style.textAlign='left';
+  c.textContent=name;
+  c.onclick=()=>{progState.cat=id;progBuild();};
+  tabs.appendChild(c);
+ }
+ /* the cards, resolved at the PHRASE's key */
+ const cards=w.querySelector('#progCards');cards.innerHTML='';
+ const ctx=sel?progCtxFor(sel):{tonic:project.tonic,minor:modeIsMinor(project.mode),lane:null};
+ const q=String(progState.q||'').trim().toLowerCase();
+ for(const e of progCards()){
+  const run=progRunFor(e,ctx);if(!run)continue;
+  const chain=run.map(c=>dispLbl(c.lbl)).join(' – ');
+  if(q&&!((e.name||'')+' '+chain).toLowerCase().includes(q))continue;
+  const d=document.createElement('div');
+  d.className='mimCard'+(progState.sel===e.id?' on':'');
+  d.title='Press = hear it in this phrase’s key (nothing is written) · ✓ writes it across the WHOLE phrase.';
+  d.innerHTML=(e.name?'<div class="mimName">'+e.name+'</div>':'')+'<div class="mimChain">'+chain+'</div>';
+  d.onclick=()=>{progState.sel=e.id;progBuild();progAudition(run);};
+  cards.appendChild(d);
+ }
+ if(!cards.children.length)cards.innerHTML='<span style="font-size:11.5px;color:var(--dim);">'+(q?'Nothing matches the 🔎 — clear it to see every progression.':'Nothing here yet.')+'</span>';
+ /* the info pane */
+ const info=w.querySelector('#progInfo');
+ const hit=progCards().find(e=>e.id===progState.sel);
+ if(hit&&sel){
+  const run=progRunFor(hit,ctx);
+  info.innerHTML='<div style="font-weight:700;margin-bottom:4px;">'+(hit.name||'Progression')+'</div>'
+   +'<div class="mimChain" style="margin-bottom:6px;">'+(run?run.map(c=>dispLbl(c.lbl)).join(' → '):'?')+'</div>'
+   +'<div style="color:var(--dim);">Writes across the whole of '+sel.name+' (bars '+(Math.round(sel.a/4)+1)+'–'+Math.round(sel.b/4)+'), each chord scaled to fill the phrase — the Cadence window shapes only the ending; this shapes everything.</div>';
+ }else info.innerHTML='<span style="color:var(--dim);">Select a progression — its details live here. The phrase chips above pick WHICH phrase it restructures.</span>';
+}
+function progApplySel(){
+ const sel=progPhraseSel();
+ if(!sel){setProgStatus('No phrase to write into.');return false;}
+ if(effectiveChords()!==project.chords){setProgStatus('Toggle ⚡ Psych-out off before editing the chord lane.');return false;}
+ const hit=progCards().find(e=>e.id===progState.sel);
+ if(!hit){setProgStatus('Choose a progression card first.');return false;}
+ const run=progRunFor(hit,progCtxFor(sel));
+ if(!run||!run.length){setProgStatus('That progression resolves to nothing here.');return false;}
+ const res=progWritePhrase(project.chords,sel.a,sel.b,run);
+ if(!res){setProgStatus('The phrase is too short for that many chords — every chord needs at least half a beat.');return false;}
+ snapshot();
+ noteEngine('progressions',{id:String(progState.sel),phrase:sel.a});
+ project.chords=res.chords;
+ selChord=null;closePalette();
+ setProgStatus('Wrote '+run.map(c=>dispLbl(c.lbl)).join(' → ')+' across '+sel.name+' — the whole phrase restructured · ⌘Z undoes.');
+ refresh(true);
+ progBuild();
+ return true;
+}
+let progStatusTimer=null;
+function setProgStatus(msg){
+ const el=document.getElementById('progStatus');if(!el)return;
+ el.textContent=msg;
+ clearTimeout(progStatusTimer);progStatusTimer=setTimeout(()=>{el.textContent='';},6000);
+}
+function progWinToggle(){
+ let w=document.getElementById('progPanel');
+ if(w){w.style.display=w.style.display==='none'?'':'none';if(w.style.display!=='none'){progBuild();try{w.scrollIntoView({block:'center'});}catch(e){}}return;}
+ w=document.createElement('div');
+ w.id='progPanel';w.className='gridwrap';w.style.margin='12px 0';
+ w.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄋 Chord PROGRESSIONS — the structure of the WHOLE phrase (a cadence shapes only its ending)</span>'
+  +'<input id="progSearchInp" spellcheck="false" placeholder="🔎 SEARCH" title="One more filter on top of the columns — the Omnisphere model." style="margin-left:auto;font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:150px;">'
+  +'<span class="wbtn" id="progCloseChip" title="Close">✕</span></div>'
+  +'<div id="progPhrases" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;"></div>'
+  +'<div style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:200px;">'
+  +'<div id="progTabs" style="display:flex;flex-direction:column;gap:2px;flex:0 0 200px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>'
+  +'<div id="progCards" style="display:flex;flex-direction:column;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:360px;"></div>'
+  +'<div id="progInfo" style="flex:0 0 252px;padding:10px;border-left:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11.5px;color:var(--text);"></div>'
+  +'</div>'
+  +'<div style="display:flex;gap:12px;align-items:center;margin-top:10px;">'
+  +'<button id="progApplyBtn" title="Replace the selected phrase’s chords with this progression, scaled to fill it exactly — one undo.">✓ Write across the phrase</button></div>'
+  +'<div id="progStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>';
+ const anchor=document.getElementById('cadPanel');
+ (anchor&&anchor.parentNode?anchor.parentNode:document.body).insertBefore(w,anchor?anchor.nextSibling:null);
+ w.querySelector('#progCloseChip').onclick=e=>{e.stopPropagation();w.style.display='none';};
+ w.querySelector('#progSearchInp').oninput=e=>{progState.q=e.target.value;progBuild();};
+ w.querySelector('#progApplyBtn').onclick=e=>{progApplySel();e.target.blur();};
+ progBuild();
+ try{w.scrollIntoView({block:'center'});}catch(e){}
+}
+/* ==== [G1]/[G2] THE GRID HEADER REWORK + THE MIXER TOGGLE VIEW (79th R6 — his words
+   verbatim in the RAW): the song title + description move INTO the title bar (right of
+   the label — the zoomStrip precedent, the real element rides); the winHead's ≡/🎚
+   2-part toggle swaps the grid's own box to the MIXER view and back; 🎨 toggles the
+   Chord Palette. ⚠ His mixer-view top-right sentence is TRUNCATED in the original —
+   what sits there is parked, not guessed (the winHead's own toggle stays reachable,
+   so "press again to revert" holds regardless). ==== */
+let gridMixView=false,_gmSaved=null;
+function gridMixApply(){
+ const gw=document.getElementById('gridWrap');if(!gw)return;
+ const tog=document.getElementById('gridMixTog');
+ if(tog)tog.querySelectorAll('span[data-mv]').forEach(sp=>sp.classList.toggle('on',(sp.dataset.mv==='mix')===gridMixView));
+ let host=document.getElementById('gridMixHost');
+ if(gridMixView){
+  const h=gw.getBoundingClientRect().height;
+  if(!host){
+   host=document.createElement('div');host.id='gridMixHost';
+   host.style.cssText='display:flex;flex-direction:column;gap:8px;';
+   gw.insertBefore(host,gw.children[1]||null);   /* directly under the title bar */
+  }
+  host.style.display='';
+  host.style.minHeight=Math.max(120,Math.round(h-60))+'px';   /* his "the same dimensions the current multi-track window is" */
+  /* park every other body row, remembering each one's own inline display EXACTLY —
+     several rows carry load-bearing inline 'none's of their own */
+  _gmSaved={};
+  for(const ch of [...gw.children]){
+   if(ch.id==='gridWinHead'||ch.id==='gridMixHost')continue;
+   _gmSaved[ch.id||('idx'+[...gw.children].indexOf(ch))]={el:ch,disp:ch.style.display};
+   ch.style.display='none';
+  }
+  /* the REAL mixer body moves in (the zoomStrip precedent) and draws */
+  const mb=document.getElementById('mixerBody');
+  if(mb&&mb.parentNode!==host)host.appendChild(mb);
+  try{if(typeof drawMixer==='function')drawMixer();}catch(e){}
+ }else{
+  if(host)host.style.display='none';
+  const mb=document.getElementById('mixerBody');
+  const mp=document.getElementById('mixerPop');
+  if(mb&&mp&&mb.parentNode!==mp)mp.appendChild(mb);   /* the pop keeps its body for verify-26r0's direct toggleMixer path */
+  if(_gmSaved){for(const k of Object.keys(_gmSaved))_gmSaved[k].el.style.display=_gmSaved[k].disp;_gmSaved=null;}
+ }
+}
+{const _mt=document.getElementById('gridMixTog');
+ if(_mt)_mt.onclick=e=>{e.stopPropagation();
+  const sp=e.target.closest('span[data-mv]');
+  gridMixView=sp?sp.dataset.mv==='mix':!gridMixView;
+  gridMixApply();};}
+{const _pb=document.getElementById('gridPalBtn');
+ if(_pb)_pb.onclick=e=>{e.stopPropagation();
+  const cp=document.getElementById('chordPanel');
+  if(cp&&cp.style.display!=='none'&&cp.getClientRects().length)palWinClose();else palWinReopen();};}
+/* the prov line rides INTO the title bar at boot (deferred a tick — the zoomStrip
+   precedent; refresh keeps writing it by id wherever it lives) */
+setTimeout(()=>{try{
+ const head=document.getElementById('gridWinHead'),prov=document.getElementById('prov');
+ if(head&&prov&&prov.parentNode!==head)head.insertBefore(prov,head.querySelector('#gridMixTog'));
+}catch(e){}},0);
+/* boot: the Settings default pins the grid (SETTINGS parses above this block; deferred
+   + wrapped all the same — the cp_ui lesson) */
+setTimeout(()=>{try{if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.fixedGrid===true){gridFixedNow=true;gridFixApply();}}catch(e){}},0);
+
 function palMatPick(i,id,m){
  if(id==='__search'){
   palSearchFor=i;
@@ -20892,6 +21594,7 @@ document.getElementById('btnSwingAct').onclick=()=>{swingActual();noteEngine('sw
 window.addEventListener('keydown',e=>{
  /* input safety: no grid shortcut fires while typing (inputs/selects/textareas/contenteditable) */
  if(isTypingTarget(document.activeElement))return;
+ if(e._cnvOwned)return;   /* the Canvas window handled this key (template delete / ⌘Z restore) — one owner per event, no propagation stopped */
  const mod=e.metaKey||e.ctrlKey;
  if(e.key===' '||e.code==='Space'){
   e.preventDefault();               /* keep the browser from page-scrolling on Space */
@@ -23188,7 +23891,8 @@ function parseSettings(str){
   countIn:0,latencyPref:'interactive',sinkId:'',
   classicHeads:false,
  navWithGrid:false,engView:'top-buttons',engTips:true,
- delLinked:true};   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ delLinked:true,
+ fixedGrid:false};   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -23208,6 +23912,7 @@ function parseSettings(str){
    if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
    if(o.showSecLane===false)def.showSecLane=false;   /* 2.5 ⑪f — 78th: default OFF */
    if(o.navWithGrid===true)def.navWithGrid=true;   /* 78th R5: the Navigator ships with the grid (default OFF, his words) */
+   if(o.fixedGrid===true)def.fixedGrid=true;   /* 79th R4 (his words): fixed-as-default is the Settings opt-in */
    if(['top-buttons','top-icons','left-buttons','left-icons'].indexOf(o.engView)>=0)def.engView=o.engView;   /* 78th R5: his four views */
    if(o.engTips===false)def.engTips=false;
    if(o.delLinked===false)def.delLinked=false;   /* 78th R4b: Delete-one opt-out */
@@ -24521,6 +25226,27 @@ function engViewApply(){
    if(typeof flashHint==='function')flashHint('Hover descriptions '+(SETTINGS.engTips===false?'OFF':'ON')+' — also in ⚙ Settings.');};
   eb.appendChild(b);
  }
+ /* 79th R5 [W1] (his words): the Chord Progressions window — a NEW-MODEL column window
+    (⛔ no WINDOW_DEFS promotion; the 12-pin stands across the suites); its button rides
+    the one group all the same */
+ {const pw=document.getElementById('progPanel');
+  const b=document.createElement('span');
+  b.className='part engChip'+((pw&&pw.style.display!=='none')?' on':'');
+  b.style.cssText='cursor:pointer;'+(icons?'padding:4px 9px;font-size:15px;':'padding:3px 10px;font-size:11.5px;');
+  b.textContent=icons?'𝄋':'𝄋 Progressions';
+  b.title=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.engTips===false)?'Progressions':'Progressions — chord progressions as the structure of the WHOLE musical phrase (the Cadence window shapes only its ending; these shape everything before it).';
+  b.setAttribute('data-eng','progPanel');
+  b.onclick=()=>{if(typeof progWinToggle==='function')progWinToggle();engViewApply();};
+  eb.appendChild(b);
+  const sb=document.createElement('span');
+  sb.className='part engChip'+((typeof slidePanelOpen!=='undefined'&&slidePanelOpen)?' on':'');
+  sb.style.cssText=b.style.cssText;
+  sb.textContent=icons?'〜':'〜 Slide';
+  sb.title=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.engTips===false)?'Slide':'Slide Engine — per-note pitch glides via the curve editor (his words: the grid chip retired, the window with the other windows at the top).';
+  sb.setAttribute('data-eng','slideWin');
+  sb.onclick=()=>{if(typeof toggleSlidePanel==='function')toggleSlidePanel();engViewApply();};
+  eb.appendChild(sb);
+ }
  ew.classList.toggle('engLeft',left);
  eb.style.flexDirection=left?'column':'row';
  fixedChromeApply();
@@ -25654,6 +26380,34 @@ function initHelpSearch(){
  };
  /* mixer + help/about */
  document.getElementById('mixerClose').onclick=toggleMixer;
+ /* ==== [ED1] THE EDUCATION TAB (79th R7 — his words verbatim in the RAW): "describe
+    the music theory of each button, and how the essences/variables/curiosities can be
+    used together to recreate any music" — the cadence-vs-progression definitions
+    worked in as asked. The blueprint-diary / avatar / favorites-workbench half of his
+    message is VISION material, recorded privately, deliberately not published here. */
+ const EDU_HTML=`<span id="infoClose">✕</span><h2>🎓 <span>Education</span> — the theory behind the buttons</h2>
+<h3>The big idea</h3>
+<p>Every piece of music is a bundle of separable habits — a melody’s rise and fall, a rhythm stripped of its notes, the way chords approach a phrase ending, which scale degrees a line leans on. This app calls each separable habit a <b>curiosity</b> (you’ll also see <i>essence</i> or <i>variable</i> — the same thing). Pull curiosities OUT of music you love, and you can recombine them to recreate that music’s feel — or drop a suite of them onto a different piece and hear it bend toward the original. Turn a piece around this way and you keep finding new ideas hidden inside the first: the same song, seen from different angles. String those angles together — hallway after hallway, path after path, flight after flight — and you are composing a musical adventure that keeps learning what you like.</p>
+<h3>Two definitions worth keeping straight</h3>
+<p><b>A cadence</b> means: the chords at the <i>end</i> of a musical phrase. Nothing more or less. It is the punctuation mark — the 𝄂 Cadences window writes one so it lands exactly on the phrase boundary.</p>
+<p><b>A chord progression</b> is the structure of the <i>entire</i> musical phrase — everything the cadence punctuates. The 𝄋 Progressions window replaces a whole phrase’s changes, scaled to fill it.</p>
+<h3>The windows, one line of theory each</h3>
+<p><b>▤ Multi-Track Grid</b> — the piece itself: melody, bass, drums and the chord lane on one timeline. Everything else reads from or writes into a grid.</p>
+<p><b>🎨 Chord Palette</b> — the diatonic chords of the key, stacked with the rows a chord can be APPROACHED from (its V, its ii). A vertical slice — a pivot-chord column — is a ready-made way into a chord, played bottom to top.</p>
+<p><b>🔎 Pivot Chord Search</b> — families of chord changes (default songs, chromatic mediants — chords a third away sharing a note but not a key — the Coltrane mediant cycles, Romantic-era moments). The “__” slot at the end of each is the chord YOU are heading home to.</p>
+<p><b>𝄂 Cadences</b> — perfect, plagal, deceptive, half: the handful of ways Western music ends a sentence, plus modulating cadences that end it in a NEW key.</p>
+<p><b>𝄋 Progressions</b> — the same families as whole-phrase structure: pick a phrase, pick its new skeleton.</p>
+<p><b>⚡ Modulate</b> — key changes and psych-out feints: the art of leaving a key convincingly (a bridge of chords that belongs to both worlds) or pretending to.</p>
+<p><b>➿ Melisma</b> — one syllable, many notes: runs, turns, scoops and gamakas — the vocal ornament vocabulary of gospel, soul and Carnatic music, applied to any line.</p>
+<p><b>〜 Slide</b> — per-note pitch glides: the bend INTO a note is itself a curiosity, drawn as a curve.</p>
+<p><b>⌕ Scales</b> — scales and ragas as environments: change the seven (or five, or nine) notes everything snaps to and the same music tells a different story.</p>
+<p><b>🧭 Wanderer &amp; 🪐 Orbits</b> — key relationships as GEOGRAPHY: nearby keys share chords (the pivot chords), and a modulation is a journey through a doorway both keys own.</p>
+<p><b>△ Prism</b> — the analyzer: splits a track into melody rise-and-fall, note DNA, and rhythm-without-notes — three curiosities extracted from one line, each ready to Keep on the Essence Shelf.</p>
+<p><b>🔷 Essence Shelf</b> — where kept curiosities live. Press one to hear it alone; Apply re-shapes a selection through it. This is the recombination bench.</p>
+<p><b>★ Variations · ⇪ Import · ≈ Samples · 🧳 Trips · 🔧 Setup</b> — the memory, the sources, the sounds, the itinerary of coming key changes, and the wiring.</p>
+<h3>How to use this page</h3>
+<p>Hover any button in the app for its own description (ctrl-click a button in the Engines window to toggle those). This tab is the theory; ? Help is the gestures.</p>`;
+ document.getElementById('eduBtn').onclick=e=>{showInfo(EDU_HTML);e.target.blur();};
  document.getElementById('helpBtn').onclick=e=>{showInfo(HELP_HTML);initHelpSearch();e.target.blur();};
  document.getElementById('aboutBtn').onclick=e=>{showInfo(ABOUT_HTML);e.target.blur();};
  document.getElementById('setBtn').onclick=e=>{openSettings();e.target.blur();};
@@ -25712,6 +26466,7 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setDelLinked" ${SETTINGS.delLinked!==false?'checked':''}> Delete closes the whole linked group</label> <span class="dim">— with a window selected and nothing inside it selected, Delete closes it AND its linked windows (uncheck: just the one).</span></p>
  <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
+ <p><label><input type="checkbox" id="setFixGrid" ${SETTINGS.fixedGrid===true?'checked':''}> <b>Multi-Track Grid fixed in place by default</b> — the top grid boots pinned (the grid’s own “Fixed In Place” chip still toggles it live)</label></p>
  <p><label><input type="checkbox" id="setKeysLane" ${SETTINGS.showKeysLane===true?'checked':''}> <b>Keys lane</b> — the key-region strip above the grid (off by default since the grids slimmed)</label>
  <label style="margin-left:14px;"><input type="checkbox" id="setTempoLane" ${SETTINGS.showTempoLane===true?'checked':''}> <b>Tempo lane</b> — the tempo envelope strip (off by default)</label></p>
  <p><b>Marker lines</b> — vertical lines through the tracks at each position marker (off by default):<br>
@@ -25758,6 +26513,7 @@ function openSettings(){
  if(g('setDelLinked'))g('setDelLinked').onchange=e=>{SETTINGS.delLinked=!!e.target.checked;persistSettings();};   /* 78th R3: his fixed-vs-per-grid option */
  if(g('setTsigLane'))g('setTsigLane').onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
  if(g('setPRoll'))g('setPRoll').onchange=e=>{SETTINGS.showPianoRoll=!!e.target.checked;persistSettings();refresh(false);};
+ if(g('setFixGrid'))g('setFixGrid').onchange=e=>{SETTINGS.fixedGrid=!!e.target.checked;persistSettings();};   /* 79th R4: the DEFAULT only — the live pin is the grid's chip */
  if(g('setKeysLane'))g('setKeysLane').onchange=e=>{SETTINGS.showKeysLane=!!e.target.checked;persistSettings();refresh(false);};
  if(g('setTempoLane'))g('setTempoLane').onchange=e=>{SETTINGS.showTempoLane=!!e.target.checked;persistSettings();refresh(false);};
  if(g('setMkLines'))g('setMkLines').onchange=e=>{SETTINGS.markerLines=(e.target.value==='off'||e.target.value==='all')?e.target.value:'active';persistSettings();refresh(false);};
