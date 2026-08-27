@@ -219,7 +219,7 @@
      NOT floating, NOT overlapping. .palLock = lane-top ON: the linked pair scrolls as one. */
   .palWin{margin-top:12px;}
   .palWin.palLock{overflow-x:auto;}
-  .palWin.winSel,.gridwrap.winSel{outline:2px solid var(--accent);outline-offset:1px;}   /* 78th R4b: click-to-select rides every window */
+  .palWin.winSel,.gridwrap.winSel{outline:2px solid var(--accent);outline-offset:1px;box-shadow:0 0 0 4px rgba(232,163,61,.18),0 0 18px rgba(232,163,61,.28);}   /* 78th R4b: click-to-select rides every window · R5: the ring GLOWS (selection must be unmistakable — the R4g lesson) */
   .colGrip{cursor:grab;user-select:none;-webkit-user-select:none;margin-right:7px;color:var(--dim);font-size:11px;letter-spacing:-1px;}
   .colGrip:hover{color:var(--text);}
   .colGrip:active{cursor:grabbing;}
@@ -540,11 +540,19 @@
   /* ==== 76th R2 · THE FIXED CHROME (his words: the transport and the navigation
        section become fixed windows at the top; the left icon rail stops scrolling) ==== */
   #transportWin,#navWin,#engWin,#gcWin{position:fixed;left:0;right:0;z-index:90;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  #navWin.navBottom{opacity:.6;border-top:1px solid var(--line);border-bottom:none;box-shadow:0 -2px 10px rgba(0,0,0,.35);}   /* 78th R5 (his words): the bottom Navigator is 40% transparent */
+  #navWin.navBottom:hover{opacity:1;}   /* full strength under the pointer [inference — a 40%-transparent control surface must stay usable] */
+  #navWin .navLaneLab{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);flex:0 0 92px;align-self:center;}
+  #navWin .navLaneWrap{display:flex;gap:8px;align-items:stretch;margin-top:4px;}
+  #navSong{font-size:11.5px;color:var(--dim);margin:2px 0 4px 0;} #navSong b{color:var(--text);}
   #transportWin{top:0;}
   #transportWin .winHead,#navWin .winHead,#engWin .winHead,#gcWin .winHead{padding:2px 10px;min-height:20px;}
   #transportWin.winCollapsed .controls{display:none;}
   #navWin.winCollapsed #navBody{display:none;}
-  #engWin.winCollapsed #engBody,#gcWin.winCollapsed #gcBody{display:none;}   /* 78th R3: the Engines + Grid Controls windows share the idiom */
+  #engWin.winCollapsed #engBody,#gcWin.winCollapsed #gcBody{display:none;}
+  #engWin.engLeft{left:0;right:auto;width:auto;min-width:52px;max-width:190px;border-right:1px solid var(--line);border-bottom:none;box-shadow:2px 0 10px rgba(0,0,0,.35);}   /* 78th R5: his left views */
+  #engWin.engLeft #engBody{flex-direction:column;align-items:stretch;}
+  #panelBar{display:none;}   /* 78th R5 (his words + my agree): the old chip bar was the same group twice — the Engines window is THE surface (the chips stay in the DOM for their handlers) */   /* 78th R3: the Engines + Grid Controls windows share the idiom */
   #gcBody input,#gcBody select{user-select:text;-webkit-user-select:text;}
   #transportWin .controls{padding:4px 10px 6px;margin:0;}
   #navBody{padding:4px 10px 6px;}
@@ -568,15 +576,16 @@
 </style>
 </head>
 <body>
-  <h1>Cross<span>Pollinate</span> — Phase 0.5 · Hookpad-style Grid Editor</h1>
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26z</span></div>
+  <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26aa</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
        routes its events through the selected grid's world) -->
   <div id="transportWin" data-gwfocus="1">
-  <div class="winHead" id="trWinHead" title="The Transport — fixed at the top; it controls whichever linked group of windows is selected. Click the bar to minimize.">
+  <div class="winHead" id="trWinHead" style="position:relative;" title="The Transport — fixed at the top; it controls whichever linked group of windows is selected. Click the bar to minimize.">
     <span class="picon">▶</span><span class="wtitle">Transport</span>
+    <span id="appTitle" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-weight:700;font-size:13px;letter-spacing:1.2px;color:var(--text);pointer-events:none;">Curi<span style="color:var(--accent);">o</span>sitor</span>
     <span class="wbtn" id="trMinChip" title="Minimize the Transport window to its title bar">−</span>
     <span class="wbtn" id="trCloseChip" title="Delete the Transport window — a &#8220;Show transport&#8221; link stays at the top to bring it back">✕</span>
   </div>
@@ -646,7 +655,7 @@
     <div id="engBody" style="display:flex;gap:6px;flex-wrap:wrap;padding:4px 10px 8px 10px;"></div>
   </div>
   <span id="engLink" style="display:none;" title="Bring the Engines window back">Engines</span>
-  <div id="gcWin" data-gwfocus="1">
+  <!-- 78th R5: the Grid Controls Window RETIRED — it was the Navigator asked for twice --><div id="gcWin" style="display:none!important;">
     <div class="winHead" id="gcWinHead" title="Grid Controls — they apply to whichever grid is at the top (the selected group). Click the bar to minimize.">
       <span class="picon">▤</span><span class="wtitle">Grid Controls</span>
       <span class="wbtn" id="gcMinChip" title="Minimize Grid Controls to its title bar">−</span>
@@ -654,7 +663,6 @@
     </div>
     <div id="gcBody" style="padding:2px 10px 8px 10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;"></div>
   </div>
-  <span id="gcLink" style="display:none;" title="Bring the Grid Controls window back">Grid controls</span>
 
   <div id="panelBar"></div>
 
@@ -22703,6 +22711,8 @@ function refresh(reschedule){
  if(_gwMain){
   const st=project.style;
   provEl.innerHTML=`<b>Song:</b> ${project.song.prov} &nbsp;·&nbsp; <b>Style:</b> ${st.name}${useSynth?' &nbsp;·&nbsp; (offline: synth fallback sounds)':''}`;
+  const _ns=document.getElementById('navSong');
+  if(_ns)_ns.innerHTML=`<b>SONG:</b> ${project.song.prov} &nbsp;—&nbsp; <b>Style:</b> ${st.name}`;   /* 78th R5 (his words): the Navigator carries the Song Name */
  }
  if(reschedule&&playing&&(typeof transportGrid!=='string'||transportGrid===CUR_GRID)){rebuild();}   /* Phase 2 R2: only the transport's OWNER reschedules it */
 }
@@ -22866,11 +22876,11 @@ function parseSettings(str){
  const def={numerals:'roman',laneLabel:'function',autosave:true,recordOver:false,clipAlign:'chords',clipDrop:'ask',clipChordNames:true,chordLaneCanHide:true,ragaFamFirst:'carnatic',ragaTerms:'',ragaMidiAud:true,
   /* 2.5: the transport-fold + chrome preferences — DEVICE data (§2d: these ride
      cp_settings, never the project file; the workspace-vs-device line for 1.7 R0) */
-  showOverview:false,showScrub:true,showSecLane:false,showTsig:false,showKeysLane:false,showTempoLane:false,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,   /* 78th (his words): the grid-top nav rows default OFF — the global Navigator + the bars/beats lane carry navigation; every row re-enables in Settings */
+  showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showKeysLane:false,showTempoLane:false,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,   /* 78th (his words): the grid-top nav rows default OFF — the global Navigator + the bars/beats lane carry navigation; every row re-enables in Settings */
   /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
   countIn:0,latencyPref:'interactive',sinkId:'',
   classicHeads:false,
- gcPerGrid:false,
+ navWithGrid:false,engView:'top-buttons',engTips:true,
  delLinked:true};   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
@@ -22887,12 +22897,14 @@ function parseSettings(str){
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
    if(o.ragaMidiAud===false)def.ragaMidiAud=false;   /* 3.5: toggle ② defaults ON (client call, #13d) */   /* v3 (client §3): default ON — the lane may tuck away */
-   if(o.showOverview===true)def.showOverview=true;   /* 2.5 ⑪e — 78th: default OFF, an explicit true re-enables */
+   if(o.showOverview===false)def.showOverview=false;   /* 2.5 ⑪e — 78th: default OFF, an explicit true re-enables */
    if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
-   if(o.showSecLane===true)def.showSecLane=true;   /* 2.5 ⑪f — 78th: default OFF */
-   if(o.gcPerGrid===true)def.gcPerGrid=true;   /* 78th R3: the per-grid Grid Controls opt-in */
+   if(o.showSecLane===false)def.showSecLane=false;   /* 2.5 ⑪f — 78th: default OFF */
+   if(o.navWithGrid===true)def.navWithGrid=true;   /* 78th R5: the Navigator ships with the grid (default OFF, his words) */
+   if(['top-buttons','top-icons','left-buttons','left-icons'].indexOf(o.engView)>=0)def.engView=o.engView;   /* 78th R5: his four views */
+   if(o.engTips===false)def.engTips=false;
    if(o.delLinked===false)def.delLinked=false;   /* 78th R4b: Delete-one opt-out */
-   if(o.showTsig===true)def.showTsig=true;   /* 2.5 ④ — 78th: default OFF */
+   if(o.showTsig===false)def.showTsig=false;   /* 2.5 ④ — 78th: default OFF */
    if(o.showKeysLane===true)def.showKeysLane=true;   /* 78th */
    if(o.showTempoLane===true)def.showTempoLane=true;   /* 78th */
    if(o.showPianoRoll===false)def.showPianoRoll=false;   /* 2.5 ③ */
@@ -23787,8 +23799,40 @@ function essShelfWinDraw(w){
    d.innerHTML='<div class="mimName">'+o.name+'</div><div style="font-size:10px;color:var(--dim);margin:2px 0;">melisma · '+o.fam+'</div>'
     +'<div style="display:flex;gap:8px;"><span class="cpchip melEssSel">✓</span></div>';
    d.onclick=e=>{
+    if(d._dragAte){d._dragAte=false;return;}
     if(e.target.classList.contains('melEssSel')){e.stopPropagation();melState.sel=o.id;if(typeof renderMelismaList==='function')renderMelismaList();if(typeof renderMelismaInfo==='function')renderMelismaInfo(o);return;}
     if(typeof melismaAudition==='function')melismaAudition(o);
+   };
+   /* 78th R5 (his words): the shelf objects click+DRAG onto the linked grid — a drop on
+      a SELECTED group writes the melisma onto every selected note; a drop on ONE note
+      selects it first. The przShelf chipDrag idiom, the write under the DROP's world. */
+   d.onmousedown=e=>{
+    if(e.button!==0||e.target.classList.contains('melEssSel'))return;
+    e.preventDefault();
+    const x0=e.clientX,y0=e.clientY;
+    const mm=ev=>{
+     if(Math.abs(ev.clientX-x0)>4||Math.abs(ev.clientY-y0)>4){
+      cleanup();d._dragAte=true;
+      chipDrag(ev,'➿ '+o.name,dv=>{
+       const el=document.elementFromPoint(dv.clientX,dv.clientY);
+       const rootEl=el&&el.closest?el.closest('[data-gridworld],#gridRowWrap'):null;
+       if(!rootEl){if(typeof flashHint==='function')flashHint('Drop it on a grid — the melisma writes onto the notes selected there (or the note under the drop).');return;}
+       const gid=rootEl.getAttribute&&rootEl.getAttribute('data-gridworld');
+       const run=()=>{
+        melState.sel=o.id;
+        if(!selNotes.size){
+         const nEl=el.closest?el.closest('[data-n]'):null;
+         if(nEl)selNotes.add(+nEl.getAttribute('data-n'));
+        }
+        if(!selNotes.size){if(typeof flashHint==='function')flashHint('Select notes first (or drop ON a note) — the melisma writes onto them.');return;}
+        if(typeof melismaRunGo==='function')melismaRunGo(0);
+       };
+       (gid&&gid!=='main'&&typeof withGridWorld==='function'&&GRID_WORLDS[gid])?withGridWorld(gid,run):run();
+      });
+     }};
+    const mu=()=>cleanup();
+    const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
    };
    body.appendChild(d);
   }
@@ -24111,13 +24155,12 @@ function fixedChromeApply(){
     link-band law generalized); gcPerGrid stands the Grid Controls window down. */
  const defs=[['tr','transportWin','trMinChip','transportLink'],
   ['nav','navWin','navMinChip','navLink'],
-  ['eng','engWin','engMinChip','engLink'],
-  ['gc','gcWin','gcMinChip','gcLink']];
+  ['eng','engWin','engMinChip','engLink']];   /* 78th R5 (his words): gc RETIRED — it was the Navigator asked for twice; the Navigator carries its content and seats at the BOTTOM */
  if(!_gridGetById('transportWin'))return;
  let anyClosed=false;
  for(const [key,winId,minId,linkId] of defs){
   const w=_gridGetById(winId);if(!w)continue;
-  const perGrid=(key==='gc'&&typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gcPerGrid);
+  const perGrid=(key==='nav'&&typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.navWithGrid);
   const closed=perGrid||!!c[key].closed;
   w.classList.toggle('winCollapsed',!!c[key].min);
   w.style.display=closed?'none':'';
@@ -24131,20 +24174,70 @@ function fixedChromeApply(){
   if(w.style.display==='none')continue;
   /* 78th R4d (his words): "I'd like to try having the 'Grid Controls Window' at the
      bottom of the screen: still fixed and not moving with the rest of the app." */
-  if(key==='gc'){w.style.top='auto';w.style.bottom='0px';continue;}
+  if(key==='nav'){w.style.top='auto';w.style.bottom='0px';w.classList.add('navBottom');continue;}   /* 78th R5 (his words): the Navigator fixed at the bottom, 40% transparent */
+  if(key==='eng'&&w.classList.contains('engLeft'))continue;   /* 78th R5: the left views seat after the loop */
   w.style.top=y+'px';w.style.bottom='';
   y+=w.offsetHeight;
  }
  const chromeH=Math.max(y,anyClosed?26:0);
  document.body.style.paddingTop=chromeH+'px';
- const _gcw=_gridGetById('gcWin');
- document.body.style.paddingBottom=(_gcw&&_gcw.style.display!=='none')?(_gcw.offsetHeight+12)+'px':'';
+ const _nw2=_gridGetById('navWin');
+ document.body.style.paddingBottom=(_nw2&&_nw2.style.display!=='none'&&!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.navWithGrid))?(_nw2.offsetHeight+12)+'px':'';
  document.documentElement.style.scrollPaddingTop=(chromeH+8)+'px';   /* scrollIntoView never lands under the fixed bars */
  const rail=_gridGetById('rail');
- if(rail){rail.style.top=(chromeH+12)+'px';
-  document.body.style.paddingLeft=((rail.offsetWidth||44)+10)+'px';}   /* his "the other windows a bit smaller" — the room the fixed rail takes */
+ let padL=0;
+ if(rail){rail.style.top=(chromeH+12)+'px';padL=(rail.offsetWidth||44)+10;}
+ const _ewL=_gridGetById('engWin');
+ if(_ewL&&_ewL.classList.contains('engLeft')&&_ewL.style.display!=='none'){
+  _ewL.style.top=chromeH+'px';_ewL.style.bottom=((parseFloat(document.body.style.paddingBottom)||0))+'px';
+  _ewL.style.left=padL+'px';
+  padL+=_ewL.offsetWidth+8;
+ }else if(_ewL&&!_ewL.classList.contains('engLeft')){_ewL.style.left='0';_ewL.style.right='0';_ewL.style.width='';}
+ document.body.style.paddingLeft=padL+'px';   /* his "the other windows a bit smaller" — the room the fixed rail takes */
 }
-function gcPerGridApply(){
+function engViewApply(){
+ const eb=_gridGetById('engBody'),ew=_gridGetById('engWin');
+ if(!eb||!ew)return;
+ const v=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.engView)||'top-buttons';
+ const icons=v.indexOf('icons')>=0,left=v.indexOf('left')===0;
+ eb.innerHTML='';
+ for(const d of WINDOW_DEFS){
+  const b=document.createElement('span');
+  b.className='part engChip'+((typeof uiWinShown==='function'&&uiWinShown(d.id))?' on':'');
+  b.style.cssText='cursor:pointer;'+(icons?'padding:4px 9px;font-size:15px;':'padding:3px 10px;font-size:11.5px;');
+  b.textContent=icons?d.icon:(d.icon+' '+(d.name||d.id));
+  b.title=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.engTips===false)?(d.name||d.id):((d.name||d.id)+(d.tip?' — '+d.tip:''));
+  b.setAttribute('data-eng',d.id);
+  b.onclick=()=>{uiDispatch({type:'toggle',id:d.id});engViewApply();};
+  b.oncontextmenu=e=>{e.preventDefault();
+   SETTINGS.engTips=(SETTINGS.engTips===false);persistSettings();engViewApply();
+   if(typeof flashHint==='function')flashHint('Hover descriptions '+(SETTINGS.engTips===false?'OFF':'ON')+' — also in ⚙ Settings.');};
+  eb.appendChild(b);
+ }
+ ew.classList.toggle('engLeft',left);
+ eb.style.flexDirection=left?'column':'row';
+ fixedChromeApply();
+}
+function navWithGridApply(){
+ /* 78th R5 (his words): "This 'Navigator' Window should ship with the Multi-Track Chord
+    Window when ... 'Navigator Window moves with Multi-Track Grid Window = ON'.  But this
+    should (for now, default to OFF." ON → the Navigator leaves the fixed band and sits
+    in-flow directly ABOVE Grid 1. */
+ const nw=_gridGetById('navWin'),root=_gridGetById('gridRowWrap');
+ if(nw&&root){
+  const withGrid=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.navWithGrid);
+  if(withGrid){
+   nw.style.position='static';nw.style.opacity='';nw.classList.remove('navBottom');
+   nw.style.top='';nw.style.bottom='';nw.style.margin='12px 0';
+   if(nw.nextElementSibling!==root)root.parentNode.insertBefore(nw,root);
+  }else{
+   nw.style.position='';nw.style.margin='';
+   if(nw.parentNode!==document.body){const eng=_gridGetById('engWin');document.body.insertBefore(nw,eng?eng.nextSibling:null);}
+  }
+ }
+ fixedChromeApply();
+}
+function _gcPerGridApplyRetired(){
  /* 78th R3 (his follow-up): the Settings opt-in creates the Grid Controls WITH the
     multi-track grids instead of fixed at the top (default: fixed). The Grid: row moves
     between the fixed window's body and Grid 1's own strip; the fixed window stands
@@ -24185,7 +24278,6 @@ function fixedChromeInit(){
  wire('trWinHead','trMinChip','trCloseChip','tr','transportLink');
  wire('navWinHead','navMinChip','navCloseChip','nav','navLink');
  wire('engWinHead','engMinChip','engCloseChip','eng','engLink');
- wire('gcWinHead','gcMinChip','gcCloseChip','gc','gcLink');
  /* 78th R3: FOUR stacked windows make height staleness VISIBLE (content grows after the
     position pass — the track chips draw post-boot and the middle windows overlapped).
     A ResizeObserver re-runs the pass; it only writes tops/padding, so no feedback loop. */
@@ -24193,10 +24285,13 @@ function fixedChromeInit(){
   const _ro=new ResizeObserver(()=>{try{fixedChromeApply();}catch(e){}});
   for(const id of ['transportWin','navWin','engWin','gcWin']){const w=_gridGetById(id);if(w)_ro.observe(w);}
  }catch(e){}
- /* 78th R3 (his words): THE ENGINES WINDOW carries every Engine Window Button — the
-    rail's win: entries move up here (the rail keeps the transform icons) */
- const eb=_gridGetById('engBody');
- if(eb&&!eb.children.length){
+ /* 78th R5 (his words + my agree): ONE group — the Engines window carries EVERY window's
+    button (WINDOW_DEFS whole; the old chip bar hides), rendered in his FOUR VIEWS
+    (SETTINGS.engView). The rail's six survivors are TRANSFORM VERBS — kept separate. */
+ if(typeof engViewApply==='function')engViewApply();
+ const _ebRetired=null;
+ if(false){
+  const eb=_gridGetById('engBody');
   const NAMES={modPanel:'Modulation',melPanel:'Melisma',ragaPanel:'Scales',wanPanel:'Wanderer',
    tripsPanel:'Trips',orbPanel:'Orbits',prismPanel:'Prism',cadPanel:'Cadences'};
   for(const r of RAIL_DEFS){
@@ -24214,8 +24309,12 @@ function fixedChromeInit(){
     their own window") — the Grid: row MOVES in (handlers ride, the zoomStrip precedent),
     plus Song / Sections / Time signature (his follow-up; Song re-surfaces from the 4.4
     retirement BY his newer direction, recorded in the spec) */
- const gb=_gridGetById('gcBody'),gcr=_gridGetById('gridCtlRow');
- if(gb&&gcr&&!gb.contains(gcr)&&!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gcPerGrid))gb.appendChild(gcr);
+ /* 78th R5 (his words): gc RETIRES INTO THE NAVIGATOR — the Grid: row, the Song select,
+    the SONG NAME line, and the three NAV LANES (Song = the overview · Sections · Time
+    Signature, "each followed to the right by a lane that the user can use to navigate
+    the song") all live in navBody now (handlers ride — the zoomStrip precedent). */
+ const gb=nb,gcr=_gridGetById('gridCtlRow');
+ if(gb&&gcr&&!gb.contains(gcr))gb.appendChild(gcr);
  if(gb&&!_gridGetById('gcExtraRow')){
   const ex=document.createElement('div');
   ex.id='gcExtraRow';ex.className='parts';ex.style.cssText='margin:0;align-items:center;';
@@ -24228,6 +24327,19 @@ function fixedChromeInit(){
   tc.onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
   const sctl=_gridGetById('songCtl');
   if(sctl){gb.insertBefore(sctl,gb.firstChild);sctl.style.display='';}
+  const ns=document.createElement('div');ns.id='navSong';gb.insertBefore(ns,gb.firstChild);
+  const laneDefs=[['Song','ovRow'],['Sections','sectionLaneRow'],['Time Signature','tsigLaneRow']];
+  for(const _ld of laneDefs){
+   const row=_gridGetById(_ld[1]);if(!row||row.closest('#navBody'))continue;
+   const wrap=document.createElement('div');wrap.className='navLaneWrap';
+   const lab=document.createElement('span');lab.className='navLaneLab';lab.textContent=_ld[0];
+   wrap.appendChild(lab);
+   if(row.parentNode)row.parentNode.removeChild(row);
+   const holder=document.createElement('div');holder.style.cssText='flex:1 1 auto;min-width:0;overflow-x:auto;';
+   holder.appendChild(row);
+   wrap.appendChild(holder);
+   gb.appendChild(wrap);
+  }
  }
  fixedChromeApply();
  window.addEventListener('resize',()=>{try{fixedChromeApply();}catch(e){}});
@@ -24271,7 +24383,7 @@ window.addEventListener('scroll',()=>{if(_sfPend)return;_sfPend=true;requestAnim
 function navSyncFromFocus(){
  /* the Navigator + Transport readouts follow the SELECTED grid (his follow-up law) */
  try{
-  const nb=_gridGetById('navBody'),gb=_gridGetById('gcBody');if(!nb&&!gb)return;
+  const nb=_gridGetById('navBody'),gb=null;if(!nb)return;   /* 78th R5: gc retired into the Navigator */
   const run=()=>{
    /* 78th R3: the Grid: row moved into the GRID CONTROLS window — the readouts follow
       the controls wherever they sit (navBody, gcBody, or back in the strip per-grid) */
@@ -25282,7 +25394,14 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setOvLane" ${SETTINGS.showOverview!==false?'checked':''}> <b>Song Overview lane</b> — the whole arrangement in miniature with a viewport outline (drag ←→ scroll · ↕ zoom · double-click = whole song)</label></p>
  <p><label><input type="checkbox" id="setScrubLane" ${SETTINGS.showScrub!==false?'checked':''}> <b>Scrub area</b> — the strip under the ruler (click: play from that bar · hold: repeat it · drag: scrub)</label></p>
  <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
- <p><label><input type="checkbox" id="setGcPerGrid" ${SETTINGS.gcPerGrid===true?'checked':''}> Grid Controls ride each grid</label> <span class="dim">— create the Grid Controls with the Multi-Track Grids instead of the fixed window at the top (default: fixed at the top).</span></p>
+ <p><label>Window buttons <select id="setEngView">
+  <option value="top-buttons" ${SETTINGS.engView!=='top-icons'&&SETTINGS.engView!=='left-buttons'&&SETTINGS.engView!=='left-icons'?'selected':''}>Buttons across the top</option>
+  <option value="top-icons" ${SETTINGS.engView==='top-icons'?'selected':''}>Icons across the top</option>
+  <option value="left-buttons" ${SETTINGS.engView==='left-buttons'?'selected':''}>Buttons down the left</option>
+  <option value="left-icons" ${SETTINGS.engView==='left-icons'?'selected':''}>Icons down the left</option>
+ </select></label> <span class="dim">— his four views for the ONE window-button group (the Engines window).</span></p>
+ <p><label><input type="checkbox" id="setEngTips" ${SETTINGS.engTips!==false?'checked':''}> Hover descriptions on the window buttons</label> <span class="dim">— also toggled by ctrl+clicking any button.</span></p>
+ <p><label><input type="checkbox" id="setNavWithGrid" ${SETTINGS.navWithGrid===true?'checked':''}> Navigator Window moves with Multi-Track Grid Window</label> <span class="dim">— ON: the Navigator ships with the grid, in the page. OFF (default): fixed at the bottom of the screen, 40% transparent.</span></p>
  <p><label><input type="checkbox" id="setDelLinked" ${SETTINGS.delLinked!==false?'checked':''}> Delete closes the whole linked group</label> <span class="dim">— with a window selected and nothing inside it selected, Delete closes it AND its linked windows (uncheck: just the one).</span></p>
  <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
@@ -25326,7 +25445,9 @@ function openSettings(){
  if(g('setOvLane'))g('setOvLane').onchange=e=>{SETTINGS.showOverview=!!e.target.checked;persistSettings();drawOverview();};
  if(g('setScrubLane'))g('setScrubLane').onchange=e=>{SETTINGS.showScrub=!!e.target.checked;persistSettings();refresh(false);drawTrackSel();};
  if(g('setSecLane'))g('setSecLane').onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
- if(g('setGcPerGrid'))g('setGcPerGrid').onchange=e=>{SETTINGS.gcPerGrid=!!e.target.checked;persistSettings();if(typeof gcPerGridApply==='function')gcPerGridApply();};
+ if(g('setNavWithGrid'))g('setNavWithGrid').onchange=e=>{SETTINGS.navWithGrid=!!e.target.checked;persistSettings();if(typeof navWithGridApply==='function')navWithGridApply();};
+ if(g('setEngView'))g('setEngView').onchange=e=>{SETTINGS.engView=e.target.value;persistSettings();if(typeof engViewApply==='function')engViewApply();};
+ if(g('setEngTips'))g('setEngTips').onchange=e=>{SETTINGS.engTips=!!e.target.checked;persistSettings();if(typeof engViewApply==='function')engViewApply();};
  if(g('setDelLinked'))g('setDelLinked').onchange=e=>{SETTINGS.delLinked=!!e.target.checked;persistSettings();};   /* 78th R3: his fixed-vs-per-grid option */
  if(g('setTsigLane'))g('setTsigLane').onchange=e=>{SETTINGS.showTsig=!!e.target.checked;persistSettings();drawTsigLane();};
  if(g('setPRoll'))g('setPRoll').onchange=e=>{SETTINGS.showPianoRoll=!!e.target.checked;persistSettings();refresh(false);};
