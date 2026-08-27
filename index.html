@@ -577,7 +577,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-26aa</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -9566,25 +9566,332 @@ function palMatHead(el,m,i){
   el.appendChild(x);
  }
 }
+/* ==== §10.2 THE PIVOT CHORD SEARCH — the progression families as DATA (79th) ====
+   The rabbit-hole search filled in: the category column (his six, in his order), the
+   results column, and the upper-right 2-bar chord-lane EDITOR (per-chord changes,
+   rate-of-change, the "+" bars, the clickable time signature). The "__" slot resolves
+   per his rule: the chord at the top of the palette matrix — or, when "Use Chord Lane
+   as Top Row" is ON, the Chord Lane's chord (the selection, else the playhead's).
+   WARNING (the grabConst rule): PROG_LIB must contain NO semicolon anywhere inside,
+   names and comments included — the harness grabs it up to the first one. */
+const PROG_LIB=[
+ /* -- Default Songs Chord Changes (§10.2, his tokens verbatim - bare numbers read MAJOR,
+    the m suffix minor, b lowers, per his own suffix system - "3m, 2mm" read as 3m, 2m) -- */
+ {fam:'def',t:'2,5,__'},{fam:'def',t:'4,5,__'},{fam:'def',t:'4m,5m,__'},
+ {fam:'def',t:'b6,4m,__'},{fam:'def',t:'b6,4,__'},{fam:'def',t:'b6,5m,__'},{fam:'def',t:'b6,5,__'},
+ {fam:'def',t:'3m,2m,__'},{fam:'def',t:'2m,3m,4,__'},{fam:'def',t:'4,3m,2m,__'},{fam:'def',t:'6m,2m,5,__'},
+ {fam:'def',t:'1,4,b3,b6,__'},{fam:'def',name:'all major',t:'1,3,4,2,__'},
+ {fam:'def',t:'1,3,6m,4,__'},{fam:'def',t:'1,3,4,4m,__'},{fam:'def',t:'1,b3,b6,__'},{fam:'def',t:'b6,b3,__'},
+ {fam:'def',t:'1,3,6m,4,b6,b7,5m,b7,__'},{fam:'def',t:'1,b3,b6,4,__'},{fam:'def',t:'1,b7,b3,4,5,__'},
+ {fam:'def',t:'i,b2maj7,5,__'},
+ /* -- Chromatic Mediant Changes (§10.2 verbatim) -- */
+ {fam:'chm',t:'1,b6,4m,__'},{fam:'chm',t:'1,b3,5,__'},{fam:'chm',t:'1,2m,b7,5m,b6,__'},
+ {fam:'chm',name:'Space Fantasy',t:'1,3m,3,b6m,b6,__'},
+ {fam:'chm',t:'1,2m,b6,__'},{fam:'chm',t:'1,b7,b6,__'},{fam:'chm',t:'1,b7,b3,__'},{fam:'chm',t:'b7,b6,__'},
+ {fam:'chm',t:'b6,4,__'},{fam:'chm',t:'b3,4,__'},{fam:'chm',t:'4,b3,__'},{fam:'chm',t:'5,b3,__'},
+ {fam:'chm',t:'b6,b3,__'},{fam:'chm',t:'3m,5,__'},
+ /* -- Coltrane Mediant Changes (§10.2 verbatim - the two "of"-chains are explicit steps,
+    tokens cannot say "ii-V of bVI") -- */
+ {fam:'col',t:'b6,3,__'},{fam:'col',t:'b6,5/3,5,__'},
+ {fam:'col',name:'Circle of Minor Thirds',t:'b3,#4/b5,6,__'},
+ {fam:'col',t:'1,b3,#4/b5,b6,__'},
+ {fam:'col',name:'ii–V of ♭VI → ♭VI · ii–V of III → III',steps:[
+  {deg:10,iv:[0,3,7,10],lbl:'ii/♭VI'},{deg:3,iv:[0,4,7,10],lbl:'V/♭VI'},{deg:8,iv:[0,4,7],lbl:'♭VI'},
+  {deg:6,iv:[0,3,7,10],lbl:'ii/III'},{deg:11,iv:[0,4,7,10],lbl:'V/III'},{deg:4,iv:[0,4,7],lbl:'III'},{slot:true,lbl:'__'}]},
+ {fam:'col',name:'V of ♭VI → V of III → V of I',steps:[
+  {deg:3,iv:[0,4,7,10],lbl:'V/♭VI'},{deg:11,iv:[0,4,7,10],lbl:'V/III'},{deg:7,iv:[0,4,7,10],lbl:'V/I'},{slot:true,lbl:'__'}]},
+ /* -- Romantic Era Moments (§10.2 verbatim) -- */
+ {fam:'rom',name:'The Tristan',t:'i7(b5),I7(b5),VII7',
+  note:'The original is arpeggiated slowly from bottom to top'},
+ {fam:'rom',name:'The Omnibus Progression (Symmetrical Chromatic Wedges)',steps:[
+  {deg:0,iv:[0,4,7,10],lbl:'I7'},{deg:3,iv:[0,3,7],bass:3,lbl:'♭iii6'},
+  {deg:6,iv:[0,3,6,9],lbl:'♯IV/♭V°7'},{deg:8,iv:[0,4,7,10],lbl:'♭VI7'}]},
+ {fam:'rom',name:'Chopin Prelude in E Minor Op. 28, No. 4',steps:[
+  {deg:0,iv:[0,3,7],lbl:'i'},{deg:11,iv:[0,4,7,11],lbl:'♭Imaj7'},{deg:5,iv:[0,4,7],bass:6,lbl:'IV/♭I'},
+  {deg:5,iv:[0,3,6,10],lbl:'IVm7(♭5)'},{deg:0,iv:[0,3,7],lbl:'i'},{deg:1,iv:[0,3,7],lbl:'♭ii'},
+  {deg:7,iv:[0,4,7],lbl:'V'},{slot:true,lbl:'__'}]},
+ {fam:'rom',t:'I,IV,vi,__'}
+];
+const PCS_ROM_LBL=['I','♭II','II','♭III','III','IV','♯IV','V','♭VI','VI','♭VII','VII'];
+function progTok(tok){
+ /* one §10.2 token → {deg (semitones from the home tonic), iv, lbl, bass?} — null on junk.
+    His grammar: arabic degrees read MAJOR bare (2 = II), the m suffix minor, b/# bend the
+    degree; roman case picks the base quality; 6 = first inversion (the app's V6 idiom);
+    a slash is an enharmonic ALIAS when both sides name the same pitch (#4/b5), else
+    chord-over-bass (5/3, IV/bI). Pure. */
+ const DEG=[null,0,2,4,5,7,9,11];
+ const pretty=s=>String(s).replace(/b/g,'♭').replace(/#/g,'♯');
+ const t=String(tok||'').trim();
+ if(!t)return null;
+ const slash=t.indexOf('/');
+ if(slash>0&&!/\(.*\//.test(t)){
+  const L=progTok(t.slice(0,slash)),Rt=t.slice(slash+1).trim();
+  const Rm=/^([b♭#♯]?)([1-7]|vii|vi|v|iv|iii|ii|i)$/i.exec(Rt);
+  if(!L||!Rm)return null;
+  const racc=Rm[1]==='b'||Rm[1]==='♭'?-1:(Rm[1]==='#'||Rm[1]==='♯'?1:0);
+  const rnum=/^[1-7]$/.test(Rm[2])?+Rm[2]:({i:1,ii:2,iii:3,iv:4,v:5,vi:6,vii:7})[Rm[2].toLowerCase()];
+  const rdeg=((DEG[rnum]+racc)%12+12)%12;
+  if(rdeg===L.deg)return {deg:L.deg,iv:L.iv,lbl:pretty(t)};      /* enharmonic alias */
+  return {deg:L.deg,iv:L.iv,bass:((rdeg-L.deg)%12+12)%12,lbl:pretty(t)};   /* chord over bass */
+ }
+ const m=/^([b♭#♯]?)([1-7]|vii|vi|v|iv|iii|ii|i)(.*)$/i.exec(t);
+ if(!m)return null;
+ const acc=m[1]==='b'||m[1]==='♭'?-1:(m[1]==='#'||m[1]==='♯'?1:0);
+ const isRoman=!/^[1-7]$/.test(m[2]);
+ const num=isRoman?({i:1,ii:2,iii:3,iv:4,v:5,vi:6,vii:7})[m[2].toLowerCase()]:+m[2];
+ const deg=((DEG[num]+acc)%12+12)%12;
+ const lower=isRoman&&m[2]===m[2].toLowerCase();
+ const suf=m[3].trim();
+ let iv=null,bass;
+ if(suf===''){iv=lower?[0,3,7]:[0,4,7];}
+ else if(suf==='m'){iv=[0,3,7];}
+ else if(suf==='maj7'){iv=[0,4,7,11];}
+ else if(suf==='m7'){iv=[0,3,7,10];}
+ else if(suf==='7'){iv=lower?[0,3,7,10]:[0,4,7,10];}
+ else if(suf==='7(b5)'||suf==='7(♭5)'){iv=lower?[0,3,6,10]:[0,4,6,10];}
+ else if(suf==='m7(b5)'||suf==='m7b5'||suf==='m7(♭5)'){iv=[0,3,6,10];}
+ else if(suf==='°7'||suf==='o7'||suf==='dim7'){iv=[0,3,6,9];}
+ else if(suf==='°'||suf==='o'||suf==='dim'){iv=[0,3,6];}
+ else if(suf==='+'||suf==='aug'){iv=[0,4,8];}
+ else if(suf==='6'){iv=lower?[0,3,7]:[0,4,7];bass=iv[1];}
+ else return null;
+ const r={deg,iv,lbl:pretty(t)};if(bass!==undefined)r.bass=bass;
+ return r;
+}
+function progParse(str){
+ /* a §10.2 token chain → steps, the "__" run kept as a slot marker — null on junk. Pure. */
+ if(typeof str!=='string'||!str.trim())return null;
+ const out=[];
+ for(const raw of str.split(',')){
+  const t=raw.trim();if(!t)return null;
+  if(/^_+$/.test(t)){out.push({slot:true,lbl:'__'});continue;}
+  const st=progTok(t);if(!st)return null;
+  out.push(st);
+ }
+ return out.length?out:null;
+}
+function progResolve(steps,ctx){
+ /* steps + {tonic, minor, lane:{r,iv,lbl}|null} → absolute chords, the "__" slot FILLED:
+    the lane chord when given (his laneTop rule), else the home tonic chord. Pure — the
+    input steps are never mutated. */
+ if(!Array.isArray(steps)||!steps.length||!ctx)return null;
+ const t=((+ctx.tonic||0)%12+12)%12;
+ const out=[];
+ for(const s of steps){
+  if(s&&s.slot){
+   if(ctx.lane&&Array.isArray(ctx.lane.iv))out.push({r:((+ctx.lane.r||0)%12+12)%12,iv:ctx.lane.iv.slice(),lbl:ctx.lane.lbl||'lane',slot:true});
+   else out.push({r:t,iv:(ctx.minor?[0,3,7]:[0,4,7]),lbl:ctx.minor?'i':'I',slot:true});
+   continue;
+  }
+  if(!s||typeof s.deg!=='number'||!Array.isArray(s.iv))return null;
+  const c={r:((t+s.deg)%12+12)%12,iv:s.iv.slice(),lbl:s.lbl};
+  if(typeof s.bass==='number')c.bass=s.bass;
+  out.push(c);
+ }
+ return out;
+}
+let pcsState={cat:'def',sel:null,steps:null,bars:2,tsN:4,tsD:4,q:''};
+function pcsLblFor(r,iv,tonic,minor){
+ const d=((r-tonic)%12+12)%12;let base=PCS_ROM_LBL[d];
+ const s=JSON.stringify(iv);
+ if(s==='[0,3,7]')return base.toLowerCase();
+ if(s==='[0,3,7,10]')return base.toLowerCase()+'7';
+ if(s==='[0,4,7,10]')return base+'7';
+ if(s==='[0,4,7,11]')return base+'maj7';
+ if(s==='[0,3,6]')return base.toLowerCase()+'°';
+ if(s==='[0,3,6,9]')return base.toLowerCase()+'°7';
+ if(s==='[0,3,6,10]')return base.toLowerCase()+'ø7';
+ if(s==='[0,4,8]')return base+'+';
+ return base;
+}
+function pcsCtx(){
+ /* the "__" resolution context — the palette's key (it follows the song), and the lane
+    chord when "Use Chord Lane as Top Row" is ON (the selection, else the playhead's) */
+ const fo=(typeof palFollowTarget==='function')?palFollowTarget():null;
+ const cs=fo?fo.scale:curScale(),t=fo?fo.tonic:project.tonic;
+ let lane=null;
+ if(palState&&palState.laneTop&&Array.isArray(project.chords)&&project.chords.length){
+  const c=(typeof selChord==='number'&&project.chords[selChord])?project.chords[selChord]
+    :chordAt(project.chords,(typeof playheadBeat==='number'?playheadBeat:0)).c;
+  if(c)lane={r:c.r,iv:c.iv.slice(),lbl:c.lbl};
+ }
+ return {tonic:t,minor:modeIsMinor(cs.id),lane};
+}
+function pcsEntrySteps(p){return p.steps?p.steps:progParse(p.t);}
+function pcsChainLbl(p,ctx){
+ const run=progResolve(pcsEntrySteps(p),ctx);
+ return run?run.map(c=>c.lbl).join(' – '):'?';
+}
+function pcsSelectRun(run,realDur){
+ /* the picked changes land in the upper-right editor — his default rate spreads them
+    over the 2 bars, a curated pick keeps its OWN rate (the song's real durations) */
+ if(!run||!run.length)return;
+ if(realDur){
+  pcsState.bars=Math.max(2,Math.ceil(run.reduce((a,c)=>a+(+c.d||1),0)/pcsState.tsN));
+  pcsState.steps=run.map(c=>({r:c.r,iv:c.iv.slice(),lbl:c.lbl,d:+c.d||1}));
+ }else{
+  const total=pcsState.bars*pcsState.tsN,d=Math.max(.5,Math.round((total/run.length)*2)/2);
+  pcsState.steps=run.map(c=>({r:c.r,iv:c.iv.slice(),lbl:c.lbl,d}));
+ }
+ pcsBuild();pcsAudition();
+}
+function pcsAudition(){
+ const go=()=>{try{
+  if(!audioReady||!inst)return;
+  const st=pcsState.steps;if(!st||!st.length)return;
+  const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
+  let at=0;
+  for(const c of st){inst.note('comping',voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+ }catch(e){}};   /* an audition must never break the gesture it rides on */
+ if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
+}
+function pcsMenuShow(x,y,items){
+ let m=document.getElementById('pcsMenu');
+ if(!m){
+  m=document.createElement('div');m.id='pcsMenu';
+  m.style.cssText='position:absolute;z-index:110;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.45);display:none;max-height:300px;overflow:auto;';
+  document.body.appendChild(m);
+  document.addEventListener('mousedown',e=>{if(m.style.display!=='none'&&!m.contains(e.target))m.style.display='none';},true);
+ }
+ m.innerHTML='';
+ for(const [lbl,fn] of items){
+  const it=document.createElement('div');
+  it.textContent=lbl;
+  it.style.cssText='padding:5px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);white-space:nowrap;';
+  it.onmouseenter=()=>{it.style.background='var(--panel2)';};
+  it.onmouseleave=()=>{it.style.background='';};
+  it.onclick=()=>{m.style.display='none';fn();};
+  m.appendChild(it);
+ }
+ m.style.left=Math.round(x+(window.scrollX||0))+'px';
+ m.style.top=Math.round(y+(window.scrollY||0))+'px';
+ m.style.display='block';
+}
+function pcsCurated(){
+ /* his rule (the cadence window's precedent): the 4.4 Import sources when any exist,
+    else every song that ships — plus the CURRENT song's own chord lane on top */
+ const refs=(Array.isArray(project.srcs)?project.srcs:[]).map(r=>r.ref);
+ const base=refs.length?SONGS.filter(s=>refs.includes(s.id)):SONGS;
+ const out=[];
+ if(Array.isArray(project.chords)&&project.chords.length)
+  out.push({name:'Current song — '+(project.song?project.song.name:'untitled'),chords:project.chords});
+ for(const s of base)out.push({name:s.name,chords:s.chords});
+ return out;
+}
+const PCS_CATS=[['cur','Your Curated Songs: Chord Changes'],['def','Default Songs Chord Changes'],
+ ['smp','Simple Cadences'],['chm','Chromatic Mediant Changes'],['col','Coltrane Mediant Changes'],
+ ['rom','Romantic Era Moments']];
+function pcsBuild(){
+ const w=document.getElementById('pcsPanel');if(!w||w.style.display==='none')return;
+ const ctx=pcsCtx();
+ /* the category column — his six, his order */
+ const cats=w.querySelector('#pcsCats');cats.innerHTML='';
+ for(const [id,name] of PCS_CATS){
+  const c=document.createElement('span');
+  c.className='cpchip'+(pcsState.cat===id?' on':'');
+  c.style.display='block';c.style.textAlign='left';c.style.margin='0 0 2px 0';
+  c.textContent=name;
+  c.onclick=()=>{pcsState.cat=id;pcsBuild();};
+  cats.appendChild(c);
+ }
+ /* the results column — the 🔎 is one more AND-filter (the Omnisphere model) */
+ const list=w.querySelector('#pcsList');list.innerHTML='';
+ const q=String(pcsState.q||'').trim().toLowerCase();
+ const mk=(name,chain,tip,idx,onpick)=>{
+  if(q&&!(String(name||'')+' '+chain).toLowerCase().includes(q))return;
+  const d=document.createElement('div');
+  d.className='mimCard'+(pcsState.sel===idx?' on':'');
+  d.title=(tip||'')+' Press = hear it and load it into the editor (nothing is written).';
+  d.innerHTML=(name?'<div class="mimName">'+name+'</div>':'')+'<div class="mimChain">'+chain+'</div>';
+  d.onclick=()=>{pcsState.sel=idx;onpick();};
+  list.appendChild(d);
+ };
+ if(pcsState.cat==='cur'){
+  pcsCurated().forEach((s,i)=>{
+   const chain=s.chords.map(c=>dispLbl(c.lbl)).join(' – ');
+   mk(s.name,chain,'The song’s own changes at its own rate of chord change.','cur:'+i,
+    ()=>pcsSelectRun(s.chords.map(c=>({r:c.r,iv:c.iv.slice(),lbl:c.lbl,d:c.d})),true));
+  });
+  if(!list.children.length&&!q)list.innerHTML='<span style="font-size:11.5px;color:var(--dim);">No curated songs yet — add Import sources in the ⇪ window (4.4), or load a song.</span>';
+ }else if(pcsState.cat==='smp'){
+  /* Simple Cadences = the Cadence library's classical family — one home, no copy */
+  CADENCE_LIB.filter(x=>x.cat==='cls').forEach((t,i)=>{
+   const run=(ctx.minor&&t.runM?t.runM:t.run).map(s=>({r:((ctx.tonic+s.deg)%12+12)%12,
+    iv:(s.q==='T'?(ctx.minor?[0,3,7]:[0,4,7]):s.iv.slice()),lbl:s.lbl,d:s.d}));
+   mk(t.name,run.map(c=>dispLbl(c.lbl)).join(' – '),t.desc,'smp:'+i,()=>pcsSelectRun(run,false));
+  });
+ }else{
+  PROG_LIB.filter(p=>p.fam===pcsState.cat).forEach((p,i)=>{
+   const chain=pcsChainLbl(p,ctx);
+   mk(p.name||'',chain,p.note||'','p:'+pcsState.cat+':'+i,
+    ()=>pcsSelectRun(progResolve(pcsEntrySteps(p),ctx),false));
+  });
+ }
+ if(q&&!list.children.length)list.innerHTML='<span style="font-size:11.5px;color:var(--dim);">Nothing matches the 🔎 — clear it to see every progression.</span>';
+ /* the upper-right EDITOR — the 2-bar chord lane, his §10.2 view window */
+ const ed=w.querySelector('#pcsEd');
+ const st=pcsState.steps;
+ let head='<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'
+  +'<span id="pcsTsig" class="cpchip" title="Click to change the time signature (notational — the bar grid re-divides).">'+pcsState.tsN+'/'+pcsState.tsD+'</span>'
+  +'<span style="font-size:11px;color:var(--dim);">'+pcsState.bars+' bar'+(pcsState.bars>1?'s':'')+'</span>'
+  +'<span id="pcsAddBar" class="cpchip" title="Add a bar to the editor’s chord lane.">＋ bar</span>'
+  +'<span id="pcsPlay" class="cpchip" title="Hear the changes at the song’s BPM, at the rate set here.">▶</span></div>';
+ if(!st||!st.length){
+  ed.innerHTML=head+'<div style="font-size:11px;color:var(--dim);">Pick a progression — it lands here as a 2-bar chord lane. Click a chord to change it or its rate of change · ＋ adds bars · the time signature is a click away. The <b>__</b> chord resolves to '+(ctx.lane?'the Chord Lane ('+dispLbl(ctx.lane.lbl)+')':'the key’s home chord')+' — his §10.2 rule.</div>';
+ }else{
+  const total=pcsState.bars*pcsState.tsN,sum=st.reduce((a,c)=>a+c.d,0);
+  let bars='<div style="display:flex;margin-bottom:2px;">';
+  for(let b=0;b<pcsState.bars;b++)bars+='<div style="flex:'+pcsState.tsN+' 1 0%;font-size:9px;color:var(--dim);border-left:1px solid var(--line);padding-left:3px;">'+(b+1)+'</div>';
+  bars+='</div>';
+  let row='<div id="pcsLane" style="display:flex;align-items:stretch;min-height:34px;border:1px solid var(--line);border-radius:6px;overflow:hidden;">';
+  st.forEach((c,i)=>{row+='<div class="pcsChip" data-i="'+i+'" title="'+(c.d)+' beat'+(c.d!==1?'s':'')+' — click to change the chord, its rate of change, or remove it." style="flex:'+c.d+' 1 0%;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;border-right:1px solid var(--line);background:var(--panel2);min-width:0;overflow:hidden;">'+dispLbl(c.lbl)+'</div>';});
+  if(sum<total-1e-6)row+='<div style="flex:'+(total-sum)+' 1 0%;border:1px dashed var(--line);border-radius:4px;margin:3px;opacity:.5;"></div>';
+  row+='</div>';
+  ed.innerHTML=head+bars+row;
+  ed.querySelectorAll('.pcsChip').forEach(el=>{
+   el.onclick=e=>{
+    const i=+el.dataset.i,c=pcsState.steps[i];
+    const ctx2=pcsCtx();
+    const QUALS=[['Major',[0,4,7]],['Minor',[0,3,7]],['Dom 7',[0,4,7,10]],['Minor 7',[0,3,7,10]],['Maj 7',[0,4,7,11]],['Dim',[0,3,6]],['Dim 7',[0,3,6,9]],['Half-dim ø7',[0,3,6,10]],['Aug',[0,4,8]]];
+    const items=QUALS.map(([nm,iv])=>[nm,()=>{c.iv=iv.slice();c.lbl=pcsLblFor(c.r,c.iv,ctx2.tonic,ctx2.minor);pcsBuild();pcsAudition();}]);
+    items.push(['♯ up a semitone',()=>{c.r=(c.r+1)%12;c.lbl=pcsLblFor(c.r,c.iv,ctx2.tonic,ctx2.minor);pcsBuild();pcsAudition();}]);
+    items.push(['♭ down a semitone',()=>{c.r=(c.r+11)%12;c.lbl=pcsLblFor(c.r,c.iv,ctx2.tonic,ctx2.minor);pcsBuild();pcsAudition();}]);
+    for(const dur of [.5,1,2,4])items.push([(dur===.5?'½':dur)+' beat'+(dur!==1?'s':'')+' long',()=>{c.d=dur;const s2=pcsState.steps.reduce((a,x)=>a+x.d,0);if(s2>pcsState.bars*pcsState.tsN)pcsState.bars=Math.ceil(s2/pcsState.tsN);pcsBuild();}]);
+    if(pcsState.steps.length>1)items.push(['✕ Remove this chord',()=>{pcsState.steps.splice(i,1);pcsBuild();}]);
+    pcsMenuShow(e.clientX,e.clientY,items);
+   };
+  });
+ }
+ const ts=ed.querySelector('#pcsTsig');
+ if(ts)ts.onclick=e=>{
+  pcsMenuShow(e.clientX,e.clientY,[['4/4',[4,4]],['3/4',[3,4]],['2/4',[2,4]],['5/4',[5,4]],['6/8',[6,8]],['7/8',[7,8]],['12/8',[12,8]]]
+   .map(([nm,sig])=>[nm,()=>{pcsState.tsN=sig[0];pcsState.tsD=sig[1];pcsBuild();}]));
+ };
+ const ab=ed.querySelector('#pcsAddBar');
+ if(ab)ab.onclick=()=>{pcsState.bars++;pcsBuild();};
+ const pb=ed.querySelector('#pcsPlay');
+ if(pb)pb.onclick=()=>pcsAudition();
+}
 function pcsWinToggle(){
- /* 78th R4c: THE PIVOT CHORD SEARCH WINDOW — the shell, standing in the column like the
-    palette (deliberately NOT a WINDOW_DEFS promotion; the one-window-era count stands).
-    The §10.2 rabbit-hole columns are scaffolded; their progression DATA (his verbatim
-    lists in the resolved brain-drain doc) lands in its own round, recorded in the spec. */
+ /* 78th R4c the shell — 79th the real thing: the §10.2 rabbit-hole search filled in
+    (standing in the column like the palette, deliberately NOT a WINDOW_DEFS promotion). */
  let w=document.getElementById('pcsPanel');
- if(w){w.style.display=w.style.display==='none'?'':'none';if(w.style.display!=='none')try{w.scrollIntoView({block:'center'});}catch(e){}return;}
+ if(w){w.style.display=w.style.display==='none'?'':'none';if(w.style.display!=='none'){pcsBuild();try{w.scrollIntoView({block:'center'});}catch(e){}}return;}
  w=document.createElement('div');
  w.id='pcsPanel';w.className='gridwrap';w.style.margin='12px 0';
- const COLS=['Your Curated Songs: Chord Changes','Default Songs Chord Changes','Simple Cadences','Chromatic Mediant Changes','Coltrane Mediant Changes','Romantic Era Moments'];
  w.innerHTML='<div class="winHead" id="pcsWinHead"><span class="picon">🔎</span><span class="wtitle">Pivot Chord Search</span>'
+  +'<input id="pcsSearchInp" spellcheck="false" placeholder="🔎 SEARCH" title="One more filter on top of the columns — the Omnisphere model." style="margin-left:auto;font-size:11px;letter-spacing:.4px;padding:2px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;">'
   +'<span class="wbtn" id="pcsCloseChip" title="Close">✕</span></div>'
-  +'<div style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:140px;">'
-  +COLS.map(c=>'<div style="flex:1 1 0;padding:8px;border-right:1px solid var(--line);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;">'+c+'</div><div style="font-size:11px;color:var(--dim);">…</div></div>').join('')
-  +'</div>'
-  +'<div style="font-size:11px;color:var(--dim);margin-top:8px;">The multi-column chord-changes search — the progression families land here in their own round; the shell marks the window his Chord Palette button opens.</div>';
+  +'<div style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:200px;">'
+  +'<div id="pcsCats" style="flex:0 0 200px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>'
+  +'<div id="pcsList" style="display:flex;flex-direction:column;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:380px;"></div>'
+  +'<div id="pcsEd" style="flex:0 0 300px;padding:10px;border-left:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11.5px;color:var(--text);"></div>'
+  +'</div>';
  const anchor=document.getElementById('chordPanel');
  (anchor&&anchor.parentNode?anchor.parentNode:document.body).insertBefore(w,anchor?anchor.nextSibling:null);
  w.querySelector('#pcsCloseChip').onclick=e=>{e.stopPropagation();w.style.display='none';};
+ w.querySelector('#pcsSearchInp').oninput=e=>{pcsState.q=e.target.value;pcsBuild();};
+ pcsBuild();
  try{w.scrollIntoView({block:'center'});}catch(e){}
 }
 function palMatPick(i,id,m){
