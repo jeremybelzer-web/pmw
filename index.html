@@ -10,6 +10,58 @@
   #gridMixTog span.on{background:var(--panel2);color:var(--accent);}
   #gridFixTog.on{color:var(--accent);text-shadow:0 0 6px var(--accent),0 0 14px rgba(232,163,61,.55);}   /* 79th R4 (his words): "Fixed In Place ... glowing signifying it is on" */
   #gridRowWrap.gridFixed{position:sticky;top:var(--fixTop,162px);left:0;z-index:50;background:var(--bg);box-shadow:0 8px 18px rgba(0,0,0,.45);}
+  /* [T1]/[T3] (his fourth + sixth messages, the screenshot the spec): ONE very narrow
+     transport LINE at the very top — unlabelled, the overview riding in-line */
+  #trWinHead{display:none;}
+  #transportWin #appTitle{position:static;transform:none;font-size:12px;letter-spacing:1px;pointer-events:none;flex:0 0 auto;}
+  #transportWin{top:0!important;}
+  #trOvWrap{flex:1 1 200px;min-width:120px;padding:0;overflow:hidden;position:relative;z-index:0;}   /* his glitch report: the strip's content bled over its cell onto the MIDI button — clipped to the cell, layered under the controls */
+  #trOvWrap #ovRow{min-width:0;overflow:hidden;flex:1 1 auto;}
+  #transportWin .controls>button,#transportWin .controls>.ctl,#transportWin .controls>span{position:relative;z-index:1;}
+  #midiLight{width:9px;height:9px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);flex:0 0 auto;}
+  #midiLight.on{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+  #engWinHead{display:none;}
+  #engLineLab{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);align-self:center;flex:0 0 auto;}
+  #gridWinHead #trackSel{margin:0 8px 0 0;display:flex;gap:5px;flex:0 0 auto;}
+  /* [T7] (his thirteenth message): the head cluster RIGHT-ALIGNED in his order —
+     Mixer toggle · palette · Fixed In Place · − · ✕ */
+  #gridWinHead #gridMixTog{margin-left:auto;}
+  [data-gridworld]:not([data-gridworld="main"]) [id="gridMixTog"],
+  [data-gridworld]:not([data-gridworld="main"]) [id="gridPalBtn"],
+  [data-gridworld]:not([data-gridworld="main"]) [id="gridFixTog"],
+  [data-gridworld]:not([data-gridworld="main"]) [id="prov"],
+  [data-gridworld]:not([data-gridworld="main"]) [id="gridCloseChip"]{display:none;}   /* the clones' dead main-only chips */
+  [data-gridworld]:not([data-gridworld="main"]) [id="gridMinChip"]{margin-left:auto;}   /* the instance −/✕ hug the upper right */
+  #gridLink{position:fixed;left:8px;top:30px;z-index:96;display:none;cursor:pointer;font-size:11px;color:var(--accent);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 10px;}
+  #snapPanel.winSel{outline:2px solid var(--accent);outline-offset:1px;box-shadow:0 0 0 4px rgba(232,163,61,.18),0 0 18px rgba(232,163,61,.28);}
+  #tempo{display:none;}   /* [T9] (his fifteenth message): no slider — the field is the face, the range stays the one state */
+  #tval{cursor:ns-resize;user-select:none;padding:2px 8px;border:1px solid var(--line);border-radius:5px;min-width:64px;text-align:center;}
+  #gridWinHead #trackSel .part{padding:2px 8px;font-size:10px;}
+  #transportWin .controls{flex-wrap:wrap;gap:4px 8px;align-items:center;padding:2px 8px 3px;overflow:visible;}   /* his glitch report: a nowrap line CLIPPED the right-side buttons at narrow widths — wrap beats hidden controls; one line whenever it fits */
+  #transportWin .ctl{flex-direction:row;align-items:center;gap:4px;}
+  #transportWin .ctl label{display:none;}
+  #transportWin .controls button{padding:3px 7px;font-size:10.5px;}
+  #transportWin #tempo{width:84px;}
+  #trOvWrap{padding:0 8px 3px;display:flex;align-items:center;}
+  #trOvWrap #ovRow{position:static;flex:1 1 auto;}
+  #trOvWrap #ovRow .thead{display:none;}   /* the strip alone, the reference's way */
+  #trOvWrap #songOv{height:18px!important;flex:1 1 auto;}
+  #trTsig{font-size:11px;color:var(--dim);padding:2px 6px;border:1px solid var(--line);border-radius:5px;cursor:context-menu;white-space:nowrap;}
+  /* [T4] (his eighth message): EVERY window resizable — contents too big scroll inside.
+     The grid keeps its OWN richer resize system (per-row rz + lowerPx), so its boxes
+     opt back out below. Native resize writes session-local inline sizes — per-window
+     size persistence is recorded for its own round. */
+  .gridwrap,#chordPanel,#snapPanel,#cnvWin,#cnvColWin,#swipeWin{resize:both;overflow:auto;min-height:40px;min-width:220px;}
+  [id="gridWrap"]{resize:none;overflow:visible;min-width:0;}
+  /* [T6] (his twelfth message): the Essence Shelf OBJECTS at engine-button size, keeping
+     their RECTANGLE (not the buttons' pill) — the shelf surfaces only; the search-result
+     cards elsewhere keep their card size */
+  #przShelf .mimCard,[id^="essWin_"] .essBody .mimCard,#swShelf .essBody .mimCard{
+    display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:4px;min-width:0;flex:0 0 auto;}
+  #przShelf .mimCard .mimName,[id^="essWin_"] .essBody .mimName,#swShelf .essBody .mimName{font-size:10.5px;font-weight:600;margin:0;white-space:nowrap;}
+  #przShelf .mimCard div:not(.mimName),[id^="essWin_"] .essBody .mimCard div:not(.mimName),#swShelf .essBody .mimCard div:not(.mimName){font-size:9px;margin:0;display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  #przShelf .mimCard .cpchip,[id^="essWin_"] .essBody .cpchip,#swShelf .essBody .cpchip{padding:0 5px;font-size:9.5px;}
+  #zimBtn[data-retired]{display:none;}   /* his ninth message: the top button retires — the zim paths stay alive (the Lower Window and the note menus reach it) */
   .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
   .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
   body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
@@ -587,7 +639,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27r</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -622,7 +674,7 @@
       <button id="play">▶ Play</button>
       <button id="recBtn" title="Record — arm a destination first: the R under a track name records notes from your MIDI keyboard, the ● on a parameter lane's header records automation from the knob or fader (or both at once). Turn this red, hit Play. New notes ADD to what's there; flip “Record over existing MIDI” in ⚙ Settings to replace instead.">⏺ Rec</button>
       <button id="loopBtn" title="Loop the selected section (⌘L from a time selection · double-click-drag the bar lane · or grab the always-on brace's edges)">⟳ Loop</button>
-      <button id="zimBtn" title="Zoomed In Midi — the in-place track renders exactly like the Lower Window (the SAME view object, one code path). Click again to go back. Both workflows ship; keep your habit.">⌕ Zoomed In Midi</button></div></div>
+      <button id="zimBtn" data-retired="1" title="Zoomed In Midi — the in-place track renders exactly like the Lower Window (the SAME view object, one code path). Click again to go back. Both workflows ship; keep your habit.">⌕ Zoomed In Midi</button></div></div>
     <!-- Phase 1.1: these four moved to the transform rail left of the grid; hidden buttons keep their handlers -->
     <div class="ctl" style="display:none;"><label>Protect</label><button id="pinBtn" style="background:#3a3e4d;color:#e9eaef;">📌 Pin selection (don’t conform)</button></div>
     <div class="ctl" style="display:none;"><label>Transform</label><button id="negBtn" style="background:#8f6bb8;color:#150a20;" title="Reflect around the tonic/dominant axis — selected notes, selected chord, or the whole track">⇄ Negative harmony</button></div>
@@ -828,7 +880,7 @@
   <div class="gridwrap" id="gridWrap" style="flex:1;min-width:0;"><!-- MG round: the MAIN wrap has an id now — .gridwrap first-match grabbed the melPanel/varPanel boxes (same class, earlier in the DOM since 27a/30d) and silently unbound the zoom strip -->
     <!-- Phase 1 (73rd, his ask in the same sitting): the Multi-Track Grid is minimize-able
          like the Modulation window — the same winCollapsed idiom, persisted in cp_ui. -->
-    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMixTog" title="Multi-tracks ⇄ Mixer — the same window, two faces: ≡ the tracks, 🎚 the mixer in the grid’s own dimensions. Press again to come back." style="display:inline-flex;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;"><span data-mv="grid" class="on" style="padding:2px 8px;font-size:11px;">≡</span><span data-mv="mix" style="padding:2px 8px;font-size:11px;">🎚</span></span><span class="wbtn" id="gridPalBtn" title="The Chord Palette — open or close it.">🎨</span><span class="wbtn" id="gridFixTog" title="Fixed In Place — the top Multi-Track Grid pins where it is and stops moving while the rest of the app scrolls. Glowing = on. The Settings menu can make it the default." style="width:auto;padding:0 8px;font-size:10px;letter-spacing:.5px;">Fixed In Place</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span></div>
+    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMixTog" title="Multi-tracks ⇄ Mixer — the same window, two faces: ≡ the tracks, 🎚 the mixer in the grid’s own dimensions. Press again to come back." style="display:inline-flex;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;"><span data-mv="grid" class="on" style="padding:2px 8px;font-size:11px;">≡</span><span data-mv="mix" style="padding:2px 8px;font-size:11px;">🎚</span></span><span class="wbtn" id="gridPalBtn" title="The Chord Palette — open or close it.">🎨</span><span class="wbtn" id="gridFixTog" title="Fixed In Place — the top Multi-Track Grid pins where it is and stops moving while the rest of the app scrolls. Glowing = on. The Settings menu can make it the default." style="width:auto;padding:0 8px;font-size:10px;letter-spacing:.5px;">Fixed In Place</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span><span class="wbtn" id="gridCloseChip" title="Delete the Multi-Track Grid window — a link at the top brings it back">✕</span></div>
     <!-- 78th R4 (his words): "The song description in the multi-track grid should be
          across the top not the bottom" — the provenance line moved up here -->
     <div class="prov" id="prov" style="margin:0 0 8px 0;"></div>
@@ -9938,14 +9990,20 @@ let canvasState=canvasRecParse((()=>{try{return localStorage.getItem('cp_canvas'
 let cnvUndoStack=[],cnvSel=null;
 function persistCanvas(){try{localStorage.setItem('cp_canvas',JSON.stringify(canvasState));}catch(e){}}
 function cnvWins(){
- /* the zoomable-window roster — WINDOW_DEFS is read, never copied (one home).
-    ⚠ Its declaration sits far BELOW this block, so the read guards in its own try —
-    the TDZ lesson-class (typeof throws too; only try/catch is safe pre-declaration). */
+ /* the zoomable-window roster — HIS ORDER (his tenth message, verbatim in the RAW):
+    Everything · Multi-Track Grids · Transport · (no Navigator — retired, his own note) ·
+    Essence Shelf · All Engines · Chord Palette · Snap · Variations · Chord
+    Progressions · Pivot Chords · then Modulate and the rest. WINDOW_DEFS is read,
+    never copied (one home). ⚠ Its declaration sits far BELOW this block, so the read
+    guards in its own try — the TDZ lesson-class. */
  let defs=[];try{defs=WINDOW_DEFS;}catch(e){}
- return [{id:'all',name:'Everything'},{id:'grid',name:'Multi-Track Grid(s)'},{id:'chordPanel',name:'Chord Palette'},
-  {id:'transportWin',name:'Transport'},{id:'navWin',name:'Navigator'},{id:'engWin',name:'Engines'},
-  {id:'snapPanel',name:'Snap'},{id:'slideWin',name:'Slide Engine'},{id:'pcsPanel',name:'Pivot Chord Search'}]
-  .concat(defs.map(d=>({id:d.id,name:d.name})));
+ return [{id:'all',name:'Everything'},{id:'grid',name:'Multi-Track Grid(s)'},
+  {id:'transportWin',name:'Transport'},{id:'shelf',name:'Essence Shelf'},
+  {id:'engWin',name:'All Engines'},{id:'chordPanel',name:'Chord Palette'},
+  {id:'snapPanel',name:'Snap'},{id:'varPanel',name:'Variations'},
+  {id:'progPanel',name:'Chord Progressions'},{id:'pcsPanel',name:'Pivot Chords'}]
+  .concat(defs.filter(d=>d.id!=='varPanel').map(d=>({id:d.id,name:d.name})))
+  .concat([{id:'slideWin',name:'Slide Engine'}]);
 }
 function canvasZoomFor(id){const v=canvasState.zoom[id];return (typeof v==='number')?v:100;}
 function canvasApplyZoom(){
@@ -9962,7 +10020,15 @@ function canvasApplyZoom(){
   const pct=canvasZoomFor(w.id);
   if(w.id==='grid'){
    const g=document.getElementById('gridRowWrap');if(g)g.style.zoom=z(pct);
-   document.querySelectorAll('[data-gridworld]').forEach(r=>{r.style.zoom=z(pct);});
+   document.querySelectorAll('[data-gridworld]').forEach(r=>{if(/^gridRowWrap_/.test(r.id||''))r.style.zoom=z(pct);});
+   continue;
+  }
+  if(w.id==='shelf'){
+   /* his tenth message: the Essence Shelf is its own zoom entry — the Prism's shelf
+      surface, the stacks' mirrors and the layout row all follow one slider */
+   const tgts=[document.getElementById('przShelf'),document.getElementById('swShelf')]
+    .concat([...document.querySelectorAll('[id^="essWin_"]')]);
+   for(const t of tgts)if(t)t.style.zoom=z(pct);
    continue;
   }
   const el=document.getElementById(w.id);
@@ -10532,6 +10598,72 @@ function swLayoutApply(layout){
  const chk=document.querySelector('#swShelfMove input');
  if(chk)chk.checked=_swShelfWithLower;
 }
+/* ==== [T1]/[T2] THE NARROW TRANSPORT'S ON-DEMAND LANES + THE GRID'S CTRL+CLICK MENU
+   (79th R9 — his fourth + fifth messages verbatim in the RAW; the reference behavior
+   VERIFIED online this session: the tempo lane appears only on a right-click of the
+   tempo field ("Show Automation"), time-signature changes are on-demand markers; both
+   live in the TIMELINE, which is where ours draw too — x-aligned to the bars). ==== */
+function trTsigSync(){
+ const el=document.getElementById('trTsig');if(!el)return;
+ let txt='4/4';
+ try{
+  const m=Array.isArray(project.tsigMap)&&project.tsigMap.length?project.tsigMap[0]:null;
+  if(m&&m.n&&m.d)txt=m.n+'/'+m.d;
+ }catch(e){}
+ el.textContent=txt;
+}
+{const _tw=document.getElementById('transportWin');
+ const _tc=document.getElementById('tempo');
+ if(_tc&&!document.getElementById('trTsig')){
+  const t=document.createElement('span');
+  t.id='trTsig';
+  t.title='Time signature — ctrl+click to show the time-signature lane on the grid (markers, editable there); ctrl+click again to tuck it away.';
+  _tc.parentNode.insertBefore(t,_tc);
+  trTsigSync();
+  t.addEventListener('contextmenu',e=>{
+   e.preventDefault();e.stopPropagation();
+   SETTINGS.showTsig=!(SETTINGS.showTsig===true);
+   persistSettings();try{drawTsigLane();}catch(e2){}try{refresh(false);}catch(e2){}
+  });
+ }
+ if(_tc){
+  _tc.title=(_tc.title?_tc.title+' — ':'')+'ctrl+click: show the tempo lane on the grid (on demand, the reference\u2019s way); again to tuck it away.';
+  _tc.addEventListener('contextmenu',e=>{
+   e.preventDefault();e.stopPropagation();
+   SETTINGS.showTempoLane=!(SETTINGS.showTempoLane===true);
+   persistSettings();try{refresh(false);}catch(e2){}
+  });
+ }}
+function gridControlsMenu(e){
+ /* [T1] (his words): "all of the controls in our Grid Controls Window they have hidden
+    in a drop down menu if you control+click somewhere in their multi-track grid" —
+    every item drives the REAL hidden input (the handlers stayed alive in navBody). */
+ const chk=id=>{const el=document.getElementById(id);return el&&el.checked;};
+ const flip=id=>{const el=document.getElementById(id);if(!el)return;el.checked=!el.checked;el.dispatchEvent(new Event('change'));};
+ const on=v=>v?'✓ ':'○ ';
+ const items=[
+  [on(chk('chkGhosts'))+'👥 All tracks',()=>flip('chkGhosts')],
+  [on(chk('chkPaper'))+'📄 Paper view',()=>flip('chkPaper')],
+  [on(chk('chkTrip'))+'Triplets',()=>flip('chkTrip')],
+  [on(chk('chkSwing'))+'Swing',()=>flip('chkSwing')],
+  [on(SETTINGS.showSecLane===true)+'Sections lane',()=>{SETTINGS.showSecLane=!(SETTINGS.showSecLane===true);persistSettings();try{drawSectionLane();}catch(e2){}try{refresh(false);}catch(e2){}}],
+  [on(SETTINGS.showTsig===true)+'Time-signature lane',()=>{SETTINGS.showTsig=!(SETTINGS.showTsig===true);persistSettings();try{drawTsigLane();}catch(e2){}try{refresh(false);}catch(e2){}}],
+  [on(SETTINGS.showKeysLane===true)+'Keys lane',()=>{SETTINGS.showKeysLane=!(SETTINGS.showKeysLane===true);persistSettings();try{refresh(false);}catch(e2){}}],
+  [on(SETTINGS.showTempoLane===true)+'Tempo lane',()=>{SETTINGS.showTempoLane=!(SETTINGS.showTempoLane===true);persistSettings();try{refresh(false);}catch(e2){}}],
+  ['Load song ▸',()=>{
+    pcsMenuShow(e.clientX+16,e.clientY+8,SONGS.map(sg=>[sg.name,()=>{try{loadSong(sg.id);}catch(e2){}}]));
+  }]
+ ];
+ pcsMenuShow(e.clientX,e.clientY,items);
+}
+{const _gh=document.getElementById('gridWinHead');
+ if(_gh)_gh.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();gridControlsMenu(e);});
+ const _gw=document.getElementById('gridWrap');
+ if(_gw)_gw.addEventListener('contextmenu',e=>{
+  /* the note/chord/selection menus own their surfaces — this menu takes the chrome */
+  if(e.target.closest('svg,.cb,input,select,button,.thead,.mimCard,#chordlane,.wbtn'))return;
+  e.preventDefault();e.stopPropagation();gridControlsMenu(e);
+ });}
 /* ==== [W1] THE CHORD PROGRESSIONS WINDOW (79th R5 — his words verbatim in the RAW):
    "exactly like the Cadences window, only instead of Cadences meant to modify the END
    of a musical phrase, these are chord progressions meant to be the STRUCTURE of the
@@ -10754,6 +10886,29 @@ function gridMixApply(){
   if(_gmSaved){for(const k of Object.keys(_gmSaved))_gmSaved[k].el.style.display=_gmSaved[k].disp;_gmSaved=null;}
  }
 }
+/* [T9] (his fifteenth message): no BPM slider — the reference's field instead. The
+   hidden range stays the ONE state (every handler and suite reads tempo.value); the
+   readout drags ↕ and double-clicks to type. */
+{const tv=document.getElementById('tval'),tr=document.getElementById('tempo');
+ if(tv&&tr){
+  tv.title='Tempo — drag ↕ to change, double-click to type.';
+  tv.onmousedown=e=>{
+   if(e.detail>1)return;
+   e.preventDefault();
+   const y0=e.clientY,v0=+tr.value||96;
+   const mv=ev=>{tr.value=Math.max(40,Math.min(220,Math.round(v0+(y0-ev.clientY)/2)));tr.dispatchEvent(new Event('input'));};
+   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);tr.dispatchEvent(new Event('change'));};
+   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  };
+  tv.ondblclick=()=>{
+   const inp=document.createElement('input');
+   inp.type='number';inp.min=40;inp.max=220;inp.value=Math.round(+tr.value||96);
+   inp.style.cssText='width:56px;font-size:11px;';
+   tv.textContent='';tv.appendChild(inp);inp.focus();inp.select();
+   const done=()=>{const v=Math.max(40,Math.min(220,Math.round(+inp.value||96)));tr.value=v;tr.dispatchEvent(new Event('input'));tr.dispatchEvent(new Event('change'));};
+   inp.onblur=done;inp.onkeydown=ev=>{if(ev.key==='Enter')done();ev.stopPropagation();};
+  };
+ }}
 {const _mt=document.getElementById('gridMixTog');
  if(_mt)_mt.onclick=e=>{e.stopPropagation();
   const sp=e.target.closest('span[data-mv]');
@@ -10921,6 +11076,19 @@ document.getElementById('palWinHead').onclick=e=>{
  palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();
 };
 /* Phase 1 (73rd): the Multi-Track Grid window minimizes like the Modulation window */
+function gridCloseApply(){
+ const g=document.getElementById('gridRowWrap');if(!g)return;
+ const closed=!!uiState.gridClosed;
+ g.style.display=closed?'none':'';
+ let l=document.getElementById('gridLink');
+ if(!l){
+  l=document.createElement('span');l.id='gridLink';l.textContent='Multi-Track Grid';
+  l.title='Bring the Multi-Track Grid back';
+  document.body.appendChild(l);
+  l.onclick=()=>{uiState.gridClosed=false;try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}gridCloseApply();};
+ }
+ l.style.display=closed?'':'none';
+}
 function gridMinApply(){
  const gw=document.getElementById('gridWrap');if(!gw)return;
  gw.classList.toggle('winCollapsed',!!uiState.gridMin);
@@ -10933,8 +11101,11 @@ document.getElementById('gridMinChip').onclick=()=>{
 };
 /* 75th round four (his fix, the palette Fix-1 idiom): the grid's title bar ITSELF
    minimizes on click — the chips and the ⠿ grip keep their own jobs */
+{const _gx=document.getElementById('gridCloseChip');
+ if(_gx)_gx.onclick=e=>{e.stopPropagation();uiState.gridClosed=true;try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e2){}gridCloseApply();};}
 document.getElementById('gridWinHead').onclick=e=>{
  if(e.target&&e.target.classList&&(e.target.classList.contains('wbtn')||e.target.classList.contains('colGrip')))return;
+ if(e.target&&e.target.closest&&e.target.closest('#trackSel'))return;   /* [T3] follow-up: the add-track/N-hidden chips live IN the head now — their clicks must not minimize the grid (verify-21be caught the collapse mid-flow) */
  uiState.gridMin=!uiState.gridMin;
  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  gridMinApply();
@@ -10968,8 +11139,9 @@ let winSelId=null;
 document.addEventListener('mousedown',e=>{
  const t=e.target;if(!t||!t.closest)return;
  let hit=null;
- const w=t.closest('.gridwrap');
- if(w&&w.id&&w.id!=='gridWrap'&&typeof WINDOW_DEFS!=='undefined'&&WINDOW_DEFS.some(d=>d.id===w.id))hit=w.id;
+ const w=t.closest('.gridwrap,#snapPanel');
+ const NEWWIN=['snapPanel','pcsPanel','progPanel','slideWin'];   /* [T8] (his fourteenth message): the new-model windows select and Delete like the rest */
+ if(w&&w.id&&w.id!=='gridWrap'&&(NEWWIN.indexOf(w.id)>=0||(typeof WINDOW_DEFS!=='undefined'&&WINDOW_DEFS.some(d=>d.id===w.id))))hit=w.id;
  if(hit!==winSelId){
   const old=winSelId?document.getElementById(winSelId):null;
   if(old)old.classList.remove('winSel');
@@ -10989,6 +11161,19 @@ document.addEventListener('keydown',e=>{
   ||(typeof stripMulti!=='undefined'&&stripMulti&&stripMulti.t!=null)
   ||(typeof xselAny==='function'&&xselAny());}catch(err){}
  if(inner)return;   /* the inner selection wins — the app's own delete takes it */
+ const NEWCLOSE={snapPanel:()=>{palState.snapHide=true;persistPal();snapDockApply(true);},
+  pcsPanel:()=>{const p=document.getElementById('pcsPanel');if(p)p.style.display='none';},
+  progPanel:()=>{const p=document.getElementById('progPanel');if(p)p.style.display='none';},
+  slideWin:()=>{if(typeof slidePanelOpen!=='undefined'&&slidePanelOpen&&typeof toggleSlidePanel==='function')toggleSlidePanel();}};
+ if(NEWCLOSE[winSelId]){
+  const p2=document.getElementById(winSelId);
+  if(!p2||!p2.getClientRects().length)return;
+  e.preventDefault();e.stopPropagation();
+  NEWCLOSE[winSelId]();
+  if(p2)p2.classList.remove('winSel');
+  winSelId=null;
+  return;
+ }
  if(typeof uiWinShown!=='function'||!uiWinShown(winSelId))return;
  e.preventDefault();e.stopPropagation();
  const one=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.delLinked===false);
@@ -23775,6 +23960,7 @@ async function ensureMidiIn(){
 }
 function recTaking(){return recArmed&&playing&&recTake&&armedTrack===recTake.t;}
 function onMidiIn(ev){
+ {const _ml=document.getElementById('midiLight');if(_ml){_ml.classList.add('on');clearTimeout(_ml._t);_ml._t=setTimeout(()=>{_ml.classList.remove('on');},130);}}   /* [T3]: the trigger light */
  const d=ev.data;if(!d||d.length<3)return;
  const cmd=d[0]&0xF0,note=d[1],vel=d[2];
  if(cmd!==0x90&&cmd!==0x80)return;
@@ -24063,11 +24249,11 @@ function parseSettings(str){
  const def={numerals:'roman',laneLabel:'function',autosave:true,recordOver:false,clipAlign:'chords',clipDrop:'ask',clipChordNames:true,chordLaneCanHide:true,ragaFamFirst:'carnatic',ragaTerms:'',ragaMidiAud:true,
   /* 2.5: the transport-fold + chrome preferences — DEVICE data (§2d: these ride
      cp_settings, never the project file; the workspace-vs-device line for 1.7 R0) */
-  showOverview:true,showScrub:true,showSecLane:true,showTsig:true,showKeysLane:false,showTempoLane:false,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,   /* 78th (his words): the grid-top nav rows default OFF — the global Navigator + the bars/beats lane carry navigation; every row re-enables in Settings */
+  showOverview:true,showScrub:true,showSecLane:false,showTsig:false,showKeysLane:false,showTempoLane:false,showPianoRoll:true,markerLines:'active',continuous:false,lowerPx:180,   /* 78th (his words): the grid-top nav rows default OFF — the global Navigator + the bars/beats lane carry navigation; every row re-enables in Settings */
   /* SETUP R1 (client spec, Aug 19): count-in bars (0 off) · latencyHint at audio start · preferred output device — DEVICE data, like everything in this bag */
   countIn:0,latencyPref:'interactive',sinkId:'',
   classicHeads:false,
- navWithGrid:false,engView:'top-buttons',engTips:true,
+ engView:'top-buttons',engTips:true,
  delLinked:true,
  fixedGrid:false};   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
@@ -24087,13 +24273,12 @@ function parseSettings(str){
    if(o.ragaMidiAud===false)def.ragaMidiAud=false;   /* 3.5: toggle ② defaults ON (client call, #13d) */   /* v3 (client §3): default ON — the lane may tuck away */
    if(o.showOverview===false)def.showOverview=false;   /* 2.5 ⑪e — 78th: default OFF, an explicit true re-enables */
    if(o.showScrub===false)def.showScrub=false;   /* 2.5 ⑪d */
-   if(o.showSecLane===false)def.showSecLane=false;   /* 2.5 ⑪f — 78th: default OFF */
-   if(o.navWithGrid===true)def.navWithGrid=true;   /* 78th R5: the Navigator ships with the grid (default OFF, his words) */
+   if(o.showSecLane===true)def.showSecLane=true;   /* 2.5 ⑪f — [T2]: on-demand (the ctrl+click menu), default OFF again */
    if(o.fixedGrid===true)def.fixedGrid=true;   /* 79th R4 (his words): fixed-as-default is the Settings opt-in */
    if(['top-buttons','top-icons','left-buttons','left-icons'].indexOf(o.engView)>=0)def.engView=o.engView;   /* 78th R5: his four views */
    if(o.engTips===false)def.engTips=false;
    if(o.delLinked===false)def.delLinked=false;   /* 78th R4b: Delete-one opt-out */
-   if(o.showTsig===false)def.showTsig=false;   /* 2.5 ④ — 78th: default OFF */
+   if(o.showTsig===true)def.showTsig=true;   /* 2.5 ④ — [T2]: on-demand, default OFF again */
    if(o.showKeysLane===true)def.showKeysLane=true;   /* 78th */
    if(o.showTempoLane===true)def.showTempoLane=true;   /* 78th */
    if(o.showPianoRoll===false)def.showPianoRoll=false;   /* 2.5 ③ */
@@ -24417,6 +24602,7 @@ function parseUiState(str,defs){
    if(o.iconsHidden===true)def.iconsHidden=true;
    if(Array.isArray(o.links))def.links=linkNorm(o.links);   /* Phase 1: the graph persists in cp_ui */
    if(o.gridMin===true)def.gridMin=true;
+   if(o.gridClosed===true)def.gridClosed=true;   /* [T7]: Grid 1's ✕ persists */
    if(Array.isArray(o.colOrder))def.colOrder=o.colOrder.filter(x=>typeof x==='string');   /* Phase 2 R0: the column order (normalized at apply) */
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
    if(o.chrome&&typeof o.chrome==='object')for(const _k of ['tr','nav','eng','gc']){const _c=o.chrome[_k];if(_c&&typeof _c==='object'){if(_c.min===true)def.chrome[_k].min=true;if(_c.closed===true)def.chrome[_k].closed=true;}}   /* 76th R2 */
@@ -24478,7 +24664,7 @@ try{uiState=parseUiState(localStorage.getItem('cp_ui'));}catch(e){}
    entry at all, so a future unlink verb is not resurrected at every boot. */
 try{if(!linkedTo(uiState.links,'win:chordPalette').length&&!(palState&&palState.win&&palState.win.closed))
  uiState.links=linkAdd(uiState.links,'win:chordPalette',focusedGridNode(),true);}catch(e){}
-try{gridMinApply();}catch(e){}   /* the grid window's saved minimize — applied HERE, after uiState exists (a pre-init call sat in TDZ and silently never ran; landmine ⑪'s try/catch hid it until the suite's reload check caught the state not restoring) */
+try{gridMinApply();gridCloseApply();}catch(e){}   /* the grid window's saved minimize + [T7] close — applied HERE, after uiState exists (a pre-init call sat in TDZ and silently never ran; landmine ⑪'s try/catch hid it until the suite's reload check caught the state not restoring) */
 function uiDispatch(action){
  const prevOpen=uiState.open;
  const prevWins=Array.isArray(uiState.openWins)?uiState.openWins.slice():[];
@@ -24608,6 +24794,20 @@ function initUiShell(){
  /* 78th R3 (his words): the Engine Window Buttons live in the fixed ENGINES WINDOW now —
     the rail keeps the transform verbs (pin/neg/snv/aretha/★/⤢) */
  rail.innerHTML=RAIL_DEFS.map((r,i)=>r.win?'':`<button id="rail_${i}" title="${r.tip}">${r.icon}</button>`).join('');
+ /* [T3] (his words): Import and the Sample engine live with the LEFT icons — appended
+    here, deliberately NOT RAIL_DEFS entries (that constant's 14-pin stands) */
+ {const imp=document.createElement('button');imp.id='rail_imp';imp.textContent='⇪';
+  imp.title='Import & cross-pollination sources';
+  imp.onclick=e=>{uiDispatch({type:'toggle',id:'importPanel'});e.target.blur();};
+  rail.appendChild(imp);
+  const hub=document.createElement('button');hub.id='rail_hub';hub.textContent='≈';
+  hub.title='Samples — the sampler in the making (his note: it looks nothing like a keyboard sampler yet — recorded)';
+  hub.onclick=e=>{uiDispatch({type:'toggle',id:'hubPanel'});e.target.blur();};
+  rail.appendChild(hub);
+  const stp=document.createElement('button');stp.id='rail_setup';stp.textContent='🔧';
+  stp.title='Setup — click track, MIDI devices, audio output';
+  stp.onclick=e=>{uiDispatch({type:'toggle',id:'setupPanel'});e.target.blur();};
+  rail.appendChild(stp);}
  RAIL_DEFS.forEach((r,i)=>{
   if(!document.getElementById('rail_'+i))return;
   document.getElementById('rail_'+i).onclick=e=>{
@@ -25349,8 +25549,10 @@ function fixedChromeApply(){
  let anyClosed=false;
  for(const [key,winId,minId,linkId] of defs){
   const w=_gridGetById(winId);if(!w)continue;
+  if(key==='nav'){w.style.display='none';const l0=_gridGetById(linkId);if(l0)l0.style.display='none';continue;}   /* [T2]/[T3]: retired — and it must not count toward the link band (an EMPTY band was his "gap") */
   const perGrid=(key==='nav'&&typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.navWithGrid);
   const closed=perGrid||!!c[key].closed;
+  if(key==='eng')c[key].min=false;   /* [T3]: the one-line Engines has no head to restore from */
   w.classList.toggle('winCollapsed',!!c[key].min);
   w.style.display=closed?'none':'';
   const mc2=_gridGetById(minId);if(mc2)mc2.textContent=c[key].min?'+':'−';
@@ -25363,7 +25565,7 @@ function fixedChromeApply(){
   if(w.style.display==='none')continue;
   /* 78th R4d (his words): "I'd like to try having the 'Grid Controls Window' at the
      bottom of the screen: still fixed and not moving with the rest of the app." */
-  if(key==='nav'){w.style.top='auto';w.style.bottom='0px';w.classList.add('navBottom');continue;}   /* 78th R5 (his words): the Navigator fixed at the bottom, 40% transparent */
+  if(key==='nav'){w.style.display='none';continue;}   /* [T2] (his fifth message): "we don't need a separate Navigator Window at all" — retired whole; its body's controls stay in-DOM for their handlers */
   if(key==='eng'&&w.classList.contains('engLeft'))continue;   /* 78th R5: the left views seat after the loop */
   w.style.top=y+'px';w.style.bottom='';
   y+=w.offsetHeight;
@@ -25389,8 +25591,11 @@ function engViewApply(){
  if(!eb||!ew)return;
  const v=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.engView)||'top-buttons';
  const icons=v.indexOf('icons')>=0,left=v.indexOf('left')===0;
+ const _keepX=eb.querySelector('#engCloseChip')||_gridGetById('engCloseChip');   /* [T3] — held ACROSS the wipe: innerHTML='' destroys an in-line chip and getElementById cannot find a disconnected node (the suite caught the second pass losing it) */
  eb.innerHTML='';
+ {const lab=document.createElement('span');lab.id='engLineLab';lab.textContent='Engines';eb.appendChild(lab);}   /* [T3]: the label IN-LINE — no vertical cost */
  for(const d of WINDOW_DEFS){
+  if(d.id==='importPanel'||d.id==='hubPanel'||d.id==='setupPanel')continue;   /* [T3]+his seventh message: Import, the Sample engine AND Setup are LEFT-rail icons, not engines */
   const b=document.createElement('span');
   b.className='part engChip'+((typeof uiWinShown==='function'&&uiWinShown(d.id))?' on':'');
   b.style.cssText='cursor:pointer;'+(icons?'padding:4px 9px;font-size:15px;':'padding:3px 10px;font-size:11.5px;');
@@ -25424,6 +25629,7 @@ function engViewApply(){
   sb.onclick=()=>{if(typeof toggleSlidePanel==='function')toggleSlidePanel();engViewApply();};
   eb.appendChild(sb);
  }
+ if(_keepX)eb.appendChild(_keepX);   /* [T3]: ✕ rides the line (the head is gone); engLink restores */
  ew.classList.toggle('engLeft',left);
  eb.style.flexDirection=left?'column':'row';
  fixedChromeApply();
@@ -25538,17 +25744,47 @@ function fixedChromeInit(){
   const sctl=_gridGetById('songCtl');
   if(sctl){gb.insertBefore(sctl,gb.firstChild);sctl.style.display='';}
   const ns=document.createElement('div');ns.id='navSong';gb.insertBefore(ns,gb.firstChild);
-  const laneDefs=[['Song','ovRow'],['Sections','sectionLaneRow'],['Time Signature','tsigLaneRow']];
-  for(const _ld of laneDefs){
-   const row=_gridGetById(_ld[1]);if(!row||row.closest('#navBody'))continue;
-   const wrap=document.createElement('div');wrap.className='navLaneWrap';
-   const lab=document.createElement('span');lab.className='navLaneLab';lab.textContent=_ld[0];
-   wrap.appendChild(lab);
-   if(row.parentNode)row.parentNode.removeChild(row);
-   const holder=document.createElement('div');holder.style.cssText='flex:1 1 auto;min-width:0;overflow-x:auto;';
-   holder.appendChild(row);
-   wrap.appendChild(holder);
-   gb.appendChild(wrap);
+  /* [T1]/[T2] (his fourth + fifth messages, the RAW): THE NAVIGATOR RETIRES WHOLE — the
+     reference's model, verified: a very narrow transport bar, the whole-song overview
+     IN-LINE with it, the Sections/Time-Signature lanes only ON DEMAND (they stay in
+     their grid markup homes, gates OFF), the Grid Controls in the grid's ctrl+click
+     menu. navBody's controls stay in-DOM, handlers alive — the hidden-buttons
+     precedent at window scale. ONLY the overview moves on, into the transport. */
+  {const ov=_gridGetById('ovRow');
+   const tw=_gridGetById('transportWin');
+   if(ov&&tw&&!ov.closest('#trOvWrap')){
+    let host=_gridGetById('trOvWrap');
+    if(!host){host=document.createElement('div');host.id='trOvWrap';tw.appendChild(host);}
+    if(ov.parentNode)ov.parentNode.removeChild(ov);
+    host.appendChild(ov);
+    const th=ov.querySelector('.thead');if(th)th.style.display='none';   /* the strip alone — the label cell's inline flex outranks css */
+   }}
+  /* [T3] (his sixth message): EVERYTHING IN ONE LINE, the screenshot's way — the head
+     row retires (no "Transport" label), Curiositor leads the line, the overview rides
+     mid-line, a MIDI button + trigger light at the right, ✕ at the far end; the
+     add-track / N-hidden chips seat ON the grid itself. */
+  {const tw=_gridGetById('transportWin'),ctr=tw&&tw.querySelector('.controls');
+   if(ctr){
+    const at=_gridGetById('appTitle');
+    if(at&&at.parentNode!==ctr){
+     ctr.insertBefore(at,ctr.firstChild);
+     at.style.position='static';at.style.left='';at.style.top='';at.style.transform='';   /* his glitch report: the INLINE absolute centering beat the stylesheet — the title floated OVER the overview and buttons */
+    }
+    const cnvCtl=_gridGetById('canvasBtn');const anchor=cnvCtl?cnvCtl.closest('.ctl'):null;
+    const ovw=_gridGetById('trOvWrap');if(ovw&&anchor)ctr.insertBefore(ovw,anchor);
+    if(!_gridGetById('midiBtn')){
+     const mb=document.createElement('button');
+     mb.id='midiBtn';mb.textContent='MIDI';
+     mb.title='MIDI assignment — devices, inputs and routing live in the Setup window.';
+     mb.style.cssText='background:#3a3e4d;color:#e9eaef;';
+     mb.onclick=e=>{uiDispatch({type:'toggle',id:'setupPanel'});e.target.blur();};
+     const ml=document.createElement('span');ml.id='midiLight';ml.title='Lights when a MIDI key arrives.';
+     if(anchor){ctr.insertBefore(mb,anchor);ctr.insertBefore(ml,anchor);}else{ctr.appendChild(mb);ctr.appendChild(ml);}
+    }
+    const x=_gridGetById('trCloseChip');if(x&&x.parentNode!==ctr)ctr.appendChild(x);
+   }
+   const gh=_gridGetById('gridWinHead'),ts=_gridGetById('trackSel');
+   if(gh&&ts&&ts.parentNode!==gh){const mt=_gridGetById('gridMixTog');gh.insertBefore(ts,mt||null);}   /* his "add track" + "N hidden" on the grid itself */
   }
  }
  fixedChromeApply();
@@ -26635,7 +26871,7 @@ function settingsHTML(){
  <p style="font-size:11.5px;color:var(--dim);">The transport header's lanes and the grid chrome — all hideable here (2.5 item ④'s rule). These are device preferences: they never ride your project file.</p>
  <p><label><input type="checkbox" id="setOvLane" ${SETTINGS.showOverview!==false?'checked':''}> <b>Song Overview lane</b> — the whole arrangement in miniature with a viewport outline (drag ←→ scroll · ↕ zoom · double-click = whole song)</label></p>
  <p><label><input type="checkbox" id="setScrubLane" ${SETTINGS.showScrub!==false?'checked':''}> <b>Scrub area</b> — the strip under the ruler (click: play from that bar · hold: repeat it · drag: scrub)</label></p>
- <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane!==false?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
+ <p><label><input type="checkbox" id="setSecLane" ${SETTINGS.showSecLane===true?'checked':''}> <b>Section lane</b> — sections as named spans with their keys, plus position markers (double-click a span loops it)</label></p>
  <p><label>Window buttons <select id="setEngView">
   <option value="top-buttons" ${SETTINGS.engView!=='top-icons'&&SETTINGS.engView!=='left-buttons'&&SETTINGS.engView!=='left-icons'?'selected':''}>Buttons across the top</option>
   <option value="top-icons" ${SETTINGS.engView==='top-icons'?'selected':''}>Icons across the top</option>
@@ -26643,9 +26879,8 @@ function settingsHTML(){
   <option value="left-icons" ${SETTINGS.engView==='left-icons'?'selected':''}>Icons down the left</option>
  </select></label> <span class="dim">— his four views for the ONE window-button group (the Engines window).</span></p>
  <p><label><input type="checkbox" id="setEngTips" ${SETTINGS.engTips!==false?'checked':''}> Hover descriptions on the window buttons</label> <span class="dim">— also toggled by ctrl+clicking any button.</span></p>
- <p><label><input type="checkbox" id="setNavWithGrid" ${SETTINGS.navWithGrid===true?'checked':''}> Navigator Window moves with Multi-Track Grid Window</label> <span class="dim">— ON: the Navigator ships with the grid, in the page. OFF (default): fixed at the bottom of the screen, 40% transparent.</span></p>
  <p><label><input type="checkbox" id="setDelLinked" ${SETTINGS.delLinked!==false?'checked':''}> Delete closes the whole linked group</label> <span class="dim">— with a window selected and nothing inside it selected, Delete closes it AND its linked windows (uncheck: just the one).</span></p>
- <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig!==false?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
+ <p><label><input type="checkbox" id="setTsigLane" ${SETTINGS.showTsig===true?'checked':''}> <b>Time-signature lane</b> — meter changes over the timeline (notational: playback still counts 4/4)</label></p>
  <p><label><input type="checkbox" id="setPRoll" ${SETTINGS.showPianoRoll!==false?'checked':''}> <b>Piano roll</b> — piano keys down the left edge of every open grid lane</label></p>
  <p><label><input type="checkbox" id="setFixGrid" ${SETTINGS.fixedGrid===true?'checked':''}> <b>Multi-Track Grid fixed in place by default</b> — the top grid boots pinned (the grid’s own “Fixed In Place” chip still toggles it live)</label></p>
  <p><label><input type="checkbox" id="setKeysLane" ${SETTINGS.showKeysLane===true?'checked':''}> <b>Keys lane</b> — the key-region strip above the grid (off by default since the grids slimmed)</label>
@@ -26688,7 +26923,6 @@ function openSettings(){
  if(g('setOvLane'))g('setOvLane').onchange=e=>{SETTINGS.showOverview=!!e.target.checked;persistSettings();drawOverview();};
  if(g('setScrubLane'))g('setScrubLane').onchange=e=>{SETTINGS.showScrub=!!e.target.checked;persistSettings();refresh(false);drawTrackSel();};
  if(g('setSecLane'))g('setSecLane').onchange=e=>{SETTINGS.showSecLane=!!e.target.checked;persistSettings();drawSectionLane();};
- if(g('setNavWithGrid'))g('setNavWithGrid').onchange=e=>{SETTINGS.navWithGrid=!!e.target.checked;persistSettings();if(typeof navWithGridApply==='function')navWithGridApply();};
  if(g('setEngView'))g('setEngView').onchange=e=>{SETTINGS.engView=e.target.value;persistSettings();if(typeof engViewApply==='function')engViewApply();};
  if(g('setEngTips'))g('setEngTips').onchange=e=>{SETTINGS.engTips=!!e.target.checked;persistSettings();if(typeof engViewApply==='function')engViewApply();};
  if(g('setDelLinked'))g('setDelLinked').onchange=e=>{SETTINGS.delLinked=!!e.target.checked;persistSettings();};   /* 78th R3: his fixed-vs-per-grid option */
