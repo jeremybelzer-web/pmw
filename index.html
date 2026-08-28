@@ -701,7 +701,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28o</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28p</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -19040,7 +19040,7 @@ function wanWeberDraw(){
       spelling SHOWS its plain enharmonic (B𝄫 → A · G𝄫 → F) — the lattice position
       never moves, only the label reduces (through the plain-window pures). */
    const redLof=st.webReduce?wanPcLof(wanLofPc(cell.lof),cell.minor):cell.lof;
-   const nm=wanLofName(st.webReduce&&/♭♭|××|×/.test(wanLofName(cell.lof))?redLof:cell.lof);
+   const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);   /* 80th R25 (his 33rd message): 3+ sharps spell as ♯♯♯, not × — the detector reads BOTH accidental families now */
    const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
    const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,st.tonic):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
    const isKey=cell.minor===minor&&cell.lof===tonicLof;
