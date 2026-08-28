@@ -167,6 +167,14 @@
   #tmenu .tmpal{display:flex;gap:4px;overflow-x:auto;padding:7px 4px 3px;border-top:1px solid var(--line);margin-top:5px;max-width:230px;}
   #tmenu .tmsw{width:17px;height:17px;border-radius:4px;flex:0 0 auto;cursor:pointer;border:1px solid rgba(255,255,255,.18);}
   #tmenu .tmsw:hover{outline:2px solid var(--accent);}
+  #tmenu .tmhd{padding:6px 9px 2px;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim);border-top:1px solid var(--line);margin-top:5px;cursor:default;}
+  /* 80th R1: the glance-behind hold — ghost notes front only while the click is held */
+  .tghold{cursor:pointer;font-size:10px;opacity:.65;padding:0 2px;flex:0 0 auto;}
+  .tghold:hover{opacity:1;}
+  .nboxMicro .tghold{display:none;}   /* micro keeps [on][S][R] — the glance rides the full head */
+  body.ghFront .gnGhost{opacity:.88;}
+  body.ghFront .cgGhost{opacity:.85;}
+  body.ghFront rect[data-n]{opacity:.3;}
   /* v3: the Show Hidden Tracks window */
   #shtWin{position:fixed;z-index:64;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.55);font-size:12.5px;min-width:230px;display:none;}
   #shtWin .shtRow{display:flex;gap:8px;align-items:center;padding:4px 2px;cursor:pointer;border-radius:5px;}
@@ -639,7 +647,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27r</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27u</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1113,6 +1121,29 @@
       <button id="cadApplyBtn" title="Write the selected cadence so it ends exactly at the selected phrase end — room is carved from the chords before it, one undo.">✓ Write at the phrase end</button>
     </div>
     <div id="cadStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
+  </div>
+
+  <!-- 80th R2 (his words, RHYTHM-ENGINE-RAW-2026-08-27.md): THE RHYTHM SEARCH WINDOW —
+       one window for every rhythm scenario: the Curiosities column × the Match column ×
+       the song-list Scope column, the Omnisphere model (every column an AND filter, All
+       bypasses). The stack ships [rig grid: Percussion on top / Polyphonic / chord lane]
+       / [Essence Shelf] / [this window]. Matching lands with the extractor round — the
+       columns and the info-pane law ship first, states honest. -->
+  <div class="gridwrap" id="rhyPanel" style="margin:12px 0;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
+    <div id="rhySongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above — Percussion on top, the Polyphonic Instrument under it, the chord lane below. The other tracks arrive hidden but audible.">Load a song into the audition grid</label>
+      <select id="rhySongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
+    </div>
+    <div id="rhySelInfo" style="font-size:11px;color:var(--dim);margin-bottom:8px;">Select notes in the grid above — the search reads the rhythm of your selection.</div>
+    <div id="rhyCols" style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:220px;">
+      <div id="rhyCurios" style="display:flex;flex-direction:column;gap:2px;flex:0 0 190px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>
+      <div id="rhyMatch" style="display:flex;flex-direction:column;gap:2px;flex:0 0 150px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>
+      <div id="rhyScope" style="display:flex;flex-direction:column;gap:2px;flex:0 0 160px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>
+      <div id="rhyCards" style="display:flex;flex-direction:column;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:380px;"></div>
+      <div id="rhyInfo" style="flex:0 0 252px;padding:10px;border-left:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11.5px;color:var(--text);"></div>
+    </div>
+    <div id="rhyStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
   </div>
 
   <div class="gridwrap" id="clipPanel" style="margin-top:12px;display:none;">
@@ -6483,7 +6514,12 @@ function drawGridView(v,svgEl){
   const cur2=v.track||activeTrack;
   if(typeof selHeads!=='undefined'&&selHeads.size>=2&&selHeads.has(cur2))
    return [...selHeads].filter(t2=>t2!==cur2&&t2!=='drums');
-  return ghostsOn?pitchedTrackIds(project.tracks).filter(t2=>t2!==cur2):[];
+  /* 80th R1 (his words): the Ghost Notes scope is GLOBAL and lives in the track menu —
+     All tracks / Polyphonic + this track / Chord lane + this track / Off. Engine-rig
+     worlds keep their own per-window ghost law (chordGhosts via auditionRigDefaults)
+     and sit out the global track scope [this build's inference, recorded in the RAW]. */
+  if(typeof GRID_WORLDS!=='undefined'&&typeof CUR_GRID!=='undefined'&&GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].pairFor)return [];
+  return ghostTracksFor(ghostScope,cur2,pitchedTrackIds(project.tracks));
  })();
  for(const gt of ghostSet){
   const gn=project.tracks[gt];if(!gn||!gn.length)continue;
@@ -6491,13 +6527,18 @@ function drawGridView(v,svgEl){
   for(const n of gn){
    if(!noteInWindow(n,W.b0,W.bEnd))continue;
    const gr=withKeyAt(n[0],()=>rowOfK(midiToK(n[2],v),v));
-   out+=`<rect x="${bx(n[0])+1}" y="${viewRowY(v,gr)+5}" width="${Math.max(n[1]*PPB-2,5)}" height="${CELLH-10}" rx="3" fill="${gc}" opacity=".2" pointer-events="none"/>`;
+   out+=`<rect class="gnGhost" x="${bx(n[0])+1}" y="${viewRowY(v,gr)+5}" width="${Math.max(n[1]*PPB-2,5)}" height="${CELLH-10}" rx="3" fill="${gc}" opacity=".2" pointer-events="none"/>`;
   }
  }
  /* 78th R2 (his words): CHORD-LANE GHOSTS — a melody-window audition rig hides its chord
     lane and shows the chords as ghost notes behind the melody instead. Chain voicings
     (laneVoicingsTop — the same pitches the band plays), dimmed, pointer-events off. */
- if(typeof chordGhosts!=='undefined'&&chordGhosts&&!v.laneOnly&&Array.isArray(project.chords)&&project.chords.length){
+ /* 80th R1: the global 'chords' scope turns these on in non-rig grids too (his menu
+    option "Chord lane + this track") — the rig worlds' own chordGhosts law stands. */
+ const _cgOn=(typeof chordGhosts!=='undefined'&&chordGhosts)
+  ||(typeof ghostScope!=='undefined'&&ghostScope==='chords'
+     &&!(typeof GRID_WORLDS!=='undefined'&&typeof CUR_GRID!=='undefined'&&GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].pairFor));
+ if(_cgOn&&!v.laneOnly&&Array.isArray(project.chords)&&project.chords.length){
   const cgV=laneVoicingsTop(project.chords,secStarts());
   let cgT=0;
   project.chords.forEach((c,ci)=>{
@@ -6844,6 +6885,18 @@ try{chordLaneHidden=localStorage.getItem('cp_chordlane')==='hidden';}catch(e){}
    chords as GHOST NOTES behind the melody instead. A world slot (per grid), never
    persisted to cp_chordlane — Grid 1's own value stays false. */
 var chordGhosts=false;
+/* 80th R1: the Ghost Notes scope — GLOBAL, every multi-track grid (his words; the
+   decision record is RHYTHM-ENGINE-RAW-2026-08-27.md, seventh message). Default ON
+   with the All-tracks scope, matching the piano-roll convention he named; a legacy
+   cp_ghosts '0' (an explicit off) is honored on migration. var + inline norm on
+   purpose — the TDZ lesson-class (a let read by an earlier-booting painter throws). */
+var ghostScope='all';
+try{
+ const _gs=localStorage.getItem('cp_ghostScope');
+ if(_gs==='off'||_gs==='all'||_gs==='poly'||_gs==='chords')ghostScope=_gs;
+ else if(localStorage.getItem('cp_ghosts')==='0')ghostScope='off';
+}catch(e){}
+try{const _gc=document.getElementById('chkGhosts');if(_gc)_gc.checked=(ghostScope==='all');}catch(e){}
 var chordRz=null;
 function setChordLaneHidden(v){
  chordLaneHidden=!!v;
@@ -12265,8 +12318,9 @@ drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
 (function(){
  const statusFor={modPanel:m=>setModStatus(m),
   melPanel:m=>{const e=document.getElementById('melStatus');if(e)e.textContent=m;},
-  cadPanel:m=>{const e=document.getElementById('cadStatus');if(e)e.textContent=m;}};
- for(const [selId,winId] of [['modSongSel','modPanel'],['melSongSel','melPanel'],['cadSongSel','cadPanel']]){
+  cadPanel:m=>{const e=document.getElementById('cadStatus');if(e)e.textContent=m;},
+  rhyPanel:m=>{const e=document.getElementById('rhyStatus');if(e)e.textContent=m;}};
+ for(const [selId,winId] of [['modSongSel','modPanel'],['melSongSel','melPanel'],['cadSongSel','cadPanel'],['rhySongSel','rhyPanel']]){
   const sel=document.getElementById(selId);if(!sel)continue;
   sel.add(new Option('— pick a song —',''));
   SONGS.forEach(s=>sel.add(new Option(s.name,s.id)));
@@ -12280,6 +12334,189 @@ drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
    sel.blur();
   };
  }
+})();
+/* ==== 80th R2 · THE RHYTHM SEARCH WINDOW (his words: RHYTHM-ENGINE-RAW-2026-08-27.md).
+   ONE window for every rhythm scenario — the Omnisphere model: every column is an AND
+   filter, All bypasses, and the user's curated list sits on top wherever results appear
+   (the standing UI rule). Rhythm MATCHING lands with the extractor round — the columns,
+   the scope states and the info-pane law ship first, every pending state honest. ==== */
+var rhyState={curio:'all',match:'exact',scope:'cur',sel:null,q:''};
+const RHY_CURIOS=[
+ ['all','All',1,'Every rhythm curiosity at once — each family under its own caption when matching lands.'],
+ ['strikes','Chord Strikes',1,'The polyphonic instrument’s strike pattern — 3,3,3,3,4 — searched across every song section.'],
+ ['melr','Rhythm of a melody / instrument',1,'A melody or single-line instrument’s rhythm, the notes stripped away.'],
+ ['polyr','Rhythm of a polyphonic instrument',1,'The chord-playing instrument’s own rhythm, searched on its own.'],
+ ['rate','Rate of Chord Change (Rhythm)',1,'The rhythm of the chord CHANGES — how the harmony moves, apart from how it strikes.'],
+ ['form','Rhythmic Form',1,'The lettering of a rhythm over time — A,A,A,B — searched as a form.'],
+ ['compound','Compound Rhythm',1,'The whole selection as ONE rhythm — the overall compound, its N-instrument group strikes, and the gap singles between them.']];
+const RHY_MATCH=[
+ ['exact','Exact',1,'Songs whose rhythm matches the selection.'],
+ ['var','A simple variation',0,'Similar rhythms in a different order, a triplet thrown in, or the rhythm and then a departure — lands with the extractor round.'],
+ ['emb','More embellished',0,'Rhythms busier than the selection — lands with the extractor round.'],
+ ['min','More minimal',0,'Rhythms sparser than the selection — lands with the extractor round.']];
+const RHY_SCOPES=[
+ ['cur','Your curated list',1,'The songs you curated through ⇪ Import — always on top wherever results appear.'],
+ ['def','Default curated list',1,'The songs that ship with the app.'],
+ ['genre','By genre',0,'Lands with the song-list data round.'],
+ ['year','By year released',0,'Lands with the song-list data round.'],
+ ['loc','By location in the world',0,'Lands with the song-list data round.'],
+ ['db','Full database',0,'Lands with the database round.']];
+/* ==== 80th R3 · THE RHYTHM EXTRACTOR pure layer — the first live matching. The IOI
+   (inter-onset-interval) pattern is his own idiom: Chord Strikes written 3,3,3,3,4 in
+   8th-note units. Simultaneous notes strike ONCE (a chord is one hit). ==== */
+function rhyOnsetPattern(notes,unit){
+ const u=(typeof unit==='number'&&unit>0)?unit:0.5;
+ const on=[...new Set((notes||[]).filter(n=>n&&typeof n[0]==='number').map(n=>Math.round(n[0]/u)))].sort((a,b)=>a-b);
+ const out=[];
+ for(let i=1;i<on.length;i++)out.push(on[i]-on[i-1]);
+ return out;
+}
+function rhyChordRate(chords){
+ /* the Rate of Chord Change — each sounding chord's duration in beats; rests (.off) are
+    part of HOW the harmony breathes but not a change, so they are skipped */
+ return (chords||[]).filter(c=>c&&!c.off&&c.d>0).map(c=>c.d);
+}
+function rhySeqContains(hay,needle){
+ if(!Array.isArray(needle)||needle.length<1||!Array.isArray(hay)||hay.length<needle.length)return false;
+ for(let i=0;i+needle.length<=hay.length;i++){
+  let ok=true;
+  for(let j=0;j<needle.length;j++)if(hay[i+j]!==needle[j]){ok=false;break;}
+  if(ok)return true;
+ }
+ return false;
+}
+function rhySongList(scope,srcs,songs){
+ /* pure-ish list resolver: 'cur' = the Import sources when any exist (else the default
+    list stands in, said out loud by the caller); 'def' = the embedded list */
+ const refs=(Array.isArray(srcs)?srcs:[]).map(r=>r.ref);
+ if(scope==='cur'&&refs.length)return songs.filter(s=>refs.includes(s.id));
+ return songs.slice();
+}
+function buildRhyWindow(){
+ const tabs=document.getElementById('rhyCurios');if(!tabs)return;
+ const mkcol=(el,title,rows,cur,set)=>{
+  if(!el)return;
+  el.innerHTML='<span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);padding:0 2px 4px;">'+title+'</span>';
+  for(const r of rows){
+   const c=document.createElement('span');
+   c.className='cpchip'+(cur===r[0]?' on':'');
+   c.style.display='block';c.style.textAlign='left';
+   if(!r[2]){c.style.opacity='.42';c.style.cursor='default';}
+   c.textContent=r[1];c.title=r[3];
+   if(r[2])c.onclick=()=>{const st0=document.getElementById('rhyStatus');if(st0)st0.textContent='';set(r[0]);buildRhyWindow();};
+   el.appendChild(c);
+  }
+ };
+ mkcol(tabs,'Curiosities',RHY_CURIOS,rhyState.curio,v=>{rhyState.curio=v;});
+ mkcol(document.getElementById('rhyMatch'),'Match',RHY_MATCH,rhyState.match,v=>{rhyState.match=v;});
+ mkcol(document.getElementById('rhyScope'),'Song list',RHY_SCOPES,rhyState.scope,v=>{rhyState.scope=v;});
+ const cards=document.getElementById('rhyCards');if(!cards)return;
+ cards.innerHTML='';
+ const refs=(Array.isArray(project.srcs)?project.srcs:[]).map(r=>r.ref);
+ const q=(rhyState.q||'').toLowerCase();
+ const list=rhySongList(rhyState.scope,project.srcs,SONGS).filter(s=>!q||s.name.toLowerCase().includes(q));
+ if(rhyState.scope==='cur'&&!refs.length){
+  const n=document.createElement('div');n.style.cssText='font-size:10.5px;color:var(--dim);padding:2px 2px 6px;';
+  n.textContent='No curated songs yet — the ⇪ Import window builds your list. Showing the default curated list meanwhile.';
+  cards.appendChild(n);
+ }
+ /* 80th R3: THE LIVE MATCHING — melody-rhythm and rate-of-chord-change search against
+    the embedded corpus (its songs carry melody + chords; the polyphonic-performance
+    curiosities wait for the corpus round, said honestly in the status). Exact only —
+    the Match relations beyond it are the variation round's. */
+ const sel=rhySelPattern();
+ const live={melr:1,rate:1,all:1};
+ const wants=rhyState.curio;
+ let matches=null;
+ if(sel&&rhyState.match==='exact'&&live[wants]){
+  const wantMel=(wants==='all'||wants==='melr')&&sel.pat.length>=3;
+  const wantRate=(wants==='all'||wants==='rate')&&sel.rate.length>=2;
+  if(wantMel||wantRate){
+   matches={};
+   for(const s of list){
+    const hits=[];
+    if(wantMel&&rhySeqContains(rhyOnsetPattern(s.melody),sel.pat))hits.push('melr');
+    if(wantRate&&rhySeqContains(rhyChordRate(s.chords),sel.rate))hits.push('rate');
+    if(hits.length)matches[s.id]=hits;
+   }
+  }
+ }
+ const capFor={melr:'Rhythm of a melody / instrument',rate:'Rate of Chord Change (Rhythm)'};
+ const shown=matches?list.filter(s=>matches[s.id]):list;
+ if(matches){
+  const cap=document.createElement('div');
+  cap.style.cssText='font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);padding:0 2px 4px;';
+  cap.textContent=shown.length+' song'+(shown.length===1?'':'s')+' contain'+(shown.length===1?'s':'')+' it';
+  cards.appendChild(cap);
+ }
+ for(const s of shown){
+  const d=document.createElement('div');
+  d.className='mimCard'+(rhyState.sel===s.id?' on':'');
+  d.title='Click to read this song’s facts in the pane — the informed-decision law: pick which song your next curiosity (or curiosity suite) comes out of.';
+  d.innerHTML='<div class="mimName">'+s.name+'</div>'
+   +'<div class="mimMeta">'+s.bpm+' BPM · '+(s.chords?s.chords.length:0)+' chords'
+   +(matches?' · <span style="color:var(--accent);">♬ '+matches[s.id].map(h=>capFor[h]).join(' + ')+'</span>':'')+'</div>';
+  d.onclick=()=>{rhyState.sel=s.id;buildRhyWindow();};
+  cards.appendChild(d);
+ }
+ if(!shown.length)cards.innerHTML+='<span style="font-size:11.5px;color:var(--dim);">'+(matches?'No song in this list contains the selected rhythm — try a shorter run, or a different list.':'No songs match the 🔎 filter.')+'</span>';
+ const si2=document.getElementById('rhySelInfo');
+ if(si2){
+  if(!sel)si2.textContent='Open the stack and select notes in the grid above — the search reads the rhythm of your selection.';
+  else if(sel.pat.length>=3)si2.textContent='Your '+(sel.selCount?'selection':'whole '+sel.track+' track')+' — rhythm '+sel.pat.join(',')+' (in 8ths)'+(sel.rate.length?' · chord rate '+sel.rate.join(','):'');
+  else si2.textContent='Select a longer run of notes (3+ gaps) — the search reads the rhythm of your selection.';
+ }
+ rhyInfoDraw();
+ const st=document.getElementById('rhyStatus');
+ if(st&&!st.textContent)st.textContent=(wants==='strikes'||wants==='polyr')
+  ?'Chord Strikes and the polyphonic rhythm need the songs’ polyphonic performances — they land with the corpus round.'
+  :(wants==='form'||wants==='compound')?'Rhythmic Form and the Compound Rhythm land with their own rounds — the columns stand ready.'
+  :'Melody rhythms and the rate of chord change search LIVE against the song list — the other curiosities say when they land.';
+}
+function rhySelPattern(){
+ /* reads the Rhythm stack's rig: the selected notes' IOI pattern (the whole active
+    track when nothing is selected) in 8th units, plus the chord-lane rate run bounded
+    by the selection's beat span. null when no rig stands. */
+ let gid=null;
+ if(typeof GRID_WORLDS==='object')for(const g in GRID_WORLDS)if(g!=='main'&&GRID_WORLDS[g]&&GRID_WORLDS[g].pairFor==='rhyPanel')gid=g;
+ if(!gid||typeof withGridWorld!=='function')return null;
+ try{
+  return withGridWorld(gid,()=>{
+   const tr=project.tracks[activeTrack]||[];
+   const idx=[...selNotes];
+   const notes=idx.length?idx.map(i=>tr[i]).filter(Boolean):tr;
+   if(!notes.length)return {pat:[],rate:rhyChordRate(project.chords),selCount:0,track:activeTrack};
+   const s0=Math.min.apply(null,notes.map(n=>n[0])),s1=Math.max.apply(null,notes.map(n=>n[0]+n[1]));
+   let t=0;const rate=[];
+   for(const c of (project.chords||[])){const c0=t;t+=c.d;if(c.off)continue;
+    if(idx.length&&(c0+c.d<=s0||c0>=s1))continue;rate.push(c.d);}
+   return {pat:rhyOnsetPattern(notes),rate,selCount:idx.length,track:activeTrack};
+  });
+ }catch(e){return null;}
+}
+function rhyInfoDraw(){
+ const info=document.getElementById('rhyInfo');if(!info)return;
+ const s=rhyState.sel?SONGS.find(x=>x.id===rhyState.sel):null;
+ if(!s){info.innerHTML='<span style="color:var(--dim);">Pick a song from the list — this pane answers the questions an informed choice needs: does the rhythm repeat, where it sits in the form, which section, the BPM, the instruments, any accent rhythm riding on top.</span>';return;}
+ let bpmNow=0;try{bpmNow=Math.round(+tempo.value)||0;}catch(e){}
+ const far=bpmNow&&Math.abs(s.bpm-bpmNow)/bpmNow>0.15;
+ info.innerHTML='<div style="font-weight:700;margin-bottom:4px;">'+s.name+'</div>'
+  +'<div style="color:var(--dim);margin-bottom:6px;">'+s.bpm+' BPM'+(bpmNow?' · your project: '+bpmNow+' BPM':'')+'</div>'
+  +'<div style="margin-bottom:6px;">'+(s.chords?s.chords.length:0)+' chords in the lane'+(s.prov?'<div style="color:var(--dim);margin-top:4px;font-size:10.5px;">'+s.prov+'</div>':'')+'</div>'
+  +(far?'<div style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:10.5px;"><b>PRO TIP:</b> If the BPM is too different, it might not feel the same at your tempo, but art is art so it might work.</div>':'')
+  +'<div style="color:var(--dim);font-size:10.5px;">Repeats · form seat · song section · instruments · accent rhythm — these answers land with the extractor round.</div>'
+  +'<div style="margin-top:8px;"><button id="rhyLoadBtn" style="font-size:11px;">⇗ Load into the audition grid</button></div>';
+ const lb=document.getElementById('rhyLoadBtn');
+ if(lb)lb.onclick=()=>{
+  const sel=document.getElementById('rhySongSel');
+  if(sel){sel.value=s.id;sel.dispatchEvent(new Event('change'));}
+ };
+}
+(function(){
+ const si=document.getElementById('rhySearchInp');
+ if(si)si.oninput=()=>{rhyState.q=si.value||'';buildRhyWindow();};
+ const go=document.getElementById('rhyGoBtn');
+ if(go)go.onclick=()=>{const st=document.getElementById('rhyStatus');if(st)st.textContent='';buildRhyWindow();};   /* his words: "The SEARCH button should just say SEARCH" — it re-reads the grid selection */
 })();
 /* 24b — the preview lane's boot wiring: settings load, the two toggles, ▶ and ▤ */
 try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
@@ -21906,7 +22143,7 @@ function togglePin(){
 }
 document.getElementById('pinBtn').onclick=e=>{togglePin();e.target.blur();};
 document.getElementById('chkTrip').onchange=e=>{gridTriplets=e.target.checked;refresh(false);e.target.blur();};
-document.getElementById('chkGhosts').onchange=e=>{ghostsOn=e.target.checked;try{localStorage.setItem('cp_ghosts',ghostsOn?'1':'0');}catch(x){}refresh(false);e.target.blur();};
+document.getElementById('chkGhosts').onchange=e=>{ghostScope=e.target.checked?'all':'off';persistGhostScope();refresh(false);e.target.blur();};   /* 80th R1: the header 👥 is the quick All/Off flip; the track menu holds the full scope */
 /* 2.5 ⑧: the Continuous toggle — DEVICE data (cp_settings), default OFF. (Only the
    handler wires here — SETTINGS is a later `let`, so the checked-state sync lives at
    the SETTINGS declaration site; a typeof here would throw on the TDZ.) */
@@ -22356,6 +22593,18 @@ function trackHead(t,inLane,microOv){
  so.title='Solo — when any track is soloed, only soloed tracks play';
  so.onclick=()=>{const m=mixer[t]||(mixer[t]={db:0,pan:0,solo:false});m.solo=!m.solo;persistMixer();drawTrackSel();if(mixerOpen)drawMixer();};
  ctl.appendChild(so);
+ /* 80th R1 (his words, sixth message): the glance-behind HOLD — ghost notes come to
+    the front only while the click is held, then step back. Shows wherever ghosts can
+    render: the global scope, or a rig world's own chord-ghost law. */
+ if(t!=='drums'&&((typeof ghostScope!=='undefined'&&ghostScope!=='off')||(typeof chordGhosts!=='undefined'&&chordGhosts))){
+  const gz=document.createElement('span');gz.className='tghold';gz.textContent='👁';
+  gz.title='Glance behind — HOLD to bring the ghost notes in front of this track’s notes; they step back when you let go.';
+  gz.onmousedown=e=>{e.stopPropagation();e.preventDefault();document.body.classList.add('ghFront');
+   const _up=()=>{document.body.classList.remove('ghFront');document.removeEventListener('mouseup',_up,true);};
+   document.addEventListener('mouseup',_up,true);};
+  gz.onclick=e=>{e.stopPropagation();};
+  ctl.appendChild(gz);
+ }
  const ar=document.createElement('span');
  if(t==='drums'){
   ar.className='tarm dis';ar.textContent='R';
@@ -22573,6 +22822,20 @@ function openTrackMenu(t,px,py,nmEl){
    selHeads.size+(selHeads.has(t)?0:1)<2
     ?'⇧-click 2+ name boxes first — then group from here or with ⌘G'
     :'Group the selected tracks — the group closes to ONE lane from its ▸');
+ /* 80th R1 (his words): the Ghost Notes category — GLOBAL, affecting all multi-track
+    grids. The scope options in his order (RHYTHM-ENGINE-RAW-2026-08-27.md, seventh
+    message); the ● marks the live one. */
+ const gh=document.createElement('div');gh.className='tmhd';gh.textContent='Ghost Notes — all grids';
+ el.appendChild(gh);
+ [['all','All tracks','Every other pitched track’s notes show dimmed behind the one you’re working on.'],
+  ['poly','Polyphonic instrument + this track','Only the polyphonic instrument (the chord-playing track) ghosts behind the track you’re working on.'],
+  ['chords','Chord lane + this track','The chord lane’s voicings ghost behind the track you’re working on — the same pitches the band plays.'],
+  ['off','Off','No ghost notes in any grid.']].forEach(sc=>{
+  const it=document.createElement('div');it.className='tmit';
+  it.textContent=(ghostScope===sc[0]?'● ':'○ ')+sc[1];it.title=sc[2];
+  it.onclick=()=>{hideTrackMenu();ghostScope=sc[0];persistGhostScope();refresh(false);};
+  el.appendChild(it);
+ });
  const pal=document.createElement('div');pal.className='tmpal';
  pal.title='Name-box color — scroll for more';
  for(const c of NBOX_PALETTE){
@@ -24554,6 +24817,7 @@ const WINDOW_DEFS=[
  {id:'tripsPanel', name:'Trips',   icon:'🧳',tip:'Upcoming Trips — the itinerary of chord and key changes waiting to enter the song. Opens as a bridge between the window above and the one below. ▶ Start next trip in: the musical time until insert. Small = a chord lane of the trips · expanded = a full editable track.'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
  {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Its own window in the column — the SEARCH button is the coming Cadence Search Window\u2019s home.'},
+ {id:'rhyPanel',   name:'Rhythm',  icon:'\u266c', tip:'THE RHYTHM ENGINE \u2014 the Rhythm Search Window: search the Curiosities of your curated song list for the rhythm selected in the grid above. Chord Strikes \u00b7 the rhythm of a melody or a polyphonic instrument \u00b7 Rate of Chord Change \u00b7 Rhythmic Form \u00b7 the song as a Compound Rhythm.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & count-in · Web MIDI (device inputs · outputs · connection status) · audio device (output choice · sample rate · latency) · tempo & time signature (the sample-directory and DAW-routing guides live behind the ⇪ Import window)'}];
 const RAIL_DEFS=[
  {icon:'📌',act:'pinBtn', tip:'Pin selection — Conform never moves pinned notes (P)'},
@@ -24680,7 +24944,7 @@ function uiDispatch(action){
     audition grid (it arrived with it; a lone audition grid over a closed window is clutter) */
  if(action&&action.type==='toggle'&&typeof action.id==='string'
   &&prevWins.indexOf(action.id)>=0&&(!Array.isArray(uiState.openWins)||uiState.openWins.indexOf(action.id)<0)
-  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel'||action.id==='ragaPanel')
+  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel'||action.id==='ragaPanel'||action.id==='rhyPanel')
   &&typeof gridWorldClose==='function'&&typeof linkedTo==='function'){
   if(typeof GRID_WORLDS==='object')for(const _gid in GRID_WORLDS)
    if(_gid!=='main'&&GRID_WORLDS[_gid]&&GRID_WORLDS[_gid].pairFor===action.id)
@@ -24702,14 +24966,15 @@ function uiDispatch(action){
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
- if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel')){
+ if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel')){
   /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation, Melisma and — 75th round four,
      his words — SCALES windows arrive with a linked audition grid directly ABOVE them —
      no Chord Palette, spawn-linked through the ONE graph. (The palette's 3.3 search
      surface still joins when it ships.) */
   let _ag=null;
-  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel')&&typeof gridAuditionSpawn==='function')
+  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='rhyPanel')&&typeof gridAuditionSpawn==='function')
    _ag=gridAuditionSpawn(uiState.open);
+  if(uiState.open==='rhyPanel'){try{if(typeof buildRhyWindow==='function')buildRhyWindow();}catch(e){}}   /* 80th R2 — try/catch per landmine ⑪'s general defence: a fault inside the window must never take the toggle down */
   const p=(_ag&&_ag.els&&_ag.els.root)||document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
@@ -24995,7 +25260,9 @@ function gridWorldSlotsFresh(opts){
     lane hides, and its chords render as ghost notes instead (opts.rig from
     auditionRigDefaults). Without a rig the 74th's blank-boot shape stands. */
  const rig=(opts&&opts.rig)?opts.rig:null;
- const hid=rig&&rig.soloTrack?new Set(Object.keys(p.tracks).filter(t=>t!==rig.soloTrack)):new Set(['bass','pad']);
+ const hid=rig&&rig.soloTrack?new Set(Object.keys(p.tracks).filter(t=>t!==rig.soloTrack))
+  :rig&&Array.isArray(rig.visTracks)?new Set(Object.keys(p.tracks).filter(t=>rig.visTracks.indexOf(t)<0))   /* 80th R2: a visible-SET rig (the Rhythm Window's drums+comping) — hide the rest */
+  :new Set(['bass','pad']);
  return {project:p,activeTrack:act,selOwner:'main',selSurface:'grid',
   LOOP:32,PPB:34,stripH:{},trackOrder:null,
   hiddenTracks:hid,trackBigH:{},trackSmallH:{},selHead:null,selHeads:new Set(),chordKeyOv:null,
@@ -25284,6 +25551,13 @@ function auditionRigDefaults(winId){
  if(winId==='modPanel'||winId==='melPanel'||winId==='ragaPanel')
   return {active:'melody',soloTrack:'melody',chordLaneHidden:true,chordGhosts:true};
  if(winId==='cadPanel')return {active:'comping'};
+ /* 80th R2, his words (RHYTHM-ENGINE-RAW-2026-08-27.md, first + third messages): the
+    Rhythm Window's grid ships "only 2 visible tracks: Percussion Track on the top, and
+    a Polyphonic Instrument below that ... and a chord lane below that" — drums lead by
+    the m15 drums-first law, the chord lane stays VISIBLE, no ghost law (the rig
+    sit-out). The 78th's rhythm-track-with-ghosts rig is a DIFFERENT window (his third
+    message) and keeps its recorded defaults for when it exists. */
+ if(winId==='rhyPanel')return {active:'comping',visTracks:['drums','comping']};
  return null;
 }
 function gridAuditionSpawn(winId){
@@ -25352,6 +25626,12 @@ function gridSongLoad(id){
       tracks.drums key, yet the lane renders (hiddenTracks honors 'drums' regardless) */
    for(const t of Object.keys(project.tracks).concat(['drums']))if(t!==_d.soloTrack)hiddenTracks.add(t);
    chordLaneHidden=true;chordGhosts=true;
+  }
+  else if(_d&&Array.isArray(_d.visTracks)){
+   /* 80th R2: the visible-SET rig re-asserts across a load the same way — everything
+      outside the set hides (still audible); the chord lane stays VISIBLE (his spec) */
+   for(const t of Object.keys(project.tracks).concat(['drums']))if(_d.visTracks.indexOf(t)<0)hiddenTracks.add(t);
+   for(const t of _d.visTracks)hiddenTracks.delete(t);
   }
   /* 75th round two: the rig keeps ITS expanded track across a load (the Cadence pair
      boots Polyphonic-expanded, fix ③) — loadSong's melody reset is Grid 1's own law */
@@ -26228,6 +26508,21 @@ function nextCustomId(tracks){
  const ids=customTrackIds(tracks);
  return 'x'+(ids.length?+ids[ids.length-1].slice(1)+1:1);}
 function pitchedTrackIds(tracks){return ['melody','bass','comping','pad'].concat(customTrackIds(tracks));}
+/* 80th R1: the Ghost Notes scope law — pure, unit-tested. 'all' ghosts every other
+   pitched track; 'poly' just the polyphonic instrument; 'chords' and 'off' ghost no
+   TRACKS ('chords' turns the chord-lane voicing ghosts on instead — the render's own
+   gate). Junk falls to 'all', the default. */
+function ghostScopeNorm(x){return (x==='off'||x==='all'||x==='poly'||x==='chords')?x:'all';}
+function ghostTracksFor(scope,cur,pitched){
+ const s=ghostScopeNorm(scope);
+ if(s==='all')return (pitched||[]).filter(t=>t!==cur);
+ if(s==='poly')return (pitched||[]).filter(t=>t==='comping'&&t!==cur);
+ return [];
+}
+function persistGhostScope(){
+ try{localStorage.setItem('cp_ghostScope',ghostScope);localStorage.setItem('cp_ghosts',ghostScope==='off'?'0':'1');}catch(e){}
+ try{const c=document.getElementById('chkGhosts');if(c)c.checked=(ghostScope==='all');}catch(e){}
+}
 /* v3: user-picked name-box colors (ctrl+click menu → palette). Pure resolver + a
    persisted override map, the trackLabels pattern. */
 function pickTrackColor(t,overrides){
@@ -26314,8 +26609,10 @@ function deleteCustomTrack(id){
  delete project.tracks[id];delete mutes[id];
  if(activeTrack===id)activeTrack='melody';
  drawTrackSel();refresh(true);}
-let ghostsOn=false;
-try{ghostsOn=localStorage.getItem('cp_ghosts')==='1';}catch(e){}
+/* 80th R1: ghostsOn RETIRED — ghostScope (declared beside chordGhosts) is the one
+   ghost law now. This late sync is the checkbox's second chance in case the early
+   one ran before the header parsed. */
+try{const _gc2=document.getElementById('chkGhosts');if(_gc2)_gc2.checked=(ghostScope==='all');}catch(e){}
 /* ==== /MULTI-TRACK ==== */
 
 /* ================= saved variations (the Keep shelf) ================= */
@@ -26991,11 +27288,15 @@ try{
    }
    if(typeof applyColOrder==='function')applyColOrder();   /* the saved order names the restored ids */
   }
-  for(const _aw of ['modPanel','melPanel','cadPanel','ragaPanel'])
+  for(const _aw of ['modPanel','melPanel','cadPanel','ragaPanel','rhyPanel'])
    if(uiState.openWins.indexOf(_aw)>=0&&uiWinShown(_aw))gridAuditionSpawn(_aw);
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  }
 }catch(e){console.error('audition-grid respawn failed at boot',e);}
+/* 80th R2: the Rhythm SEARCH columns paint at boot too (a cp_ui-restored open window
+   must not sit empty) — wrapped per landmine ⑪'s general defence: a fault inside a
+   window's boot call must never take the boot down. */
+try{if(typeof buildRhyWindow==='function')buildRhyWindow();}catch(e){console.error('rhy window boot draw failed',e);}
 </script>
 </body>
 </html>
