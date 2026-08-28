@@ -196,6 +196,15 @@
   .wanDegBox.k4{border:1px dotted #a8895f;opacity:.5;}
   .wanWebSel{outline:2px solid #b8860b;outline-offset:1px;}
   #wanPathsSvg{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+  /* 80th R22 (his thirtieth message): the route hover lights + selects the chords the
+     line touches; the legend rides the map's right */
+  .wanRouteLit{outline:2px solid #b58a3a;outline-offset:1px;background:rgba(181,138,58,.28);border-radius:6px;}
+  #wanLegend{flex:0 0 200px;font-family:Georgia,serif;color:#4a3a20;font-size:11px;min-width:0;}
+  .wanLegRow{margin-bottom:9px;padding:6px 8px;border:1px solid rgba(107,79,40,.35);border-radius:8px;background:rgba(232,220,196,.45);}
+  .wanLegTitle{font-weight:800;font-size:12.5px;cursor:pointer;letter-spacing:.4px;display:inline-block;}
+  .wanLegChain{margin-top:3px;cursor:grab;font-size:11.5px;color:#5a4426;line-height:1.5;}
+  #wanRoadDlg{position:fixed;z-index:1200;width:300px;background:#efe6d2;border:2px solid #6b4f28;border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.4);color:#4a3a20;font-family:Georgia,serif;font-size:12px;padding:0 10px 10px;}
+  #wanRoadDlg .wanPopStrip{margin:0 -10px 8px;}
   #wanWebMenu{position:fixed;z-index:130;background:#f2e7cb;border:2px double #6b4f28;border-radius:8px;padding:6px;box-shadow:0 8px 26px rgba(0,0,0,.45);font-size:12px;min-width:210px;display:none;font-family:Georgia,serif;color:#3a2c18;}
   #wanWebMenu .wmit{padding:5px 9px;border-radius:5px;cursor:pointer;}
   #wanWebMenu .wmit:hover{background:#e5d5ab;}
@@ -692,7 +701,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28l</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28o</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1424,7 +1433,71 @@ const SCALE_DB={};
  SC('dorb2','Dorian ♭2 (MM2)','mm',[0,1,3,5,7,9,10],'1,♭2,♭3,4,5,6,♭7'),
  SC('lydAug','Lydian Augmented (MM3)','mm',[0,2,4,6,8,9,11],'1,2,3,♯4,♯5,6,7'),
  SC('locNat2','Locrian ♮2 (MM6)','mm',[0,2,3,5,6,8,10],'1,2,♭3,4,♭5,♭6,♭7'),
+ /* 80th R24 (his thirty-first message): the FAMILIES completed — the five missing
+    harmonic-minor modes, the whole double-harmonic family, the whole-half diminished
+    and the whole tone scale, so every family he ordered exists to order. */
+ SC('locNat6','Locrian ♮6 (HM2)','hm',[0,1,3,5,6,9,10],'1,♭2,♭3,4,♭5,6,♭7'),
+ SC('ionAug','Ionian ♯5 (HM3)','hm',[0,2,4,5,8,9,11],'1,2,3,4,♯5,6,7'),
+ SC('dorS4','Dorian ♯4 (HM4 · Ukrainian)','hm',[0,2,3,6,7,9,10],'1,2,♭3,♯4,5,6,♭7'),
+ SC('lydS2','Lydian ♯2 (HM6)','hm',[0,3,4,6,7,9,11],'1,♯2,3,♯4,5,6,7'),
+ SC('supLoc7','Super-Locrian 𝄫7 (HM7)','hm',[0,1,3,4,6,8,9],'1,♭2,♭3,♭4,♭5,♭6,𝄫7'),
+ SC('dblHarm','Double Harmonic Major (Byzantine)','dh',[0,1,4,5,7,8,11],'1,♭2,3,4,5,♭6,7'),
+ SC('lydS2S6','Lydian ♯2 ♯6 (DH2)','dh',[0,3,4,6,7,10,11],'1,♯2,3,♯4,5,♯6,7'),
+ SC('ultraPhryg','Ultraphrygian (DH3)','dh',[0,1,3,4,7,8,9],'1,♭2,♭3,♭4,5,♭6,𝄫7'),
+ SC('hungMin','Hungarian Minor (Double Harmonic Minor · DH4)','dh',[0,2,3,6,7,8,11],'1,2,♭3,♯4,5,♭6,7'),
+ SC('oriental','Oriental (DH5)','dh',[0,1,4,5,6,9,10],'1,♭2,3,4,♭5,6,♭7'),
+ SC('ionS2S5','Ionian ♯2 ♯5 (DH6)','dh',[0,3,4,5,8,9,11],'1,♯2,3,4,♯5,6,7'),
+ SC('locb3b7','Locrian 𝄫3 𝄫7 (DH7)','dh',[0,1,2,5,6,8,9],'1,♭2,𝄫3,4,♭5,♭6,𝄫7'),
+ SC('dimWH','Symmetrical Diminished (whole–half)','dim',[0,2,3,5,6,8,9,11],'1,2,♭3,4,♭5,♭6,6,7'),
+ SC('wholeTone','Whole Tone','wt',[0,2,4,6,8,10],'1,2,3,♯4,♯5,♭7'),
 ].forEach(s=>SCALE_DB[s.id]=s);
+function ragaFamilyOf(pcs){
+ /* 80th R24 (his thirty-first message): each raga's FAMILY by similarity — which
+    anchor scale its pitch set sits nearest (symmetric set difference, Sa anchored):
+    0 Major / Natural Minor · 1 Melodic Minor · 2 Harmonic Minor · 3 the Double
+    Harmonic · 4 the further shores (nothing within three alterations). Pure. */
+ const anchors=[[[0,2,4,5,7,9,11],[0,2,3,5,7,8,10]],[[0,2,3,5,7,9,11]],[[0,2,3,5,7,8,11]],[[0,1,4,5,7,8,11]]];
+ const set=new Set((pcs||[]).map(p=>((p%12)+12)%12));
+ let fam=4,dist=99;
+ anchors.forEach((group,fi)=>{
+  for(const a of group){
+   let d=0;
+   for(const x of a)if(!set.has(x))d++;
+   set.forEach(x=>{if(a.indexOf(x)<0)d++;});
+   if(d<dist){dist=d;fam=fi;}
+  }
+ });
+ return {fam:dist<=3?fam:4,dist};
+}
+function wanScaleFamilies(){
+ /* his thirty-first-message ORDER for the scale list — by family: the Modes · the
+    Natural/Melodic/Harmonic/Double-Harmonic minor families · Blues & Bebop · each
+    raga family by similarity · at the end the Diminished and Whole Tone families.
+    (The natural-minor modes ARE the major modes — one family, labeled as both;
+    inference labeled in the RAW.) */
+ const fams=[
+  {label:'Modes — the Major / Natural Minor family',ids:['ionian','dorian','phrygian','lydian','mixolydian','aeolian','locrian']},
+  {label:'The Melodic Minor Mode Family',ids:['melMin','dorb2','lydAug','lydDom','mixb6','locNat2','altDom']},
+  {label:'The Harmonic Minor Mode Family',ids:['harmonicMinor','locNat6','ionAug','dorS4','phrygDom','lydS2','supLoc7']},
+  {label:'The Double Harmonic Family (Major & Hungarian Minor)',ids:['dblHarm','lydS2S6','ultraPhryg','hungMin','oriental','ionS2S5','locb3b7']},
+  {label:'Blues & Bebop',ids:['blues','majorBlues','bebopDom']},
+ ];
+ const tiers=[[],[],[],[],[]];
+ for(const id in SCALE_DB){
+  const s=SCALE_DB[id];
+  if(s.group!=='carnatic')continue;
+  const r=ragaFamilyOf(s.pcs);
+  tiers[r.fam].push({id,d:r.dist,name:s.name});
+ }
+ const tierLbl=['Ragas — nearest Major / Natural Minor','Ragas — nearest Melodic Minor','Ragas — nearest Harmonic Minor','Ragas — nearest the Double Harmonic','Ragas — the further shores'];
+ tiers.forEach((t2,i)=>{
+  t2.sort((a,b)=>a.d-b.d||a.name.localeCompare(b.name));
+  if(t2.length)fams.push({label:tierLbl[i],ids:t2.map(x=>x.id)});
+ });
+ fams.push({label:'The Diminished Scale Family',ids:['dimHW','dimWH']});
+ fams.push({label:'The Whole Tone Scale Family',ids:['wholeTone']});
+ return fams;
+}
 /* ==== 3.5 SCALE/RAGA BROWSER — data layer (build 2026-07-30a) ====
    The Carnatic DB (72 melakartas + 107 janyas — raga-toolkit-data.json v2) ships EMBEDDED
    as JSON inside the <script type="application/json" id="ragaDB"> tag above this script —
@@ -12475,6 +12548,20 @@ drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
    if(!w){say('No audition grid to load into.');return;}
    withGridWorld(w.id,()=>gridSongLoad(id));
    say('Loaded into the audition grid above — extra tracks arrive muted & hidden (unhide/unmute them any time).');
+   /* 80th R22 (his thirtieth message: "no cadences are analyzed from that song"):
+      picking a song in the CADENCE window also runs the cadence census on THAT
+      song and shows the result — the ★ Curated column, narrowed to it. */
+   if(winId==='cadPanel'){
+    try{
+     cadState.cat='cur';
+     cadState.exSongs=SONGS.filter(s=>s.id!==id).map(s=>s.id);
+     cadState.sel=null;
+     buildCadWindow();
+     const n=Array.isArray(cadState.curList)?cadState.curList.length:0;
+     say(n?('Loaded — and its cadences are ANALYZED below: '+n+' distinct cadence'+(n>1?'s':'')+' detected at its phrase ends (the ★ Curated column, this song only). The other columns hold the default cadence families.')
+          :'Loaded — no cadences detected at its 8-beat phrase ends. The other columns hold the default cadence families.');
+    }catch(e){}
+   }
    sel.blur();
   };
  }
@@ -18698,25 +18785,13 @@ function wanKeyAudition(pc,minor){
  }catch(e){}
 }
 function wanRoutePath(a,b){
- /* 80th (his twenty-first message): the BETWEEN-CHORDS router, in cell units — centers
-    at (c+0.5, r+0.5), gutter corners at integers. A path leaves a center for the corner
-    toward its goal, walks corner to corner (horizontal, vertical or diagonal — always
-    BETWEEN the cells), and only re-enters a center at its goal. Pure. */
- /* 80th R21 (his twenty-ninth message: "still going over chords"): a DIAGONAL between
-    two gutter corners cuts straight through the cell between them — so the walk is a
-    STAIR-STEP: every corner-to-corner segment is horizontal or vertical, riding the
-    gutters only. */
- const pts=[{x:a.c+0.5,y:a.r+0.5}];
- let cx=a.c+(b.c>=a.c?1:0),cy=a.r+(b.r>=a.r?1:0);
- const tx=b.c+(b.c>=a.c?0:1),ty=b.r+(b.r>=a.r?0:1);
- pts.push({x:cx,y:cy});
- let g=0;
- while((cx!==tx||cy!==ty)&&g++<64){
-  if(cx!==tx){cx+=Math.sign(tx-cx);pts.push({x:cx,y:cy});}
-  if(cy!==ty){cy+=Math.sign(ty-cy);pts.push({x:cx,y:cy});}
- }
- pts.push({x:b.c+0.5,y:b.r+0.5});
- return pts;
+ /* 80th R23 (his thirty-first message — A ROUTE-LAW REVERSAL, his correction going
+    forward): the between-chords law (his 21st message) and the R21 stair-step router
+    STAND DOWN. The line takes the PATH OF LEAST MOVEMENT — a straight line, center
+    to center — and passing through a chord is fine "once the line touches the letter
+    inside the chord". The stops (home · the road's waypoints · the destination)
+    remain the chords the route MEANS. Pure. */
+ return [{x:a.c+0.5,y:a.r+0.5},{x:b.c+0.5,y:b.r+0.5}];
 }
 function wanRoadWaypoints(road,homePc,homeMinor,destPc,destMinor){
  /* the MUSICAL routing rules (his twenty-ninth message): none of the paths should do
@@ -18788,7 +18863,12 @@ function wanPopupOpen(panelId){
  /* 80th (his twenty-sixth message): the Pathways SEARCH buttons open the real search
     windows AS POP-UPS — the panel lifts into a fixed, draggable, scrollable float;
     its ⤢ close hands it back to the column exactly as it was. */
- const p=document.getElementById(panelId);if(!p)return;
+ let p=document.getElementById(panelId);
+ /* 80th R22 (his thirtieth message: "the Chord Progression Window doesn't work"):
+    progPanel is created LAZILY — a fresh session had no element, so this returned
+    silently. Create it first. */
+ if(!p&&panelId==='progPanel'&&typeof progWinToggle==='function'){progWinToggle();p=document.getElementById(panelId);}
+ if(!p)return;
  if(panelId==='progPanel'){if(p.style.display==='none'&&typeof progWinToggle==='function')progWinToggle();}
  else{try{if(typeof uiWinShown==='function'&&!uiWinShown(panelId))uiDispatch({type:'toggle',id:panelId});}catch(e){}}
  if(p.classList.contains('wanPopup'))return;
@@ -18811,6 +18891,38 @@ function wanPopupOpen(panelId){
   p.classList.remove('wanPopup');
   p.setAttribute('style',p.dataset.popPrev||'');
   delete p.dataset.popPrev;
+ };
+}
+function wanRoadDialog(roadId){
+ /* 80th R22 (his thirtieth message): double-click a path name → the road's OWN
+    floating dialogue — its definition, then the option to populate it via the
+    Cadence Search Window or the Chord Progression Search Window (the pop-ups). */
+ const rd=WAN_PATH_TYPES.find(t2=>t2.id===roadId);if(!rd)return;
+ let d=document.getElementById('wanRoadDlg');
+ if(d)d.remove();
+ d=document.createElement('div');
+ d.id='wanRoadDlg';
+ d.style.left='calc(50% - 150px)';d.style.top='120px';
+ const deco=rd.style.dash?(rd.style.dash.split(' ')[0]<=2?'dotted':'dashed'):'solid';
+ d.innerHTML='<div class="wanPopStrip"><span style="cursor:grab;">✥ drag</span><span class="wbtn" style="margin-left:auto;cursor:pointer;" data-w="rdclose">✕</span></div>'
+  +'<div style="font-weight:800;font-size:15px;color:'+rd.style.col+';border-bottom:2.5px '+deco+' '+rd.style.col+';display:inline-block;margin-bottom:6px;">'+rd.name+'</div>'
+  +'<div style="margin-bottom:5px;">'+rd.def+'</div>'
+  +'<div style="margin-bottom:9px;color:#6b4f28;font-style:italic;">'+rd.harm+'</div>'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#6b4f28;margin-bottom:4px;">Populate this road — a cadence OR a progression, never both</div>'
+  +'<div style="display:flex;gap:8px;flex-wrap:wrap;"><button id="wanRdCad" style="font-size:10.5px;">CADENCE SEARCH</button>'
+  +'<button id="wanRdProg" style="font-size:10.5px;">CHORD PROGRESSION SEARCH</button></div>';
+ document.body.appendChild(d);
+ d.querySelector('[data-w="rdclose"]').onclick=()=>d.remove();
+ d.querySelector('#wanRdCad').onclick=()=>{wanPopupOpen('cadPanel');};
+ d.querySelector('#wanRdProg').onclick=()=>{wanPopupOpen('progPanel');};
+ const strip=d.querySelector('.wanPopStrip');
+ strip.onmousedown=e=>{
+  if(e.target.dataset&&e.target.dataset.w==='rdclose')return;
+  e.preventDefault();
+  const x0=e.clientX-d.offsetLeft,y0=e.clientY-d.offsetTop;
+  const mv=ev=>{d.style.left=(ev.clientX-x0)+'px';d.style.top=(ev.clientY-y0)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
  };
 }
 function wanPathsState(){
@@ -18906,6 +19018,9 @@ function wanWeberDraw(){
  const W=document.getElementById('wanWeber');if(!W)return;
  const st=wanState;
  if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView='letters';st.webPaths=[];st.webSel=new Set();}
+ if(!Array.isArray(st.webRoadsOff))st.webRoadsOff=[];   /* 80th R23: legend-toggled-off roads */
+ if(st.webLegAll===undefined)st.webLegAll=false;
+ if(st.webReduce===undefined)st.webReduce=false;   /* 80th R24 (his thirty-second message): Reduce Accidentals — OFF by default */
  const minor=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
  const tonicLof=wanPcLof(st.tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+st.webShift;
@@ -18914,13 +19029,18 @@ function wanWeberDraw(){
   +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:3px;">The table of the relationships of keys — drag to travel the map · click hears a key · double-click makes it home · ⌘+click draws the modulation paths · ctrl+click for the map menu. The full story is in ℹ About.</div>'
   +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
   +'<div style="margin-bottom:5px;display:flex;gap:8px;align-items:center;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span>'
-  +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults. ON by default: a ⌘-selected destination shows every filled-out road’s pathway.">Pathways</span></div>'
-  +'<div id="wanWebWrap">';
+  +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults. ON by default: a ⌘-selected destination shows every filled-out road’s pathway.">Pathways</span>'
+  +'<span class="wanAllTog'+(st.webReduce?' on':'')+'" id="wanRedTog" title="Show every double-accidental key as its plain enharmonic on screen — B𝄫 shows as A, G𝄫 as F. The map’s positions never move; only the labels reduce.">'+(st.webReduce?'☑':'☐')+' Reduce Accidentals</span></div>'
+  +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="flex:1 1 auto;min-width:0;">';
  for(let r=0;r<13;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
   for(let c=0;c<10;c++){
    const cell=grid[r][c];
-   const nm=wanLofName(cell.lof);
+   /* 80th R24 (his thirty-second message): Reduce Accidentals ON → a double-accidental
+      spelling SHOWS its plain enharmonic (B𝄫 → A · G𝄫 → F) — the lattice position
+      never moves, only the label reduces (through the plain-window pures). */
+   const redLof=st.webReduce?wanPcLof(wanLofPc(cell.lof),cell.minor):cell.lof;
+   const nm=wanLofName(st.webReduce&&/♭♭|××|×/.test(wanLofName(cell.lof))?redLof:cell.lof);
    const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
    const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,st.tonic):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
    const isKey=cell.minor===minor&&cell.lof===tonicLof;
@@ -18931,7 +19051,7 @@ function wanWeberDraw(){
   }
   h+='</div>';
  }
- h+='<svg id="wanPathsSvg"></svg></div>';   /* 80th R21: the arrow marker stood down with the arrowheads */
+ h+='<svg id="wanPathsSvg"></svg></div><div id="wanLegend"></div></div>';   /* 80th R21: the arrow marker stood down; R22: the legend rides the right */
  W.innerHTML=h;
  W.title='Weber intended the matrix as a practical, visual roadmap for modulation and a chart of the psychological “distance” between keys. One step in any direction is a closely related key — vertically by fifths (dominant/subdominant), horizontally through parallel and relative modes. To reach a distant key, trace a path through the boxes (C → G → D → b) and build pivot bridges along it. Adjacent keys are first-degree relations; each box further is a degree more distant — a one-box move sounds smooth, a leap across many sounds dramatic. The full story is in ℹ About.';
  const wrap=W.querySelector('#wanWebWrap');
@@ -19036,7 +19156,8 @@ function wanWeberDraw(){
    const el2=chipAt(rr,cc);if(!el2)return {x:pt2.x*47,y:pt2.y*25};
    return {x:el2.offsetLeft+(pt2.x>ci||pt2.x===10?el2.offsetWidth+1.5:-1.5),y:el2.offsetTop+(pt2.y>ri||pt2.y===13?el2.offsetHeight+1.5:-1.5)};
   };
-  let ph='';
+  let ph='',phHit='';
+  const routeInfo={};   /* 80th R22 (his thirtieth message): the legend's raw material */
   const home=centers[0];
   const homePc=wanLofPc(tonicLof);
   const allChips=[...wrap.querySelectorAll('.wanWebKey')];
@@ -19075,16 +19196,181 @@ function wanWeberDraw(){
     /* no arrowheads (his ruling: the user can see all the paths ending on the same
        chord) and no pixel offset — the routes themselves differ now */
     const d2='M '+pts.map(p2=>{const q=px(p2);return q.x.toFixed(1)+' '+q.y.toFixed(1);}).join(' L ');
-    ph+='<path d="'+d2+'" data-road="'+rd.id+'" fill="none" stroke="'+rd.style.col+'" stroke-width="'+rd.style.w+'"'
-     +(rd.style.dash?' stroke-dasharray="'+rd.style.dash+'"':'')
-     +' stroke-linejoin="round" opacity="'+(ri2===0?'.92':'.62')+'"/>';
+    const stopsAttr=stops.map(s3=>s3.r+':'+s3.c).join('|');
+    /* 80th R23: a legend-toggled-off road keeps its legend row (dull) but its path
+       LEAVES the map */
+    if(st.webRoadsOff.indexOf(rd.id)<0){
+     ph+='<path d="'+d2+'" data-road="'+rd.id+'" data-stops="'+stopsAttr+'" fill="none" stroke="'+rd.style.col+'" stroke-width="'+rd.style.w+'"'
+      +(rd.style.dash?' stroke-dasharray="'+rd.style.dash+'"':'')
+      +' stroke-linejoin="round" opacity="'+(ri2===0?'.92':'.62')+'"/>';
+     /* an invisible WIDE twin carries the hover/click (the visible line is thin) */
+     phHit+='<path d="'+d2+'" data-road="'+rd.id+'" data-stops="'+stopsAttr+'" fill="none" stroke="rgba(0,0,0,0)" stroke-width="11" style="pointer-events:stroke;cursor:pointer;" class="wanHitPath"/>';
+    }
+    /* the legend's raw material: every stop as a KEY, labeled as the map spells it */
+    routeInfo[rd.id]={rd,stops:stops.slice(),keys:stops.map(s3=>{
+     const el3=chipAt(s3.r,s3.c);
+     return el3?{pc:wanLofPc(+el3.getAttribute('data-lof')),minor:el3.getAttribute('data-minor')==='1',
+      lbl:(st.webView==='roman'?wanLofName(+el3.getAttribute('data-lof')):el3.textContent)+(el3.getAttribute('data-minor')==='1'?'m':'')}:null;
+    }).filter(Boolean)};
    });
   }
+  ph+=phHit;
   svg.innerHTML=ph;
- }
+  /* ---- 80th R22 (his thirtieth message): hover a LINE → it lights and SELECTS every
+     chord the line touches; click → plays them all. The wide invisible twin carries
+     the pointer (the visible line is thin); the chords a route "touches" are its
+     STOPS — home, the road's waypoints, the destination. ---- */
+  const stopChips=p3=>String(p3.getAttribute('data-stops')||'').split('|').map(s3=>{
+   const m2=s3.split(':');return chipAt(+m2[0],+m2[1]);}).filter(Boolean);
+  const litOff=()=>{wrap.querySelectorAll('.wanRouteLit').forEach(el3=>el3.classList.remove('wanRouteLit'));
+   svg.querySelectorAll('path[data-road]:not(.wanHitPath)').forEach(v3=>{v3.style.strokeWidth='';v3.style.opacity='';});};
+  const litOn=road=>{const v3=svg.querySelector('path[data-road="'+road+'"]:not(.wanHitPath)');
+   if(v3){v3.style.strokeWidth=(parseFloat(v3.getAttribute('stroke-width'))+1.6)+'px';v3.style.opacity='1';}};
+  const playStops=chips2=>{chips2.forEach((el3,i3)=>{setTimeout(()=>{
+   try{wanKeyAudition(wanLofPc(+el3.getAttribute('data-lof')),el3.getAttribute('data-minor')==='1');}catch(e3){}},i3*480);});};
+  svg.querySelectorAll('.wanHitPath').forEach(hp=>{
+   hp.onmouseenter=()=>{litOff();litOn(hp.getAttribute('data-road'));stopChips(hp).forEach(el3=>el3.classList.add('wanRouteLit'));};
+   hp.onmouseleave=litOff;
+   hp.onclick=e3=>{e3.stopPropagation();playStops(stopChips(hp));};
+  });
+  /* ---- the LEGEND on the right: the three RULED pathways — the title in the road's
+     own line (color + solid/dashed), the chord progression the route makes beneath
+     it (draggable to the chord lane), double-click the title for the road's own
+     dialog ---- */
+  const leg=W.querySelector('#wanLegend');
+  if(leg){
+   leg.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:2px;">Path Trips</div>'
+    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">Click a lit name to dull it (its path leaves the map) · hover lights the route · drag the chords to the chord lane · double-click a name for the road’s own dialogue · ctrl+click here for the menu</div>';
+   /* 80th R23 (his thirty-first message): the three ruled roads lead; expand… below
+      them reveals the other roads so the user can populate more paths */
+   const ruled=['way','greenway','passageway'];
+   const legIds=st.webLegAll?WAN_PATH_TYPES.map(t2=>t2.id):ruled;
+   for(const rid of legIds){
+    const rd2=WAN_PATH_TYPES.find(t2=>t2.id===rid);
+    const info=routeInfo[rid];
+    if(!info&&!st.webLegAll&&ruled.indexOf(rid)<0)continue;
+    const isOff=st.webRoadsOff.indexOf(rid)>=0;
+    const row=document.createElement('div');
+    row.className='wanLegRow';
+    const deco=rd2.style.dash?(rd2.style.dash.split(' ')[0]<=2?'dotted':'dashed'):'solid';
+    row.innerHTML='<span class="wanLegTitle" data-road="'+rid+'" style="color:'+rd2.style.col+';border-bottom:2.5px '+deco+' '+rd2.style.col+';'+(isOff?'opacity:.35;':'')+'" title="'+(isOff?'Dulled — its path is off the map. Click to relight it.':'Click dulls this road (its path leaves the map) · hover lights its route · double-click opens its dialogue.')+'">'+rd2.name+'</span>'
+     +(info?'<div class="wanLegChain" draggable="false" data-road="'+rid+'" style="'+(isOff?'opacity:.4;':'')+'" title="The chord changes this road makes — drag them onto the chord lane (they fill BACKWARDS ending at the drop chord, the lane’s own rate kept).">'+info.keys.map(k3=>k3.lbl).join(' → ')+'</div>'
+      :'<div style="font-size:10px;color:#8a6f4d;font-style:italic;margin-top:2px;">unpopulated — double-click the name to populate it</div>');
+    leg.appendChild(row);
+   }
+   const more=document.createElement('div');
+   more.id='wanLegMore';
+   more.textContent=st.webLegAll?'show less':'expand…';
+   more.style.cssText='font-size:10.5px;color:#6b4f28;cursor:pointer;text-decoration:underline;margin-bottom:5px;';
+   more.title='Show the other roads so you can populate more paths.';
+   more.onclick=e3=>{e3.stopPropagation();st.webLegAll=!st.webLegAll;wanWeberDraw();};
+   leg.appendChild(more);
+   const st4=document.createElement('div');
+   st4.id='wanLegStatus';st4.style.cssText='font-size:10.5px;color:#7a5a30;min-height:13px;';
+   leg.appendChild(st4);
+   const legSay=m2=>{const e3=document.getElementById('wanLegStatus');if(e3)e3.textContent=m2;};
+   leg.querySelectorAll('.wanLegTitle').forEach(tt=>{
+    const rid=tt.getAttribute('data-road');
+    const hp=svg.querySelector('.wanHitPath[data-road="'+rid+'"]');
+    tt.onmouseenter=()=>{if(hp){litOff();litOn(rid);stopChips(hp).forEach(el3=>el3.classList.add('wanRouteLit'));}};
+    tt.onmouseleave=litOff;
+    /* 80th R23: a click TOGGLES the road — lit→dull and its path leaves the map
+       (the LINE's own click still plays the chords) */
+    tt.onclick=e3=>{e3.stopPropagation();
+     const i3=st.webRoadsOff.indexOf(rid);
+     if(i3>=0)st.webRoadsOff.splice(i3,1);else st.webRoadsOff.push(rid);
+     wanWeberDraw();};
+    tt.ondblclick=e3=>{e3.stopPropagation();wanRoadDialog(rid);};
+   });
+   /* the ctrl+click PATH TRIPS menu: Save As Template · Save (the default, warned) ·
+      Restore defaults at the bottom */
+   leg.oncontextmenu=e3=>{
+    e3.preventDefault();e3.stopPropagation();
+    let m3=document.getElementById('wanWebMenu');
+    if(m3)m3.remove();
+    m3=document.createElement('div');m3.id='wanWebMenu';m3.style.display='block';
+    const mk3=(label,fn,dis)=>{const it=document.createElement('div');it.className='wmit'+(dis?' dis':'');
+     it.textContent=label;if(!dis)it.onclick=()=>{m3.remove();fn();};m3.appendChild(it);};
+    const hd3=t3=>{const d3=document.createElement('div');d3.className='wmhd';d3.textContent=t3;m3.appendChild(d3);};
+    const snap=()=>({paths:wanPathsState(),off:st.webRoadsOff.slice()});
+    const apply=cfg=>{try{localStorage.setItem('cp_wanPaths',JSON.stringify(cfg.paths||{active:'way',types:{}}));}catch(e4){}
+     st.webRoadsOff=Array.isArray(cfg.off)?cfg.off.slice():[];wanWeberDraw();};
+    hd3('Path Trips');
+    mk3('Save As Template…',()=>{
+     const nm3=prompt('Name this Path Trips setup:');if(!nm3)return;
+     let arr=[];try{arr=JSON.parse(localStorage.getItem('cp_wanPathTpl')||'[]');}catch(e4){}
+     arr.push(Object.assign({name:nm3.slice(0,40)},snap()));
+     try{localStorage.setItem('cp_wanPathTpl',JSON.stringify(arr));}catch(e4){}
+     legSay('Saved as the template “'+nm3.slice(0,40)+'”.');});
+    mk3('Save',()=>{
+     if(!confirm('Overwrite the default?'))return;
+     try{localStorage.setItem('cp_wanPathsDefault',JSON.stringify(snap()));}catch(e4){}
+     legSay('Saved as the default Path Trips setup.');});
+    let tpls3=[];try{tpls3=JSON.parse(localStorage.getItem('cp_wanPathTpl')||'[]');}catch(e4){}
+    if(tpls3.length)hd3('Templates');
+    tpls3.slice(0,8).forEach(t4=>mk3(t4.name,()=>apply(t4)));
+    hd3('');
+    mk3('Restore defaults',()=>{
+     let d4=null;try{d4=JSON.parse(localStorage.getItem('cp_wanPathsDefault')||'null');}catch(e4){}
+     if(d4)apply(d4);
+     else{try{localStorage.removeItem('cp_wanPaths');}catch(e4){}st.webRoadsOff=[];wanWeberDraw();}
+     const e5=document.getElementById('wanLegStatus');if(e5)e5.textContent='Path Trips restored to the default.';});
+    document.body.appendChild(m3);
+    m3.style.left=Math.min(e3.clientX,window.innerWidth-m3.offsetWidth-14)+'px';
+    m3.style.top=Math.min(e3.clientY+4,window.innerHeight-m3.offsetHeight-14)+'px';
+    const away3=ev3=>{if(!m3.contains(ev3.target)){m3.remove();document.removeEventListener('mousedown',away3,true);}};
+    setTimeout(()=>document.addEventListener('mousedown',away3,true),0);
+   };
+   /* the chord-changes DRAG → the chord lane (the moon-cadence seam: backwards fill
+      ending at the drop, the lane's rate kept, one undo) */
+   leg.querySelectorAll('.wanLegChain').forEach(ch=>{
+    ch.onmousedown=e3=>{
+     if(e3.button!==0)return;
+     e3.preventDefault();
+     const rid=ch.getAttribute('data-road');
+     const info=routeInfo[rid];if(!info)return;
+     let ghost=null,went=false;
+     const mv=ev=>{
+      if(!went&&Math.hypot(ev.clientX-e3.clientX,ev.clientY-e3.clientY)<6)return;
+      went=true;
+      if(!ghost){ghost=document.createElement('div');
+       ghost.style.cssText='position:fixed;z-index:2000;pointer-events:none;font-size:11px;padding:3px 8px;border-radius:8px;background:#efe6d2;border:1px solid #6b4f28;color:#4a3a20;opacity:.9;';
+       ghost.textContent=info.keys.map(k3=>k3.lbl).join(' → ');document.body.appendChild(ghost);}
+      ghost.style.left=(ev.clientX+10)+'px';ghost.style.top=(ev.clientY+8)+'px';
+      const lane=document.getElementById('chordlane');
+      if(lane)lane.style.outline=(()=>{const lr=lane.getBoundingClientRect();
+       return (ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom)?'1px dashed var(--accent)':'';})();
+     };
+     const up=ev=>{
+      document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+      if(ghost)ghost.remove();
+      const lane=document.getElementById('chordlane');
+      if(lane)lane.style.outline='';
+      if(!went)return;
+      if(!lane||!lane.getClientRects().length){legSay('No chord lane on screen to drop into.');return;}
+      const lr=lane.getBoundingClientRect();
+      if(!(ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom))return;
+      const cell=(document.elementFromPoint(ev.clientX,ev.clientY)||{closest:()=>null}).closest('.cb');
+      const cm=cell?/^cb(\d+)$/.exec(cell.id):null;
+      const ci=cm?+cm[1]:(project.chords.length-1);
+      const run=info.keys.map(k3=>({r:k3.pc,iv:(k3.minor?MIN:MAJ).slice(),lbl:k3.lbl}));
+      const rows=cadFillBack(project.chords,ci,run);
+      if(!rows){legSay('The '+info.rd.name+' needs '+run.length+' chords ending at the drop — drop it further right.');return;}
+      snapshot();
+      project.chords=rows;
+      drawChordLane();refresh(false);
+      legSay('The '+info.rd.name+'’s changes landed ENDING at the drop chord, filled backwards — the lane’s own rate kept. ⌘Z undoes it.');
+     };
+     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+    };
+   });
+  }
+ }else{const leg=W.querySelector('#wanLegend');if(leg)leg.innerHTML='';}
  /* ---- the toggle ---- */
  const tog=W.querySelector('#wanAllTog');
  if(tog)tog.onclick=e=>{e.stopPropagation();st.webAll=!st.webAll;wanWeberDraw();};
+ const red=W.querySelector('#wanRedTog');
+ if(red)red.onclick=e=>{e.stopPropagation();st.webReduce=!st.webReduce;wanWeberDraw();};
  const pb=W.querySelector('#wanPathsBtn');
  if(pb)pb.onclick=e=>{e.stopPropagation();wanPathsWinOpen();};
  /* ---- DRAG-TO-PAN + the click laws ---- */
@@ -19184,17 +19470,22 @@ function renderWan(){
  const n=sc.pcs.length;
  /* left column: the two labeled search surfaces + Weber neighbors + the trail */
  const modeOpts=(()=>{
+  /* 80th R24 (his thirty-first message): the scale list ordered BY FAMILY — the
+     Modes, the minor families, each raga family by similarity, the Diminished and
+     Whole Tone families at the end. The 🔎 is still one more filter on top. */
   const q=(wanState.search||'').toLowerCase();
-  const groups={};
-  for(const id in SCALE_DB){
-   const s=SCALE_DB[id];
-   if(q&&s.name.toLowerCase().indexOf(q)<0)continue;
-   (groups[s.group||'other']||(groups[s.group||'other']=[])).push(s);
-  }
+  const seen=new Set();
   let h='';
-  for(const g in groups){
-   h+='<optgroup label="'+g+'">'+groups[g].slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===wanState.mode?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
+  for(const f of wanScaleFamilies()){
+   const list=f.ids.map(id=>SCALE_DB[id]).filter(Boolean)
+    .filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return !q||s.name.toLowerCase().indexOf(q)>=0;});
+   if(!list.length)continue;
+   h+='<optgroup label="'+f.label+'">'+list.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===wanState.mode?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
   }
+  /* anything not yet family-seated still lists (nothing becomes unreachable) */
+  const rest=[];
+  for(const id in SCALE_DB)if(!seen.has(id)){const s=SCALE_DB[id];if(!q||s.name.toLowerCase().indexOf(q)>=0)rest.push(s);}
+  if(rest.length)h+='<optgroup label="Elsewhere">'+rest.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===wanState.mode?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
   return h;
  })();
  const ivOpts=(()=>{
@@ -19223,10 +19514,20 @@ function renderWan(){
  }).join('');
  B.innerHTML='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
   +'<div style="flex:0 0 250px;display:flex;flex-direction:column;gap:8px;">'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Main Scale</label>'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">2 Main Scales</label>'
   +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;">'
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" '+(wanState.follow?'disabled':'')+' style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select></div>'
+  /* 80th R24 (his thirty-first message): the SECOND main scale — "Melodic, Harmonic,
+     Natural", the three types of minor on the same root */
+  +'<div style="display:flex;gap:6px;align-items:center;">'
+  +'<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);flex:0 0 64px;line-height:1.25;" title="The three types of minor, built on the same root as the scale above.">Melodic, Harmonic, Natural</span>'
+  +'<select id="wanMinorSel" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'
+  +'<option value=""'+(['melMin','harmonicMinor','aeolian'].indexOf(wanState.mode)<0?' selected':'')+'>— pick a minor —</option>'
+  +'<option value="melMin"'+(wanState.mode==='melMin'?' selected':'')+'>Melodic Minor</option>'
+  +'<option value="harmonicMinor"'+(wanState.mode==='harmonicMinor'?' selected':'')+'>Harmonic Minor</option>'
+  +'<option value="aeolian"'+(wanState.mode==='aeolian'?' selected':'')+'>Natural Minor</option>'
+  +'</select></div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Relative</label>'
   +'<div style="display:flex;gap:6px;align-items:center;font-size:12px;">a <select id="wanRelStep">'+ivOpts+'</select><select id="wanRelDir"><option value="below"'+(wanState.relDir==='below'?' selected':'')+'>Below</option><option value="above"'+(wanState.relDir==='above'?' selected':'')+'>Above</option></select></div>'
@@ -19276,6 +19577,8 @@ function renderWan(){
  se.oninput=e=>{wanState.search=e.target.value;renderWan();const s2=document.getElementById('wanSearch');if(s2){s2.focus();try{s2.setSelectionRange(s2.value.length,s2.value.length);}catch(_){}}};
  document.getElementById('wanRoot').onchange=e=>{wanState.tonic=+e.target.value||0;wanState.cur={row:0,deg:0};renderWan();};
  document.getElementById('wanMode').onchange=e=>{if(SCALE_DB[e.target.value]){wanState.mode=e.target.value;wanState.relStep=Math.min(wanState.relStep,Math.max(1,wanScale().pcs.length-1));wanState.cur={row:0,deg:0};renderWan();}};
+ const wms=document.getElementById('wanMinorSel');
+ if(wms)wms.onchange=e=>{if(SCALE_DB[e.target.value]){wanState.mode=e.target.value;wanState.relStep=Math.min(wanState.relStep,Math.max(1,wanScale().pcs.length-1));wanState.cur={row:0,deg:0};renderWan();}};
  document.getElementById('wanFollow').onchange=e=>{wanState.follow=!!e.target.checked;if(wanState.follow)wanSyncFollow();renderWan();};
  document.getElementById('wanRelStep').onchange=e=>{wanState.relStep=+e.target.value||2;renderWan();};
  document.getElementById('wanRelDir').onchange=e=>{wanState.relDir=e.target.value==='above'?'above':'below';renderWan();};
