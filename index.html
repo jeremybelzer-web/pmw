@@ -701,7 +701,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28p</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28q</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -19126,6 +19126,28 @@ function wanWeberDraw(){
  /* ---- the PATHS (⌘+click destinations — solid = the direct 2-5-1 / 4-5-1 route,
     dashed and dotted = round-about ways) ---- */
  const svg=wrap.querySelector('#wanPathsSvg');
+ /* ---- 81st R1 (his THIRTY-FOURTH message, and his THIRTY-FIFTH corrected the reading):
+    ⭐⭐ THE PATH TRIPS LEGEND IS ALWAYS ON. It used to be rendered INSIDE the paths
+    guard below, with an `else` that wiped it — so a map with no ⌘ destination showed
+    NO Path Trips column at all: no title, no road names, no ☑ toggles, no expand….
+    That is what he reported twice ("I still don't see the 3 paths to the right and
+    the 'expand' button underneath"). ⛔ THE TELL THAT IT WAS A WOUND AND NOT A DESIGN:
+    each row already carried an "unpopulated — double-click the name to populate it"
+    state, so the frame was BUILT to stand before it has routes; only the outer guard
+    stopped it. ⚠ And it matters more than a cosmetic: the legend is the surface you
+    USE to populate paths (the toggles, expand…, the double-click dialogs), so gating
+    it on a populated path is gating the control on its own outcome.
+    ➡ routeInfo and the four hover/play helpers hoist out with the legend. The three
+    that touch `svg` are null-safe now, because they can be called with no svg at all. */
+ let routeInfo={};   /* 80th R22 (his thirtieth message): the legend's raw material — EMPTY until a ⌘ destination exists, which is exactly what an unpopulated row renders from */
+ const stopChips=p3=>String(p3.getAttribute('data-stops')||'').split('|').map(s3=>{
+  const m2=s3.split(':');return chipAt(+m2[0],+m2[1]);}).filter(Boolean);
+ const litOff=()=>{wrap.querySelectorAll('.wanRouteLit').forEach(el3=>el3.classList.remove('wanRouteLit'));
+  if(svg)svg.querySelectorAll('path[data-road]:not(.wanHitPath)').forEach(v3=>{v3.style.strokeWidth='';v3.style.opacity='';});};
+ const litOn=road=>{if(!svg)return;const v3=svg.querySelector('path[data-road="'+road+'"]:not(.wanHitPath)');
+  if(v3){v3.style.strokeWidth=(parseFloat(v3.getAttribute('stroke-width'))+1.6)+'px';v3.style.opacity='1';}};
+ const playStops=chips2=>{chips2.forEach((el3,i3)=>{setTimeout(()=>{
+  try{wanKeyAudition(wanLofPc(+el3.getAttribute('data-lof')),el3.getAttribute('data-minor')==='1');}catch(e3){}},i3*480);});};
  if(svg&&st.webPaths.length&&centers.length){
   svg.setAttribute('width',wrap.scrollWidth);svg.setAttribute('height',wrap.scrollHeight);
   /* 80th (his twenty-first message): THE ROUTED PATHS — never over a selectable
@@ -19157,7 +19179,7 @@ function wanWeberDraw(){
    return {x:el2.offsetLeft+(pt2.x>ci||pt2.x===10?el2.offsetWidth+1.5:-1.5),y:el2.offsetTop+(pt2.y>ri||pt2.y===13?el2.offsetHeight+1.5:-1.5)};
   };
   let ph='',phHit='';
-  const routeInfo={};   /* 80th R22 (his thirtieth message): the legend's raw material */
+  routeInfo={};   /* 80th R22 (his thirtieth message): the legend's raw material */
   const home=centers[0];
   const homePc=wanLofPc(tonicLof);
   const allChips=[...wrap.querySelectorAll('.wanWebKey')];
@@ -19216,23 +19238,12 @@ function wanWeberDraw(){
   }
   ph+=phHit;
   svg.innerHTML=ph;
-  /* ---- 80th R22 (his thirtieth message): hover a LINE → it lights and SELECTS every
-     chord the line touches; click → plays them all. The wide invisible twin carries
-     the pointer (the visible line is thin); the chords a route "touches" are its
-     STOPS — home, the road's waypoints, the destination. ---- */
-  const stopChips=p3=>String(p3.getAttribute('data-stops')||'').split('|').map(s3=>{
-   const m2=s3.split(':');return chipAt(+m2[0],+m2[1]);}).filter(Boolean);
-  const litOff=()=>{wrap.querySelectorAll('.wanRouteLit').forEach(el3=>el3.classList.remove('wanRouteLit'));
-   svg.querySelectorAll('path[data-road]:not(.wanHitPath)').forEach(v3=>{v3.style.strokeWidth='';v3.style.opacity='';});};
-  const litOn=road=>{const v3=svg.querySelector('path[data-road="'+road+'"]:not(.wanHitPath)');
-   if(v3){v3.style.strokeWidth=(parseFloat(v3.getAttribute('stroke-width'))+1.6)+'px';v3.style.opacity='1';}};
-  const playStops=chips2=>{chips2.forEach((el3,i3)=>{setTimeout(()=>{
-   try{wanKeyAudition(wanLofPc(+el3.getAttribute('data-lof')),el3.getAttribute('data-minor')==='1');}catch(e3){}},i3*480);});};
   svg.querySelectorAll('.wanHitPath').forEach(hp=>{
    hp.onmouseenter=()=>{litOff();litOn(hp.getAttribute('data-road'));stopChips(hp).forEach(el3=>el3.classList.add('wanRouteLit'));};
    hp.onmouseleave=litOff;
    hp.onclick=e3=>{e3.stopPropagation();playStops(stopChips(hp));};
   });
+ }
   /* ---- the LEGEND on the right: the three RULED pathways — the title in the road's
      own line (color + solid/dashed), the chord progression the route makes beneath
      it (draggable to the chord lane), double-click the title for the road's own
@@ -19240,7 +19251,7 @@ function wanWeberDraw(){
   const leg=W.querySelector('#wanLegend');
   if(leg){
    leg.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:2px;">Path Trips</div>'
-    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">Click a lit name to dull it (its path leaves the map) · hover lights the route · drag the chords to the chord lane · double-click a name for the road’s own dialogue · ctrl+click here for the menu</div>';
+    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · double-click a name to populate it and open the road’s own dialogue · ctrl+click here for the menu</div>';
    /* 80th R23 (his thirty-first message): the three ruled roads lead; expand… below
       them reveals the other roads so the user can populate more paths */
    const ruled=['way','greenway','passageway'];
@@ -19253,7 +19264,13 @@ function wanWeberDraw(){
     const row=document.createElement('div');
     row.className='wanLegRow';
     const deco=rd2.style.dash?(rd2.style.dash.split(' ')[0]<=2?'dotted':'dashed'):'solid';
-    row.innerHTML='<span class="wanLegTitle" data-road="'+rid+'" style="color:'+rd2.style.col+';border-bottom:2.5px '+deco+' '+rd2.style.col+';'+(isOff?'opacity:.35;':'')+'" title="'+(isOff?'Dulled — its path is off the map. Click to relight it.':'Click dulls this road (its path leaves the map) · hover lights its route · double-click opens its dialogue.')+'">'+rd2.name+'</span>'
+    /* 81st R1 (his thirty-fourth message, verbatim): "the ability to turn them on
+       and off by clicking their name (a toggle next to the name would be more clear)".
+       ⭐ BOTH, not either — the name keeps its click (it already had it) and the chip
+       is the explicit affordance he asked for. The chip carries its own click so a
+       user who aims at the box gets the box, not the name. */
+    row.innerHTML='<span class="wanLegTog" data-road="'+rid+'" role="checkbox" aria-checked="'+(isOff?'false':'true')+'" style="color:'+rd2.style.col+';cursor:pointer;font-size:12px;margin-right:5px;user-select:none;'+(isOff?'opacity:.5;':'')+'" title="'+(isOff?'Off — this road’s path is not on the map. Click to put it back.':'On — this road’s path is drawn on the map. Click to take it off.')+'">'+(isOff?'☐':'☑')+'</span>'
+     +'<span class="wanLegTitle" data-road="'+rid+'" style="color:'+rd2.style.col+';border-bottom:2.5px '+deco+' '+rd2.style.col+';'+(isOff?'opacity:.35;':'')+'" title="'+(isOff?'Dulled — its path is off the map. Click to relight it.':'Click dulls this road (its path leaves the map) · hover lights its route · double-click opens its dialogue.')+'">'+rd2.name+'</span>'
      +(info?'<div class="wanLegChain" draggable="false" data-road="'+rid+'" style="'+(isOff?'opacity:.4;':'')+'" title="The chord changes this road makes — drag them onto the chord lane (they fill BACKWARDS ending at the drop chord, the lane’s own rate kept).">'+info.keys.map(k3=>k3.lbl).join(' → ')+'</div>'
       :'<div style="font-size:10px;color:#8a6f4d;font-style:italic;margin-top:2px;">unpopulated — double-click the name to populate it</div>');
     leg.appendChild(row);
@@ -19271,7 +19288,7 @@ function wanWeberDraw(){
    const legSay=m2=>{const e3=document.getElementById('wanLegStatus');if(e3)e3.textContent=m2;};
    leg.querySelectorAll('.wanLegTitle').forEach(tt=>{
     const rid=tt.getAttribute('data-road');
-    const hp=svg.querySelector('.wanHitPath[data-road="'+rid+'"]');
+    const hp=svg?svg.querySelector('.wanHitPath[data-road="'+rid+'"]'):null;   /* 81st R1: null when the legend stands before any ⌘ destination — every use below is already guarded on hp */
     tt.onmouseenter=()=>{if(hp){litOff();litOn(rid);stopChips(hp).forEach(el3=>el3.classList.add('wanRouteLit'));}};
     tt.onmouseleave=litOff;
     /* 80th R23: a click TOGGLES the road — lit→dull and its path leaves the map
@@ -19281,6 +19298,17 @@ function wanWeberDraw(){
      if(i3>=0)st.webRoadsOff.splice(i3,1);else st.webRoadsOff.push(rid);
      wanWeberDraw();};
     tt.ondblclick=e3=>{e3.stopPropagation();wanRoadDialog(rid);};
+   });
+   /* 81st R1: the ☑/☐ chip runs the SAME toggle the name runs — one law, two targets */
+   leg.querySelectorAll('.wanLegTog').forEach(tg=>{
+    const rid=tg.getAttribute('data-road');
+    tg.onclick=e3=>{e3.stopPropagation();
+     const i3=st.webRoadsOff.indexOf(rid);
+     if(i3>=0)st.webRoadsOff.splice(i3,1);else st.webRoadsOff.push(rid);
+     wanWeberDraw();};
+    tg.onmouseenter=()=>{const hp2=svg?svg.querySelector('.wanHitPath[data-road="'+rid+'"]'):null;
+     if(hp2){litOff();litOn(rid);stopChips(hp2).forEach(el3=>el3.classList.add('wanRouteLit'));}};
+    tg.onmouseleave=litOff;
    });
    /* the ctrl+click PATH TRIPS menu: Save As Template · Save (the default, warned) ·
       Restore defaults at the bottom */
@@ -19365,7 +19393,6 @@ function wanWeberDraw(){
     };
    });
   }
- }else{const leg=W.querySelector('#wanLegend');if(leg)leg.innerHTML='';}
  /* ---- the toggle ---- */
  const tog=W.querySelector('#wanAllTog');
  if(tog)tog.onclick=e=>{e.stopPropagation();st.webAll=!st.webAll;wanWeberDraw();};
