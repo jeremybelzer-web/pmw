@@ -187,6 +187,27 @@
   #wanPanel #wanBody .cpchip.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   #wanPanel #wanStatus{color:#6b4f28;}
   #wanPanel select,#wanPanel input{background:#f6ecd4;color:#3a2c18;border:1px solid #a8895f;}
+  /* 80th (his eighteenth message): the degree boxes, the paths, the map menu — all in
+     the old-map ink */
+  #wanWebWrap{position:relative;user-select:none;}
+  .wanDegBox{position:absolute;pointer-events:none;border:3px double #6b4f28;border-radius:9px;box-shadow:0 0 0 1px rgba(107,79,40,.3),inset 0 0 14px rgba(107,79,40,.14);}
+  .wanDegBox.k2{border:2px dashed #8a6f4d;opacity:.8;}
+  .wanDegBox.k3{border:2px dotted #9a7f5d;opacity:.65;}
+  .wanDegBox.k4{border:1px dotted #a8895f;opacity:.5;}
+  .wanWebSel{outline:2px solid #b8860b;outline-offset:1px;}
+  #wanPathsSvg{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+  #wanWebMenu{position:fixed;z-index:130;background:#f2e7cb;border:2px double #6b4f28;border-radius:8px;padding:6px;box-shadow:0 8px 26px rgba(0,0,0,.45);font-size:12px;min-width:210px;display:none;font-family:Georgia,serif;color:#3a2c18;}
+  #wanWebMenu .wmit{padding:5px 9px;border-radius:5px;cursor:pointer;}
+  #wanWebMenu .wmit:hover{background:#e5d5ab;}
+  #wanWebMenu .wmit.dis{color:#9a7f5d;cursor:default;}
+  #wanWebMenu .wmhd{padding:5px 9px 2px;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#6b4f28;border-top:1px solid #c9b085;margin-top:4px;}
+  .wanAllTog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#5a4426;border:1px solid #a8895f;border-radius:14px;padding:2px 10px;background:#f2e7cb;font-family:Georgia,serif;}
+  .wanAllTog.on{background:#7a5a30;color:#f6ecd4;}
+  #wanPathsBanner{font-size:11px;color:#5a4426;font-style:italic;margin:2px 0 4px;font-family:Georgia,serif;}
+  .wanTerr{position:absolute;pointer-events:none;font-size:13px;line-height:1;filter:sepia(.4) saturate(.7);text-shadow:0 1px 1px rgba(90,68,38,.4);}
+  .wanTerr.tMt{font-size:15px;z-index:2;}
+  .wanTerr.tOb{font-size:12px;opacity:.9;z-index:2;}
+  .wanTerr.tFar{font-size:10px;opacity:.5;}
   /* v3: the Show Hidden Tracks window */
   #shtWin{position:fixed;z-index:64;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.55);font-size:12.5px;min-width:230px;display:none;}
   #shtWin .shtRow{display:flex;gap:8px;align-items:center;padding:4px 2px;cursor:pointer;border-radius:5px;}
@@ -665,7 +686,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -18628,39 +18649,226 @@ function weberGrid(centerLof){
  }
  return rows;
 }
+function wanRomanOf(pc,minor,homePc){
+ /* the Roman Numerals view: a key labeled by its relation to HOME (lowercase = minor) */
+ const iv=(((pc-homePc)%12)+12)%12;
+ const base={0:'I',1:'♭II',2:'II',3:'♭III',4:'III',5:'IV',6:'♭V',7:'V',8:'♭VI',9:'VI',10:'♭VII',11:'VII'}[iv];
+ return minor?base.toLowerCase():base;
+}
+function wanKeyAudition(pc,minor){
+ try{
+  const go=()=>{try{inst.note('comping',voiceFromFirstInvI({r:pc,iv:(minor?MIN:MAJ).slice()},pc,minor),1.2,Tone.now()+.02,.6);}catch(e){}};
+  if(typeof audioReady!=='undefined'&&audioReady)go();
+  else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
+ }catch(e){}
+}
+function wanBoxPerim(hr,hc,k,rows,cols){
+ /* the k-th degree box's PERIMETER cells around home (hr,hc), clipped to the table —
+    pure; the terrain view builds its mountain ranges and obstacle lines from this */
+ const out=[];
+ const r0=Math.max(0,hr-k),r1=Math.min(rows-1,hr+k),c0=Math.max(0,hc-k),c1=Math.min(cols-1,hc+k);
+ for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)
+  if(r===r0||r===r1||c===c0||c===c1)out.push({r,c});
+ return out;
+}
 function wanWeberDraw(){
+ /* 80th (his eighteenth message): the degree boxes · All Boxes · drag-to-pan · the
+    ctrl+click map menu (radius 1–4 · Roman Numerals · Save As Template) · click =
+    AUDITION, double-click = the new root · ⌘+click = the modulation paths · ⇧+click =
+    select · ⌥+click = reset — the universal click rules, applied here first. */
  const W=document.getElementById('wanWeber');if(!W)return;
- const minor=wanState.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[wanState.mode]||{}).name||'');
- const tonicLof=wanPcLof(wanState.tonic,minor);
- const anchor=minor?tonicLof-3:tonicLof;   /* a minor key seats beside its relative major */
+ const st=wanState;
+ if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView='letters';st.webPaths=[];st.webSel=new Set();}
+ const minor=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
+ const tonicLof=wanPcLof(st.tonic,minor);
+ const anchor=(minor?tonicLof-3:tonicLof)+st.webShift;
  const grid=weberGrid(anchor);
- /* 80th (his seventeenth message): the invention line PROMINENT at the top; the intent
-    text rides the hover (the full version lives in the About menu). */
  let h='<div style="font-size:15px;font-weight:800;letter-spacing:.6px;color:#5a4426;margin-bottom:2px;font-family:Georgia,serif;">Invented in 1817 by Jacob Gottfried Weber</div>'
-  +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">The table of the relationships of keys — 10 across · 13 down, your key at the center. Click a key to travel. Hover the table for how Weber meant it to be used; the full story is in ℹ About.</div>';
- for(const row of grid){
+  +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:3px;">The table of the relationships of keys — drag to travel the map · click hears a key · double-click makes it home · ⌘+click draws the modulation paths · ctrl+click for the map menu. The full story is in ℹ About.</div>'
+  +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
+  +'<div style="margin-bottom:5px;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span></div>'
+  +'<div id="wanWebWrap">';
+ for(let r=0;r<13;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
-  for(const cell of row){
+  for(let c=0;c<10;c++){
+   const cell=grid[r][c];
    const nm=wanLofName(cell.lof);
-   const label=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
+   const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
+   const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,st.tonic):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
    const isKey=cell.minor===minor&&cell.lof===tonicLof;
-   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'"'
+   const selKey=st.webSel.has(cell.lof+':'+(cell.minor?1:0));
+   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'"'
     +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'"'
-    +' title="'+label+(cell.minor?' minor':' major')+' — click to travel the Wanderer there.">'+label+'</span>';
+    +' title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home · ⌘+click draws a path to it.">'+label+'</span>';
   }
   h+='</div>';
  }
+ h+='<svg id="wanPathsSvg"><defs><marker id="wanArr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#5a4426"/></marker></defs></svg></div>';
  W.innerHTML=h;
  W.title='Weber intended the matrix as a practical, visual roadmap for modulation and a chart of the psychological “distance” between keys. One step in any direction is a closely related key — vertically by fifths (dominant/subdominant), horizontally through parallel and relative modes. To reach a distant key, trace a path through the boxes (C → G → D → b) and build pivot bridges along it. Adjacent keys are first-degree relations; each box further is a degree more distant — a one-box move sounds smooth, a leap across many sounds dramatic. The full story is in ℹ About.';
+ const wrap=W.querySelector('#wanWebWrap');
+ /* ---- the DEGREE BOXES (drawn from live chip geometry — the coordinate law) ---- */
+ const chipAt=(r,c)=>wrap.querySelector('.wanWebKey[data-r="'+r+'"][data-c="'+c+'"]');
+ const homes=[...wrap.querySelectorAll('.wanWebKey')].filter(el=>+el.getAttribute('data-lof')===tonicLof&&(el.getAttribute('data-minor')==='1')===minor)
+  .map(el=>({r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c'),el}));
+ let centers=homes;
+ if(!st.webAll&&homes.length){
+  centers=[homes.reduce((a,b)=>(Math.abs(a.r-6)+Math.abs(a.c-4.5)<=Math.abs(b.r-6)+Math.abs(b.c-4.5))?a:b)];
+ }
+ const wr=wrap.getBoundingClientRect();
+ if(st.webView==='terrain'){
+  /* 80th (his nineteenth message): THE OLD WORLD MAP — the mountains, lakes and
+     monsters FORM the borders of the two boxes: box 1's perimeter is a MOUNTAIN
+     RANGE, box 2's an obstacle line (forests, dragons, lakes); the far country
+     scatters lakes and valleys. Deterministic by cell — no dice. */
+  const glyphAt=(cell,txt,cls)=>{
+   const el2=chipAt(cell.r,cell.c);if(!el2)return;
+   const rc=el2.getBoundingClientRect();
+   const g=document.createElement('span');
+   g.className='wanTerr '+cls;g.textContent=txt;g.setAttribute('data-terr',cls);
+   g.style.left=(rc.left-wr.left+rc.width/2-8)+'px';
+   g.style.top=(rc.top-wr.top-9)+'px';
+   wrap.appendChild(g);
+  };
+  const obst=['🌲','🐉','🌊','🌲','🗿'];
+  const seen=new Set();
+  for(const hcell of centers){
+   for(const p of wanBoxPerim(hcell.r,hcell.c,1,13,10)){
+    const k2=p.r+':'+p.c;if(seen.has(k2))continue;seen.add(k2);
+    glyphAt(p,'⛰','tMt');
+   }
+   for(const p of wanBoxPerim(hcell.r,hcell.c,2,13,10)){
+    const k2=p.r+':'+p.c;if(seen.has(k2))continue;seen.add(k2);
+    glyphAt(p,obst[(p.r*3+p.c)%obst.length],'tOb');
+   }
+  }
+  for(let r=0;r<13;r++)for(let c=0;c<10;c++){
+   const k2=r+':'+c;if(seen.has(k2))continue;
+   const roll=(r*7+c*3)%9;
+   if(roll===0)glyphAt({r,c},'🌊','tFar');
+   else if(roll===4)glyphAt({r,c},'🌿','tFar');
+   else if(roll===7)glyphAt({r,c},'🌲','tFar');
+  }
+ }else{
+  for(const hcell of centers){
+   for(let k=1;k<=Math.max(1,Math.min(4,st.webRadius));k++){
+    const r0=Math.max(0,hcell.r-k),r1=Math.min(12,hcell.r+k);
+    const c0=Math.max(0,hcell.c-k),c1=Math.min(9,hcell.c+k);
+    const tl=chipAt(r0,c0),br=chipAt(r1,c1);
+    if(!tl||!br)continue;
+    const a=tl.getBoundingClientRect(),b2=br.getBoundingClientRect();
+    const d=document.createElement('div');
+    d.className='wanDegBox'+(k>1?' k'+k:'');
+    d.style.left=(a.left-wr.left-4)+'px';d.style.top=(a.top-wr.top-3)+'px';
+    d.style.width=(b2.right-a.left+8)+'px';d.style.height=(b2.bottom-a.top+6)+'px';
+    wrap.appendChild(d);
+   }
+  }
+ }
+ /* ---- the PATHS (⌘+click destinations — solid = the direct 2-5-1 / 4-5-1 route,
+    dashed and dotted = round-about ways) ---- */
+ const svg=wrap.querySelector('#wanPathsSvg');
+ if(svg&&st.webPaths.length&&centers.length){
+  svg.setAttribute('width',wrap.scrollWidth);svg.setAttribute('height',wrap.scrollHeight);
+  const ctr=el=>{const rc=el.getBoundingClientRect();return {x:rc.left-wr.left+rc.width/2,y:rc.top-wr.top+rc.height/2};};
+  let ph='';
+  for(const t of st.webPaths){
+   const tEl=[...wrap.querySelectorAll('.wanWebKey')].filter(el=>+el.getAttribute('data-lof')===t.lof&&(el.getAttribute('data-minor')==='1')===!!t.minor);
+   if(!tEl.length)continue;
+   const home=centers[0].el,hp=ctr(home);
+   const tgt=tEl.reduce((a,b)=>{const pa=ctr(a),pb=ctr(b);return (Math.hypot(pa.x-hp.x,pa.y-hp.y)<=Math.hypot(pb.x-hp.x,pb.y-hp.y))?a:b;});
+   const tp=ctr(tgt);
+   ph+='<line x1="'+hp.x+'" y1="'+hp.y+'" x2="'+tp.x+'" y2="'+tp.y+'" stroke="#5a4426" stroke-width="2.6" marker-end="url(#wanArr)" opacity=".9"/>';
+   ph+='<path d="M'+hp.x+' '+hp.y+' L'+tp.x+' '+hp.y+' L'+tp.x+' '+tp.y+'" fill="none" stroke="#8a6f4d" stroke-width="1.8" stroke-dasharray="7 5" opacity=".8"/>';
+   ph+='<path d="M'+hp.x+' '+hp.y+' L'+hp.x+' '+tp.y+' L'+tp.x+' '+tp.y+'" fill="none" stroke="#9a7f5d" stroke-width="1.5" stroke-dasharray="2 5" opacity=".7"/>';
+  }
+  svg.innerHTML=svg.innerHTML.replace('</defs>','</defs>'+ph);
+ }
+ /* ---- the toggle ---- */
+ const tog=W.querySelector('#wanAllTog');
+ if(tog)tog.onclick=e=>{e.stopPropagation();st.webAll=!st.webAll;wanWeberDraw();};
+ /* ---- DRAG-TO-PAN + the click laws ---- */
+ let pan=null;
+ wrap.onmousedown=e=>{
+  if(e.button!==0||e.metaKey||e.shiftKey||e.altKey||e.ctrlKey)return;
+  pan={x:e.clientX,y:e.clientY,shift0:st.webShift,moved:false};
+  const mv=ev=>{
+   if(!pan)return;
+   const dx=ev.clientX-pan.x,dy=ev.clientY-pan.y;
+   if(!pan.moved&&Math.hypot(dx,dy)<7)return;
+   pan.moved=true;window._wanPanned=true;
+   const rowH=25,pairW=94;   /* a row down = −1 fifth · a column pair right = +3 fifths */
+   const shift=pan.shift0+Math.round(dy/rowH)*1-Math.round(dx/pairW)*3;
+   if(shift!==st.webShift){st.webShift=shift;wanWeberDraw();}
+  };
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);pan=null;
+   setTimeout(()=>{window._wanPanned=false;},0);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
  W.querySelectorAll('.wanWebKey').forEach(el=>{
-  el.onclick=()=>{
+  const pc=()=>wanLofPc(+el.getAttribute('data-lof'));
+  const mn=()=>el.getAttribute('data-minor')==='1';
+  el.onclick=e=>{
+   if(window._wanPanned)return;
+   if(e.metaKey){   /* ⌘+click: a modulation path springs to this key (more while held) */
+    e.preventDefault();
+    const key={lof:+el.getAttribute('data-lof'),minor:mn()};
+    const i=st.webPaths.findIndex(p=>p.lof===key.lof&&!!p.minor===key.minor);
+    if(i>=0)st.webPaths.splice(i,1);else st.webPaths.push(key);
+    wanWeberDraw();return;
+   }
+   if(e.shiftKey){   /* ⇧+click: toggle selection */
+    const k=el.getAttribute('data-lof')+':'+el.getAttribute('data-minor');
+    st.webSel.has(k)?st.webSel.delete(k):st.webSel.add(k);
+    wanWeberDraw();return;
+   }
+   if(e.altKey){   /* ⌥+click: reset to default */
+    st.webShift=0;st.webPaths=[];st.webSel.clear();st.webRadius=2;st.webAll=false;st.webView='letters';
+    wanWeberDraw();return;
+   }
+   wanKeyAudition(pc(),mn());   /* a plain click just HEARS the key */
+  };
+  el.ondblclick=e=>{   /* double-click: the new root key */
+   e.preventDefault();
    wanState.follow=false;
-   wanState.tonic=wanLofPc(+el.getAttribute('data-lof'));
-   wanState.mode=el.getAttribute('data-minor')==='1'?'aeolian':'ionian';
+   wanState.tonic=pc();
+   wanState.mode=mn()?'aeolian':'ionian';
    wanState.cur={row:0,deg:0};
+   st.webShift=0;
    renderWan();wanAudition();
   };
  });
+ /* ---- the ctrl+click MAP MENU (macOS: ctrl+click IS contextmenu — the one dispatcher) ---- */
+ wrap.oncontextmenu=e=>{
+  e.preventDefault();e.stopPropagation();
+  let m=document.getElementById('wanWebMenu');
+  if(m)m.remove();
+  m=document.createElement('div');m.id='wanWebMenu';m.style.display='block';
+  const mk=(label,fn,cur,dis)=>{const it=document.createElement('div');it.className='wmit'+(dis?' dis':'');
+   it.textContent=(cur?'● ':'')+label;if(!dis)it.onclick=()=>{m.remove();fn();};m.appendChild(it);};
+  const hd=t2=>{const d=document.createElement('div');d.className='wmhd';d.textContent=t2;m.appendChild(d);};
+  hd('How close are other keys');
+  [1,2,3,4].forEach(n2=>mk(n2+' box'+(n2>1?'es':''),()=>{st.webRadius=n2;wanWeberDraw();},st.webRadius===n2));
+  hd('View');
+  mk('Letters',()=>{st.webView='letters';wanWeberDraw();},st.webView==='letters');
+  mk('Roman Numerals',()=>{st.webView='roman';wanWeberDraw();},st.webView==='roman');
+  mk('Old World Map (terrain)',()=>{st.webView='terrain';wanWeberDraw();},st.webView==='terrain');   /* his nineteenth message — the 2nd 3D view */
+  mk('More views land with their rounds',null,false,true);
+  hd('Templates');
+  mk('Save As Template…',()=>{
+   const nm2=prompt('Name this Weber view:');if(!nm2)return;
+   let arr=[];try{arr=JSON.parse(localStorage.getItem('cp_weberTpl')||'[]');}catch(e2){}
+   arr.push({name:nm2.slice(0,40),radius:st.webRadius,all:st.webAll,view:st.webView});
+   try{localStorage.setItem('cp_weberTpl',JSON.stringify(arr));}catch(e2){}
+   wanWeberDraw();});
+  let tpls=[];try{tpls=JSON.parse(localStorage.getItem('cp_weberTpl')||'[]');}catch(e2){}
+  tpls.slice(0,8).forEach(t3=>mk(t3.name,()=>{st.webRadius=t3.radius;st.webAll=!!t3.all;st.webView=t3.view||'letters';wanWeberDraw();}));
+  document.body.appendChild(m);
+  m.style.left=Math.min(e.clientX,window.innerWidth-m.offsetWidth-14)+'px';
+  m.style.top=Math.min(e.clientY+4,window.innerHeight-m.offsetHeight-14)+'px';
+  const away=ev2=>{if(!m.contains(ev2.target)){m.remove();document.removeEventListener('mousedown',away,true);}};
+  setTimeout(()=>document.addEventListener('mousedown',away,true),0);
+ };
 }
 function renderWan(){
  try{wanWeberDraw();}catch(e){}   /* its own surface — a fault here must never take the board down */
