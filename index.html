@@ -647,7 +647,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27u</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27y</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1140,6 +1140,10 @@
       <div id="rhyCurios" style="display:flex;flex-direction:column;gap:2px;flex:0 0 190px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>
       <div id="rhyMatch" style="display:flex;flex-direction:column;gap:2px;flex:0 0 150px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>
       <div id="rhyScope" style="display:flex;flex-direction:column;gap:2px;flex:0 0 160px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);"></div>
+      <!-- 80th R6: THE COMPOUND column — shows only under the Compound Rhythm curiosity:
+           the overall compound · the exactly-N group strikes · the gap singles · the
+           ghost/loud velocity split; every row is CLICKABLE as the search needle. -->
+      <div id="rhyComp" style="display:none;flex-direction:column;gap:2px;flex:0 0 210px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);overflow:auto;max-height:380px;"></div>
       <div id="rhyCards" style="display:flex;flex-direction:column;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:380px;"></div>
       <div id="rhyInfo" style="flex:0 0 252px;padding:10px;border-left:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11.5px;color:var(--text);"></div>
     </div>
@@ -12340,7 +12344,7 @@ drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
    filter, All bypasses, and the user's curated list sits on top wherever results appear
    (the standing UI rule). Rhythm MATCHING lands with the extractor round — the columns,
    the scope states and the info-pane law ship first, every pending state honest. ==== */
-var rhyState={curio:'all',match:'exact',scope:'cur',sel:null,q:''};
+var rhyState={curio:'all',match:'exact',scope:'cur',sel:null,q:'',compRow:'all'};
 const RHY_CURIOS=[
  ['all','All',1,'Every rhythm curiosity at once — each family under its own caption when matching lands.'],
  ['strikes','Chord Strikes',1,'The polyphonic instrument’s strike pattern — 3,3,3,3,4 — searched across every song section.'],
@@ -12350,10 +12354,10 @@ const RHY_CURIOS=[
  ['form','Rhythmic Form',1,'The lettering of a rhythm over time — A,A,A,B — searched as a form.'],
  ['compound','Compound Rhythm',1,'The whole selection as ONE rhythm — the overall compound, its N-instrument group strikes, and the gap singles between them.']];
 const RHY_MATCH=[
- ['exact','Exact',1,'Songs whose rhythm matches the selection.'],
- ['var','A simple variation',0,'Similar rhythms in a different order, a triplet thrown in, or the rhythm and then a departure — lands with the extractor round.'],
- ['emb','More embellished',0,'Rhythms busier than the selection — lands with the extractor round.'],
- ['min','More minimal',0,'Rhythms sparser than the selection — lands with the extractor round.']];
+ ['exact','Exact',1,'Songs whose rhythm contains the selection, gap for gap.'],
+ ['var','A simple variation',1,'The same gaps in a different order · one gap subdivided (the thrown-in triplet) · or the rhythm’s opening followed by a departure.'],
+ ['emb','More embellished',1,'The same span of musical time with MORE hits than the selection.'],
+ ['min','More minimal',1,'The same span of musical time with FEWER hits than the selection.']];
 const RHY_SCOPES=[
  ['cur','Your curated list',1,'The songs you curated through ⇪ Import — always on top wherever results appear.'],
  ['def','Default curated list',1,'The songs that ship with the app.'],
@@ -12385,6 +12389,179 @@ function rhySeqContains(hay,needle){
  }
  return false;
 }
+/* ==== 80th R4 · THE CORPUS layer — the polyphonic performances come from the STYLES:
+   each style's comp array IS the strike pattern the app's own band plays (provenance-
+   clean; nothing invented about the real songs). Matching moves to 16th units — the
+   pushed anticipations (iwyb's .75s) live between the 8ths; the display divides back
+   to 8ths when the pattern allows. ==== */
+function rhyStrikePattern(notes,unit){
+ /* the CHORD-STRIKE pattern: only onsets where 2+ notes sound together (his rule — a
+    chord is one hit; a single note is not a chord strike) */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ const cnt={};
+ for(const n of (notes||[])){if(!n||typeof n[0]!=='number')continue;const k=Math.round(n[0]/u);cnt[k]=(cnt[k]||0)+1;}
+ const on=Object.keys(cnt).filter(k=>cnt[k]>=2).map(Number).sort((a,b)=>a-b);
+ const out=[];for(let i=1;i<on.length;i++)out.push(on[i]-on[i-1]);
+ return out;
+}
+function rhyCompPattern(comp,cycleBars,totalBeats,unit){
+ /* a style's comp cycle expanded across the song — the corpus hay for the polyphonic
+    curiosities */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ const cyc=Math.max(1,cycleBars||1)*4;
+ const tot=Math.max(cyc,totalBeats||cyc);
+ const on=[];
+ if(Array.isArray(comp))for(let b0=0;b0<tot;b0+=cyc)for(const c of comp)if(c&&typeof c.b==='number'&&b0+c.b<tot)on.push(Math.round((b0+c.b)/u));
+ const uq=[...new Set(on)].sort((a,b)=>a-b);
+ const out=[];for(let i=1;i<uq.length;i++)out.push(uq[i]-uq[i-1]);
+ return out;
+}
+function rhySeqCount(hay,needle){
+ /* how many times the run appears — the info-pane's "does it repeat" answer */
+ if(!Array.isArray(needle)||!needle.length||!Array.isArray(hay)||hay.length<needle.length)return 0;
+ let n=0;
+ for(let i=0;i+needle.length<=hay.length;i++){let ok=true;for(let j=0;j<needle.length;j++)if(hay[i+j]!==needle[j]){ok=false;break;}if(ok)n++;}
+ return n;
+}
+function rhyPatDisplay(pat){
+ /* his notation prefers 8ths (3,3,3,3,4) — divide back when every gap allows it */
+ if(!Array.isArray(pat)||!pat.length)return {u:'16ths',pat:[]};
+ return pat.every(x=>x%2===0)?{u:'8ths',pat:pat.map(x=>x/2)}:{u:'16ths',pat:pat.slice()};
+}
+/* ==== 80th R5 · THE MATCH RELATIONS — his words made testable: "similar rhythms but in
+   a different order, or with a triplet thrown in, or with the rhythm, but then a
+   completely different rhythm following it" (a simple variation) · busier / sparser
+   over the SAME span of musical time (more embellished / more minimal). ==== */
+function rhyVariantOf(hay,needle){
+ if(!Array.isArray(hay)||!Array.isArray(needle)||needle.length<2)return false;
+ const n=needle.length;
+ const sorted=needle.slice().sort((a,b)=>a-b).join(',');
+ for(let i=0;i+n<=hay.length;i++){
+  const w=hay.slice(i,i+n);
+  if(w.join(',')===needle.join(','))continue;   /* exact belongs to Exact, not to a variation */
+  if(w.slice().sort((a,b)=>a-b).join(',')===sorted)return true;   /* a different order */
+ }
+ for(let i=0;i+n+1<=hay.length;i++){   /* ONE gap subdivided — the thrown-in triplet's shape */
+  const w=hay.slice(i,i+n+1);
+  for(let j=0;j<n;j++){
+   let ok=true;
+   for(let k=0;k<j&&ok;k++)if(w[k]!==needle[k])ok=false;
+   if(ok&&Math.abs(w[j]+w[j+1]-needle[j])>1e-9)ok=false;
+   if(ok)for(let k=j+1;k<n&&ok;k++)if(w[k+1]!==needle[k])ok=false;
+   if(ok)return true;
+  }
+ }
+ const half=needle.slice(0,Math.max(2,Math.ceil(n/2)));   /* the rhythm, then a departure */
+ if(rhySeqContains(hay,half)&&!rhySeqContains(hay,needle))return true;
+ return false;
+}
+function rhySpanShift(hay,needle,dir){
+ /* the same span of musical time (the needle's total), with MORE hits (dir>0 = more
+    embellished) or FEWER (dir<0 = more minimal) — a two-pointer over positive gaps */
+ if(!Array.isArray(hay)||!Array.isArray(needle)||!needle.length)return false;
+ const T=needle.reduce((a,x)=>a+x,0),C=needle.length;
+ let i=0,sum=0;
+ for(let j=0;j<hay.length;j++){
+  sum+=hay[j];
+  while(sum>T+1e-9&&i<=j){sum-=hay[i];i++;}
+  if(Math.abs(sum-T)<1e-9){const len=j-i+1;if(dir>0?len>C:len<C)return true;}
+ }
+ return false;
+}
+/* ==== 80th R6 · THE COMPOUND RHYTHM — his fourth message's decomposition: the whole
+   selection as ONE rhythm (all instruments' hits), the group strikes where exactly N
+   instruments hit together, the ethereal GAP SINGLES between them, and the ghost-note
+   velocity lens (the musical sense — soft hits split from the loud skeleton). ==== */
+function rhyCycleOnsets(items,cycleBars,totalBeats){
+ /* a style cycle's .b offsets expanded across the song — onset BEATS, not IOIs */
+ const cyc=Math.max(1,cycleBars||1)*4;
+ const tot=Math.max(cyc,totalBeats||cyc);
+ const on=[];
+ if(Array.isArray(items))for(let b0=0;b0<tot;b0+=cyc)for(const c of items){
+  const bb=(c&&typeof c.b==='number')?c.b:(Array.isArray(c)&&typeof c[1]==='number')?c[1]:null;
+  if(bb!==null&&b0+bb<tot)on.push(b0+bb);
+ }
+ return on;
+}
+function rhyLevels(onsetLists,unit){
+ /* the decomposition: per rounded onset, how many INSTRUMENTS hit — 'all' is the union
+    rhythm, levels[n] the exactly-n strikes (n=1 IS the gap singles, his ethereal notes) */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ const cnt={};
+ let max=0;
+ for(const lst of (onsetLists||[])){
+  if(!Array.isArray(lst)||!lst.length)continue;
+  const seen=new Set();
+  for(const b of lst){if(typeof b!=='number')continue;seen.add(Math.round(b/u));}
+  for(const k of seen)cnt[k]=(cnt[k]||0)+1;
+ }
+ const keys=Object.keys(cnt).map(Number).sort((a,b)=>a-b);
+ const ioi=arr=>{const o=[];for(let i=1;i<arr.length;i++)o.push(arr[i]-arr[i-1]);return o;};
+ const levels={};
+ for(const k of keys)if(cnt[k]>max)max=cnt[k];
+ for(let n=1;n<=max;n++)levels[n]=ioi(keys.filter(k=>cnt[k]===n));
+ return {all:ioi(keys),levels,max};
+}
+function rhyGhostSplit(notes,unit,thr){
+ /* the MUSICAL ghost notes (his fourth message): soft hits split from the loud
+    skeleton by velocity (n[8], 0..1; absent = full strength) */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ const t=(typeof thr==='number')?thr:0.4;
+ const loud=new Set(),soft=new Set();
+ for(const n of (notes||[])){
+  if(!n||typeof n[0]!=='number')continue;
+  const k=Math.round(n[0]/u);
+  if(typeof n[8]==='number'&&n[8]<t)soft.add(k);else loud.add(k);
+ }
+ for(const k of loud)soft.delete(k);   /* an onset with any loud note is skeleton */
+ const ioi=st=>{const a=[...st].sort((x,y)=>x-y),o=[];for(let i=1;i<a.length;i++)o.push(a[i]-a[i-1]);return o;};
+ return {loud:ioi(loud),ghost:ioi(soft)};
+}
+/* ==== 80th R7 · RHYTHMIC FORM — the lettering (his A,A,A,B / ABABCC′). ONE letterer:
+   the shipped EN4 letterSegments, fed constant-pitch rows whose duration channel is
+   the bar's onset-gap sequence (offset-from-barline first, then the IOIs) — lettering
+   driven purely by rhythm, syncopation included. E-005 is EN4+EN1 in the master, and
+   this is that row in code. ==== */
+function rhyFormOf(notes,barBeats){
+ const bar=(typeof barBeats==='number'&&barBeats>0)?barBeats:4;
+ const byBar={};let maxBar=-1;
+ for(const n of (notes||[])){
+  if(!n||typeof n[0]!=='number')continue;
+  const b=Math.floor(n[0]/bar+1e-9);
+  (byBar[b]=byBar[b]||[]).push(n[0]-b*bar);
+  if(b>maxBar)maxBar=b;
+ }
+ const segs=[],slots=[];
+ for(let b=0;b<=maxBar;b++){
+  const on=byBar[b]?[...new Set(byBar[b].map(x=>+x.toFixed(3)))].sort((x,y)=>x-y):[];
+  if(on.length){
+   const rows=on.map((o,i)=>[i,+((i===0?o:on[i]-on[i-1])).toFixed(3),60]);
+   slots.push(segs.length);segs.push(rows);
+  }else slots.push(-1);
+ }
+ const ls=(segs.length&&typeof letterSegments==='function')?letterSegments(segs):{letters:[]};
+ const letters=slots.map(ix=>ix<0?'–':ls.letters[ix]);
+ return {letters,form:letters.join(' ')};
+}
+function rhyFormCanon(tokens){
+ /* structural identity: relabel base letters in order of first appearance; primes ride
+    their base; -tag folds to the base; the empty-bar dash stands */
+ const map={};let next=65;
+ return (tokens||[]).map(t=>{
+  if(t==='–')return '–';
+  const prime=/′/.test(t),base=String(t).replace(/′|-tag/g,'');
+  if(!(base in map))map[base]=String.fromCharCode(next++);
+  return map[base]+(prime?'′':'');
+ }).join(' ');
+}
+function rhyFormContains(hay,needle){
+ if(!Array.isArray(hay)||!Array.isArray(needle)||needle.length<2||hay.length<needle.length)return 0;
+ const want=rhyFormCanon(needle);
+ let n=0;
+ for(let i=0;i+needle.length<=hay.length;i++)
+  if(rhyFormCanon(hay.slice(i,i+needle.length))===want)n++;
+ return n;
+}
 function rhySongList(scope,srcs,songs){
  /* pure-ish list resolver: 'cur' = the Import sources when any exist (else the default
     list stands in, said out loud by the caller); 'def' = the embedded list */
@@ -12410,6 +12587,47 @@ function buildRhyWindow(){
  mkcol(tabs,'Curiosities',RHY_CURIOS,rhyState.curio,v=>{rhyState.curio=v;});
  mkcol(document.getElementById('rhyMatch'),'Match',RHY_MATCH,rhyState.match,v=>{rhyState.match=v;});
  mkcol(document.getElementById('rhyScope'),'Song list',RHY_SCOPES,rhyState.scope,v=>{rhyState.scope=v;});
+ /* 80th R6: THE COMPOUND COLUMN — only under the Compound Rhythm curiosity. Every row
+    (the whole compound · the exactly-N strikes · the gap singles · the velocity split)
+    is a rhythm AND a clickable search needle. */
+ const compCol=document.getElementById('rhyComp');
+ let compNeedle=null;
+ if(compCol){
+  if(rhyState.curio!=='compound')compCol.style.display='none';
+  else{
+   compCol.style.display='flex';
+   compCol.innerHTML='<span style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);padding:0 2px 4px;">This song as a compound rhythm</span>';
+   const rig=rhyRigInstruments();
+   if(!rig||!rig.lists.length){
+    const d=document.createElement('div');d.style.cssText='font-size:10.5px;color:var(--dim);';
+    d.textContent='Load a song (or author notes) in the grid above — the compound reads every instrument that plays.';
+    compCol.appendChild(d);
+   }else{
+    const lv=rhyLevels(rig.lists,0.25);
+    const rows=[['all','All '+rig.lists.length+' instruments',lv.all]];
+    for(let n2=lv.max;n2>=2;n2--)rows.push(['n'+n2,n2+' instruments together',lv.levels[n2]||[]]);
+    rows.push(['singles','The gap singles (1 instrument)',lv.levels[1]||[]]);
+    if(rig.gh&&rig.gh.ghost.length){
+     rows.push(['loud','The loud skeleton',rig.gh.loud]);
+     rows.push(['ghost','The ghost notes (soft)',rig.gh.ghost]);
+    }
+    if(!rows.some(r=>r[0]===rhyState.compRow))rhyState.compRow='all';
+    for(const r of rows){
+     const c=document.createElement('span');
+     c.className='cpchip'+(rhyState.compRow===r[0]?' on':'');
+     c.style.display='block';c.style.textAlign='left';
+     const dsp=rhyPatDisplay(r[2]);
+     c.innerHTML=r[1]+'<br><span style="opacity:.6;font-size:9.5px;">'+(r[2].length?dsp.pat.slice(0,9).join(',')+(dsp.pat.length>9?'…':'')+' ('+dsp.u+')':'—')+'</span>';
+     c.title='The '+r[1]+' rhythm — click to make it the search needle. The instruments read: '+rig.names.join(' · ')+'.';
+     if(r[2].length>=2)c.onclick=()=>{const st0=document.getElementById('rhyStatus');if(st0)st0.textContent='';rhyState.compRow=r[0];buildRhyWindow();};
+     else{c.style.opacity='.42';c.style.cursor='default';}
+     compCol.appendChild(c);
+    }
+    const act=rows.find(r=>r[0]===rhyState.compRow);
+    if(act&&act[2].length>=2)compNeedle=act[2];
+   }
+  }
+ }
  const cards=document.getElementById('rhyCards');if(!cards)return;
  cards.innerHTML='';
  const refs=(Array.isArray(project.srcs)?project.srcs:[]).map(r=>r.ref);
@@ -12420,33 +12638,87 @@ function buildRhyWindow(){
   n.textContent='No curated songs yet — the ⇪ Import window builds your list. Showing the default curated list meanwhile.';
   cards.appendChild(n);
  }
- /* 80th R3: THE LIVE MATCHING — melody-rhythm and rate-of-chord-change search against
-    the embedded corpus (its songs carry melody + chords; the polyphonic-performance
-    curiosities wait for the corpus round, said honestly in the status). Exact only —
-    the Match relations beyond it are the variation round's. */
+ /* 80th R3+R4: THE LIVE MATCHING — melody rhythm, rate of chord change, AND (the corpus
+    round) the polyphonic curiosities: each style's comp cycle IS the song's polyphonic
+    performance, expanded across its chords. 16th units both sides (the pushed
+    anticipations live between the 8ths). Exact only — the Match relations beyond it
+    are the variation round's. Counts ride each hit (the "does it repeat" answer). */
  const sel=rhySelPattern();
- const live={melr:1,rate:1,all:1};
+ const live={melr:1,rate:1,strikes:1,polyr:1,form:1,all:1};
  const wants=rhyState.curio;
  let matches=null;
- if(sel&&rhyState.match==='exact'&&live[wants]){
+ /* 80th R5: the Match column dispatches the relation — exact counts repeats; the
+    relations answer yes/no (a variation has no meaningful ×N) */
+ const mrel=rhyState.match;
+ const hit=(hay,needle)=>{
+  if(mrel==='exact')return rhySeqCount(hay,needle);
+  if(mrel==='var')return rhyVariantOf(hay,needle)?1:0;
+  if(mrel==='emb')return rhySpanShift(hay,needle,1)?1:0;
+  if(mrel==='min')return rhySpanShift(hay,needle,-1)?1:0;
+  return 0;
+ };
+ /* 80th R6: THE COMPOUND SEARCH — the chosen row's rhythm hunted at EVERY strike
+    depth of every song's own band (his "contains it as a 2-instrument strike
+    pattern, 3-instrument..." buckets — the badges name the depth). */
+ if(wants==='compound'&&compNeedle){
+  matches={};
+  for(const s of list){
+   const stl=(typeof STYLES!=='undefined')?STYLES.find(x=>x.id===s.style):null;
+   const beats=(s.chords||[]).reduce((a,c)=>a+(c.d||0),0);
+   const lists=[(s.melody||[]).map(n=>n[0])];
+   if(stl){
+    if(Array.isArray(stl.comp)&&stl.comp.length)lists.push(rhyCycleOnsets(stl.comp,stl.cycle,beats));
+    if(Array.isArray(stl.bass)&&stl.bass.length)lists.push(rhyCycleOnsets(stl.bass,stl.cycle,beats));
+    if(Array.isArray(stl.groove)&&stl.groove.length)lists.push(rhyCycleOnsets(stl.groove,stl.cycle,beats));
+   }
+   const lv2=rhyLevels(lists,0.25);
+   const hits=[];
+   const hAll=hit(lv2.all,compNeedle);if(hAll)hits.push(['comp-all',hAll]);
+   for(let n3=1;n3<=lv2.max;n3++){const c3=hit(lv2.levels[n3]||[],compNeedle);if(c3)hits.push(['comp-n'+n3,c3]);}
+   if(hits.length)matches[s.id]=hits;
+  }
+ }
+ else if(sel&&live[wants]){
   const wantMel=(wants==='all'||wants==='melr')&&sel.pat.length>=3;
   const wantRate=(wants==='all'||wants==='rate')&&sel.rate.length>=2;
-  if(wantMel||wantRate){
+  const wantPoly=(wants==='all'||wants==='polyr')&&sel.pat.length>=3;
+  /* the style-comp FALLBACK stands in only when Chord Strikes is chosen EXPLICITLY —
+     under All, an empty selection must leave the list whole (the R2 boot behavior) */
+  const wantStrikes=(wants==='strikes'||(wants==='all'&&!sel.fromStyle))&&sel.strikes.length>=2;
+  /* 80th R7: the FORM search is STRUCTURAL (canonical letters), so only Exact carries
+     meaning — the gap relations don't letter */
+  const wantForm=(wants==='form'||wants==='all')&&mrel==='exact'
+   &&sel.formL&&sel.formL.filter(l=>l!=='–').length>=2;
+  if(wantMel||wantRate||wantPoly||wantStrikes||wantForm){
    matches={};
    for(const s of list){
+    const stl=(typeof STYLES!=='undefined')?STYLES.find(x=>x.id===s.style):null;
+    const beats=(s.chords||[]).reduce((a,c)=>a+(c.d||0),0);
+    const comp16=(stl&&Array.isArray(stl.comp)&&stl.comp.length)?rhyCompPattern(stl.comp,stl.cycle,beats,0.25):[];
     const hits=[];
-    if(wantMel&&rhySeqContains(rhyOnsetPattern(s.melody),sel.pat))hits.push('melr');
-    if(wantRate&&rhySeqContains(rhyChordRate(s.chords),sel.rate))hits.push('rate');
+    if(wantMel){const n=hit(rhyOnsetPattern(s.melody,0.25),sel.pat);if(n)hits.push(['melr',n]);}
+    if(wantRate){const n=hit(rhyChordRate(s.chords),sel.rate);if(n)hits.push(['rate',n]);}
+    if(wantPoly){const n=hit(comp16,sel.pat);if(n)hits.push(['polyr',n]);}
+    if(wantStrikes){const n=hit(comp16,sel.strikes);if(n)hits.push(['strikes',n]);}
+    if(wantForm){const n=rhyFormContains(rhyFormOf(s.melody,4).letters,sel.formL);if(n)hits.push(['formc',n]);}
     if(hits.length)matches[s.id]=hits;
    }
   }
  }
- const capFor={melr:'Rhythm of a melody / instrument',rate:'Rate of Chord Change (Rhythm)'};
+ const capFor={melr:'Rhythm of a melody / instrument',rate:'Rate of Chord Change (Rhythm)',polyr:'Rhythm of a polyphonic instrument',strikes:'Chord Strikes',formc:'Rhythmic Form'};
+ const rhyCapLabel=k=>{
+  if(capFor[k])return capFor[k];
+  if(k==='comp-all')return 'the full compound';
+  const m2=/^comp-n(\d+)$/.exec(k);
+  if(m2)return m2[1]==='1'?'the gap singles':(m2[1]+'-instrument strikes');
+  return k;
+ };
  const shown=matches?list.filter(s=>matches[s.id]):list;
  if(matches){
   const cap=document.createElement('div');
   cap.style.cssText='font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);padding:0 2px 4px;';
-  cap.textContent=shown.length+' song'+(shown.length===1?'':'s')+' contain'+(shown.length===1?'s':'')+' it';
+  const capVerb={exact:['contains','contain'],var:['varies','vary'],emb:['embellishes','embellish'],min:['minimalizes','minimalize']}[rhyState.match]||['contains','contain'];
+  cap.textContent=shown.length+' song'+(shown.length===1?'':'s')+' '+(shown.length===1?capVerb[0]:capVerb[1])+' it';
   cards.appendChild(cap);
  }
  for(const s of shown){
@@ -12455,7 +12727,7 @@ function buildRhyWindow(){
   d.title='Click to read this song’s facts in the pane — the informed-decision law: pick which song your next curiosity (or curiosity suite) comes out of.';
   d.innerHTML='<div class="mimName">'+s.name+'</div>'
    +'<div class="mimMeta">'+s.bpm+' BPM · '+(s.chords?s.chords.length:0)+' chords'
-   +(matches?' · <span style="color:var(--accent);">♬ '+matches[s.id].map(h=>capFor[h]).join(' + ')+'</span>':'')+'</div>';
+   +(matches?' · <span style="color:var(--accent);">♬ '+matches[s.id].map(h=>rhyCapLabel(h[0])+(h[1]>1?' ×'+h[1]:'')).join(' + ')+'</span>':'')+'</div>';
   d.onclick=()=>{rhyState.sel=s.id;buildRhyWindow();};
   cards.appendChild(d);
  }
@@ -12463,15 +12735,62 @@ function buildRhyWindow(){
  const si2=document.getElementById('rhySelInfo');
  if(si2){
   if(!sel)si2.textContent='Open the stack and select notes in the grid above — the search reads the rhythm of your selection.';
-  else if(sel.pat.length>=3)si2.textContent='Your '+(sel.selCount?'selection':'whole '+sel.track+' track')+' — rhythm '+sel.pat.join(',')+' (in 8ths)'+(sel.rate.length?' · chord rate '+sel.rate.join(','):'');
-  else si2.textContent='Select a longer run of notes (3+ gaps) — the search reads the rhythm of your selection.';
+  else{
+   const dp=rhyPatDisplay(sel.pat),ds=rhyPatDisplay(sel.strikes);
+   const bits=[];
+   if(sel.pat.length>=3)bits.push('rhythm '+dp.pat.join(',')+' (in '+dp.u+')');
+   if(sel.strikes.length>=2)bits.push((sel.fromStyle?'the loaded song’s own strike pattern ':'chord strikes ')+ds.pat.join(',')+' (in '+ds.u+')');
+   if(sel.rate.length)bits.push('chord rate '+sel.rate.join(','));
+   if(sel.formL&&sel.formL.filter(l=>l!=='–').length>=2)bits.push('form '+sel.formL.join(' '));
+   const who=sel.selCount?'Your selection':(sel.pat.length?('The whole '+sel.track+' track'):'Nothing selected');
+   si2.textContent=bits.length?(who+' — '+bits.join(' · '))
+    :'Select a longer run of notes (3+ gaps) — the search reads the rhythm of your selection.';
+  }
  }
  rhyInfoDraw();
  const st=document.getElementById('rhyStatus');
- if(st&&!st.textContent)st.textContent=(wants==='strikes'||wants==='polyr')
-  ?'Chord Strikes and the polyphonic rhythm need the songs’ polyphonic performances — they land with the corpus round.'
-  :(wants==='form'||wants==='compound')?'Rhythmic Form and the Compound Rhythm land with their own rounds — the columns stand ready.'
-  :'Melody rhythms and the rate of chord change search LIVE against the song list — the other curiosities say when they land.';
+ if(st&&!st.textContent)st.textContent=(wants==='form'&&rhyState.match!=='exact')
+  ?'Rhythmic Form is a STRUCTURE (canonical letters) — the Match relations don’t letter it; pick Exact to search the form.'
+  :(wants==='compound')
+  ?'Pick a row in the compound column — the search finds songs whose band plays it at ANY strike depth (the badges name the depth).'
+  :'Every curiosity searches LIVE — melody rhythms · the chord rate · strikes · the polyphonic rhythm · the form · the compound. The songs’ performances are the app’s own band.';
+}
+function rhyRigInstruments(){
+ /* 80th R6: the compound's instrument set from the Rhythm stack's rig — every track
+    carrying MIDI (⇧-selected heads restrict the set when 2+ are chosen, his "selected
+    tracks"), plus the style band for the parts that play with no MIDI of their own
+    (drums always; comping/bass when their tracks are empty). */
+ let gid=null;
+ if(typeof GRID_WORLDS==='object')for(const g in GRID_WORLDS)if(g!=='main'&&GRID_WORLDS[g]&&GRID_WORLDS[g].pairFor==='rhyPanel')gid=g;
+ if(!gid||typeof withGridWorld!=='function')return null;
+ try{
+  return withGridWorld(gid,()=>{
+   const heads=(typeof selHeads!=='undefined'&&selHeads.size>=2)?new Set(selHeads):null;
+   const beats=(typeof LOOP==='number')?LOOP:32;
+   const stl=(project.style&&typeof project.style==='object')?project.style:null;
+   const names=[],lists=[];
+   for(const t of Object.keys(project.tracks||{})){
+    if(heads&&!heads.has(t))continue;
+    const tr=project.tracks[t];
+    if(Array.isArray(tr)&&tr.length){names.push(t);lists.push(tr.map(n=>n[0]));}
+   }
+   if((!heads||heads.has('comping'))&&names.indexOf('comping')<0&&stl&&Array.isArray(stl.comp)&&stl.comp.length){
+    names.push('comping (the band)');lists.push(rhyCycleOnsets(stl.comp,stl.cycle,beats));}
+   if((!heads||heads.has('bass'))&&names.indexOf('bass')<0&&stl&&Array.isArray(stl.bass)&&stl.bass.length){
+    names.push('bass (the band)');lists.push(rhyCycleOnsets(stl.bass,stl.cycle,beats));}
+   if((!heads||heads.has('drums'))&&stl&&Array.isArray(stl.groove)&&stl.groove.length){
+    names.push('drums (the band)');lists.push(rhyCycleOnsets(stl.groove,stl.cycle,beats));}
+   /* the ghost lens: when the rig's own MIDI carries velocities, split soft from loud */
+   let gh=null;
+   const allNotes=[];
+   for(const t of Object.keys(project.tracks||{})){
+    if(heads&&!heads.has(t))continue;
+    for(const n of (project.tracks[t]||[]))allNotes.push(n);
+   }
+   if(allNotes.some(n=>n&&typeof n[8]==='number'&&n[8]<1))gh=rhyGhostSplit(allNotes,0.25);
+   return {names,lists,beats,gh};
+  });
+ }catch(e){return null;}
 }
 function rhySelPattern(){
  /* reads the Rhythm stack's rig: the selected notes' IOI pattern (the whole active
@@ -12485,12 +12804,19 @@ function rhySelPattern(){
    const tr=project.tracks[activeTrack]||[];
    const idx=[...selNotes];
    const notes=idx.length?idx.map(i=>tr[i]).filter(Boolean):tr;
-   if(!notes.length)return {pat:[],rate:rhyChordRate(project.chords),selCount:0,track:activeTrack};
+   /* 80th R4: the loaded song's own style-comp pattern is the honest strike fallback —
+      "search for THIS song's strike pattern in the others" works with nothing authored */
+   const st=(project.style&&Array.isArray(project.style.comp)&&project.style.comp.length)?project.style:null;
+   const compFall=st?rhyCompPattern(st.comp,st.cycle,typeof LOOP==='number'?LOOP:null,0.25):[];
+   if(!notes.length)return {pat:[],strikes:compFall,fromStyle:!!compFall.length,rate:rhyChordRate(project.chords),selCount:0,track:activeTrack};
    const s0=Math.min.apply(null,notes.map(n=>n[0])),s1=Math.max.apply(null,notes.map(n=>n[0]+n[1]));
    let t=0;const rate=[];
    for(const c of (project.chords||[])){const c0=t;t+=c.d;if(c.off)continue;
     if(idx.length&&(c0+c.d<=s0||c0>=s1))continue;rate.push(c.d);}
-   return {pat:rhyOnsetPattern(notes),rate,selCount:idx.length,track:activeTrack};
+   let strikes=rhyStrikePattern(notes,0.25),fromStyle=false;
+   if(!strikes.length&&compFall.length){strikes=compFall;fromStyle=true;}
+   return {pat:rhyOnsetPattern(notes,0.25),strikes,fromStyle,rate,selCount:idx.length,track:activeTrack,
+    formL:rhyFormOf(notes,4).letters};
   });
  }catch(e){return null;}
 }
@@ -12500,11 +12826,40 @@ function rhyInfoDraw(){
  if(!s){info.innerHTML='<span style="color:var(--dim);">Pick a song from the list — this pane answers the questions an informed choice needs: does the rhythm repeat, where it sits in the form, which section, the BPM, the instruments, any accent rhythm riding on top.</span>';return;}
  let bpmNow=0;try{bpmNow=Math.round(+tempo.value)||0;}catch(e){}
  const far=bpmNow&&Math.abs(s.bpm-bpmNow)/bpmNow>0.15;
+ /* 80th R4: two more informed-decision answers live — the SECTION (each embedded song
+    is one section, named in its own title) and the INSTRUMENTS (the style says what
+    the band plays); "does it repeat" is the ♬ ×N count on the card. */
+ const sec=(s.name.split('—')[1]||'').trim();
+ const stl=(typeof STYLES!=='undefined')?STYLES.find(x=>x.id===s.style):null;
+ const inst=['melody'].concat(stl?[].concat(
+  (stl.comp&&stl.comp.length)?['polyphonic (comping)']:[],
+  (stl.bass&&stl.bass.length)?['bass']:[],
+  (stl.groove&&stl.groove.length)?['drums']:[],
+  stl.pad?['pad']:[]):[]);
+ /* 80th R7: the LAST two informed-decision answers live — the melody rhythm's FORM
+    (his second message's "where in the form does it live") and the ACCENT RHYTHM (the
+    band's loud skeleton — the same velocity lens, aimed at the style's own dynamics) */
+ const fm=rhyFormOf(s.melody||[],4);
+ const acc=(function(){
+  if(!stl)return null;
+  const beats=(s.chords||[]).reduce((a,c)=>a+(c.d||0),0);
+  const cyc=Math.max(1,stl.cycle||1)*4;
+  const ns=[];
+  for(let b0=0;b0<Math.max(cyc,beats);b0+=cyc){
+   for(const c of (stl.comp||[]))if(c&&typeof c.b==='number'&&b0+c.b<beats)ns.push([b0+c.b,.2,60,0,0,0,0,0,(typeof c.v==='number'?c.v:1)]);
+   for(const g of (stl.groove||[]))if(Array.isArray(g)&&typeof g[1]==='number'&&b0+g[1]<beats)ns.push([b0+g[1],.2,60,0,0,0,0,0,(typeof g[2]==='number'?g[2]:1)]);
+  }
+  return ns.length?rhyGhostSplit(ns,0.25,0.5).loud:null;
+ })();
  info.innerHTML='<div style="font-weight:700;margin-bottom:4px;">'+s.name+'</div>'
   +'<div style="color:var(--dim);margin-bottom:6px;">'+s.bpm+' BPM'+(bpmNow?' · your project: '+bpmNow+' BPM':'')+'</div>'
+  +(sec?'<div style="margin-bottom:4px;">Section: <b>'+sec+'</b> <span style="color:var(--dim);font-size:10.5px;">(the embedded transcription is this one section)</span></div>':'')
+  +'<div style="margin-bottom:4px;">Instruments: '+inst.join(' · ')+'</div>'
+  +(fm.letters.length?'<div style="margin-bottom:4px;">Form (melody rhythm): <b>'+fm.form+'</b></div>':'')
+  +(acc&&acc.length?'<div style="margin-bottom:4px;">Accent rhythm (the band’s loud hits): '+(function(){const d2=rhyPatDisplay(acc);return d2.pat.slice(0,12).join(',')+(d2.pat.length>12?'…':'')+' ('+d2.u+')';})()+'</div>':'')
   +'<div style="margin-bottom:6px;">'+(s.chords?s.chords.length:0)+' chords in the lane'+(s.prov?'<div style="color:var(--dim);margin-top:4px;font-size:10.5px;">'+s.prov+'</div>':'')+'</div>'
   +(far?'<div style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:10.5px;"><b>PRO TIP:</b> If the BPM is too different, it might not feel the same at your tempo, but art is art so it might work.</div>':'')
-  +'<div style="color:var(--dim);font-size:10.5px;">Repeats · form seat · song section · instruments · accent rhythm — these answers land with the extractor round.</div>'
+  +'<div style="color:var(--dim);font-size:10.5px;">“Does it repeat” is the ♬ ×N count on a matched card — every informed-decision answer is live for the embedded corpus.</div>'
   +'<div style="margin-top:8px;"><button id="rhyLoadBtn" style="font-size:11px;">⇗ Load into the audition grid</button></div>';
  const lb=document.getElementById('rhyLoadBtn');
  if(lb)lb.onclick=()=>{
