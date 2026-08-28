@@ -647,7 +647,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27z</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27aa</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -781,6 +781,11 @@
        Lives at the top of the screen with the other CHOOSE YOUR OWN ADVENTURE windows. -->
   <div class="gridwrap" id="wanPanel" style="margin:12px 0;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Chord Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers (Weber's table)</div>
+    <!-- 80th R9 (his ninth message + the table image): THE WEBER MATRIX as the window's
+         DEFAULT view — 10 letters across × 13 down, the song's key seated where C sits
+         in the printed table (row 7, column 5); spelled keys, double-sharps and
+         double-flats at the edges, lowercase = minor. Click a key = travel there. -->
+    <div id="wanWeber" style="margin-bottom:10px;overflow-x:auto;"></div>
     <div id="wanBody"></div>
     <div id="wanStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Where to? ← → walk the degrees · ↑ ↓ flip worlds · the Weber chips jump orbits — every landing plays, nothing writes until you say ✓.</div>
   </div>
@@ -18502,7 +18507,68 @@ function wanKeydown(e){
  renderWan();wanAudition();
  return true;
 }
+/* ==== 80th R9 · THE WEBER MATRIX (his ninth message + the table image) — the pure
+   lattice on the line of fifths. Across a row: alternating relative-minor /
+   parallel-major pairs (+3 fifths per pair); down a column: a FOURTH per row (−1
+   fifth). The printed table is itself centered on C at row 7, col 5 — "reflect the
+   key the song is in" seats the song's key there. ==== */
+function wanLofName(n){
+ const L='FCGDAEB'[(((n+1)%7)+7)%7];
+ const a=Math.floor((n+1)/7);
+ return L+(a>0?(a===2?'×':'♯'.repeat(a)):a<0?'♭'.repeat(-a):'');
+}
+function wanLofPc(n){return (((n*7)%12)+12)%12;}
+function wanPcLof(pc,minor){
+ /* the nearest plain spelling — majors in G♭..B; a MINOR key shifts the window three
+    fifths sharp (e♭..g♯ territory) so its RELATIVE MAJOR stays plain: f♯ minor, never
+    the monster g♭ minor (the rh80i catch) */
+ const m=(((pc*7)%12)+12)%12;
+ const hi=minor?8:5;
+ return m>hi?m-12:m;
+}
+function weberGrid(centerLof){
+ /* 13 rows × 10 cols of {lof,minor}; the anchor MAJOR sits at r6 c4 */
+ const rows=[];
+ for(let r=0;r<13;r++){
+  const base=centerLof-6-(r-6);
+  const row=[];
+  for(let c=0;c<10;c++)row.push({lof:base+3*Math.ceil(c/2),minor:c%2===1});
+  rows.push(row);
+ }
+ return rows;
+}
+function wanWeberDraw(){
+ const W=document.getElementById('wanWeber');if(!W)return;
+ const minor=wanState.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[wanState.mode]||{}).name||'');
+ const tonicLof=wanPcLof(wanState.tonic,minor);
+ const anchor=minor?tonicLof-3:tonicLof;   /* a minor key seats beside its relative major */
+ const grid=weberGrid(anchor);
+ let h='<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;">The Weber table — 10 across · 13 down, your key at the center. Click a key to travel.</div>';
+ for(const row of grid){
+  h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
+  for(const cell of row){
+   const nm=wanLofName(cell.lof);
+   const label=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
+   const isKey=cell.minor===minor&&cell.lof===tonicLof;
+   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'"'
+    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'"'
+    +' title="'+label+(cell.minor?' minor':' major')+' — click to travel the Wanderer there.">'+label+'</span>';
+  }
+  h+='</div>';
+ }
+ W.innerHTML=h;
+ W.querySelectorAll('.wanWebKey').forEach(el=>{
+  el.onclick=()=>{
+   wanState.follow=false;
+   wanState.tonic=wanLofPc(+el.getAttribute('data-lof'));
+   wanState.mode=el.getAttribute('data-minor')==='1'?'aeolian':'ionian';
+   wanState.cur={row:0,deg:0};
+   renderWan();wanAudition();
+  };
+ });
+}
 function renderWan(){
+ try{wanWeberDraw();}catch(e){}   /* its own surface — a fault here must never take the board down */
  const B=document.getElementById('wanBody');if(!B)return;
  const sc=wanScale();
  const rows=wanRows();
@@ -26268,6 +26334,23 @@ function engViewApply(){
   sb.setAttribute('data-eng','slideWin');
   sb.onclick=()=>{if(typeof toggleSlidePanel==='function')toggleSlidePanel();engViewApply();};
   eb.appendChild(sb);
+  /* 80th R9 (his ninth message: "I still don't see a multi-track button (engine)"):
+     the ⊞ Multi-Track chip rides the same one group — it restores a closed Grid 1 and
+     brings the grid into view either way. */
+  const mtb=document.createElement('span');
+  const _mg=document.getElementById('gridRowWrap');
+  mtb.className='part engChip'+((_mg&&_mg.style.display!=='none')?' on':'');
+  mtb.style.cssText=b.style.cssText;
+  mtb.textContent=icons?'⊞':'⊞ Multi-Track';
+  mtb.title=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.engTips===false)?'Multi-Track Grid':'Multi-Track Grid — brings the 1st Multi-Track Grid into view (and back, if its ✕ closed it).';
+  mtb.setAttribute('data-eng','gridRowWrap');
+  mtb.onclick=()=>{
+   if(typeof uiState==='object'&&uiState&&uiState.gridClosed){uiState.gridClosed=false;try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}if(typeof gridCloseApply==='function')gridCloseApply();}
+   const g2=document.getElementById('gridRowWrap');
+   if(g2&&g2.scrollIntoView)try{g2.scrollIntoView({block:'start'});}catch(e){}
+   engViewApply();
+  };
+  eb.appendChild(mtb);
  }
  if(_keepX)eb.appendChild(_keepX);   /* [T3]: ✕ rides the line (the head is gone); engLink restores */
  ew.classList.toggle('engLeft',left);
