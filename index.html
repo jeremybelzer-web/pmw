@@ -647,7 +647,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27y</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-27z</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11144,7 +11144,10 @@ function gridCloseApply(){
   document.body.appendChild(l);
   l.onclick=()=>{uiState.gridClosed=false;try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}gridCloseApply();};
  }
- l.style.display=closed?'':'none';
+ /* 80th R8 (his eighth message: "There is no multi-track button"): the show-path used
+    an inline '' — which DEFERS to the rule's at-rest display:none, so the chip never
+    actually showed and the ✕ trapped the user gridless. A positive value now. */
+ l.style.display=closed?'inline-block':'none';
 }
 function gridMinApply(){
  const gw=document.getElementById('gridWrap');if(!gw)return;
@@ -25221,7 +25224,9 @@ function parseUiState(str,defs){
    if(o.iconsHidden===true)def.iconsHidden=true;
    if(Array.isArray(o.links))def.links=linkNorm(o.links);   /* Phase 1: the graph persists in cp_ui */
    if(o.gridMin===true)def.gridMin=true;
-   if(o.gridClosed===true)def.gridClosed=true;   /* [T7]: Grid 1's ✕ persists */
+   /* [T7]'s cross-boot persistence SUPERSEDED by his eighth message (the 80th,
+      RHYTHM-ENGINE-RAW): "I thought it defaulted to opening with one" — the app
+      always BOOTS with the Multi-Track Grid; the ✕ is session-local now. */
    if(Array.isArray(o.colOrder))def.colOrder=o.colOrder.filter(x=>typeof x==='string');   /* Phase 2 R0: the column order (normalized at apply) */
    /* WINDOW-SHELL: Trips is a companion (RAW [72] [75]) — not the exclusive open slot */
    if(o.chrome&&typeof o.chrome==='object')for(const _k of ['tr','nav','eng','gc']){const _c=o.chrome[_k];if(_c&&typeof _c==='object'){if(_c.min===true)def.chrome[_k].min=true;if(_c.closed===true)def.chrome[_k].closed=true;}}   /* 76th R2 */
