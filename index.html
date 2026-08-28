@@ -701,7 +701,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28q</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28s</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -18578,12 +18578,46 @@ function buildRagaPanel(){
    the 3.3 Rabbit-Hole search when it ships (reads window.rabbitHoleSeeds) — until
    then the playhead's key seeds the board. The full drawn Weber table stays the
    future spec's background (resolved doc §8). Pure layer unit-tested. ==== */
-var wanState={follow:true,tonic:0,mode:'ionian',relStep:2,relDir:'below',cur:{row:0,deg:0},trail:[],search:''};
+var wanState={follow:true,tonic:0,mode:'ionian',relStep:2,relDir:'below',cur:{row:0,deg:0},trail:[],search:'',mode2:'',search2:'',relChrom:false,rec:false};   /* 81st R3 (his thirty-fifth message): "Experiment, record your trips" — rec is the ⏺ mode */   /* 81st R2 (his thirty-fourth message): 2 RELATED SCALES — scale 2 carries its OWN mode and its OWN search; relChrom is his Chromatic button */
 var wanGroups=[];
 function ordinalName(step){
  /* pure: scale-step count → interval ordinal (1 → 2nd, 2 → 3rd …) */
  const n=step+1;
  return n+(n===2?'nd':n===3?'rd':'th');
+}
+const CHROM_IV=[{k:0,n:'Unison'},{k:1,n:'minor 2nd'},{k:2,n:'major 2nd'},{k:3,n:'minor 3rd'},
+ {k:4,n:'major 3rd'},{k:5,n:'perfect 4th'},{k:6,n:'tritone'},{k:7,n:'perfect 5th'},
+ {k:8,n:'minor 6th'},{k:9,n:'major 6th'},{k:10,n:'minor 7th'},{k:11,n:'major 7th'}];
+function wanRelOffset(pcs,step,dir,chrom){
+ /* 81st R2 (his thirty-fourth message) — THE SEMITONE DISTANCE FROM SCALE 1's ROOT TO
+    SCALE 2's ROOT, and the whole point of the round is that it is SCALE-TRUE by default:
+    the offset is read off scale 1's OWN degrees, so "a 3rd below" in C major lands on the
+    major 6th's A — a MINOR third down — and never on a literal A♭. His words:
+      "the intervals above or below that it defaults to need to be the actual intervals
+       in the 1st scale.  It can't go down a major 3rd when the scale has a major 6...
+       that would be going down a minor 3rd which wouldn't work."
+    ⭐ CHROMATIC is his escape hatch, not the default: with it on, `step` is a literal
+    semitone count, which is how the user asks for "down a MAJOR 3rd" on purpose.
+    Pure — no state read, no side effect. */
+ if(chrom){const k=((step%12)+12)%12;return dir==='above'?k:(12-k)%12;}
+ const n=(pcs||[]).length;if(!n)return 0;
+ const idx=dir==='above'?((step%n)+n)%n:(((n-step)%n)+n)%n;
+ return (((pcs[idx]||0)%12)+12)%12;
+}
+function wanRelStepName(pcs,step,dir,chrom){
+ /* the two words the Relative row shows. ⛔ HIS LAW, AND IT IS THE READOUT'S WHOLE JOB:
+    when scale 2 sits on the SAME root the step reads "Unison" and the direction slot is
+    "----" — a relationship of no distance has no direction to report. Pure. */
+ if(wanRelOffset(pcs,step,dir,chrom)===0)return {step:'Unison',dir:'----'};
+ return {step:chrom?((CHROM_IV[((step%12)+12)%12]||{}).n||ordinalName(step)):ordinalName(step),
+         dir:dir==='above'?'Above':'Below'};
+}
+function wanRelationship(pcs2){
+ /* ⭐ his thirty-fourth message: the row that read "Melodic, Harmonic, Natural" becomes
+    the RELATIONSHIP readout and it TRACKS SCALE 2 — "If it is dorian built a 3rd below,
+    then it should say dorian." A pc set the library cannot name is not an error and is
+    not blank; it reads his own words for it. Pure. */
+ return pcsScaleName(pcs2)||'Untamed Wilderness';
 }
 function relParallelPcs(pcs,step,dir){
  /* the PARALLEL RELATIVE: rotate the mode to the degree <step> scale-steps below (or
@@ -18664,14 +18698,59 @@ function wanFollowKey(){
   return {tonic:st.tonic||0,mode:st.mode||'ionian'};
  }catch(e){return {tonic:0,mode:'ionian'};}
 }
+function wanTripFromKey(tonic,minor){
+ /* 81st R3 (his thirty-fifth message: "Experiment, record your trips") — one landing on
+    the map becomes ONE itinerary item, in the shape 4.7 R3 already defined for
+    project.trips: {it:{k:'planet',…},bars,lbl}. ⛔ A NEW SHAPE WAS NOT INVENTED FOR THIS:
+    the Orbit's ⏺ Record journey already feeds the same list through the same seam, and a
+    second trip shape would have split the itinerary in two. Pure. */
+ const t=(((tonic%12)+12)%12);
+ return {it:{k:'planet',tonic:t,minor:!!minor},bars:4,lbl:PCN[t]+(minor?'m':'')};
+}
+function wanTrailChords(){
+ /* the trail as a STRING OF CHORDS — his "creates strings of chords = draggable chord
+    lanes". The trail already holds {r,iv,lbl} steps; this is the read-only view of it
+    that the drag hands to cadFillBack, the same seam the legend chains and the
+    moon-cadence drags use. Pure. */
+ return (wanState.trail||[]).map(s2=>({r:s2.r,iv:(s2.iv||[]).slice(),lbl:s2.lbl}));
+}
+function wanRecord(tonic,minor,how){
+ /* record a landing, but ONLY while ⏺ is armed, and never two of the same key in a row
+    — wandering around one key is one stop on the itinerary, not five. */
+ if(!wanState.rec)return false;
+ if(!Array.isArray(project.trips))project.trips=[];
+ const tr=wanTripFromKey(tonic,minor);
+ const last=project.trips[project.trips.length-1];
+ if(last&&last.it&&last.it.k==='planet'&&last.it.tonic===tr.it.tonic&&!!last.it.minor===!!tr.it.minor)return false;
+ project.trips.push(tr);
+ try{if(typeof renderTrips==='function')renderTrips();}catch(e){}
+ setWanStatus('⏺ '+tr.lbl+' recorded into 🧳 Upcoming Trips ('+project.trips.length+' stop'+(project.trips.length===1?'':'s')+') — '+(how||'a landing')+'. The trail below drags onto the chord lane.');
+ return true;
+}
 function wanScale(){return SCALE_DB[wanState.mode]||SCALE_DB.ionian;}
+function wanScale2(){
+ /* 81st R2: scale 2 is a REAL SECOND SCALE the user defines, not a rotation of scale 1.
+    Unset, it falls back to the parallel-relative rotation the 4.6 panel always drew, so
+    an untouched panel keeps its old second row and nothing silently changes under him. */
+ if(wanState.mode2&&SCALE_DB[wanState.mode2])return SCALE_DB[wanState.mode2];
+ const rel=relParallelPcs(wanScale().pcs,wanState.relStep,wanState.relDir);
+ return {id:'',name:pcsScaleName(rel)||('(the '+ordinalName(wanState.relStep)+'-'+wanState.relDir+' rotation)'),pcs:rel};
+}
+function wanRel2Root(){
+ return (((wanState.tonic+wanRelOffset(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom))%12)+12)%12;
+}
 function wanRows(){
- /* the two matrix rows: the main scale and its parallel relative — same root */
- const sc=wanScale();
- const rel=relParallelPcs(sc.pcs,wanState.relStep,wanState.relDir);
+ /* 81st R2 (his thirty-fourth message): THE TWO ROWS ARE TWO RELATED SCALES.
+    ⛔ WHAT CHANGED AND WHY IT IS NOT COSMETIC: row 2 used to be scale 1's mode rotated
+    and REBUILT ON THE SAME ROOT ("always parallel", client §8) — so "a 3rd below" in C
+    major drew C Aeolian and the root never moved at all. He distinguishes "dorian built
+    a 3rd below" from "dorian built from the same root note" and wants the readout to say
+    Unison / "----" for the second, which only means anything if row 2 CARRIES ITS OWN
+    ROOT. It does now: the Relative step+direction places it, scale-truly. */
+ const sc=wanScale(),sc2=wanScale2(),root2=wanRel2Root();
  return [
-  {name:PCN[wanState.tonic]+' '+sc.name,pcs:sc.pcs},
-  {name:PCN[wanState.tonic]+' '+(pcsScaleName(rel)||('(the '+ordinalName(wanState.relStep)+'-'+wanState.relDir+' rotation)')),pcs:rel}
+  {name:PCN[wanState.tonic]+' '+sc.name,pcs:sc.pcs,tonic:wanState.tonic},
+  {name:PCN[root2]+' '+sc2.name,pcs:sc2.pcs,tonic:root2}
  ];
 }
 function wanCellAt(row,deg){
@@ -18679,7 +18758,7 @@ function wanCellAt(row,deg){
  const R=rows[row]||rows[0];
  const tri=scaleDegreeTriad(R.pcs,deg);
  if(!tri)return null;
- const r=((wanState.tonic+tri.off)%12+12)%12;
+ const r=(((R.tonic!=null?R.tonic:wanState.tonic)+tri.off)%12+12)%12;   /* 81st R2: row 2 has its own root now — a cell names itself from ITS row, not from scale 1 */
  const suffix=(tri.iv[1]===3?(tri.iv[2]===6?'dim':'m'):(tri.iv[2]===8?'+':''));
  const name=PCN[r]+suffix;
  return {r,iv:tri.iv,lbl:name,name,roman:degRomanW(deg,tri.iv,R.pcs.length)};
@@ -18708,6 +18787,7 @@ function wanWander(tonic,minor,tag){
  wanState.tonic=((tonic%12)+12)%12;
  wanState.mode=minor?'aeolian':'ionian';
  wanState.cur={row:0,deg:0};
+ wanRecord(wanState.tonic,minor,'the '+tag+' orbit');   /* 81st R3: a wander IS a trip when ⏺ is armed */
  renderWan();
  setWanStatus('Wandered to '+PCN[wanState.tonic]+' '+(minor?'Minor':'Major')+' — the '+tag+' orbit. Arrow keys walk its chords; ⟲ re-follows the playhead.');
 }
@@ -19030,7 +19110,14 @@ function wanWeberDraw(){
   +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
   +'<div style="margin-bottom:5px;display:flex;gap:8px;align-items:center;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span>'
   +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults. ON by default: a ⌘-selected destination shows every filled-out road’s pathway.">Pathways</span>'
-  +'<span class="wanAllTog'+(st.webReduce?' on':'')+'" id="wanRedTog" title="Show every double-accidental key as its plain enharmonic on screen — B𝄫 shows as A, G𝄫 as F. The map’s positions never move; only the labels reduce.">'+(st.webReduce?'☑':'☐')+' Reduce Accidentals</span></div>'
+  +'<span class="wanAllTog'+(st.webReduce?' on':'')+'" id="wanRedTog" title="Show every double-accidental key as its plain enharmonic on screen — B𝄫 shows as A, G𝄫 as F. The map’s positions never move; only the labels reduce.">'+(st.webReduce?'☑':'☐')+' Reduce Accidentals</span>'
+  /* 81st R3 (his thirty-fifth message): "Experiment, record your trips: Trips Window
+     which creates strings of chords = draggable chord lanes." ⭐ THE WINDOW IS THE ONE
+     THAT ALREADY EXISTS — his own word for it was PAIR ("just pair it - ship it - with
+     an Upcoming Trips Window"), and 🧳 Upcoming Trips is already built as the
+     one-window-law COMPANION ("a bridge between the window above and the one below"),
+     so arming ⏺ ships the pair and costs no WINDOW_DEFS entry. */
+  +'<span class="wanAllTog'+(wanState.rec?' on':'')+'" id="wanRecTog" title="Experiment, and record your trips. Every key you land on joins 🧳 Upcoming Trips as a stop; the trail below becomes a string of chords you can drag straight onto the chord lane.">'+(wanState.rec?'⏺':'⏵')+' Record your trips</span></div>'
   +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="flex:1 1 auto;min-width:0;">';
  for(let r=0;r<13;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
@@ -19398,6 +19485,19 @@ function wanWeberDraw(){
  if(tog)tog.onclick=e=>{e.stopPropagation();st.webAll=!st.webAll;wanWeberDraw();};
  const red=W.querySelector('#wanRedTog');
  if(red)red.onclick=e=>{e.stopPropagation();st.webReduce=!st.webReduce;wanWeberDraw();};
+ /* 81st R3: arming ⏺ SHIPS THE PAIR — 🧳 Upcoming Trips comes up beside the map, because
+    a recorder with its tape hidden is half a feature. ⛔ Trips is a COMPANION flag, not a
+    WINDOW_DEFS member, so showing it does NOT steal the one `open` slot from the
+    Wanderer (FABLE §2 ② names tripsPanel as exactly this exception). */
+ const rec=W.querySelector('#wanRecTog');
+ if(rec)rec.onclick=e=>{e.stopPropagation();
+  wanState.rec=!wanState.rec;
+  if(wanState.rec){
+   try{if(typeof uiState==='object'&&uiState&&!uiState.trips){uiDispatch({type:'toggle',id:'tripsPanel'});}
+       else if(typeof renderTrips==='function')renderTrips();}catch(e2){}
+   setWanStatus('⏺ Recording. Every key you land on joins 🧳 Upcoming Trips — double-click the map, or take a Weber neighbour. The trail below drags onto the chord lane as a string of chords.');
+  }else setWanStatus('⏵ Recording stopped — the itinerary keeps what it caught. ⏺ again to add more.');
+  wanWeberDraw();renderWan();};
  const pb=W.querySelector('#wanPathsBtn');
  if(pb)pb.onclick=e=>{e.stopPropagation();wanPathsWinOpen();};
  /* ---- DRAG-TO-PAN + the click laws ---- */
@@ -19454,6 +19554,7 @@ function wanWeberDraw(){
    wanState.mode=mn()?'aeolian':'ionian';
    wanState.cur={row:0,deg:0};
    st.webShift=0;
+   wanRecord(wanState.tonic,mn(),'a double-click on the map');   /* 81st R3 */
    wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
   };
  });
@@ -19496,30 +19597,46 @@ function renderWan(){
  const rows=wanRows();
  const n=sc.pcs.length;
  /* left column: the two labeled search surfaces + Weber neighbors + the trail */
- const modeOpts=(()=>{
+ /* 81st R2: the family-ordered option list is now a FUNCTION, because there are two
+    scales to build it for — his "a search window for each or a pull down menu with
+    search above the first option for each, so i can define what they are". */
+ const wanModeOpts=(sel,query,blank)=>{
   /* 80th R24 (his thirty-first message): the scale list ordered BY FAMILY — the
      Modes, the minor families, each raga family by similarity, the Diminished and
      Whole Tone families at the end. The 🔎 is still one more filter on top. */
-  const q=(wanState.search||'').toLowerCase();
+  const q=(query||'').toLowerCase();
   const seen=new Set();
-  let h='';
+  let h=blank?('<option value=""'+(sel?'':' selected')+'>'+blank+'</option>'):'';
   for(const f of wanScaleFamilies()){
    const list=f.ids.map(id=>SCALE_DB[id]).filter(Boolean)
     .filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return !q||s.name.toLowerCase().indexOf(q)>=0;});
    if(!list.length)continue;
-   h+='<optgroup label="'+f.label+'">'+list.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===wanState.mode?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
+   h+='<optgroup label="'+f.label+'">'+list.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
   }
   /* anything not yet family-seated still lists (nothing becomes unreachable) */
   const rest=[];
   for(const id in SCALE_DB)if(!seen.has(id)){const s=SCALE_DB[id];if(!q||s.name.toLowerCase().indexOf(q)>=0)rest.push(s);}
-  if(rest.length)h+='<optgroup label="Elsewhere">'+rest.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===wanState.mode?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
+  if(rest.length)h+='<optgroup label="Elsewhere">'+rest.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
   return h;
- })();
+ };
+ const modeOpts=wanModeOpts(wanState.mode,wanState.search,'');
+ const mode2Opts=wanModeOpts(wanState.mode2,wanState.search2,'— the '+wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom).step.toLowerCase()+' rotation —');
+ /* 81st R2: ⭐ UNISON JOINS THE LIST (his "built from the same root note" case needs a
+    way to be ASKED for, not only detected), and his CHROMATIC button swaps the whole
+    list for literal intervals — "so the user can choose the scale relationship down a
+    major or a minor 3rd if they select that". */
  const ivOpts=(()=>{
   let h='';
+  if(wanState.relChrom){
+   for(let k=0;k<12;k++)h+='<option value="'+k+'"'+(k===wanState.relStep?' selected':'')+'>'+CHROM_IV[k].n+'</option>';
+   return h;
+  }
+  h+='<option value="0"'+(wanState.relStep===0?' selected':'')+'>Unison</option>';
   for(let k=1;k<n;k++)h+='<option value="'+k+'"'+(k===wanState.relStep?' selected':'')+'>'+ordinalName(k)+'</option>';
   return h;
  })();
+ const relNames=wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom);
+ const sameRoot=relNames.dir==='----';
  const nb=weberNeighbors(wanState.tonic,wanScale().pcs.indexOf(3)>=0&&wanScale().pcs.indexOf(4)<0);
  const nbChips=nb.map((o,i)=>'<span class="part wanNb" data-i="'+i+'" title="'+o.tag+' on Weber\'s table — click to wander there (first-degree neighborhood: fifths both ways, the relative, the parallel)" style="padding:3px 8px;font-size:11px;">'+PCN[o.tonic]+' '+(o.minor?'Minor':'Major')+'<span style="color:var(--dim);font-size:9px;"> · '+o.tag+'</span></span>').join('');
  const trail=wanState.trail.length
@@ -19537,32 +19654,38 @@ function renderWan(){
     +'<div style="font-size:9.5px;color:var(--dim);">'+c.roman+'</div>'
     +'<div style="font-size:13px;font-weight:700;">'+c.name+'</div></div>');
   }
-  return '<div style="margin-bottom:6px;"><div style="font-size:10.5px;color:var(--dim);margin-bottom:3px;">'+(ri===0?'MAIN — ':'PARALLEL RELATIVE — ')+R.name+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;">'+cells.join('')+'</div></div>';
+  return '<div style="margin-bottom:6px;"><div style="font-size:10.5px;color:var(--dim);margin-bottom:3px;">'+(ri===0?'SCALE 1 — ':'SCALE 2 — ')+R.name+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;">'+cells.join('')+'</div></div>';
  }).join('');
  B.innerHTML='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
   +'<div style="flex:0 0 250px;display:flex;flex-direction:column;gap:8px;">'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">2 Main Scales</label>'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="Two scales and the relationship between them. Scale 1 is the main scale; scale 2 is placed by the Relative row below and is yours to define.">2 Related Scales</label>'
   +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;">'
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" '+(wanState.follow?'disabled':'')+' style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select></div>'
-  /* 80th R24 (his thirty-first message): the SECOND main scale — "Melodic, Harmonic,
-     Natural", the three types of minor on the same root */
-  +'<div style="display:flex;gap:6px;align-items:center;">'
-  +'<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);flex:0 0 64px;line-height:1.25;" title="The three types of minor, built on the same root as the scale above.">Melodic, Harmonic, Natural</span>'
-  +'<select id="wanMinorSel" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'
-  +'<option value=""'+(['melMin','harmonicMinor','aeolian'].indexOf(wanState.mode)<0?' selected':'')+'>— pick a minor —</option>'
-  +'<option value="melMin"'+(wanState.mode==='melMin'?' selected':'')+'>Melodic Minor</option>'
-  +'<option value="harmonicMinor"'+(wanState.mode==='harmonicMinor'?' selected':'')+'>Harmonic Minor</option>'
-  +'<option value="aeolian"'+(wanState.mode==='aeolian'?' selected':'')+'>Natural Minor</option>'
-  +'</select></div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
+  /* 81st R2 (his thirty-fourth message): THE RELATIVE ROW PLACES SCALE 2, and the
+     intervals it offers are SCALE-TRUE — read off scale 1's own degrees, so a "3rd
+     below" in C major is the major 6th's A. ⭐ Chromatic is the deliberate override. */
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Relative</label>'
-  +'<div style="display:flex;gap:6px;align-items:center;font-size:12px;">a <select id="wanRelStep">'+ivOpts+'</select><select id="wanRelDir"><option value="below"'+(wanState.relDir==='below'?' selected':'')+'>Below</option><option value="above"'+(wanState.relDir==='above'?' selected':'')+'>Above</option></select></div>'
-  +'<div style="font-size:10px;color:var(--dim);">always parallel — built from the same root as the Main Scale</div>'
+  +'<div style="display:flex;gap:6px;align-items:center;font-size:12px;">a <select id="wanRelStep" title="'+(wanState.relChrom?'Chromatic: literal intervals — this is where you ask for a MAJOR third down on purpose.':'Scale-true: the step is counted in SCALE 1\'s own degrees, so a 3rd below C major lands on A — a minor third — never on A♭.')+'">'+ivOpts+'</select>'
+  +'<select id="wanRelDir"'+(sameRoot?' disabled':'')+' title="'+(sameRoot?'Scale 2 sits on the same root — there is no direction to report.':'Which way from scale 1\'s root.')+'">'
+  +(sameRoot?'<option selected>----</option>'
+    :'<option value="below"'+(wanState.relDir==='below'?' selected':'')+'>Below</option><option value="above"'+(wanState.relDir==='above'?' selected':'')+'>Above</option>')+'</select>'
+  +'<span class="wanAllTog'+(wanState.relChrom?' on':'')+'" id="wanChromTog" title="Chromatic — measure the relationship in literal semitones instead of scale 1\'s degrees, so you can ask for down a MAJOR third when the scale would have given you a minor one.">'+(wanState.relChrom?'☑':'☐')+' Chromatic</span></div>'
+  +'<div style="font-size:10px;color:var(--dim);">'+(sameRoot?'scale 2 shares scale 1\'s root':'scale 2 is built on '+PCN[wanRel2Root()]+' — '+(wanState.relChrom?'a literal ':'scale 1\'s own ')+relNames.step.toLowerCase()+' '+relNames.dir.toLowerCase())+'</div>'
+  /* his order, verbatim: "The 2nd scale search button and name should be below the
+     'Relative' '3rd' 'below' part." */
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Scale 2</label>'
+  +'<input id="wanSearch2" placeholder="search scales &amp; ragas…" value="'+(wanState.search2||'').replace(/"/g,'&quot;')+'" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;">'
+  +'<div style="display:flex;gap:6px;align-items:center;"><span style="font-size:12px;color:var(--dim);flex:0 0 auto;">'+PCN[wanRel2Root()]+'</span><select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select></div>'
+  /* the row that used to read "Melodic, Harmonic, Natural" is now the RELATIONSHIP */
+  +'<div style="display:flex;gap:6px;align-items:center;">'
+  +'<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);flex:0 0 64px;line-height:1.25;" title="What scale 2 IS, relative to scale 1 — it follows whatever you set scale 2 to.">Relationship</span>'
+  +'<span id="wanRelationship" style="flex:1;min-width:0;font-size:12px;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--panel);" title="'+(wanRelationship(wanScale2().pcs)==='Untamed Wilderness'?'This pair matches no scale the library knows — you are off the map.':'Scale 2 named by the library.')+'">'+wanRelationship(wanScale2().pcs)+'</span></div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Weber neighbors</label>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+nbChips+'</div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">The trail</label>'
-  +'<div id="wanTrail" style="font-size:11px;color:var(--text);line-height:1.5;">'+trail+'</div>'
+  +'<div id="wanTrail" style="font-size:11px;color:var(--text);line-height:1.5;'+(wanState.trail.length?'cursor:grab;border:1px dashed var(--line);border-radius:6px;padding:4px 6px;':'')+'" title="'+(wanState.trail.length?'A string of chords — drag it onto the chord lane. It fills BACKWARDS ending at the chord you drop on, the lane’s own rate kept. One undo.':'Empty — ✓ writes add to it, and ⏺ Record your trips logs the keys you land on.')+'">'+trail+'</div>'
   +'<div style="display:flex;gap:6px;flex-wrap:wrap;"><button id="wanSaveGrp" style="padding:4px 10px;font-size:11.5px;">★ Save pivot group</button><button id="wanClearTrail" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;">Clear</button></div>'
   +(wanGroups.length?'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+groupChips+'</div>':'')
   +'</div>'
@@ -19604,11 +19727,32 @@ function renderWan(){
  se.oninput=e=>{wanState.search=e.target.value;renderWan();const s2=document.getElementById('wanSearch');if(s2){s2.focus();try{s2.setSelectionRange(s2.value.length,s2.value.length);}catch(_){}}};
  document.getElementById('wanRoot').onchange=e=>{wanState.tonic=+e.target.value||0;wanState.cur={row:0,deg:0};renderWan();};
  document.getElementById('wanMode').onchange=e=>{if(SCALE_DB[e.target.value]){wanState.mode=e.target.value;wanState.relStep=Math.min(wanState.relStep,Math.max(1,wanScale().pcs.length-1));wanState.cur={row:0,deg:0};renderWan();}};
- const wms=document.getElementById('wanMinorSel');
- if(wms)wms.onchange=e=>{if(SCALE_DB[e.target.value]){wanState.mode=e.target.value;wanState.relStep=Math.min(wanState.relStep,Math.max(1,wanScale().pcs.length-1));wanState.cur={row:0,deg:0};renderWan();}};
  document.getElementById('wanFollow').onchange=e=>{wanState.follow=!!e.target.checked;if(wanState.follow)wanSyncFollow();renderWan();};
- document.getElementById('wanRelStep').onchange=e=>{wanState.relStep=+e.target.value||2;renderWan();};
- document.getElementById('wanRelDir').onchange=e=>{wanState.relDir=e.target.value==='above'?'above':'below';renderWan();};
+ /* 81st R2: ⛔ `+v||2` WOULD EAT UNISON — 0 is a legal step now (his same-root case), and
+    the old default-on-falsy idiom silently turned it into a 3rd. Parse, then clamp. */
+ document.getElementById('wanRelStep').onchange=e=>{
+  const v=parseInt(e.target.value,10);
+  wanState.relStep=isNaN(v)?2:Math.max(0,v);
+  wanState.cur={row:0,deg:0};renderWan();};
+ const wrd=document.getElementById('wanRelDir');
+ if(wrd)wrd.onchange=e=>{if(e.target.disabled)return;wanState.relDir=e.target.value==='above'?'above':'below';wanState.cur={row:0,deg:0};renderWan();};
+ /* his Chromatic button — the two lists measure different things, so the step is
+    re-clamped into whichever one it is landing in rather than carried across blindly */
+ const wct=document.getElementById('wanChromTog');
+ if(wct)wct.onclick=e=>{e.stopPropagation();
+  wanState.relChrom=!wanState.relChrom;
+  const lim=wanState.relChrom?11:Math.max(0,wanScale().pcs.length-1);
+  wanState.relStep=Math.max(0,Math.min(wanState.relStep,lim));
+  wanState.cur={row:0,deg:0};renderWan();};
+ /* scale 2's own search + picker — "so i can define what they are" */
+ const se2=document.getElementById('wanSearch2');
+ if(se2)se2.oninput=e=>{wanState.search2=e.target.value;renderWan();
+  const s3=document.getElementById('wanSearch2');
+  if(s3){s3.focus();try{s3.setSelectionRange(s3.value.length,s3.value.length);}catch(_){}}};
+ const wm2=document.getElementById('wanMode2');
+ if(wm2)wm2.onchange=e=>{
+  wanState.mode2=SCALE_DB[e.target.value]?e.target.value:'';   /* blank = fall back to the rotation */
+  wanState.cur={row:0,deg:0};renderWan();};
  document.getElementById('wanSaveGrp').onclick=()=>{
   if(!wanState.trail.length){setWanStatus('The trail is empty — ✓ a few chords first, then ★ keeps the journey.');return;}
   wanGroups.push({name:'Pivot group '+(wanGroups.length+1)+' · '+wanState.trail.map(s=>s.lbl).join('→').slice(0,24),steps:wanState.trail.map(s=>({r:s.r,iv:s.iv.slice(),lbl:s.lbl}))});
@@ -19616,6 +19760,50 @@ function renderWan(){
   setWanStatus('Pivot group saved (per browser). Press it to hear it — the Essence Shelf drag lands with F5.');
  };
  document.getElementById('wanClearTrail').onclick=()=>{wanState.trail=[];renderWan();};
+ /* 81st R3 (his thirty-fifth message): "strings of chords = draggable chord lanes".
+    ⭐ THE SEAM IS THE ONE THAT ALREADY EXISTS — cadFillBack, the same backwards fill the
+    legend chains and the moon-cadence drags use, so the lane's own rate never moves and
+    it is one undo. Nothing new was invented for this. */
+ const trailEl=document.getElementById('wanTrail');
+ if(trailEl)trailEl.onmousedown=e=>{
+  if(e.button!==0)return;
+  const run=wanTrailChords();
+  if(!run.length){setWanStatus('The trail is empty — ✓ a few chords first (or ⏺ Record your trips and wander), then drag it onto the chord lane.');return;}
+  e.preventDefault();
+  let ghost=null,went=false;
+  const mv=ev=>{
+   if(!went&&Math.hypot(ev.clientX-e.clientX,ev.clientY-e.clientY)<6)return;
+   went=true;
+   if(!ghost){ghost=document.createElement('div');
+    ghost.style.cssText='position:fixed;z-index:2000;pointer-events:none;font-size:11px;padding:3px 8px;border-radius:8px;background:var(--panel);border:1px solid var(--accent);color:var(--text);opacity:.92;';
+    ghost.textContent=run.map(r=>r.lbl).join(' → ');document.body.appendChild(ghost);}
+   ghost.style.left=(ev.clientX+10)+'px';ghost.style.top=(ev.clientY+8)+'px';
+   const lane=document.getElementById('chordlane');
+   if(lane){const lr=lane.getBoundingClientRect();
+    lane.style.outline=(ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom)?'1px dashed var(--accent)':'';}
+  };
+  const up=ev=>{
+   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+   if(ghost)ghost.remove();
+   const lane=document.getElementById('chordlane');
+   if(lane)lane.style.outline='';
+   if(!went)return;
+   if(!lane||!lane.getClientRects().length){setWanStatus('No chord lane on screen to drop into.');return;}
+   const lr=lane.getBoundingClientRect();
+   if(!(ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom))return;
+   if(typeof effectiveChords==='function'&&effectiveChords()!==project.chords){setWanStatus('Toggle ⚡ off to write chords — the lane is read-only while a psych-out is armed.');return;}
+   const cell=(document.elementFromPoint(ev.clientX,ev.clientY)||{closest:()=>null}).closest('.cb');
+   const cm=cell?/^cb(\d+)$/.exec(cell.id):null;
+   const ci=cm?+cm[1]:(project.chords.length-1);
+   const rows=cadFillBack(project.chords,ci,run);
+   if(!rows){setWanStatus('The trail needs '+run.length+' chords ending at the drop — drop it further right.');return;}
+   snapshot();
+   project.chords=rows;
+   drawChordLane();refresh(false);
+   setWanStatus('The trail landed ENDING at the drop chord, filled backwards — the lane’s own rate kept. ⌘Z undoes it.');
+  };
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
  document.getElementById('wanUseBtn').onclick=()=>wanUse();
 }
 function buildWanPanel(){
