@@ -212,6 +212,8 @@
   #wanPathsWin select,#wanPathsWin button{background:#f6ecd4;color:#3a2c18;border:1px solid #a8895f;font-family:Georgia,serif;font-size:10.5px;border-radius:5px;padding:1px 6px;cursor:pointer;}
   .wanPathRow.on{background:rgba(122,90,48,.16);border-radius:6px;}
   .wanPathRow:hover{background:rgba(122,90,48,.09);}
+  .wanPopup{position:fixed!important;left:10vw!important;top:9vh!important;width:74vw!important;max-height:76vh!important;overflow:auto!important;z-index:135!important;margin:0!important;box-shadow:0 18px 48px rgba(0,0,0,.55)!important;}
+  .wanPopStrip{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--dim);border-bottom:1px dashed var(--line);padding-bottom:4px;margin-bottom:6px;}
   /* v3: the Show Hidden Tracks window */
   #shtWin{position:fixed;z-index:64;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.55);font-size:12.5px;min-width:230px;display:none;}
   #shtWin .shtRow{display:flex;gap:8px;align-items:center;padding:4px 2px;cursor:pointer;border-radius:5px;}
@@ -690,7 +692,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28f</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28j</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -10663,6 +10665,23 @@ function swShelfBlock(){
   +'<label id="swShelfMove" style="margin-left:auto;font-size:10px;color:var(--dim);display:flex;gap:4px;align-items:center;cursor:pointer;" title="ON — the shelf rides the lower window’s swipe. OFF — it stays fixed in its own band (his words; OFF is the boot state, a labeled inference — he named both states, not the default)."><input type="checkbox" style="accent-color:var(--accent);">Move with lower window</label></div>'
   +'<div class="essBody" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;align-items:flex-start;"></div>';
  d.querySelector('#swShelfMove input').onchange=e=>{_swShelfWithLower=!!e.target.checked;swLayoutApply(swLayoutState);};
+ /* 80th (his 23rd message): the layout shelf row wears the −/✕ upper right too —
+    − collapses the cards, ✕ hides them behind the head (the head itself restores) */
+ const hd2=d.querySelector('.winHead');
+ const mn2=document.createElement('span');mn2.className='wbtn';mn2.id='swShelfMin';mn2.textContent='−';
+ mn2.title='Collapse the shelf cards';
+ const x2=document.createElement('span');x2.className='wbtn';x2.id='swShelfX';x2.textContent='✕';
+ x2.title='Hide the shelf — click the 🔷 head to bring it back';
+ hd2.appendChild(mn2);hd2.appendChild(x2);
+ const body2=()=>d.querySelector('.essBody');
+ mn2.onclick=e=>{e.stopPropagation();const b3=body2();
+  b3.style.display=b3.style.display==='none'?'flex':'none';mn2.textContent=b3.style.display==='none'?'+':'−';};
+ x2.onclick=e=>{e.stopPropagation();body2().style.display='none';mn2.style.display='none';x2.style.display='none';
+  d.dataset.shelfHidden='1';hd2.style.cursor='pointer';
+  hd2.title='The shelf is hidden — click to bring it back';};
+ hd2.onclick=()=>{if(d.dataset.shelfHidden!=='1')return;
+  delete d.dataset.shelfHidden;body2().style.display='flex';
+  mn2.style.display='';x2.style.display='';mn2.textContent='−';hd2.style.cursor='';hd2.title='';};
  return d;
 }
 function swLayoutTeardown(){
@@ -18632,7 +18651,7 @@ function wanKeydown(e){
  else if(e.key==='Enter'){e.preventDefault();wanUse();return true;}
  else return false;
  e.preventDefault();
- renderWan();wanAudition();
+ wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
  return true;
 }
 /* ==== 80th R9 · THE WEBER MATRIX (his ninth message + the table image) — the pure
@@ -18673,7 +18692,7 @@ function wanRomanOf(pc,minor,homePc){
 }
 function wanKeyAudition(pc,minor){
  try{
-  const go=()=>{try{inst.note('comping',voiceFromFirstInvI({r:pc,iv:(minor?MIN:MAJ).slice()},pc,minor),1.2,Tone.now()+.02,.6);}catch(e){}};
+  const go=()=>{try{inst.note('comping',voiceFromFirstInvI({r:pc,iv:(minor?MIN:MAJ).slice()},pc,minor),1.2,Tone.now(),.6);}catch(e){}};
   if(typeof audioReady!=='undefined'&&audioReady)go();
   else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
  }catch(e){}
@@ -18722,10 +18741,39 @@ function wanBoxPerim(hr,hc,k,rows,cols){
   if(r===r0||r===r1||c===c0||c===c1)out.push({r,c});
  return out;
 }
+function wanPopupOpen(panelId){
+ /* 80th (his twenty-sixth message): the Pathways SEARCH buttons open the real search
+    windows AS POP-UPS — the panel lifts into a fixed, draggable, scrollable float;
+    its ⤢ close hands it back to the column exactly as it was. */
+ const p=document.getElementById(panelId);if(!p)return;
+ if(panelId==='progPanel'){if(p.style.display==='none'&&typeof progWinToggle==='function')progWinToggle();}
+ else{try{if(typeof uiWinShown==='function'&&!uiWinShown(panelId))uiDispatch({type:'toggle',id:panelId});}catch(e){}}
+ if(p.classList.contains('wanPopup'))return;
+ p.dataset.popPrev=p.getAttribute('style')||'';
+ p.classList.add('wanPopup');
+ const strip=document.createElement('div');
+ strip.className='wanPopStrip';
+ strip.innerHTML='<span style="cursor:grab;">✥ drag</span><span class="wbtn" style="margin-left:auto;cursor:pointer;" data-w="popclose">⤢ back to the column</span>';
+ p.insertBefore(strip,p.firstChild);
+ strip.onmousedown=e=>{
+  if(e.target.dataset&&e.target.dataset.w==='popclose')return;
+  e.preventDefault();
+  const x0=e.clientX-p.offsetLeft,y0=e.clientY-p.offsetTop;
+  const mv=ev=>{p.style.left=(ev.clientX-x0)+'px';p.style.top=(ev.clientY-y0)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
+ strip.querySelector('[data-w="popclose"]').onclick=()=>{
+  strip.remove();
+  p.classList.remove('wanPopup');
+  p.setAttribute('style',p.dataset.popPrev||'');
+  delete p.dataset.popPrev;
+ };
+}
 function wanPathsState(){
  let s={active:'way',types:{}};
  try{const o=JSON.parse(localStorage.getItem('cp_wanPaths')||'{}');
-  if(o&&typeof o==='object'){if(typeof o.active==='string')s.active=o.active;if(o.types&&typeof o.types==='object')s.types=o.types;}}catch(e){}
+  if(o&&typeof o==='object'){if(typeof o.active==='string')s.active=o.active;if(o.types&&typeof o.types==='object')s.types=o.types;if(o.expanded)s.expanded=true;}}catch(e){}
  return s;
 }
 function wanPathsPersist(s){try{localStorage.setItem('cp_wanPaths',JSON.stringify(s));}catch(e){}}
@@ -18738,11 +18786,15 @@ function wanPathsWinOpen(){
  if(w){w.remove();return;}
  const S=wanPathsState();
  w=document.createElement('div');w.id='wanPathsWin';
+ const expanded=!!S.expanded;
  let h='<div id="wanPathsHead" style="display:flex;align-items:center;cursor:grab;font-weight:800;font-size:13px;padding-bottom:6px;border-bottom:1px solid #c9b085;margin-bottom:6px;">🗺 Pathways — the kinds of road a modulation takes'
   +'<span class="wbtn" id="wanPathsX" style="margin-left:auto;cursor:pointer;">✕</span></div>'
-  +'<div style="font-size:10px;color:#6b4f28;margin-bottom:6px;">Click a road to make it the ACTIVE pathway — the map draws your ⌘ routes in its line. A set default shows as a menu (Search… sits one above it); an empty one is a Search button.</div>'
+  +'<div style="font-size:10px;color:#6b4f28;margin-bottom:4px;">Click a road to make it the ACTIVE pathway — the map draws your ⌘ routes in its line. A set default shows as a menu (Search… sits one above it); an empty one is a Search button.</div>'
+  +'<div style="font-size:10px;color:#5a4426;font-style:italic;border:1px solid #c9b085;border-radius:6px;padding:4px 8px;margin-bottom:6px;"><b>PRO-TIP:</b> Try using one or both Search Windows to load your own Curated Songs and have us show you the Cadences and Chord Progressions.</div>'
   +'<div id="wanPathsList" style="overflow:auto;max-height:52vh;">';
- for(const t of WAN_PATH_TYPES){
+ /* 80th (his twenty-second message): the first FIVE roads show — expand… reveals the rest */
+ const roadList=expanded?WAN_PATH_TYPES:WAN_PATH_TYPES.slice(0,5);
+ for(const t of roadList){
   const ov=S.types[t.id]||{};
   const cad=(ov.cad!==undefined)?ov.cad:t.cad;
   const prog=(ov.prog!==undefined)?ov.prog:t.prog;
@@ -18760,7 +18812,9 @@ function wanPathsWinOpen(){
     :'<button class="wanPProgBtn" data-pt="'+t.id+'" style="font-size:10px;">CHORD PROGRESSION SEARCH</button>')
    +'</div></div>';
  }
- h+='</div>';
+ h+='</div>'
+  +'<div id="wanPathsMore" style="text-align:center;padding:6px 0 2px;cursor:pointer;font-size:11px;color:#6b4f28;text-decoration:underline;">'
+  +(expanded?'show less':'expand… ('+(WAN_PATH_TYPES.length-5)+' more roads)')+'</div>';
  w.innerHTML=h;
  document.body.appendChild(w);
  w.style.left=Math.max(8,(window.innerWidth-w.offsetWidth)/2-120)+'px';
@@ -18776,6 +18830,9 @@ function wanPathsWinOpen(){
   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
  };
  w.querySelector('#wanPathsX').onclick=()=>w.remove();
+ w.querySelector('#wanPathsMore').onclick=e=>{e.stopPropagation();
+  const S2=wanPathsState();S2.expanded=!expanded;wanPathsPersist(S2);
+  w.remove();wanPathsWinOpen();};
  w.querySelectorAll('.wanPathRow').forEach(row=>{
   row.onclick=e=>{
    if(e.target.tagName==='SELECT'||e.target.tagName==='BUTTON'||e.target.tagName==='OPTION')return;
@@ -18783,8 +18840,8 @@ function wanPathsWinOpen(){
    w.remove();wanPathsWinOpen();wanWeberDraw();
   };
  });
- const openCad=()=>{try{if(typeof uiWinShown==='function'&&!uiWinShown('cadPanel'))uiDispatch({type:'toggle',id:'cadPanel'});}catch(e){}};
- const openProg=()=>{try{if(typeof progWinToggle==='function')progWinToggle();}catch(e){}};
+ const openCad=()=>wanPopupOpen('cadPanel');
+ const openProg=()=>wanPopupOpen('progPanel');
  w.querySelectorAll('.wanPCadBtn').forEach(b2=>b2.onclick=e=>{e.stopPropagation();openCad();});
  w.querySelectorAll('.wanPProgBtn').forEach(b2=>b2.onclick=e=>{e.stopPropagation();openProg();});
  w.querySelectorAll('.wanPCad').forEach(s2=>s2.onchange=e=>{
@@ -18814,7 +18871,7 @@ function wanWeberDraw(){
   +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:3px;">The table of the relationships of keys — drag to travel the map · click hears a key · double-click makes it home · ⌘+click draws the modulation paths · ctrl+click for the map menu. The full story is in ℹ About.</div>'
   +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
   +'<div style="margin-bottom:5px;display:flex;gap:8px;align-items:center;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span>'
-  +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults.">🗺 Pathways</span></div>'
+  +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults. ON by default: a ⌘-selected destination shows every filled-out road’s pathway.">Pathways</span></div>'
   +'<div id="wanWebWrap">';
  for(let r=0;r<13;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
@@ -18839,9 +18896,16 @@ function wanWeberDraw(){
  const chipAt=(r,c)=>wrap.querySelector('.wanWebKey[data-r="'+r+'"][data-c="'+c+'"]');
  const homes=[...wrap.querySelectorAll('.wanWebKey')].filter(el=>+el.getAttribute('data-lof')===tonicLof&&(el.getAttribute('data-minor')==='1')===minor)
   .map(el=>({r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c'),el}));
+ /* 80th (his 25th message: "1 broken box in a random place"): the single-box pick
+    takes the ROOMIEST home instance — full rings whenever one exists — never a
+    clipped edge instance; and a home panned clean off the map recenters once. */
+ if(!homes.length&&st.webShift!==0){st.webShift=0;wanWeberDraw();return;}
+ const roomOf=h2=>Math.min(h2.r,12-h2.r,h2.c,9-h2.c);
  let centers=homes;
  if(!st.webAll&&homes.length){
-  centers=[homes.reduce((a,b)=>(Math.abs(a.r-6)+Math.abs(a.c-4.5)<=Math.abs(b.r-6)+Math.abs(b.c-4.5))?a:b)];
+  centers=[homes.reduce((a,b)=>roomOf(a)>=roomOf(b)?a:b)];
+ }else if(st.webAll&&homes.length){
+  centers=homes.slice().sort((a,b)=>roomOf(b)-roomOf(a));
  }
  const wr=wrap.getBoundingClientRect();
  if(st.webView==='terrain'){
@@ -18878,7 +18942,7 @@ function wanWeberDraw(){
    else if(roll===7)glyphAt({r,c},'🌲','tFar');
   }
  }else{
-  for(const hcell of centers){
+  centers.forEach((hcell,ci2)=>{
    for(let k=1;k<=Math.max(1,Math.min(4,st.webRadius));k++){
     const r0=Math.max(0,hcell.r-k),r1=Math.min(12,hcell.r+k);
     const c0=Math.max(0,hcell.c-k),c1=Math.min(9,hcell.c+k);
@@ -18887,11 +18951,12 @@ function wanWeberDraw(){
     const a=tl.getBoundingClientRect(),b2=br.getBoundingClientRect();
     const d=document.createElement('div');
     d.className='wanDegBox'+(k>1?' k'+k:'');
+    if(ci2>0)d.style.opacity='.5';   /* All Boxes: the roomiest instance leads full-strength, its echoes fade */
     d.style.left=(a.left-wr.left-4)+'px';d.style.top=(a.top-wr.top-3)+'px';
     d.style.width=(b2.right-a.left+8)+'px';d.style.height=(b2.bottom-a.top+6)+'px';
     wrap.appendChild(d);
    }
-  }
+  });
  }
  /* ---- the PATHS (⌘+click destinations — solid = the direct 2-5-1 / 4-5-1 route,
     dashed and dotted = round-about ways) ---- */
@@ -18903,7 +18968,18 @@ function wanWeberDraw(){
      only at home, at a ⇧-selected waypoint (in, then out the other side), and at the
      destination(s). Drawn in the ACTIVE pathway's own line. */
   const PS=wanPathsState();
-  const ptype=WAN_PATH_TYPES.find(t2=>t2.id===PS.active)||WAN_PATH_TYPES[0];
+  /* 80th (his twenty-seventh message): Pathways defaults ON — every FILLED road (a
+     cadence OR a progression, never both) draws its own route to each destination,
+     the ACTIVE road first and full-strength */
+  const filled=WAN_PATH_TYPES.filter(t2=>{
+   const ov=PS.types[t2.id]||{};
+   const cad=(ov.cad!==undefined)?ov.cad:t2.cad;
+   const prog=(ov.prog!==undefined)?ov.prog:t2.prog;
+   return !!cad||!!prog;
+  });
+  const act=WAN_PATH_TYPES.find(t2=>t2.id===PS.active);
+  const roads=(act&&filled.some(f2=>f2.id===act.id))?[act].concat(filled.filter(f2=>f2.id!==act.id))
+   :(act?[act].concat(filled):filled.length?filled:[WAN_PATH_TYPES[0]]);
   const cellPos=el=>({r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c')});
   const px=pt2=>{
    /* cell units → pixels: centers via the chip rects, corners via the gutters */
@@ -18934,10 +19010,13 @@ function wanWeberDraw(){
     const leg=wanRoutePath(stops[s2],stops[s2+1]);
     pts=pts.length?pts.concat(leg.slice(1)):leg;
    }
-   const d2='M '+pts.map(p2=>{const q=px(p2);return q.x.toFixed(1)+' '+q.y.toFixed(1);}).join(' L ');
-   ph+='<path d="'+d2+'" fill="none" stroke="'+ptype.style.col+'" stroke-width="'+ptype.style.w+'"'
-    +(ptype.style.dash?' stroke-dasharray="'+ptype.style.dash+'"':'')
-    +' stroke-linejoin="round" marker-end="url(#wanArr)" opacity=".92"/>';
+   roads.forEach((rd,ri2)=>{
+    const off=ri2*3;   /* each road rides its own slightly-offset line so all stay readable */
+    const d2='M '+pts.map(p2=>{const q=px(p2);return (q.x+off).toFixed(1)+' '+(q.y+off*.6).toFixed(1);}).join(' L ');
+    ph+='<path d="'+d2+'" fill="none" stroke="'+rd.style.col+'" stroke-width="'+rd.style.w+'"'
+     +(rd.style.dash?' stroke-dasharray="'+rd.style.dash+'"':'')
+     +' stroke-linejoin="round" marker-end="url(#wanArr)" opacity="'+(ri2===0?'.92':'.62')+'"/>';
+   });
   }
   svg.innerHTML=svg.innerHTML.replace('</defs>','</defs>'+ph);
  }
@@ -18994,7 +19073,7 @@ function wanWeberDraw(){
    wanState.mode=mn()?'aeolian':'ionian';
    wanState.cur={row:0,deg:0};
    st.webShift=0;
-   renderWan();wanAudition();
+   wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
   };
  });
  /* ---- the ctrl+click MAP MENU (macOS: ctrl+click IS contextmenu — the one dispatcher) ---- */
@@ -19104,7 +19183,7 @@ function renderWan(){
   el.onmousedown=ev=>{
    ev.preventDefault();
    wanState.cur={row:+el.dataset.r,deg:+el.dataset.d};
-   renderWan();wanAudition();
+   wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
   };
  });
  B.querySelectorAll('.wanNb').forEach(el=>{
