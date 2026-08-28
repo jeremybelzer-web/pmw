@@ -665,7 +665,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -859,7 +859,14 @@
         <span class="cpchip" id="przDnaClose">✕ Close</span>
       </div>
     </div>
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:12px 0 6px;" title="Rows of favorite extracted essences — contour lines, Note DNA, one-tone rhythms. Project data: rides undo, saves and autosave. Identical strands recognize each other by fingerprint (↔). Drag any card onto the grid to apply it to the selected notes there.">★ Essence Shelf</div>
+    <!-- 80th (his seventeenth message): the shelf wears the −/✕ idiom in its upper
+         right — − collapses, ✕ hides with a VISIBLE restore chip (the R8 lesson:
+         positive display values, never an inline ''). Session-local. -->
+    <div id="przShelfHead" style="display:flex;align-items:center;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:12px 0 6px;" title="Rows of favorite extracted essences — contour lines, Note DNA, one-tone rhythms. Project data: rides undo, saves and autosave. Identical strands recognize each other by fingerprint (↔). Drag any card onto the grid to apply it to the selected notes there.">★ Essence Shelf
+      <span class="wbtn" id="przShelfMin" style="margin-left:auto;cursor:pointer;" title="Collapse the shelf (the cards tuck away; + brings them back)">−</span>
+      <span class="wbtn" id="przShelfX" style="cursor:pointer;" title="Hide the Essence Shelf — the 🔷 chip brings it back">✕</span>
+    </div>
+    <span id="przShelfLink" style="display:none;cursor:pointer;font-size:10.5px;color:var(--accent);border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin:8px 0;" title="Bring the Essence Shelf back">🔷 Essence Shelf</span>
     <div id="przShelf" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
     <!-- 5.1 r2: the zoomed-out section re-order tool -->
     <div id="przSecRow" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px;"></div>
@@ -12950,6 +12957,21 @@ function rhyInfoDraw(){
  const go=document.getElementById('rhyGoBtn');
  if(go)go.onclick=()=>{const st=document.getElementById('rhyStatus');if(st)st.textContent='';buildRhyWindow();};   /* his words: "The SEARCH button should just say SEARCH" — it re-reads the grid selection */
 })();
+/* 80th (his seventeenth message): the main Essence Shelf's −/✕ — session-local, the
+   restore chip always computed-visible when hidden (the R8 wound class) */
+(function(){
+ const head=document.getElementById('przShelfHead'),sh=document.getElementById('przShelf'),
+  lk=document.getElementById('przShelfLink'),mn=document.getElementById('przShelfMin'),
+  x=document.getElementById('przShelfX');
+ if(!head||!sh||!lk||!mn||!x)return;
+ mn.onclick=e=>{e.stopPropagation();
+  const closed=sh.style.display==='none'&&lk.style.display==='none';
+  sh.style.display=closed?'flex':(sh.style.display==='none'?'flex':'none');
+  mn.textContent=sh.style.display==='none'?'+':'−';};
+ x.onclick=e=>{e.stopPropagation();
+  head.style.display='none';sh.style.display='none';lk.style.display='inline-block';};
+ lk.onclick=()=>{head.style.display='flex';sh.style.display='flex';lk.style.display='none';mn.textContent='−';};
+})();
 /* 24b — the preview lane's boot wiring: settings load, the two toggles, ▶ and ▤ */
 try{const _mw=JSON.parse(localStorage.getItem('cp_modwin')||'{}');
  if(typeof _mw.rate==='boolean')modWinSettings.rate=_mw.rate;
@@ -18612,7 +18634,10 @@ function wanWeberDraw(){
  const tonicLof=wanPcLof(wanState.tonic,minor);
  const anchor=minor?tonicLof-3:tonicLof;   /* a minor key seats beside its relative major */
  const grid=weberGrid(anchor);
- let h='<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;">The Weber table — 10 across · 13 down, your key at the center. Click a key to travel.</div>';
+ /* 80th (his seventeenth message): the invention line PROMINENT at the top; the intent
+    text rides the hover (the full version lives in the About menu). */
+ let h='<div style="font-size:15px;font-weight:800;letter-spacing:.6px;color:#5a4426;margin-bottom:2px;font-family:Georgia,serif;">Invented in 1817 by Jacob Gottfried Weber</div>'
+  +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">The table of the relationships of keys — 10 across · 13 down, your key at the center. Click a key to travel. Hover the table for how Weber meant it to be used; the full story is in ℹ About.</div>';
  for(const row of grid){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
   for(const cell of row){
@@ -18626,6 +18651,7 @@ function wanWeberDraw(){
   h+='</div>';
  }
  W.innerHTML=h;
+ W.title='Weber intended the matrix as a practical, visual roadmap for modulation and a chart of the psychological “distance” between keys. One step in any direction is a closely related key — vertically by fifths (dominant/subdominant), horizontally through parallel and relative modes. To reach a distant key, trace a path through the boxes (C → G → D → b) and build pivot bridges along it. Adjacent keys are first-degree relations; each box further is a degree more distant — a one-box move sounds smooth, a leap across many sounds dramatic. The full story is in ℹ About.';
  W.querySelectorAll('.wanWebKey').forEach(el=>{
   el.onclick=()=>{
    wanState.follow=false;
@@ -18703,27 +18729,9 @@ function renderWan(){
   +matrix
   +'<div style="display:flex;gap:8px;align-items:center;margin-top:4px;"><button id="wanUseBtn" style="padding:6px 14px;font-size:12.5px;">✓ Use this chord</button><span style="font-size:10.5px;color:var(--dim);">writes to the selected chord in the lane (or the one under the playhead) — one undo</span></div>'
   +'</div>'
-  /* WINDOW-SHELL · RAW [8][68][79]: Weber\'s table — Orbit-sized map in the Wanderer alone */
-  +'<div class="wanMapWrap" style="flex:1 1 100%;min-width:520px;margin-top:4px;">'
-  +'<div class="wanMapTitle">Weber\'s table of key centers</div>'
-  +(function(){
-   const homeT=wanState.tonic;
-   const homeMin=wanScale().pcs.indexOf(3)>=0&&wanScale().pcs.indexOf(4)<0;
-   let weber='<table>';
-   for(let k=2;k>=-2;k--){
-    const Tt=((homeT+7*k)%12+12)%12;
-    const rel=((Tt+9)%12+12)%12;
-    const cell=(tt,minor)=>{
-     const isC=homeT===tt&&homeMin===minor;
-     const dim=Math.abs(k)>1;
-     return '<td class="wanWb'+(isC?' wanWbCur':'')+(dim?' wanWbDim':'')+'" data-t="'+tt+'" data-m="'+(minor?1:0)+'" title="'+PCN[tt]+' '+(minor?'Minor':'Major')+' — click to wander (Weber&#8217;s table: fifths vertical, relative left, parallel right)">'+(minor?PCN[tt].toLowerCase():PCN[tt])+'</td>';
-    };
-    weber+='<tr>'+cell(rel,true)+cell(Tt,false)+cell(Tt,true)+'</tr>';
-   }
-   return weber+'</table>';
-  })()
-  +'<div style="font-size:10px;color:#5a4828;text-align:center;margin-top:8px;font-family:Georgia,serif;">fifths ↑↓ · relative ← · parallel → — the map that left Orbit (RAW [68])</div>'
-  +'</div></div>';
+  /* 80th (his seventeenth message): the OLD small key-center table RETIRED — the big
+     10x13 Weber table on top is the one map now (RAW [8][68][79] superseded) */
+  +'</div>';
  /* wiring */
  B.querySelectorAll('.wanCell').forEach(el=>{
   el.onmousedown=ev=>{
@@ -27573,6 +27581,23 @@ const ABOUT_HTML=`
  <span id="infoClose">✕</span><h2>ℹ <span>About</span> — CrossPollinate</h2>
  <p>Develop one musical seed idea the way classical composers did — systematic variation —
  using a small curated library of songs you love as the gene pool.</p>
+ <h3>Weber's table of the relationships of keys (1817)</h3>
+ <p>The map in Weber's Wanderer was invented in 1817 by <b>Jacob Gottfried Weber</b>. He intended
+ it as a practical, visual roadmap for modulation — changing from one key to another — and as a
+ way to mathematically chart the psychological "distance" between keys.</p>
+ <p><b>Step-by-step modulations.</b> The chart is geometric: moving one step in any direction is
+ a move to a closely related key. The vertical axis moves by perfect fifths (dominant and
+ subdominant); the horizontal axis connects a key to its parallel and relative modes. To reach a
+ distant key — say C major to B minor — trace a visual path through the connecting keys
+ (C → G → D → b) and build harmonic bridges or pivot-point transitions along it.</p>
+ <p><b>The tonal center over the key signature.</b> Before Weber, theorists judged closeness by
+ shared sharps and flats — which puts C major and C minor far apart. Weber placed them side by
+ side: sharing the same tonic creates a powerful psychological relationship even with zero
+ shared chords, which is why mixture and parallel modulations sound so fluid — the ear anchors
+ to the same root.</p>
+ <p><b>Degrees of distance.</b> Keys immediately adjacent are relationships of the first degree;
+ two boxes away, the second degree, and so on. A shift to an adjacent box sounds smooth and
+ natural; a leap across many boxes sounds abrupt, shocking, or highly dramatic.</p>
  <h3>Theme &amp; variations — why this app exists</h3>
  <p>What's the difference between an improv actor and a skit writer? An improv actor invents a
  dozen one-off characters — each concept gets its laugh, and they move on. A skit writer takes
