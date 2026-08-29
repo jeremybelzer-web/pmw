@@ -701,7 +701,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28t</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28u</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -19121,7 +19121,15 @@ function wanWeberDraw(){
   +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
   +'<div style="margin-bottom:5px;display:flex;gap:8px;align-items:center;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span>'
   +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults. ON by default: a ⌘-selected destination shows every filled-out road’s pathway.">Pathways</span>'
-  +'<span class="wanAllTog'+(st.webReduce?' on':'')+'" id="wanRedTog" title="Show every double-accidental key as its plain enharmonic on screen — B𝄫 shows as A, G𝄫 as F. The map’s positions never move; only the labels reduce.">'+(st.webReduce?'☑':'☐')+' Reduce Accidentals</span>'
+  /* 81st R5 (his forty-first message, answering the 81st's own flagged question):
+     "the Reduce Accidentals Button should only appear when the user toggles to select
+     the other view." ⛔ THE CONDITION IS NOT `view==='letters'` — IT IS `view!=='roman'`,
+     AND THE DIFFERENCE IS A REAL ONE: the TERRAIN view keeps the letters (it is a skin,
+     not a labelling — see the label line in the render loop), so Reduce Accidentals is
+     meaningful there too. Gating on 'letters' alone would have hidden a working control
+     on the Old World Map. ⭐ The toggle's STATE is left untouched while hidden, so a user
+     who had it on finds it still on when the letters come back. */
+  +(st.webView==='roman'?'':'<span class="wanAllTog'+(st.webReduce?' on':'')+'" id="wanRedTog" title="Show every double-accidental key as its plain enharmonic on screen — B𝄫 shows as A, G𝄫 as F. The map’s positions never move; only the labels reduce.">'+(st.webReduce?'☑':'☐')+' Reduce Accidentals</span>')
   /* 81st R3 (his thirty-fifth message): "Experiment, record your trips: Trips Window
      which creates strings of chords = draggable chord lanes." ⭐ THE WINDOW IS THE ONE
      THAT ALREADY EXISTS — his own word for it was PAIR ("just pair it - ship it - with
