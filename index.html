@@ -720,7 +720,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-29a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-29c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -973,7 +973,7 @@
   <div class="gridwrap" id="gridWrap" style="flex:1;min-width:0;"><!-- MG round: the MAIN wrap has an id now — .gridwrap first-match grabbed the melPanel/varPanel boxes (same class, earlier in the DOM since 27a/30d) and silently unbound the zoom strip -->
     <!-- Phase 1 (73rd, his ask in the same sitting): the Multi-Track Grid is minimize-able
          like the Modulation window — the same winCollapsed idiom, persisted in cp_ui. -->
-    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMixTog" title="Multi-tracks ⇄ Mixer — the same window, two faces: ≡ the tracks, 🎚 the mixer in the grid’s own dimensions. Press again to come back." style="display:inline-flex;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;"><span data-mv="grid" class="on" style="padding:2px 8px;font-size:11px;">≡</span><span data-mv="mix" style="padding:2px 8px;font-size:11px;">🎚</span></span><span class="wbtn" id="gridPalBtn" title="The Chord Palette — open or close it.">🎨</span><span class="wbtn" id="gridFixTog" title="Fixed In Place — the top Multi-Track Grid pins where it is and stops moving while the rest of the app scrolls. Glowing = on. The Settings menu can make it the default." style="width:auto;padding:0 8px;font-size:10px;letter-spacing:.5px;">Fixed In Place</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span><span class="wbtn" id="gridCloseChip" title="Delete the Multi-Track Grid window — a link at the top brings it back">✕</span></div>
+    <div class="winHead" id="gridWinHead"><span class="picon">▤</span><span class="wtitle">Multi-Track Grid</span><span class="wbtn" id="gridMixTog" title="Multi-tracks ⇄ Mixer — the same window, two faces: ≡ the tracks, 🎚 the mixer in the grid’s own dimensions. Press again to come back." style="display:inline-flex;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;"><span data-mv="grid" class="on" style="padding:2px 8px;font-size:11px;">≡</span><span data-mv="mix" style="padding:2px 8px;font-size:11px;">🎚</span></span><span class="wbtn" id="gridPalBtn" title="The CHORD Palette — open or close it. (82nd R8: it wore the paint glyph until his fifty-first message; the rest of the app already calls this window 🎹, so the grid header was the lone holdout.)">🎹</span><span class="wbtn" id="gridFixTog" title="Fixed In Place — the top Multi-Track Grid pins where it is and stops moving while the rest of the app scrolls. Glowing = on. The Settings menu can make it the default." style="width:auto;padding:0 8px;font-size:10px;letter-spacing:.5px;">Fixed In Place</span><span class="wbtn" id="gridMinChip" title="Minimize the Multi-Track Grid window to its title bar">−</span><span class="wbtn" id="gridCloseChip" title="Delete the Multi-Track Grid window — a link at the top brings it back">✕</span></div>
     <!-- 78th R4 (his words): "The song description in the multi-track grid should be
          across the top not the bottom" — the provenance line moved up here -->
     <div class="prov" id="prov" style="margin:0 0 8px 0;"></div>
@@ -10056,9 +10056,14 @@ function pcsMenuShow(x,y,items){
   document.addEventListener('mousedown',e=>{if(m.style.display!=='none'&&!m.contains(e.target))m.style.display='none';},true);
  }
  m.innerHTML='';
- for(const [lbl,fn] of items){
+ for(const [lbl,fn,html] of items){
   const it=document.createElement('div');
-  it.textContent=lbl;
+  /* ⭐ 82nd R7 (his FIFTIETH message): an item may carry MARKUP as an optional THIRD element, so a
+     palette row can show its five colours instead of describing them. ⛔ ADDITIVE ON PURPOSE —
+     every existing caller passes a two-element tuple, `html` is undefined for all of them, and
+     they keep the textContent path exactly as it was. A menu that renders swatches is the whole
+     point of "a small, simple version of it" living in a drop-down. */
+  if(html)it.innerHTML=html; else it.textContent=lbl;
   it.style.cssText='padding:5px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);white-space:nowrap;';
   it.onmouseenter=()=>{it.style.background='var(--panel2)';};
   it.onmouseleave=()=>{it.style.background='';};
@@ -10210,7 +10215,7 @@ function canvasRecParse(raw){
  /* the cp_canvas guard — pure: junk in, the defaults out. zoom values clamp to 0–200,
     the swipe choice to the four splits, colors to #rrggbb only, templates normalized
     {name,zoom,swipe,colors}. */
- const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null,palId:null};
+ const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null,palId:null,alpha:{}};
  let o=raw;
  if(typeof raw==='string'){try{o=JSON.parse(raw);}catch(e){return def;}}
  if(!o||typeof o!=='object'||Array.isArray(o))return def;
@@ -10233,7 +10238,15 @@ function canvasRecParse(raw){
      integer and NOT against CL_PALETTES.length: that const is declared far below this function
      and reading it here is a TDZ error at boot — the lesson-class `cnvWins` already guards for.
      An out-of-range id simply resolves to null in clPalette(). */
-  palId:(typeof o.palId==='number'&&isFinite(o.palId)&&o.palId>=0&&o.palId<4096)?(o.palId|0):null};
+  palId:(typeof o.palId==='number'&&isFinite(o.palId)&&o.palId>=0&&o.palId<4096)?(o.palId|0):null,
+  /* 82nd R8 (his FIFTY-SECOND message: "You should also be able to change opacity"). ⛔ ADMITTED
+     EXPLICITLY, for the second time this session and for the same reason: this parser is a
+     WHITELIST returning a FIXED shape, so an unlisted key is eaten silently on the next reload. */
+  alpha:(function(a){const out={};
+   if(a&&typeof a==='object'&&!Array.isArray(a))for(const k of Object.keys(a)){
+    const v=a[k];
+    if(typeof k==='string'&&k.length<=40&&typeof v==='number'&&isFinite(v)&&v>=0&&v<=100)out[k]=Math.round(v);}
+   return out;})(o.alpha)};
 }
 const CNV_SUITES=[
  ['standard','Standard',{all:100}],
@@ -10437,6 +10450,15 @@ function cnvHexRgb(h){
  const v=x.length===3?x.split('').map(c=>c+c).join(''):x;
  return [parseInt(v.substr(0,2),16)||0,parseInt(v.substr(2,2),16)||0,parseInt(v.substr(4,2),16)||0];
 }
+function cnvHexRgba(h,a){
+ /* 82nd R8 (his FIFTY-SECOND message): a slot colour at an opacity. `a` is 0–100. ⛔ 100 OR ABSENT
+    RETURNS THE PLAIN HEX UNCHANGED, and that is the invariant the whole feature rests on: a slot he
+    has never dragged must be byte-identical to what it always was. An opacity layer that quietly
+    rewrote every colour into rgba() would change rendering across the app at once. Pure. */
+ if(a==null||a>=100)return h;
+ const c=cnvHexRgb(h);
+ return 'rgba('+c[0]+','+c[1]+','+c[2]+','+(Math.max(0,Math.min(100,a))/100).toFixed(3)+')';
+}
 function cnvRgbHex(c){
  return '#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
 }
@@ -10493,6 +10515,31 @@ function cnvPaletteApply(i){
  try{cnvSaveSync();}catch(e){}
  return true;
 }
+function clMenuPicks(applied,n){
+ /* 82nd R7 (his FIFTIETH message: "a small , simple version of it… at the bottom of the drop down
+    menu"). SMALL means a handful, and SIMPLE means the handful must not all look alike — so the
+    picks are an EVEN SPREAD across the library rather than the first n, which would hand him eight
+    neighbours from the same corner of the set. The applied palette is pinned first when there is
+    one, because the menu should say what is currently on. Pure, deterministic, no randomness. */
+ const total=CL_PALETTES.length;
+ /* ⚠ `n||8` was wrong and the unit caught it: a caller asking for ZERO rows got EIGHT, because 0
+    is falsy. Only an ABSENT count means "use the default"; a count that is present is clamped. */
+ const want=(n==null)?8:(n|0);
+ const k=Math.max(1,Math.min(want,total));
+ const out=[];
+ if(applied!=null&&applied>=0&&applied<total)out.push(applied);
+ const step=Math.max(1,Math.floor(total/k));
+ for(let i=0;out.length<k&&i<total;i+=step)if(out.indexOf(i)<0)out.push(i);
+ for(let i=0;out.length<k&&i<total;i++)if(out.indexOf(i)<0)out.push(i);
+ return out;
+}
+function clSwatchHtml(i,tick){
+ /* one palette as a menu row: its five colours, then its painting. Pure-ish (reads CL_PALETTES). */
+ const p=clPalette(i);if(!p)return '';
+ return '<span style="display:inline-flex;vertical-align:middle;border-radius:3px;overflow:hidden;border:1px solid var(--line);margin-right:7px;">'
+  +p.colors.map(c=>'<span class="cnvPalSw" style="width:11px;height:11px;display:inline-block;background:'+c+';"></span>').join('')
+  +'</span><span style="vertical-align:middle;">'+(tick?'✓ ':'')+p.painting+'</span>';
+}
 function cnvPalMapNow(){
  /* 82nd R6 (his FORTY-NINTH message): the applied swatch palette as a slot map, or null. Guarded
     because CL_PALETTES is a const declared above but read at CALL time — the TDZ lesson-class this
@@ -10519,9 +10566,18 @@ function canvasApplyColors(){
     to the PALETTE when one is applied, instead of jumping all the way to the app's shipped colour
     — which is what a reader of that button would expect and what R5 got wrong. */
  const pal=cnvPalMapNow();
+ const A=canvasState.alpha||{};
  for(const [v] of CNV_COLORS){
-  const ov=canvasState.colors[v]||(pal?pal[v]:'');
-  if(ov)document.documentElement.style.setProperty(v,ov);
+  const base=canvasState.colors[v]||(pal?pal[v]:'');
+  /* 82nd R8: OPACITY IS A THIRD LAYER AND IT COMPOSES OVER THE OTHER TWO — it applies to whichever
+     colour won, by hand or from the swatch, and to the app's OWN colour when neither did. */
+  const a=A[v];
+  if(base)document.documentElement.style.setProperty(v,cnvHexRgba(base,a));
+  else if(a!=null&&a<100){
+   const d=cnvColDefault(v);
+   if(/^#[0-9a-f]{3,8}$/i.test(d))document.documentElement.style.setProperty(v,cnvHexRgba(d,a));
+   else document.documentElement.style.removeProperty(v);
+  }
   else document.documentElement.style.removeProperty(v);
  }
 }
@@ -10621,7 +10677,7 @@ function cnvColBuild(){
  if(hc)hc.onclick=()=>wipe(true,false);   /* his forty-ninth: the temporary colours only */
  brow.querySelector('#cnvPalClear').onclick=()=>wipe(true,true);
  const slots=document.createElement('div');
- slots.innerHTML='<div class="cp-title">Every colour, by hand</div>';
+ slots.innerHTML='<div class="cp-title">Every colour, by hand · and its opacity</div>';
  rows.appendChild(slots);
  const palNow=cnvPalMapNow();
  for(const [v,name] of CNV_COLORS){
@@ -10640,6 +10696,12 @@ function cnvColBuild(){
   row.innerHTML='<span style="flex:0 0 150px;font-size:11px;color:var(--dim);">'+name+'</span>'
    +'<input type="color" value="'+cur+'" data-cnvcol="'+v+'" style="flex:0 0 40px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;cursor:pointer;">'
    +'<span data-cnvval="'+v+'" style="font-size:10.5px;color:var(--dim);flex:1 1 auto;">'+cur+src+'</span>'
+   /* ⭐ 82nd R8 (his FIFTY-SECOND message: "You should also be able to change opacity"). A third
+      layer over the other two — it applies to whichever colour won, by hand or from the swatch,
+      and to the app's own colour when neither did. ⚠ 100 is the untouched state and returns the
+      plain hex, so a slot he has never dragged is byte-identical to what it always was. */
+   +'<input type="range" class="cnvAlpha" data-cnvalpha="'+v+'" min="0" max="100" step="1" value="'+((canvasState.alpha||{})[v]==null?100:canvasState.alpha[v])+'" title="Opacity" style="flex:0 0 66px;accent-color:var(--accent);">'
+   +'<span data-cnvalphaval="'+v+'" style="font-size:9.5px;color:var(--dim);flex:0 0 30px;text-align:right;">'+((canvasState.alpha||{})[v]==null?100:canvasState.alpha[v])+'%</span>'
    +'<span class="wbtn" data-cnvrst="'+v+'" title="'+(byHand&&palNow?'Drop the by-hand colour — this slot falls back to the swatch palette':'Back to the app’s own color')+'">↺</span>';
   const inp=row.querySelector('input');
   /* ⛔ 82nd R6: a LIVE sync, not a rebuild. The row rebuild deliberately waits for `change` so the
@@ -10648,10 +10710,45 @@ function cnvColBuild(){
      A control that is disabled because the screen is out of date is a trap, not a guard. */
   inp.oninput=()=>{canvasState.colors[v]=inp.value;canvasApplyColors();persistCanvas();cnvSaveSync();cnvHandSync();};
   inp.onchange=()=>cnvColBuild();
-  row.querySelector('[data-cnvrst]').onclick=()=>{delete canvasState.colors[v];canvasApplyColors();persistCanvas();cnvColBuild();cnvSaveSync();};
-  rows.appendChild(row);   /* the seven by-hand slots still sit under the browser, and a hand edit
-                              on top of a palette is kept: the palette seeds, it does not lock */
+  const al=row.querySelector('[data-cnvalpha]');
+  if(al)al.oninput=()=>{
+   const val=Math.max(0,Math.min(100,+al.value));
+   if(!canvasState.alpha)canvasState.alpha={};
+   if(val>=100)delete canvasState.alpha[v]; else canvasState.alpha[v]=val;   /* 100 stores nothing */
+   const lbl=row.querySelector('[data-cnvalphaval]');if(lbl)lbl.textContent=val+'%';
+   canvasApplyColors();persistCanvas();cnvSaveSync();};
+  row.querySelector('[data-cnvrst]').onclick=()=>{delete canvasState.colors[v];
+   if(canvasState.alpha)delete canvasState.alpha[v];   /* ↺ takes the opacity with the colour */
+   canvasApplyColors();persistCanvas();cnvColBuild();cnvSaveSync();};
+  rows.appendChild(row);
  }
+ /* ⭐⭐ 82nd R8 (his FIFTY-FIRST message): THE CHORD-FUNCTION COLOURS MOVED HERE FROM THE WANDERER,
+    they were not deleted. His fiftieth and fifty-first messages together say the paint icon means
+    ONE window, and his forty-fifth asked for these four — so they live where every other colour in
+    the app now lives. ⚠ They keep their own store (cp_wanFnCols) because they are not :root
+    variables; the Wanderer repaints itself when they change. */
+ if(typeof WAN_FN!=='undefined'){
+  const fnHead=document.createElement('div');
+  fnHead.innerHTML='<div class="cp-title" style="margin-top:10px;">Chord functions · the Wanderer’s map</div>';
+  rows.appendChild(fnHead);
+  for(const f of WAN_FN){
+   const row=document.createElement('div');
+   row.className='cnvFnRow';
+   row.style.cssText='display:flex;align-items:center;gap:8px;margin:3px 0;';
+   row.innerHTML='<span style="flex:0 0 150px;font-size:11px;color:var(--dim);">'+f.label+'</span>'
+    +'<input type="color" data-fn2col="'+f.id+'" value="'+wanFnCol(f.id)+'" style="flex:0 0 40px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;cursor:pointer;">'
+    +'<span style="font-size:10.5px;color:var(--dim);flex:1 1 auto;">'+wanFnCol(f.id)+(wanFnCols[f.id]?' · by hand':'')+'</span>'
+    +'<span class="wbtn" data-fn2rst="'+f.id+'" title="Back to the shipped colour">↺</span>';
+   const ci=row.querySelector('input');
+   ci.oninput=()=>{wanFnCols[f.id]=ci.value;persistWanFnCols();try{renderWan();}catch(e){}};
+   ci.onchange=()=>cnvColBuild();
+   row.querySelector('[data-fn2rst]').onclick=()=>{delete wanFnCols[f.id];persistWanFnCols();
+    try{renderWan();}catch(e){}cnvColBuild();};
+   rows.appendChild(row);
+  }
+ }
+ /* ⚠ the by-hand slots sit under the browser and the function colours under them; a hand edit on
+    top of a palette is KEPT — the palette seeds, it does not lock. */
 }
 function cnvTplPick(mode){
  /* the fixed-but-floating selector (his words): click selects · a second click
@@ -11233,6 +11330,22 @@ function gridControlsMenu(e){
     pcsMenuShow(e.clientX+16,e.clientY+8,SONGS.map(sg=>[sg.name,()=>{try{loadSong(sg.id);}catch(e2){}}]));
   }]
  ];
+ /* ⭐⭐ 82nd R7 — HIS FIFTIETH MESSAGE, and note he ended it with "right?": he was checking the
+    spec, not adding to it. ROADMAP 6.4 already says the palette is "reachable from the universal
+    context menu", so this is his own earlier decision arriving for collection. ⛔ AT THE BOTTOM,
+    in his words, and SMALL: eight palettes spread across the library so they do not all look
+    alike, the applied one pinned first with a ✓, one click to clear, and the full browser one
+    step away. The rest of the 62 live in the window; this is the quick hand. */
+ items.push(['────────',()=>{},'<span style="color:var(--dim);font-size:9.5px;letter-spacing:.6px;">COLOUR PALETTE</span>']);
+ for(const pi of clMenuPicks(canvasState.palId,8))
+  items.push(['palette '+pi,(id=>()=>{cnvPaletteApply(id);try{cnvColBuild();}catch(e2){}})(pi),
+              clSwatchHtml(pi,canvasState.palId===pi)]);
+ if(canvasState.palId!=null||Object.keys(canvasState.colors).length)
+  items.push(['✕ Clear the colours',()=>{
+   for(const [v] of CNV_COLORS)delete canvasState.colors[v];
+   canvasState.palId=null;canvasApplyColors();
+   try{persistCanvas();}catch(e2){}try{cnvSaveSync();}catch(e2){}try{cnvColBuild();}catch(e2){}}]);
+ items.push(['🎨 All 62 palettes…',()=>{try{cnvColWinToggle();}catch(e2){}}]);
  pcsMenuShow(e.clientX,e.clientY,items);
 }
 {const _gh=document.getElementById('gridWinHead');
@@ -11426,7 +11539,7 @@ function progWinToggle(){
 /* ==== [G1]/[G2] THE GRID HEADER REWORK + THE MIXER TOGGLE VIEW (79th R6 — his words
    verbatim in the RAW): the song title + description move INTO the title bar (right of
    the label — the zoomStrip precedent, the real element rides); the winHead's ≡/🎚
-   2-part toggle swaps the grid's own box to the MIXER view and back; 🎨 toggles the
+   2-part toggle swaps the grid's own box to the MIXER view and back; 🎹 toggles the
    Chord Palette. ⚠ His mixer-view top-right sentence is TRUNCATED in the original —
    what sits there is parked, not guessed (the winHead's own toggle stays reachable,
    so "press again to revert" holds regardless). ==== */
@@ -20304,19 +20417,22 @@ function renderWan(){
      color all of the classifications of Dominant, Subdominant, Relative, and Parallel the same
      colors". ⚠ NAMING: this is NOT the [CP1] Color Palette window and NOT the .palWin CHORD
      Palette — "palette" is already twice-taken on this board, so nothing here is named `pal*`. */
-  +'<span class="wanSrchBtn" id="wanFnPal" title="Colour the four harmonic functions. The chord buttons above wear these colours so two or three scales can be read against each other while improvising.">&#127912; colours</span></div>'
+  /* ⛔⭐ 82nd R8 (his FIFTY-FIRST message: "Each 'paint brush and paints' icon should open the
+     Color Palette Window"). This icon used to open its own little colour box RIGHT HERE, which is
+     almost certainly the paint icon he pressed when he reported the palette was "no longer groups
+     of 5 swaths from famous paintings". ➡ It opens the ONE Color Palette Window now, and the four
+     function colours MOVED THERE rather than being deleted — he asked for them at his forty-fifth
+     and they are still his. ⚠ The SCHEME chips stay here, because a scheme is not a colour. */
+  +'<span class="wanSrchBtn" id="wanFnPal" title="Open the Color Palette Window — the 62 painting swatches, every app colour, and these four chord-function colours, all in one place.">&#127912; Color Palette</span></div>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+nbChips+'</div>'
-  +(wanState.fnPalOpen?('<div style="display:flex;flex-direction:column;gap:5px;border:1px solid #a8895f;border-radius:8px;padding:6px 8px;background:rgba(242,231,203,.6);">'
+  +('<div style="display:flex;flex-direction:column;gap:5px;border:1px solid #a8895f;border-radius:8px;padding:6px 8px;background:rgba(242,231,203,.6);">'
     /* his TWO schemes, both of them his own words, offered as a choice rather than one guessed at */
     +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'
     +'<span class="wanAllTog'+(wanState.fnScheme==='degree'?' on':'')+'" data-fnscheme="degree" title="His first scheme: all versions of 2s and 4s are Subdominant, all the 6s (VI, ♭VI, vi) are Relative, I and i are Parallel, the rest are Dominant — by DEGREE, whatever the chord quality.">By degree</span>'
     +'<span class="wanAllTog'+(wanState.fnScheme==='majdom'?' on':'')+'" data-fnscheme="majdom" title="His second scheme: every MAJOR chord except the 1 and the 4 is a Dominant — so a major II or a major VI reads as the secondary dominant it is behaving as. Everything else keeps its degree colour.">Majors are dominants</span>'
     +'<span class="wanAllTog'+(wanState.fnOn?' on':'')+'" id="wanFnOnTog" title="Paint the chord buttons with these colours.">'+(wanState.fnOn?'☑':'☐')+' paint the chords</span></div>'
-    +WAN_FN.map(f=>'<div style="display:flex;gap:6px;align-items:center;">'
-      +'<input type="color" data-fncol="'+f.id+'" value="'+wanFnCol(f.id)+'" style="flex:0 0 34px;height:20px;padding:0;border:1px solid #a8895f;border-radius:4px;background:none;cursor:pointer;">'
-      +'<span style="flex:0 0 76px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#5a4426;">'+f.label+'</span>'
-      +'<span class="wbtn" data-fnrst="'+f.id+'" title="Back to the shipped colour" style="cursor:pointer;color:#6b4f28;">↺</span></div>').join('')
-    +'</div>'):'')
+    +'<div style="font-size:9.5px;color:#6b4f28;">The four function colours live in the Color Palette Window now — press 🎨 above.</div>'
+    +'</div>')
   +'<div style="display:flex;flex-direction:column;gap:2px;">'
   +fnGroups.map(g=>'<div style="display:flex;gap:6px;align-items:baseline;font-size:11px;line-height:1.45;">'
     +'<span style="flex:0 0 76px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:'+wanFnCol(g.f.id)+';font-weight:700;">'+g.f.label+'</span>'
@@ -20403,8 +20519,9 @@ function renderWan(){
  /* 82nd R4 (his FORTY-FIFTH message): the function-colour controls. ⚠ The colour inputs write
     straight through to localStorage under a cp_ key, matching the record's own convention for the
     other twenty-four — a colour the user picked and lost on reload is worse than no colour. */
+ /* 82nd R8 (his fifty-first): EVERY paint icon opens the ONE Color Palette Window. */
  const wfp=document.getElementById('wanFnPal');
- if(wfp)wfp.onclick=e=>{e.stopPropagation();wanState.fnPalOpen=!wanState.fnPalOpen;renderWan();};
+ if(wfp)wfp.onclick=e=>{e.stopPropagation();try{cnvColWinToggle();}catch(e2){}};
  const wfo=document.getElementById('wanFnOnTog');
  if(wfo)wfo.onclick=e=>{e.stopPropagation();wanState.fnOn=!wanState.fnOn;renderWan();};
  B.querySelectorAll('[data-fnscheme]').forEach(el=>{el.onclick=e=>{e.stopPropagation();
@@ -21222,7 +21339,7 @@ function orbGhostAnalysis(){
   }else res.note='That travel essence left the Shelf — pick another ghost source.';
  }
  /* ORBIT FEEDBACK R1: the grey doorways are ALWAYS on the ring — ii–V into each diatonic
-    chord's key by default, the 🎨 Chromatic toggle adds the five missing notes. The old
+    chord's key by default, the Chromatic toggle adds the five missing notes. The old
     🔭 Expanded ring (quality-flips) retired in their favour — the client's call, Aug 20. */
  for(const d of orbDoorways(cur.tonic,pcs,!!orbState.chromOn,orbState.bridgeKinds||{}))res.pivots.push(d);
  for(const u of (orbState.userPivots||[]))res.pivots.push(u);
@@ -22588,7 +22705,7 @@ function renderOrb(){
  }
  /* pivot moons — dashed, on the same ring (the alternatives&#8217; doorways). ORBIT
     FEEDBACK R1: the GREY DOORWAYS sit BETWEEN the moons — a diatonic ii–V just before
-    the moon it leads into; the 🎨 chromatic ones on an outer ring at their pitch;
+    the moon it leads into; the chromatic ones on an outer ring at their pitch;
     every doorway is hover-to-see-the-road (data-far names the world it opens). */
  const step=Math.PI*2/Math.max(1,n);
  ana.pivots.forEach(pv=>{
@@ -22807,7 +22924,7 @@ function renderOrb(){
    +'<select id="orbMoonLay" style="font-size:10.5px;padding:2px 4px;" title="The moon layout (client, Aug 21): ⭕ one ring — every moon, the greyed-out doorways included, evenly on one perfect circle · ◎ two rings in sync — the chords on the tight ring, each greyed-out moon outside on the ray of its chord (planet → ii → II on one straight line), turning together · 🌀 free orbits — every moon on its own ellipse about the planet, its own tilt and pace.">'+ORB_MOON_LAYS.map(o=>'<option value="'+o[0]+'"'+((orbState.moonLay||'ring')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'
    +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Keep all planets related to the current moons in the current Zoom View (default OFF) — on, the camera frames every far planet the moons lead to, wherever their orbits take them, so you need not zoom out and in."><input type="checkbox" id="orbKeepAll"'+(orbState.keepAll?' checked':'')+' style="accent-color:var(--accent);">🖼 Keep all planets in view</label>':'')
   +'<span class="cpchip" id="orbFull" title="Full Screen Animation Mode — the map fills the screen for stage projection. Esc returns (the browser&#8217;s own exit IS the spec). MIDI pads and arrow keys keep working.">⛶ Full screen</span>'
-  +'<span class="cpchip'+(orbState.chromOn?' on':'')+'" id="orbChrom" title="Chromatic doorways (default OFF) — the grey moons between the moons are ii–V doorways into each diatonic chord&#8217;s key; switch this on and five more appear on the outer ring, one on every note the key leaves out (&#9837;2 · &#9837;3 · &#9837;5/&#9839;4 · &#9837;6 · &#9837;7), each a ii–V into the key rooted there. Hover any doorway to see its road; right-click to change its pivot chords.">🎨 Chromatic</span>'
+  +'<span class="cpchip'+(orbState.chromOn?' on':'')+'" id="orbChrom" title="Chromatic doorways (default OFF) — the grey moons between the moons are ii–V doorways into each diatonic chord&#8217;s key; switch this on and five more appear on the outer ring, one on every note the key leaves out (&#9837;2 · &#9837;3 · &#9837;5/&#9839;4 · &#9837;6 · &#9837;7), each a ii–V into the key rooted there. Hover any doorway to see its road; right-click to change its pivot chords.">Chromatic</span>'
   +'<span class="cpchip'+(orbState.fit?' on':'')+'" id="orbFit" title="Transform multi-tracks to fit chords (default ON) — when a click lands a chord, the melody notes under it snap to the nearest chord tone; the chord tones are the transform menu&#8217;s extension set (the Conform checkboxes in the palette toolbar: 1 · 9 · 3 · 11 · 5 · 13 · 7, ticked or not). Off = the chord changes and the notes stay as written.">🎯 Fit to chords</span>'
   +'<input id="orbGoKey" placeholder="go to key… (Eb · F#m · a)" style="width:138px;font-size:11px;padding:3px 6px;" title="Type the key you want to modulate to and press Enter — C · F# · Bb · Ebm · a (lowercase = minor) · G minor. Song stopped: it lands at the playhead; playing: it joins 🧳 Upcoming Trips.">'
   +'<span class="cpchip" id="orbUser" title="Type your own pivot chord — even one far outside the key. It joins the ring greyed out, with a grey dotted road to the planet it opens.">＋ User created</span>'
@@ -23093,7 +23210,7 @@ function renderOrb(){
   setOrbStatus(orbState.ecoSrc==='own'?'The twin undocked — one planet again.':'The twin planets docked (GEMS ⑦) — two keys, one sky; pick chords from either half. Rotation rests while they are up.');
  };
  document.getElementById('orbChrom').onclick=()=>{orbState.chromOn=!orbState.chromOn;renderOrb();
-  setOrbStatus(orbState.chromOn?'🎨 Chromatic — five more doorways on the outer ring, one on every note the key leaves out (♭2 · ♭3 · ♭5 · ♭6 · ♭7), each a ii–V into the key rooted there.':'🎨 Chromatic off — the diatonic doorways only.');};
+  setOrbStatus(orbState.chromOn?'Chromatic — five more doorways on the outer ring, one on every note the key leaves out (♭2 · ♭3 · ♭5 · ♭6 · ♭7), each a ii–V into the key rooted there.':'🎨 Chromatic off — the diatonic doorways only.');};
  document.getElementById('orbUser').onclick=orbUserPrompt;
  document.getElementById('orbPilot').onclick=()=>{orbState.pilot=!orbState.pilot;renderOrb();};
  const fitB=document.getElementById('orbFit');if(fitB)fitB.onclick=()=>{orbState.fit=!orbState.fit;renderOrb();setOrbStatus(orbState.fit?'🎯 Fit to chords ON — a landed chord snaps the melody under it to its chord tones.':'🎯 Fit to chords OFF — chords change, the melody stays as written.');};
@@ -27362,6 +27479,16 @@ function initUiShell(){
   imp.title='Import & cross-pollination sources';
   imp.onclick=e=>{uiDispatch({type:'toggle',id:'importPanel'});e.target.blur();};
   rail.appendChild(imp);
+  /* ⭐ 82nd R7 (his FIFTIETH message: "I think it should be an icon rather than an engine
+     button"). ⛔ APPENDED, NOT ADDED TO RAIL_DEFS — the same call [T3] made for Import and the
+     Sample engine, and for the same reason: that constant's 14-pin stands. ⚠ The Canvas window's
+     own 🎨 button is KEPT rather than removed: it is his own decision from the 79th, "rather than"
+     is a loose phrase to delete a control on, and a removal is the irreversible half of this. One
+     line takes it out whenever he says so. */
+  {const pal=document.createElement('button');pal.id='rail_pal';pal.textContent='🎨';
+   pal.title='Color Palette — 62 painting palettes of five colours, plus every app colour by hand';
+   pal.onclick=e=>{try{cnvColWinToggle();}catch(e2){}e.target.blur();};
+   rail.appendChild(pal);}
   const hub=document.createElement('button');hub.id='rail_hub';hub.textContent='≈';
   hub.title='Samples — the sampler in the making (his note: it looks nothing like a keyboard sampler yet — recorded)';
   hub.onclick=e=>{uiDispatch({type:'toggle',id:'hubPanel'});e.target.blur();};
@@ -29440,7 +29567,7 @@ function initHelpSearch(){
 <p><b>A chord progression</b> is the structure of the <i>entire</i> musical phrase — everything the cadence punctuates. The 𝄋 Progressions window replaces a whole phrase’s changes, scaled to fill it.</p>
 <h3>The windows, one line of theory each</h3>
 <p><b>▤ Multi-Track Grid</b> — the piece itself: melody, bass, drums and the chord lane on one timeline. Everything else reads from or writes into a grid.</p>
-<p><b>🎨 Chord Palette</b> — the diatonic chords of the key, stacked with the rows a chord can be APPROACHED from (its V, its ii). A vertical slice — a pivot-chord column — is a ready-made way into a chord, played bottom to top.</p>
+<p><b>🎹 Chord Palette</b> — the diatonic chords of the key, stacked with the rows a chord can be APPROACHED from (its V, its ii). A vertical slice — a pivot-chord column — is a ready-made way into a chord, played bottom to top.</p>
 <p><b>🔎 Pivot Chord Search</b> — families of chord changes (default songs, chromatic mediants — chords a third away sharing a note but not a key — the Coltrane mediant cycles, Romantic-era moments). The “__” slot at the end of each is the chord YOU are heading home to.</p>
 <p><b>𝄂 Cadences</b> — perfect, plagal, deceptive, half: the handful of ways Western music ends a sentence, plus modulating cadences that end it in a NEW key.</p>
 <p><b>𝄋 Progressions</b> — the same families as whole-phrase structure: pick a phrase, pick its new skeleton.</p>
