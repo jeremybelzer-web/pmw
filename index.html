@@ -187,6 +187,10 @@
   #wanPanel #wanBody .cpchip.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   #wanPanel #wanStatus{color:#6b4f28;}
   #wanPanel select,#wanPanel input{background:#f6ecd4;color:#3a2c18;border:1px solid #a8895f;}
+  /* 82nd R2 (his FORTY-THIRD message): the SEARCH button beside each scale box, in the
+     Wanderer's own ink rather than the app's chrome. */
+  .wanSrchBtn{flex:0 0 auto;background:#f2e7cb;color:#3a2c18;border:1px solid #a8895f;border-radius:6px;padding:5px 9px;font-size:10.5px;letter-spacing:.6px;cursor:pointer;font-family:'Iowan Old Style','Palatino','Georgia',serif;}
+  .wanSrchBtn:hover{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   /* 80th (his eighteenth message): the degree boxes, the paths, the map menu — all in
      the old-map ink */
   #wanWebWrap{position:relative;user-select:none;}
@@ -199,6 +203,11 @@
   /* 80th R22 (his thirtieth message): the route hover lights + selects the chords the
      line touches; the legend rides the map's right */
   .wanRouteLit{outline:2px solid #b58a3a;outline-offset:1px;background:rgba(181,138,58,.28);border-radius:6px;}
+  /* 82nd R1 (his 39th + 40th messages): a LANDED chord glows in the line's own colour;
+     a PASSED-OVER chord has its OUTSIDE lit instead of the line running in to the
+     numeral. Both take the road's colour through --wanGlow, set per chip. */
+  .wanRouteGlow{border-radius:6px;box-shadow:0 0 0 2px var(--wanGlow,#b58a3a),0 0 13px 3px var(--wanGlow,#b58a3a);}
+  .wanRoutePassed{border-radius:6px;outline:1.5px solid var(--wanGlow,#b58a3a);outline-offset:1px;}
   #wanLegend{flex:0 0 200px;font-family:Georgia,serif;color:#4a3a20;font-size:11px;min-width:0;}
   .wanLegRow{margin-bottom:9px;padding:6px 8px;border:1px solid rgba(107,79,40,.35);border-radius:8px;background:rgba(232,220,196,.45);}
   .wanLegTitle{font-weight:800;font-size:12.5px;cursor:pointer;letter-spacing:.4px;display:inline-block;}
@@ -701,7 +710,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28u</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28w</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -18604,6 +18613,22 @@ function wanRelOffset(pcs,step,dir,chrom){
  const idx=dir==='above'?((step%n)+n)%n:(((n-step)%n)+n)%n;
  return (((pcs[idx]||0)%12)+12)%12;
 }
+function wanRelFromRoot(pcs,tonic,pc,preferDir){
+ /* 82nd R2 (his FORTY-THIRD message: "It should have the same input as the top scale").
+    THE INVERSE OF wanRelOffset — the user picks a root for scale 2 by hand and this gives
+    the Relative row its own terms for it, so the two controls are one value and can never
+    disagree. SCALE-TRUE FIRST: picking A under C major must read as a step of scale 1's own
+    degrees, not as "9 semitones". Chromatic is the fallback and only when no degree lands
+    there — which is exactly the job Chromatic was added for. The currently-selected
+    direction is tried first so a hand-picked root does not flip Below to Above for nothing.
+    Pure. */
+ const want=(((pc-tonic)%12)+12)%12;
+ const n=(pcs||[]).length;
+ const dirs=(preferDir==='above')?['above','below']:['below','above'];
+ if(n)for(const dir of dirs)for(let step=0;step<n;step++)
+  if(wanRelOffset(pcs,step,dir,false)===want)return {step,dir,chrom:false};
+ return {step:want,dir:'above',chrom:true};
+}
 function wanRelStepName(pcs,step,dir,chrom){
  /* the two words the Relative row shows. ⛔ HIS LAW, AND IT IS THE READOUT'S WHOLE JOB:
     when scale 2 sits on the SAME root the step reads "Unison" and the direction slot is
@@ -18883,6 +18908,38 @@ function wanRoutePath(a,b){
     inside the chord". The stops (home · the road's waypoints · the destination)
     remain the chords the route MEANS. Pure. */
  return [{x:a.c+0.5,y:a.r+0.5},{x:b.c+0.5,y:b.r+0.5}];
+}
+function wanSegSpans(p0,p1,rects){
+ /* 82nd R1 (his THIRTY-NINTH + FORTIETH messages): the RENDER law needs to know which
+    parts of a leg lie INSIDE a chord button and which run over open ground. Splits the
+    straight leg p0→p1 into ordered intervals {t0,t1,i} — i indexes `rects`, or -1 for
+    open ground. Liang–Barsky per rect for the entry/exit parameters, then one sweep
+    over the collected boundaries. Pure. */
+ const dx=p1.x-p0.x,dy=p1.y-p0.y,ivs=[],cuts=[0,1];
+ for(let i=0;i<rects.length;i++){
+  const r=rects[i];let t0=0,t1=1,ok=true;
+  const clip=(p,q)=>{
+   if(!ok)return;
+   if(p===0){if(q<0)ok=false;return;}
+   const t=q/p;
+   if(p<0){if(t>t1)ok=false;else if(t>t0)t0=t;}
+   else{if(t<t0)ok=false;else if(t<t1)t1=t;}
+  };
+  clip(-dx,p0.x-r.x);clip(dx,r.x+r.w-p0.x);clip(-dy,p0.y-r.y);clip(dy,r.y+r.h-p0.y);
+  if(ok&&t1-t0>1e-9){ivs.push({t0,t1,i});cuts.push(t0,t1);}
+ }
+ cuts.sort((a,b)=>a-b);
+ const out=[];
+ for(let k=0;k<cuts.length-1;k++){
+  const a=cuts[k],b=cuts[k+1];
+  if(b-a<=1e-9)continue;
+  const mid=(a+b)/2;
+  let idx=-1;
+  for(const v of ivs)if(v.t0<=mid&&mid<=v.t1)idx=v.i;
+  if(out.length&&out[out.length-1].i===idx)out[out.length-1].t1=b;
+  else out.push({t0:a,t1:b,i:idx});
+ }
+ return out;
 }
 function wanRoadWaypoints(road,homePc,homeMinor,destPc,destMinor){
  /* the MUSICAL routing rules (his twenty-ninth message): none of the paths should do
@@ -19257,8 +19314,10 @@ function wanWeberDraw(){
   const m2=s3.split(':');return chipAt(+m2[0],+m2[1]);}).filter(Boolean);
  const litOff=()=>{wrap.querySelectorAll('.wanRouteLit').forEach(el3=>el3.classList.remove('wanRouteLit'));
   if(svg)svg.querySelectorAll('path[data-road]:not(.wanHitPath)').forEach(v3=>{v3.style.strokeWidth='';v3.style.opacity='';});};
- const litOn=road=>{if(!svg)return;const v3=svg.querySelector('path[data-road="'+road+'"]:not(.wanHitPath)');
-  if(v3){v3.style.strokeWidth=(parseFloat(v3.getAttribute('stroke-width'))+1.6)+'px';v3.style.opacity='1';}};
+ /* 82nd R1: a road now draws as TWO visible twins (full strength + the faint over-chord
+    parts), so the hover light reaches all of them, not just the first. */
+ const litOn=road=>{if(!svg)return;svg.querySelectorAll('path[data-road="'+road+'"]:not(.wanHitPath)').forEach(v3=>{
+  v3.style.strokeWidth=(parseFloat(v3.getAttribute('stroke-width'))+1.6)+'px';v3.style.opacity='1';});};
  const playStops=chips2=>{chips2.forEach((el3,i3)=>{setTimeout(()=>{
   try{wanKeyAudition(wanLofPc(+el3.getAttribute('data-lof')),el3.getAttribute('data-minor')==='1');}catch(e3){}},i3*480);});};
  if(svg&&st.webPaths.length&&centers.length){
@@ -19296,6 +19355,10 @@ function wanWeberDraw(){
   const home=centers[0];
   const homePc=wanLofPc(tonicLof);
   const allChips=[...wrap.querySelectorAll('.wanWebKey')];
+  /* 82nd R1 (his 39th + 40th messages): the chip geometry the RENDER law clips against,
+     measured once — the same OFFSET frame px() works in. */
+  const chipRects=allChips.map(el=>({x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight,el}));
+  const glowMap=new Map(),passSet=new Set();
   for(const t of st.webPaths){
    const tEl=allChips.filter(el=>+el.getAttribute('data-lof')===t.lof&&(el.getAttribute('data-minor')==='1')===!!t.minor);
    if(!tEl.length)continue;
@@ -19330,14 +19393,41 @@ function wanWeberDraw(){
     }
     /* no arrowheads (his ruling: the user can see all the paths ending on the same
        chord) and no pixel offset — the routes themselves differ now */
-    const d2='M '+pts.map(p2=>{const q=px(p2);return q.x.toFixed(1)+' '+q.y.toFixed(1);}).join(' L ');
+    const pxPts=pts.map(px);
+    /* ⛔ 82nd R1: d2 is the ROUTING line and it is UNCHANGED — straight, centre to
+       centre, visiting every stop. His fortieth message moved the RENDERING, not the
+       routing, so the hit twin still carries it and every routing assertion reads it. */
+    const d2='M '+pxPts.map(q=>q.x.toFixed(1)+' '+q.y.toFixed(1)).join(' L ');
     const stopsAttr=stops.map(s3=>s3.r+':'+s3.c).join('|');
     /* 80th R23: a legend-toggled-off road keeps its legend row (dull) but its path
        LEAVES the map */
     if(st.webRoadsOff.indexOf(rd.id)<0){
-     ph+='<path d="'+d2+'" data-road="'+rd.id+'" data-stops="'+stopsAttr+'" fill="none" stroke="'+rd.style.col+'" stroke-width="'+rd.style.w+'"'
-      +(rd.style.dash?' stroke-dasharray="'+rd.style.dash+'"':'')
-      +' stroke-linejoin="round" opacity="'+(ri2===0?'.92':'.62')+'"/>';
+     /* 82nd R1 (his THIRTY-NINTH + FORTIETH messages): split every leg where it enters
+        and leaves a chord button. Inside a chip the road LANDS on → nothing is drawn:
+        the line stops at the button's edge and never reaches the roman numeral, and the
+        button's OUTSIDE is what marks the meeting. Inside a chip it merely passes OVER →
+        the faint twin (~60% transparent). Open ground between chords → full strength. */
+     const stopEls=stops.map(s3=>chipAt(s3.r,s3.c));
+     let dFull='',dFaint='';
+     for(let s2=0;s2<pxPts.length-1;s2++){
+      const p0=pxPts[s2],p1=pxPts[s2+1];
+      for(const sp of wanSegSpans(p0,p1,chipRects)){
+       const seg='M '+(p0.x+(p1.x-p0.x)*sp.t0).toFixed(1)+' '+(p0.y+(p1.y-p0.y)*sp.t0).toFixed(1)
+        +' L '+(p0.x+(p1.x-p0.x)*sp.t1).toFixed(1)+' '+(p0.y+(p1.y-p0.y)*sp.t1).toFixed(1)+' ';
+       if(sp.i<0){dFull+=seg;continue;}
+       const el4=chipRects[sp.i].el;
+       if(stopEls.indexOf(el4)>=0){if(!glowMap.has(el4))glowMap.set(el4,rd.style.col);continue;}
+       passSet.add(el4);dFaint+=seg;
+      }
+     }
+     const common=' data-road="'+rd.id+'" data-stops="'+stopsAttr+'" fill="none" stroke="'+rd.style.col+'" stroke-width="'+rd.style.w+'"'
+      +(rd.style.dash?' stroke-dasharray="'+rd.style.dash+'"':'')+' stroke-linejoin="round"';
+     /* ⚠ the ||d2 fallback is unreachable on the shipped lattice — there is always a
+        gutter between two chips, so a leg always has SOME open ground — and it is here
+        only so a road can never lose its visible element. */
+     ph+='<path d="'+(dFull.trim()||d2)+'"'+common+' opacity="'+(ri2===0?'.92':'.62')+'"/>';
+     if(dFaint.trim())
+      ph+='<path d="'+dFaint.trim()+'"'+common+' class="wanFaintPath" opacity="'+(ri2===0?'.37':'.25')+'"/>';
      /* an invisible WIDE twin carries the hover/click (the visible line is thin) */
      phHit+='<path d="'+d2+'" data-road="'+rd.id+'" data-stops="'+stopsAttr+'" fill="none" stroke="rgba(0,0,0,0)" stroke-width="11" style="pointer-events:stroke;cursor:pointer;" class="wanHitPath"/>';
     }
@@ -19349,6 +19439,15 @@ function wanWeberDraw(){
     }).filter(Boolean)};
    });
   }
+  /* 82nd R1 (his 39th + 40th): the chords the roads MEET. A LANDED chord GLOWS in the
+     line's own colour — ⚠ labelled inference, not his words: several roads land on the
+     same destination, so the ACTIVE road (drawn first) wins the colour. A PASSED-OVER
+     chord gets its OUTSIDE lit, which is what his fortieth message asked for in place of
+     the line running in to the roman numeral. */
+  wrap.querySelectorAll('.wanRouteGlow,.wanRoutePassed').forEach(el3=>{
+   el3.classList.remove('wanRouteGlow','wanRoutePassed');el3.style.removeProperty('--wanGlow');});
+  passSet.forEach(el3=>{if(!glowMap.has(el3))el3.classList.add('wanRoutePassed');});
+  glowMap.forEach((col,el3)=>{el3.classList.add('wanRouteGlow');el3.style.setProperty('--wanGlow',col);});
   ph+=phHit;
   svg.innerHTML=ph;
   svg.querySelectorAll('.wanHitPath').forEach(hp=>{
@@ -19647,6 +19746,11 @@ function renderWan(){
  };
  const modeOpts=wanModeOpts(wanState.mode,wanState.search,'');
  const mode2Opts=wanModeOpts(wanState.mode2,wanState.search2,'— the '+wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom).step.toLowerCase()+' rotation —');
+ /* 82nd R2: the MIDDLE describer carries the same mode families as scale 2's own picker —
+    it is the same value seen as a RELATIONSHIP. Its blank option reports what the Relative
+    row's placement came out as, which is where "the 4th rotation" was always coming from. */
+ const relSelOpts=wanModeOpts(wanState.mode2,'','— '+wanRelationship(wanScale2().pcs)+' —');
+ const SEARCH_BTN='<button class="wanSrchBtn" data-wansearch="1" title="Open the Scale/Raga Browser as a floating pop-up — the 72 melakartas, the 107 janyas and every Western mode, searchable.">&#8981; SEARCH</button>';
  /* 81st R2: ⭐ UNISON JOINS THE LIST (his "built from the same root note" case needs a
     way to be ASKED for, not only detected), and his CHROMATIC button swaps the whole
     list for literal intervals — "so the user can choose the scale relationship down a
@@ -19685,10 +19789,38 @@ function renderWan(){
  B.innerHTML='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
   +'<div style="flex:0 0 250px;display:flex;flex-direction:column;gap:8px;">'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="Two scales and the relationship between them. Scale 1 is the main scale; scale 2 is placed by the Relative row below and is yours to define.">2 Related Scales</label>'
-  +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;">'
+  /* 82nd R2 (his FORTY-THIRD message): "The Search scales and Ragas windows should have
+     a SEARCH button to the left of them which causes a floating pop-up window to appear
+     for the scales / ragas window." ⭐ THE MACHINERY ALREADY EXISTED — wanPopupOpen lifts a
+     WINDOW_DEFS window into a draggable float, and ragaPanel IS the scales/ragas window
+     ("Scales", the Scale/Raga Browser). Nothing new was invented for this. */
+  +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
+  +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" '+(wanState.follow?'disabled':'')+' style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select></div>'
-  +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
+  +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:#3a2c18;cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
+  /* 82nd R2 (his FORTY-THIRD message): "The drop down menu that says 'The 4th rotation'
+     should stay in the middle between the top scale and it's relative lower drop down
+     menu scale.  'The 4th rotation, and all of it's mode families will become the
+     describer of the relationship between any 2 selected scales / ragas."
+     ⭐ SO IT IS A CONTROL NOW, NOT A READOUT: the row that read the relationship back sits
+     in the MIDDLE of the span between the two scales and carries the same mode families
+     — picking one SETS scale 2, and leaving it blank lets the Relative row place it and
+     reports what that placement came out as.
+     ⚠ LABELLED INFERENCE, NOT HIS WORDS: this dropdown and scale 2's own mode select below
+     are TWO VIEWS OF ONE VALUE (wanState.mode2) — the middle one names scale 2 by its
+     RELATIONSHIP to scale 1, the lower one by its own absolute name. He asked for both a
+     describer here and "the same input as the top scale" below; making them mirrors is the
+     reading that gives him both without minting a second scale-2 state. */
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Relationship</label>'
+  +'<div style="display:flex;gap:6px;align-items:center;">'
+  +'<select id="wanRelSel" style="flex:1;min-width:0;" title="'+(wanRelationship(wanScale2().pcs)==='Untamed Wilderness'?'This pair matches no scale the library knows — you are off the map.':'What scale 2 IS, relative to scale 1. Pick a rotation or a mode family to set it; leave it on the reported relationship to let the Relative row place it.')+'">'+relSelOpts+'</select></div>'
+  /* ⛔ 82nd R2: the READOUT KEEPS ITS ID. The relationship report did not stop existing when
+     the row above it became a control — it moved. Two suites (rh80t, rh81b) read
+     #wanRelationship for the reported name and went red on the first draft of this round
+     because the id was dropped in the move, not because the readout was gone. Carrying the id
+     is the correct build, not an accommodation: this element IS the readout they name. */
+  +'<div id="wanRelationship" style="font-size:10px;color:#6b4f28;">'+wanRelationship(wanScale2().pcs)+'</div>'
   /* 81st R2 (his thirty-fourth message): THE RELATIVE ROW PLACES SCALE 2, and the
      intervals it offers are SCALE-TRUE — read off scale 1's own degrees, so a "3rd
      below" in C major is the major 6th's A. ⭐ Chromatic is the deliberate override. */
@@ -19702,21 +19834,25 @@ function renderWan(){
   /* his order, verbatim: "The 2nd scale search button and name should be below the
      'Relative' '3rd' 'below' part." */
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Scale 2</label>'
-  +'<input id="wanSearch2" placeholder="search scales &amp; ragas…" value="'+(wanState.search2||'').replace(/"/g,'&quot;')+'" style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;">'
-  +'<div style="display:flex;gap:6px;align-items:center;"><span style="font-size:12px;color:var(--dim);flex:0 0 auto;">'+PCN[wanRel2Root()]+'</span><select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select></div>'
-  /* the row that used to read "Melodic, Harmonic, Natural" is now the RELATIONSHIP */
-  +'<div style="display:flex;gap:6px;align-items:center;">'
-  +'<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);flex:0 0 64px;line-height:1.25;" title="What scale 2 IS, relative to scale 1 — it follows whatever you set scale 2 to.">Relationship</span>'
-  +'<span id="wanRelationship" style="flex:1;min-width:0;font-size:12px;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--panel);" title="'+(wanRelationship(wanScale2().pcs)==='Untamed Wilderness'?'This pair matches no scale the library knows — you are off the map.':'Scale 2 named by the library.')+'">'+wanRelationship(wanScale2().pcs)+'</span></div>'
+  +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
+  +'<input id="wanSearch2" placeholder="search scales &amp; ragas…" value="'+(wanState.search2||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
+  /* 82nd R2 (his FORTY-THIRD message): "we still need a more user-input-driven method of
+     choosing the 2nd scale.  It should have the same input as the top scale." ⭐ The static
+     root SPAN becomes a real SELECT, the twin of #wanRoot — that was the whole difference
+     between the two scales' inputs. ⚠ ONE SOURCE OF TRUTH IS KEPT: picking a root here does
+     not mint an override, it moves the RELATIVE ROW to the step and direction that lands
+     there (wanRelFromRoot), so the two controls can never disagree. */
+  +'<div style="display:flex;gap:6px;"><select id="wanRoot2" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanRel2Root()?' selected':'')+'>'+p+'</option>').join('')+'</select>'
+  +'<select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select></div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Weber neighbors</label>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+nbChips+'</div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">The trail</label>'
-  +'<div id="wanTrail" style="font-size:11px;color:var(--text);line-height:1.5;'+(wanState.trail.length?'cursor:grab;border:1px dashed var(--line);border-radius:6px;padding:4px 6px;':'')+'" title="'+(wanState.trail.length?'A string of chords — drag it onto the chord lane. It fills BACKWARDS ending at the chord you drop on, the lane’s own rate kept. One undo.':'Empty — ✓ writes add to it, and ⏺ Record your trips logs the keys you land on.')+'">'+trail+'</div>'
+  +'<div id="wanTrail" style="font-size:11px;color:#3a2c18;line-height:1.5;'+(wanState.trail.length?'cursor:grab;border:1px dashed var(--line);border-radius:6px;padding:4px 6px;':'')+'" title="'+(wanState.trail.length?'A string of chords — drag it onto the chord lane. It fills BACKWARDS ending at the chord you drop on, the lane’s own rate kept. One undo.':'Empty — ✓ writes add to it, and ⏺ Record your trips logs the keys you land on.')+'">'+trail+'</div>'
   +'<div style="display:flex;gap:6px;flex-wrap:wrap;"><button id="wanSaveGrp" style="padding:4px 10px;font-size:11.5px;">★ Save pivot group</button><button id="wanClearTrail" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;">Clear</button></div>'
   +(wanGroups.length?'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+groupChips+'</div>':'')
   +'</div>'
   +'<div style="flex:1;min-width:340px;">'
-  +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">← → walk the degrees · ↑ ↓ flip between the two worlds · every landing auditions (nothing written) · <b style="color:var(--text);">Enter / ✓ writes the highlighted chord to the selected lane chord</b></div>'
+  +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">← → walk the degrees · ↑ ↓ flip between the two worlds · every landing auditions (nothing written) · <b style="color:#3a2c18;">Enter / ✓ writes the highlighted chord to the selected lane chord</b></div>'
   +matrix
   +'<div style="display:flex;gap:8px;align-items:center;margin-top:4px;"><button id="wanUseBtn" style="padding:6px 14px;font-size:12.5px;">✓ Use this chord</button><span style="font-size:10.5px;color:var(--dim);">writes to the selected chord in the lane (or the one under the playhead) — one undo</span></div>'
   +'</div>'
@@ -19779,6 +19915,28 @@ function renderWan(){
  if(wm2)wm2.onchange=e=>{
   wanState.mode2=SCALE_DB[e.target.value]?e.target.value:'';   /* blank = fall back to the rotation */
   wanState.cur={row:0,deg:0};renderWan();};
+ /* 82nd R2 (his FORTY-THIRD message): the MIDDLE describer writes the SAME value scale 2's
+    own mode select writes — two views, one state. Blank means "let the Relative row place
+    it", which is what the reported relationship beneath the box is describing. */
+ const wrs=document.getElementById('wanRelSel');
+ if(wrs)wrs.onchange=e=>{
+  wanState.mode2=SCALE_DB[e.target.value]?e.target.value:'';
+  wanState.cur={row:0,deg:0};renderWan();};
+ /* 82nd R2: scale 2's own ROOT — the input the top scale always had and this one did not.
+    ⛔ IT DOES NOT MINT AN OVERRIDE. It moves the Relative row to the step and direction that
+    lands on the chosen root, so wanRel2Root() stays the single source of truth and the row
+    above never describes a placement that is no longer true. */
+ const wr2=document.getElementById('wanRoot2');
+ if(wr2)wr2.onchange=e=>{
+  const got=wanRelFromRoot(wanScale().pcs,wanState.tonic,+e.target.value,wanState.relDir);
+  wanState.relStep=got.step;wanState.relDir=got.dir;wanState.relChrom=got.chrom;
+  wanState.cur={row:0,deg:0};renderWan();};
+ /* 82nd R2: "a SEARCH button to the left of them which causes a floating pop-up window to
+    appear for the scales / ragas window" — ragaPanel IS that window, and wanPopupOpen is
+    the float the 80th already built for the Pathways search buttons. */
+ B.querySelectorAll('[data-wansearch]').forEach(btn=>{btn.onclick=e=>{
+  e.preventDefault();e.stopPropagation();
+  try{wanPopupOpen('ragaPanel');}catch(_){}};});
  document.getElementById('wanSaveGrp').onclick=()=>{
   if(!wanState.trail.length){setWanStatus('The trail is empty — ✓ a few chords first, then ★ keeps the journey.');return;}
   wanGroups.push({name:'Pivot group '+(wanGroups.length+1)+' · '+wanState.trail.map(s=>s.lbl).join('→').slice(0,24),steps:wanState.trail.map(s=>({r:s.r,iv:s.iv.slice(),lbl:s.lbl}))});
