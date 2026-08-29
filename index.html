@@ -193,7 +193,17 @@
   .wanSrchBtn:hover{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   /* 80th (his eighteenth message): the degree boxes, the paths, the map menu — all in
      the old-map ink */
-  #wanWebWrap{position:relative;user-select:none;}
+  /* ⛔ 82nd R3 (his FORTY-FIFTH message: "right now the 'paths' on the right are being covered
+     up with chord buttons"). REPRODUCED BEFORE IT WAS FIXED, and it is width-dependent, which is
+     why it did not show at a desk-width window: below roughly 880px of viewport the 15x12 lattice
+     stops fitting (scrollWidth 562 against clientWidth 446 at 760px) and `overflow-x: visible` let
+     the chips spill straight out of the box and over #wanLegend, which sits beside it in the same
+     flex row — 13 chips over the legend at 860px, 39 at 760px. The map now carries its own scroll
+     instead of spilling. ⚠ THE ZOOM-GEOMETRY LAW IS UNAFFECTED AND THAT IS NOT LUCK: the SVG
+     overlay and the degree boxes are placed by OFFSET geometry (80th R20) and the SVG is sized to
+     wrap.scrollWidth/scrollHeight, so both scroll WITH the content rather than being pinned to a
+     padding box that just got smaller. A client-rect overlay would have broken here. */
+  #wanWebWrap{position:relative;user-select:none;overflow:auto;}
   .wanDegBox{position:absolute;pointer-events:none;border:3px double #6b4f28;border-radius:9px;box-shadow:0 0 0 1px rgba(107,79,40,.3),inset 0 0 14px rgba(107,79,40,.14);}
   .wanDegBox.k2{border:2px dashed #8a6f4d;opacity:.8;}
   .wanDegBox.k3{border:2px dotted #9a7f5d;opacity:.65;}
@@ -710,7 +720,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28w</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28y</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -843,7 +853,7 @@
        window: wander related key centers on Weber's table, arrow keys walk the chords.
        Lives at the top of the screen with the other CHOOSE YOUR OWN ADVENTURE windows. -->
   <div class="gridwrap" id="wanPanel" style="margin:12px 0;">
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Harmony game · Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers (Weber's table, 1817)</div>
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Harmony game · Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers (Weber's table, 1817–1821)</div>
     <!-- 80th R9 (his ninth message + the table image): THE WEBER MATRIX as the window's
          DEFAULT view — 10 letters across × 13 down, the song's key seated where C sits
          in the printed table (row 7, column 5); spelled keys, double-sharps and
@@ -18587,7 +18597,7 @@ function buildRagaPanel(){
    the 3.3 Rabbit-Hole search when it ships (reads window.rabbitHoleSeeds) — until
    then the playhead's key seeds the board. The full drawn Weber table stays the
    future spec's background (resolved doc §8). Pure layer unit-tested. ==== */
-var wanState={follow:true,tonic:0,mode:'ionian',relStep:2,relDir:'below',cur:{row:0,deg:0},trail:[],search:'',mode2:'',search2:'',relChrom:false,rec:false};   /* 81st R3 (his thirty-fifth message): "Experiment, record your trips" — rec is the ⏺ mode */   /* 81st R2 (his thirty-fourth message): 2 RELATED SCALES — scale 2 carries its OWN mode and its OWN search; relChrom is his Chromatic button */
+var wanState={follow:true,tonic:0,mode:'ionian',relStep:2,relDir:'below',cur:{row:0,deg:0},trail:[],search:'',mode2:'',search2:'',relChrom:false,rec:false,also:false,respell:false,mode3:'',search3:'',fnScheme:'degree',fnOn:true};   /* 82nd R4 (his FORTY-FIFTH message): the four harmonic FUNCTIONS colour the chord buttons; fnScheme picks between his two schemes */   /* 82nd R3 (his FORTY-FIFTH message): "also" opens a THIRD scale slot; "respell in same key" keeps scale 2's notes and re-roots them onto scale 1's root */   /* 81st R3 (his thirty-fifth message): "Experiment, record your trips" — rec is the ⏺ mode */   /* 81st R2 (his thirty-fourth message): 2 RELATED SCALES — scale 2 carries its OWN mode and its OWN search; relChrom is his Chromatic button */
 var wanGroups=[];
 function ordinalName(step){
  /* pure: scale-step count → interval ordinal (1 → 2nd, 2 → 3rd …) */
@@ -18643,6 +18653,66 @@ function wanRelationship(pcs2){
     then it should say dorian." A pc set the library cannot name is not an error and is
     not blank; it reads his own words for it. Pure. */
  return pcsScaleName(pcs2)||'Untamed Wilderness';
+}
+const WAN_FN=[
+ {id:'par',label:'Parallel',   col:'#3f5aa6'},
+ {id:'sub',label:'Subdominant',col:'#3f7a4a'},
+ {id:'dom',label:'Dominant',   col:'#a6432f'},
+ {id:'rel',label:'Relative',   col:'#7a4a8a'}
+];
+function wanChordFunction(deg,iv,scheme){
+ /* 82nd R4 (his FORTY-FIFTH message). ⛔ HE SPECIFIED BOTH SCHEMES AND THEY DISAGREE ON PURPOSE,
+    so this takes the scheme as an argument rather than picking one.
+      ① 'degree' — his explicit listing, and it classifies by DEGREE NUMBER regardless of quality:
+         "all versions of 2s, and 4s, be colored Subdominant, and all of the 6s to be colored
+         relative, (VI, bVI, vi,) all of the Parallel to be colored parallel: (I, i)". On a plain
+         major scale that reproduces his own table exactly — Subdominant: ii, IV · Dominant: iii,
+         V, vii · Relative: vi · Parallel: I, i.
+      ② 'majdom' — "another default color scheme where the Major chords besides 1 and 4 are all
+         called Dominant, and the rest of the color scheme remains the same." ⚠ THE EXCLUSION OF
+         1 AND 4 IS THE WHOLE RULE: a major I stays Parallel and a major IV stays Subdominant; it
+         is every OTHER major that turns Dominant, which is what makes a major II or a major VI
+         read as the secondary dominant it is behaving as.
+    ⚠ Degrees are 0-based in, 1-based in his language. For scales that are not seven notes his
+    words do not define an answer, so the degree rule simply carries on — a labelled degradation,
+    not a claim that it is musically meant. Pure. */
+ const n=(deg|0)+1;
+ const major=!!iv&&iv[1]===4&&iv[2]===7;
+ if(scheme==='majdom'&&major&&n!==1&&n!==4)return 'dom';
+ if(n===1)return 'par';
+ if(n===2||n===4)return 'sub';
+ if(n===6)return 'rel';
+ return 'dom';
+}
+function wanFnCol(id){
+ /* the user's colour for a function, else the shipped one. His: "the user should be able to take
+    the Color Palette and change the color of any and all chord buttons they like". */
+ const f=WAN_FN.find(x=>x.id===id);
+ return (wanFnCols&&wanFnCols[id])||(f?f.col:'#6b4f28');
+}
+var wanFnCols=(function(){
+ try{const o=JSON.parse(localStorage.getItem('cp_wanFnCols')||'{}');
+  const out={};for(const f of WAN_FN)if(typeof o[f.id]==='string'&&/^#[0-9a-f]{6}$/i.test(o[f.id]))out[f.id]=o[f.id];
+  return out;}catch(e){return {};}
+})();
+function persistWanFnCols(){try{localStorage.setItem('cp_wanFnCols',JSON.stringify(wanFnCols));}catch(e){}}
+function wanRespellPcs(pcs,fromRoot,toRoot){
+ /* 82nd R3 (his FORTY-FIFTH message, verbatim: "it takes the existing Scale 2 and keeps all
+    the same notes, but retranslates the scale as if it's root were the same key as the Scale
+    1 root note"). ⛔ THE POINT IS THAT THE ABSOLUTE PITCHES DO NOT MOVE — only the root they
+    are measured from does. A dorian (A B C D E F♯ G) re-rooted onto C is C LYDIAN: the very
+    same seven notes, a different name. ⚠ THIS IS NOT A TRANSPOSE, and the difference is the
+    whole feature: transposing A dorian to C gives C dorian, which is a DIFFERENT set of
+    notes. Sorted, de-duplicated, and it does not care whether toRoot is in the set — if it
+    is not, the result simply has no 0 and the library will decline to name it, which is the
+    honest answer rather than a silent nearest-match. Pure. */
+ const f=(((fromRoot||0)%12)+12)%12, t=(((toRoot||0)%12)+12)%12;
+ const out=[];
+ for(const p of (pcs||[])){
+  const v=((((p+f-t)%12)+12)%12);
+  if(out.indexOf(v)<0)out.push(v);
+ }
+ return out.sort((a,b)=>a-b);
 }
 function relParallelPcs(pcs,step,dir){
  /* the PARALLEL RELATIVE: rotate the mode to the degree <step> scale-steps below (or
@@ -18773,10 +18843,33 @@ function wanRows(){
     Unison / "----" for the second, which only means anything if row 2 CARRIES ITS OWN
     ROOT. It does now: the Relative step+direction places it, scale-truly. */
  const sc=wanScale(),sc2=wanScale2(),root2=wanRel2Root();
- return [
-  {name:PCN[wanState.tonic]+' '+sc.name,pcs:sc.pcs,tonic:wanState.tonic},
-  {name:PCN[root2]+' '+sc2.name,pcs:sc2.pcs,tonic:root2}
- ];
+ const row1={name:PCN[wanState.tonic]+' '+sc.name,pcs:sc.pcs,tonic:wanState.tonic};
+ /* 82nd R3 (his FORTY-FIFTH message): the four states of the "also, respell in the same key"
+    pair, in his own words and in his own order.
+      ⓐ respell ON, also OFF  — "it takes the existing Scale 2 and keeps all the same notes,
+        but retranslates the scale as if it's root were the same key as the Scale 1 root
+        note": scale 2 ITSELF is re-rooted, in place. No third row.
+      ⓑ also ON, respell ON   — "it creates another spelling of the 2nd scale which keeps all
+        of the same notes in the scale, but says what the new scale is called if it starts on
+        the same note as Scale 1": scale 2 stays, and the respelling is a THIRD row.
+      ⓒ also ON, respell OFF  — "it creates a blank one": a third slot with its own picker.
+      ⓓ neither — the two rows as they were.
+    ⚠ ⓒ IS ALSO HIS FORTY-FOURTH MESSAGE'S "add another scale" ARRIVING FROM A DIFFERENT
+    DIRECTION — one third-scale slot, not two. It ships with its own search + root + mode
+    rather than as an empty box, because the record's own rule is that a surface which draws
+    and moves nothing is the failure to avoid (2.5's automation lane). */
+ const respelled=()=>{
+  const pcs=wanRespellPcs(sc2.pcs,root2,wanState.tonic);
+  return {name:PCN[wanState.tonic]+' '+(pcsScaleName(pcs)||'Untamed Wilderness'),pcs,tonic:wanState.tonic,respell:true};
+ };
+ if(wanState.respell&&!wanState.also)return [row1,respelled()];
+ const row2={name:PCN[root2]+' '+sc2.name,pcs:sc2.pcs,tonic:root2};
+ if(!wanState.also)return [row1,row2];
+ if(wanState.respell)return [row1,row2,respelled()];
+ const sc3=SCALE_DB[wanState.mode3]||null;
+ return [row1,row2,sc3
+  ?{name:PCN[wanState.tonic]+' '+sc3.name,pcs:sc3.pcs,tonic:wanState.tonic}
+  :{name:'(empty — pick a scale)',pcs:sc.pcs,tonic:wanState.tonic,blank:true}];
 }
 function wanCellAt(row,deg){
  const rows=wanRows();
@@ -19173,7 +19266,14 @@ function wanWeberDraw(){
  const tonicLof=wanPcLof(st.tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+st.webShift;
  const grid=weberGrid(anchor);
- let h='<div style="font-size:15px;font-weight:800;letter-spacing:.6px;color:#5a4426;margin-bottom:2px;font-family:Georgia,serif;">Invented in 1817 by Jacob Gottfried Weber</div>'
+ /* 82nd R4 (his FORTY-SIXTH message: "lets change the title of Weber's Matrix to say created
+    between 1817-1824 - or whatever is true"). ⛔ "OR WHATEVER IS TRUE" WAS AN INSTRUCTION TO GO
+    AND CHECK, AND CHECKING CHANGED THE ANSWER: the treatise the table lives in — Versuch einer
+    geordneten Theorie der Tonsetzkunst, Schott, Mainz — ran as THREE volumes across 1817, 1818
+    and 1821, not to 1824. (IMSLP's first-publication line reads "1817–21"; the volume-by-volume
+    years agree.) ⚠ 1824 is not nothing — it is the SECOND edition — but the first edition is
+    when the table was created, which is what the title claims. ➡ 1817–1821. */
+ let h='<div style="font-size:15px;font-weight:800;letter-spacing:.6px;color:#5a4426;margin-bottom:2px;font-family:Georgia,serif;">Created 1817–1821 by Jacob Gottfried Weber</div>'
   +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:3px;">The table of the relationships of keys — drag to travel the map · click hears a key · double-click makes it home · ⌘+click draws the modulation paths · ctrl+click for the map menu. The full story is in ℹ About.</div>'
   +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
   +'<div style="margin-bottom:5px;display:flex;gap:8px;align-items:center;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span>'
@@ -19746,10 +19846,13 @@ function renderWan(){
  };
  const modeOpts=wanModeOpts(wanState.mode,wanState.search,'');
  const mode2Opts=wanModeOpts(wanState.mode2,wanState.search2,'— the '+wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom).step.toLowerCase()+' rotation —');
- /* 82nd R2: the MIDDLE describer carries the same mode families as scale 2's own picker —
-    it is the same value seen as a RELATIONSHIP. Its blank option reports what the Relative
-    row's placement came out as, which is where "the 4th rotation" was always coming from. */
- const relSelOpts=wanModeOpts(wanState.mode2,'','— '+wanRelationship(wanScale2().pcs)+' —');
+ /* 82nd R3 (his FORTY-FIFTH message): RESPELL WITHOUT ALSO is the state that rewrites scale 2
+    in place, so the Relative row has nothing left to choose — his own words: "the middle
+    'Relative' drop dow that defaults to a '3rd' and 'below' will then switch to say 'unison' in
+    the first drop down, and the second drop down will be blank." ⚠ It is DERIVED, not written
+    into wanState.relStep — unticking Respell must hand him back the step he had, and mutating
+    the state on a tick would have silently eaten it. */
+ const respellOnly=!!wanState.respell&&!wanState.also;
  const SEARCH_BTN='<button class="wanSrchBtn" data-wansearch="1" title="Open the Scale/Raga Browser as a floating pop-up — the 72 melakartas, the 107 janyas and every Western mode, searchable.">&#8981; SEARCH</button>';
  /* 81st R2: ⭐ UNISON JOINS THE LIST (his "built from the same root note" case needs a
     way to be ASKED for, not only detected), and his CHROMATIC button swaps the whole
@@ -19758,17 +19861,36 @@ function renderWan(){
  const ivOpts=(()=>{
   let h='';
   if(wanState.relChrom){
-   for(let k=0;k<12;k++)h+='<option value="'+k+'"'+(k===wanState.relStep?' selected':'')+'>'+CHROM_IV[k].n+'</option>';
+   /* 82nd R3: under respell-only ONLY the unison may carry `selected` — marking two options
+      selected leaves the LAST one winning, which is how this first shipped showing "3rd". */
+   for(let k=0;k<12;k++)h+='<option value="'+k+'"'+((respellOnly?k===0:k===wanState.relStep)?' selected':'')+'>'+CHROM_IV[k].n+'</option>';
    return h;
   }
-  h+='<option value="0"'+(wanState.relStep===0?' selected':'')+'>Unison</option>';
-  for(let k=1;k<n;k++)h+='<option value="'+k+'"'+(k===wanState.relStep?' selected':'')+'>'+ordinalName(k)+'</option>';
+  h+='<option value="0"'+((wanState.relStep===0||respellOnly)?' selected':'')+'>Unison</option>';   /* 82nd R3: respell-only IS a unison, and the control says so */
+  for(let k=1;k<n;k++)h+='<option value="'+k+'"'+((!respellOnly&&k===wanState.relStep)?' selected':'')+'>'+ordinalName(k)+'</option>';
   return h;
  })();
  const relNames=wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom);
  const sameRoot=relNames.dir==='----';
  const nb=weberNeighbors(wanState.tonic,wanScale().pcs.indexOf(3)>=0&&wanScale().pcs.indexOf(4)<0);
  const nbChips=nb.map((o,i)=>'<span class="part wanNb" data-i="'+i+'" title="'+o.tag+' on Weber\'s table — click to wander there (first-degree neighborhood: fifths both ways, the relative, the parallel)" style="padding:3px 8px;font-size:11px;">'+PCN[o.tonic]+' '+(o.minor?'Minor':'Major')+'<span style="color:var(--dim);font-size:9px;"> · '+o.tag+'</span></span>').join('');
+ /* 82nd R4 (his FORTY-FIFTH message): "the actual chords in both chord name, and roman numeral
+    should be listed underneath each category: Subdominant: ii, IV; Dominant: iii, V, vii;
+    Relative: vi, Parallel: I, i." ⭐ BOTH SPELLINGS, because that is the pairing that teaches —
+    the roman says what the chord DOES, the letter name says what to play. Every row is listed,
+    numbered when there is more than one, since comparing the scales is the point of the colour. */
+ const fnGroups=WAN_FN.map(f=>{
+  const items=[];
+  rows.forEach((R,ri2)=>{
+   for(let d=0;d<R.pcs.length;d++){
+    const c=wanCellAt(ri2,d);
+    if(!c||wanChordFunction(d,c.iv,wanState.fnScheme)!==f.id)continue;
+    items.push((rows.length>1?'<span style="color:#8a6f4d;font-size:9px;">'+(ri2+1)+'</span>&thinsp;':'')
+     +c.name+'&thinsp;<span style="color:#6b4f28;">('+c.roman+')</span>');
+   }
+  });
+  return {f,items};
+ });
  const trail=wanState.trail.length
   ?wanState.trail.map(s=>s.lbl).join(' → ')
   :'(empty — ✓ writes add to it)';
@@ -19780,7 +19902,13 @@ function renderWan(){
   for(let d=0;d<n;d++){
    const c=wanCellAt(ri,d);
    const cur=(wanState.cur.row===ri&&wanState.cur.deg===d);
-   cells.push('<div class="wanCell" data-r="'+ri+'" data-d="'+d+'" style="width:'+cellW+'px;box-sizing:border-box;padding:6px 4px;border:1px solid '+(cur?'var(--accent)':'var(--line)')+';border-radius:6px;cursor:pointer;text-align:center;'+(cur?'background:rgba(232,163,61,.14);':'background:rgba(255,255,255,.02);')+'">'
+   /* 82nd R4 (his FORTY-FIFTH message): "in order to help with improvisation" — the chord
+      buttons themselves carry the function colour, so two or three scales can be read against
+      each other at a glance. The tint is a left bar plus a wash, never the text colour: the
+      roman numeral and the chord name have to stay readable at every colour he might pick. */
+   const fn=wanChordFunction(d,c.iv,wanState.fnScheme);
+   const fc=wanFnCol(fn);
+   cells.push('<div class="wanCell" data-r="'+ri+'" data-d="'+d+'" data-fn="'+fn+'" title="'+(WAN_FN.find(x=>x.id===fn)||{}).label+'" style="width:'+cellW+'px;box-sizing:border-box;padding:6px 4px;border:1px solid '+(cur?'var(--accent)':'var(--line)')+';border-radius:6px;cursor:pointer;text-align:center;'+(wanState.fnOn?'border-left:4px solid '+fc+';':'')+(cur?'background:rgba(232,163,61,.14);':wanState.fnOn?'background:'+fc+'22;':'background:rgba(255,255,255,.02);')+'">'
     +'<div style="font-size:9.5px;color:var(--dim);">'+c.roman+'</div>'
     +'<div style="font-size:13px;font-weight:700;">'+c.name+'</div></div>');
   }
@@ -19799,38 +19927,24 @@ function renderWan(){
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" '+(wanState.follow?'disabled':'')+' style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select></div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:#3a2c18;cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
-  /* 82nd R2 (his FORTY-THIRD message): "The drop down menu that says 'The 4th rotation'
-     should stay in the middle between the top scale and it's relative lower drop down
-     menu scale.  'The 4th rotation, and all of it's mode families will become the
-     describer of the relationship between any 2 selected scales / ragas."
-     ⭐ SO IT IS A CONTROL NOW, NOT A READOUT: the row that read the relationship back sits
-     in the MIDDLE of the span between the two scales and carries the same mode families
-     — picking one SETS scale 2, and leaving it blank lets the Relative row place it and
-     reports what that placement came out as.
-     ⚠ LABELLED INFERENCE, NOT HIS WORDS: this dropdown and scale 2's own mode select below
-     are TWO VIEWS OF ONE VALUE (wanState.mode2) — the middle one names scale 2 by its
-     RELATIONSHIP to scale 1, the lower one by its own absolute name. He asked for both a
-     describer here and "the same input as the top scale" below; making them mirrors is the
-     reading that gives him both without minting a second scale-2 state. */
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Relationship</label>'
-  +'<div style="display:flex;gap:6px;align-items:center;">'
-  +'<select id="wanRelSel" style="flex:1;min-width:0;" title="'+(wanRelationship(wanScale2().pcs)==='Untamed Wilderness'?'This pair matches no scale the library knows — you are off the map.':'What scale 2 IS, relative to scale 1. Pick a rotation or a mode family to set it; leave it on the reported relationship to let the Relative row place it.')+'">'+relSelOpts+'</select></div>'
-  /* ⛔ 82nd R2: the READOUT KEEPS ITS ID. The relationship report did not stop existing when
-     the row above it became a control — it moved. Two suites (rh80t, rh81b) read
-     #wanRelationship for the reported name and went red on the first draft of this round
-     because the id was dropped in the move, not because the readout was gone. Carrying the id
-     is the correct build, not an accommodation: this element IS the readout they name. */
-  +'<div id="wanRelationship" style="font-size:10px;color:#6b4f28;">'+wanRelationship(wanScale2().pcs)+'</div>'
+  /* ⛔⭐ 82nd R3 (his FORTY-FIFTH message, first sentence): "We don't need the relationship
+     drop down menu in the middle.  Please get rid of it." — GONE, one round after it shipped.
+     ⚠ THE LESSON OUTLASTS THE CONTROL: R2 built that dropdown on a LABELLED INFERENCE — his
+     forty-third asked for a describer in the middle, and making it a CONTROL that mirrored
+     scale 2's picker was the session's reading, not his words — and the label is exactly what
+     let him reverse it in one sentence instead of arguing with a shipped design. ⛔ THE
+     RELATIONSHIP READOUT IS NOT THE DROPDOWN AND SURVIVES: it moves back below scale 2, which
+     is where his thirty-fourth message put it and where rh80t/rh81b look for it. */
   /* 81st R2 (his thirty-fourth message): THE RELATIVE ROW PLACES SCALE 2, and the
      intervals it offers are SCALE-TRUE — read off scale 1's own degrees, so a "3rd
      below" in C major is the major 6th's A. ⭐ Chromatic is the deliberate override. */
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Relative</label>'
-  +'<div style="display:flex;gap:6px;align-items:center;font-size:12px;">a <select id="wanRelStep" title="'+(wanState.relChrom?'Chromatic: literal intervals — this is where you ask for a MAJOR third down on purpose.':'Scale-true: the step is counted in SCALE 1\'s own degrees, so a 3rd below C major lands on A — a minor third — never on A♭.')+'">'+ivOpts+'</select>'
-  +'<select id="wanRelDir"'+(sameRoot?' disabled':'')+' title="'+(sameRoot?'Scale 2 sits on the same root — there is no direction to report.':'Which way from scale 1\'s root.')+'">'
-  +(sameRoot?'<option selected>----</option>'
+  +'<div style="display:flex;gap:6px;align-items:center;font-size:12px;">a <select id="wanRelStep"'+(respellOnly?' disabled':'')+' title="'+(wanState.relChrom?'Chromatic: literal intervals — this is where you ask for a MAJOR third down on purpose.':'Scale-true: the step is counted in SCALE 1\'s own degrees, so a 3rd below C major lands on A — a minor third — never on A♭.')+'">'+ivOpts+'</select>'
+  +'<select id="wanRelDir"'+((sameRoot||respellOnly)?' disabled':'')+' title="'+(sameRoot?'Scale 2 sits on the same root — there is no direction to report.':'Which way from scale 1\'s root.')+'">'
+  +((sameRoot||respellOnly)?'<option selected>----</option>'
     :'<option value="below"'+(wanState.relDir==='below'?' selected':'')+'>Below</option><option value="above"'+(wanState.relDir==='above'?' selected':'')+'>Above</option>')+'</select>'
   +'<span class="wanAllTog'+(wanState.relChrom?' on':'')+'" id="wanChromTog" title="Chromatic — measure the relationship in literal semitones instead of scale 1\'s degrees, so you can ask for down a MAJOR third when the scale would have given you a minor one.">'+(wanState.relChrom?'☑':'☐')+' Chromatic</span></div>'
-  +'<div style="font-size:10px;color:var(--dim);">'+(sameRoot?'scale 2 shares scale 1\'s root':'scale 2 is built on '+PCN[wanRel2Root()]+' — '+(wanState.relChrom?'a literal ':'scale 1\'s own ')+relNames.step.toLowerCase()+' '+relNames.dir.toLowerCase())+'</div>'
+  +'<div style="font-size:10px;color:var(--dim);">'+(respellOnly?'scale 2 has been respelled onto scale 1\'s own root — the relationship IS a unison':sameRoot?'scale 2 shares scale 1\'s root':'scale 2 is built on '+PCN[wanRel2Root()]+' — '+(wanState.relChrom?'a literal ':'scale 1\'s own ')+relNames.step.toLowerCase()+' '+relNames.dir.toLowerCase())+'</div>'
   /* his order, verbatim: "The 2nd scale search button and name should be below the
      'Relative' '3rd' 'below' part." */
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Scale 2</label>'
@@ -19844,8 +19958,60 @@ function renderWan(){
      there (wanRelFromRoot), so the two controls can never disagree. */
   +'<div style="display:flex;gap:6px;"><select id="wanRoot2" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanRel2Root()?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select></div>'
-  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Weber neighbors</label>'
+  /* ⛔ 82nd R2: the READOUT KEEPS ITS ID, and 82nd R3 brings it home. Two suites (rh80t,
+     rh81b) read #wanRelationship for the reported name; it belongs under scale 2, which is
+     what it describes. */
+  /* ⛔ 82nd R3, CAUGHT BY rh80t: removing the middle dropdown took its "Relationship" LABEL with
+     it and left the readout as a bare word — 'Lydian' with nothing saying what it was reporting.
+     The suite asserts the panel says "Relationship", which is the right thing to assert: an
+     unlabelled readout is not a readout. The label belongs WITH the value, under the scale it
+     describes, which is where his thirty-fourth message put the pair in the first place. */
+  +'<div style="display:flex;gap:6px;align-items:baseline;">'
+  +'<span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);flex:0 0 auto;" title="What scale 2 IS, relative to scale 1 — it follows whatever you set scale 2 to.">Relationship</span>'
+  +'<span id="wanRelationship" style="font-size:11px;color:#3a2c18;" title="'+(wanRelationship(wanScale2().pcs)==='Untamed Wilderness'?'This pair matches no scale the library knows — you are off the map.':'Scale 2 named by the library.')+'">'+wanRelationship(wanScale2().pcs)+'</span></div>'
+  /* 82nd R3 (his FORTY-FIFTH message, verbatim): "have a toggle switch below the 2nd scale
+     that says 'respell in same key', and another one to the left of that one that just says
+     'also'… so together not including the toggle switch parts it says 'also, respell in the
+     same key'." ⛔ THE READING ORDER IS THE LAYOUT: the two chips sit side by side and the
+     sentence runs left to right through them. Their FOUR states are his own four sentences,
+     and wanRows() carries them — see its comment for the mapping. */
+  +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;">'
+  +'<span class="wanAllTog'+(wanState.also?' on':'')+'" id="wanAlsoTog" title="Also — opens a THIRD scale slot beneath scale 2. On its own it is a blank one, with the same search and pickers the other two have. Ticked together with Respell, that slot holds scale 2\'s notes renamed from scale 1\'s root.">'+(wanState.also?'☑':'☐')+' also,</span>'
+  +'<span class="wanAllTog'+(wanState.respell?' on':'')+'" id="wanRespellTog" title="Respell in the same key — keep every note of scale 2 and rename the scale as if it started on scale 1\'s root. A dorian becomes C lydian: the same seven notes, a different name. ⛔ This is not a transpose — transposing would change the notes.">'+(wanState.respell?'☑':'☐')+' respell in the same key</span></div>'
+  +(wanState.also?'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Scale 3'+(wanState.respell?' — the respelling (read-only)':'')+'</label>':'')
+  /* ⚠ when Respell is on too, scale 3 IS the respelling and has nothing to pick — his own
+     words for that state are "it creates ANOTHER SPELLING of the 2nd scale", not a new scale.
+     With Also alone it is "a blank one", and a blank one gets the same input the other two
+     have — a slot that draws and moves nothing is the failure this record already named once. */
+  +((wanState.also&&!wanState.respell)?('<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
+    +'<input id="wanSearch3" placeholder="search scales &amp; ragas…" value="'+(wanState.search3||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
+    +'<div style="display:flex;gap:6px;"><span style="font-size:12px;color:#6b4f28;flex:0 0 auto;padding-top:5px;">'+PCN[wanState.tonic]+'</span>'
+    +'<select id="wanMode3" style="flex:1;min-width:0;">'+wanModeOpts(wanState.mode3,wanState.search3,'— pick a third scale —')+'</select></div>'):'')
+  +((wanState.also&&wanState.respell)?'<div style="font-size:11px;color:#3a2c18;border:1px dashed #a8895f;border-radius:6px;padding:4px 8px;">'+wanRows()[2].name+'</div>':'')
+  +'<div style="display:flex;gap:8px;align-items:center;margin-top:4px;">'
+  +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Weber neighbors</label>'
+  /* 82nd R4 (his FORTY-FIFTH message): "a color pallete next to 'Weber Neighbors' so the user can
+     color all of the classifications of Dominant, Subdominant, Relative, and Parallel the same
+     colors". ⚠ NAMING: this is NOT the [CP1] Color Palette window and NOT the .palWin CHORD
+     Palette — "palette" is already twice-taken on this board, so nothing here is named `pal*`. */
+  +'<span class="wanSrchBtn" id="wanFnPal" title="Colour the four harmonic functions. The chord buttons above wear these colours so two or three scales can be read against each other while improvising.">&#127912; colours</span></div>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+nbChips+'</div>'
+  +(wanState.fnPalOpen?('<div style="display:flex;flex-direction:column;gap:5px;border:1px solid #a8895f;border-radius:8px;padding:6px 8px;background:rgba(242,231,203,.6);">'
+    /* his TWO schemes, both of them his own words, offered as a choice rather than one guessed at */
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'
+    +'<span class="wanAllTog'+(wanState.fnScheme==='degree'?' on':'')+'" data-fnscheme="degree" title="His first scheme: all versions of 2s and 4s are Subdominant, all the 6s (VI, ♭VI, vi) are Relative, I and i are Parallel, the rest are Dominant — by DEGREE, whatever the chord quality.">By degree</span>'
+    +'<span class="wanAllTog'+(wanState.fnScheme==='majdom'?' on':'')+'" data-fnscheme="majdom" title="His second scheme: every MAJOR chord except the 1 and the 4 is a Dominant — so a major II or a major VI reads as the secondary dominant it is behaving as. Everything else keeps its degree colour.">Majors are dominants</span>'
+    +'<span class="wanAllTog'+(wanState.fnOn?' on':'')+'" id="wanFnOnTog" title="Paint the chord buttons with these colours.">'+(wanState.fnOn?'☑':'☐')+' paint the chords</span></div>'
+    +WAN_FN.map(f=>'<div style="display:flex;gap:6px;align-items:center;">'
+      +'<input type="color" data-fncol="'+f.id+'" value="'+wanFnCol(f.id)+'" style="flex:0 0 34px;height:20px;padding:0;border:1px solid #a8895f;border-radius:4px;background:none;cursor:pointer;">'
+      +'<span style="flex:0 0 76px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#5a4426;">'+f.label+'</span>'
+      +'<span class="wbtn" data-fnrst="'+f.id+'" title="Back to the shipped colour" style="cursor:pointer;color:#6b4f28;">↺</span></div>').join('')
+    +'</div>'):'')
+  +'<div style="display:flex;flex-direction:column;gap:2px;">'
+  +fnGroups.map(g=>'<div style="display:flex;gap:6px;align-items:baseline;font-size:11px;line-height:1.45;">'
+    +'<span style="flex:0 0 76px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:'+wanFnCol(g.f.id)+';font-weight:700;">'+g.f.label+'</span>'
+    +'<span style="flex:1;min-width:0;color:#3a2c18;">'+(g.items.length?g.items.join(' · '):'<span style="color:#8a6f4d;">—</span>')+'</span></div>').join('')
+  +'</div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">The trail</label>'
   +'<div id="wanTrail" style="font-size:11px;color:#3a2c18;line-height:1.5;'+(wanState.trail.length?'cursor:grab;border:1px dashed var(--line);border-radius:6px;padding:4px 6px;':'')+'" title="'+(wanState.trail.length?'A string of chords — drag it onto the chord lane. It fills BACKWARDS ending at the chord you drop on, the lane’s own rate kept. One undo.':'Empty — ✓ writes add to it, and ⏺ Record your trips logs the keys you land on.')+'">'+trail+'</div>'
   +'<div style="display:flex;gap:6px;flex-wrap:wrap;"><button id="wanSaveGrp" style="padding:4px 10px;font-size:11.5px;">★ Save pivot group</button><button id="wanClearTrail" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;">Clear</button></div>'
@@ -19915,12 +20081,38 @@ function renderWan(){
  if(wm2)wm2.onchange=e=>{
   wanState.mode2=SCALE_DB[e.target.value]?e.target.value:'';   /* blank = fall back to the rotation */
   wanState.cur={row:0,deg:0};renderWan();};
- /* 82nd R2 (his FORTY-THIRD message): the MIDDLE describer writes the SAME value scale 2's
-    own mode select writes — two views, one state. Blank means "let the Relative row place
-    it", which is what the reported relationship beneath the box is describing. */
- const wrs=document.getElementById('wanRelSel');
- if(wrs)wrs.onchange=e=>{
-  wanState.mode2=SCALE_DB[e.target.value]?e.target.value:'';
+ /* 82nd R3 (his FORTY-FIFTH message): the "also, respell in the same key" pair. ⛔ THEY ARE TWO
+    INDEPENDENT TOGGLES, NOT A THREE-WAY — he specified all four combinations by hand, including
+    "when just also is checked, it creates a blank one", so neither may imply the other. */
+ const wat=document.getElementById('wanAlsoTog');
+ if(wat)wat.onclick=e=>{e.stopPropagation();wanState.also=!wanState.also;
+  wanState.cur={row:0,deg:0};renderWan();};
+ const wrt=document.getElementById('wanRespellTog');
+ if(wrt)wrt.onclick=e=>{e.stopPropagation();wanState.respell=!wanState.respell;
+  wanState.cur={row:0,deg:0};renderWan();};
+ /* 82nd R4 (his FORTY-FIFTH message): the function-colour controls. ⚠ The colour inputs write
+    straight through to localStorage under a cp_ key, matching the record's own convention for the
+    other twenty-four — a colour the user picked and lost on reload is worse than no colour. */
+ const wfp=document.getElementById('wanFnPal');
+ if(wfp)wfp.onclick=e=>{e.stopPropagation();wanState.fnPalOpen=!wanState.fnPalOpen;renderWan();};
+ const wfo=document.getElementById('wanFnOnTog');
+ if(wfo)wfo.onclick=e=>{e.stopPropagation();wanState.fnOn=!wanState.fnOn;renderWan();};
+ B.querySelectorAll('[data-fnscheme]').forEach(el=>{el.onclick=e=>{e.stopPropagation();
+  wanState.fnScheme=el.getAttribute('data-fnscheme');renderWan();};});
+ B.querySelectorAll('input[data-fncol]').forEach(inp=>{
+  const id=inp.getAttribute('data-fncol');
+  inp.oninput=()=>{wanFnCols[id]=inp.value;persistWanFnCols();renderWan();};});
+ B.querySelectorAll('[data-fnrst]').forEach(el=>{el.onclick=e=>{e.stopPropagation();
+  delete wanFnCols[el.getAttribute('data-fnrst')];persistWanFnCols();renderWan();};});
+ /* scale 3's own input — the same search + picker the other two have (his forty-fourth
+    message's "add another scale", arriving through his forty-fifth's blank slot) */
+ const se3=document.getElementById('wanSearch3');
+ if(se3)se3.oninput=e=>{wanState.search3=e.target.value;renderWan();
+  const s4=document.getElementById('wanSearch3');
+  if(s4){s4.focus();try{s4.setSelectionRange(s4.value.length,s4.value.length);}catch(_){}}};
+ const wm3=document.getElementById('wanMode3');
+ if(wm3)wm3.onchange=e=>{
+  wanState.mode3=SCALE_DB[e.target.value]?e.target.value:'';
   wanState.cur={row:0,deg:0};renderWan();};
  /* 82nd R2: scale 2's own ROOT — the input the top scale always had and this one did not.
     ⛔ IT DOES NOT MINT AN OVERRIDE. It moves the Relative row to the step and direction that
@@ -28797,8 +28989,10 @@ const ABOUT_HTML=`
  <span id="infoClose">✕</span><h2>ℹ <span>About</span> — CrossPollinate</h2>
  <p>Develop one musical seed idea the way classical composers did — systematic variation —
  using a small curated library of songs you love as the gene pool.</p>
- <h3>Weber's table of the relationships of keys (1817)</h3>
- <p>The map in Weber's Wanderer was invented in 1817 by <b>Jacob Gottfried Weber</b>. He intended
+ <h3>Weber's table of the relationships of keys (1817–1821)</h3>
+ <p>The map in Weber's Wanderer was created by <b>Jacob Gottfried Weber</b> (1779–1839) in his
+ <i>Versuch einer geordneten Theorie der Tonsetzkunst</i>, published by Schott in Mainz across
+ three volumes — 1817, 1818 and 1821. He intended
  it as a practical, visual roadmap for modulation — changing from one key to another — and as a
  way to mathematically chart the psychological "distance" between keys.</p>
  <p><b>Step-by-step modulations.</b> The chart is geometric: moving one step in any direction is
