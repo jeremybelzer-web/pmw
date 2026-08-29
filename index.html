@@ -720,7 +720,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28y</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-29a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -10210,7 +10210,7 @@ function canvasRecParse(raw){
  /* the cp_canvas guard — pure: junk in, the defaults out. zoom values clamp to 0–200,
     the swipe choice to the four splits, colors to #rrggbb only, templates normalized
     {name,zoom,swipe,colors}. */
- const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null};
+ const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null,palId:null};
  let o=raw;
  if(typeof raw==='string'){try{o=JSON.parse(raw);}catch(e){return def;}}
  if(!o||typeof o!=='object'||Array.isArray(o))return def;
@@ -10225,7 +10225,15 @@ function canvasRecParse(raw){
   templates:Array.isArray(o.templates)?o.templates.filter(t=>t&&typeof t==='object'&&typeof t.name==='string').slice(0,64)
     .map(t=>({name:t.name.slice(0,60),zoom:zoomOf(t.zoom),swipe:SW.includes(t.swipe)?t.swipe:'v',colors:colOf(t.colors),
       layout:(t.layout&&typeof t.layout==='object'&&!Array.isArray(t.layout))?t.layout:null})):[],
-  x:(typeof o.x==='number'&&isFinite(o.x))?o.x:null,y:(typeof o.y==='number'&&isFinite(o.y))?o.y:null};
+  x:(typeof o.x==='number'&&isFinite(o.x))?o.x:null,y:(typeof o.y==='number'&&isFinite(o.y))?o.y:null,
+  /* ⛔ ROADMAP 6.4: THIS PARSER IS A WHITELIST — it returns a FIXED shape, so a key that is not
+     named here is DROPPED SILENTLY on the next reload. That is the same failure as `validShelf`
+     and `normalizeAutoLanes`' kind guard, in a third costume, and it is why the applied palette
+     is admitted explicitly rather than merely written. ⚠ It is validated as a plain non-negative
+     integer and NOT against CL_PALETTES.length: that const is declared far below this function
+     and reading it here is a TDZ error at boot — the lesson-class `cnvWins` already guards for.
+     An out-of-range id simply resolves to null in clPalette(). */
+  palId:(typeof o.palId==='number'&&isFinite(o.palId)&&o.palId>=0&&o.palId<4096)?(o.palId|0):null};
 }
 const CNV_SUITES=[
  ['standard','Standard',{all:100}],
@@ -10310,9 +10318,209 @@ function cnvTplApply(i){
    recorded for their own cut (the spec notes). ==== */
 const CNV_COLORS=[['--bg','Background'],['--panel','Panels'],['--panel2','Controls & cells'],
  ['--line','Borders & lines'],['--text','Text'],['--dim','Secondary text'],['--accent','Accent / highlights']];
+/* ==== [CP2] ROADMAP 6.4 — THE COLORLISA PALETTE BROWSER (client, August 28: "The Color Palette
+   should be on the Road Map scheduled to be built.  But it would be great if it got built
+   soonish.") ====
+
+   ⛔ THE ASSETS WERE NEVER MISSING — ONLY THE WIRING. `colorlisa-palettes.json` has been in the
+   project folder since July 19 (62 palettes, five hex colours each, every one named for its
+   painting and artist, across 14 of the client's own category words). ⚠ THEY ARE INLINED HERE AND
+   THAT IS NOT LAZINESS: the editor is ONE file with no build step and it ships byte-for-byte as
+   the public index.html — only that file is copied to the deploy clone — so a fetch of a sibling
+   .json would 404 in production and be blocked by file:// CORS in the harness. Inline is the only
+   shape that actually works here.
+
+   ⛔⛔ THE HARD PART IS NOT THE BROWSER, IT IS THE MAPPING: five arbitrary colours from a painting
+   onto seven semantic slots that must stay READABLE. A naive assignment produces exactly the bug
+   the client reported earlier the same day — light text on a light ground. So `cnvPaletteMap` is
+   ROLE-BASED and CONTRAST-GUARANTEED: darkest becomes the ground, lightest becomes the text, the
+   two are pushed apart until they clear WCAG AAA, and the mid tones are mixed FROM those two so
+   panels, lines and secondary text can never invert. The palette keeps its hues; legibility is
+   not left to luck. ⭐ THE UNIT GATE RUNS THE WHOLE LIBRARY: all 62 palettes must clear 7:1 for
+   text, 4.5:1 for secondary text and 3:1 for the accent. No palette in the set can make the app
+   unreadable, and that is provable rather than hoped for. ==== */
+const CL_ATTRIB='All color palettes compiled by: https://colorlisa.com/';
+const CL_PALETTES=[
+/*  [painting, artist, categories joined by |, the five hex colours concatenated without # ]  */
+ ['Flowers, 1964','Andy Warhol','Beach|Neon|Warm','F26386F588AFA4D984FCBC52FD814E'],
+ ['Dance (I)','Henri Matisse','Blues|Beach|Greens','2168A6165F8C03735E078C66F2A29B'],
+ ['The Scream (Pastel)','Edvard Munch','Blues|Beach|Pastel','5059A1EFC3371F386ED1AE82BE3B2C'],
+ ['Boating','Édouard Manet','Blues|Browns|Pastel|Classy','6486AD2D345DD9BE7F5A3A26C6A490'],
+ ['A Bigger Splash','David Hockney','Blues|Pastel|Neutral|Classy','79BED9126599CABD8A497E58B28D7B'],
+ ['Abstraction Blue','Georgia O\'Keeffe','Blues|Pastel|Neutral|Classy','0E122D18204451628E91A1BAAFD0C9'],
+ ['The Great Wave Off Kanagawa','Katsushika Hokusai','Blues|Pastel|Neutral|Classy','1F284C2D44726E6352D9CCACECE2C6'],
+ ['Red Tights With Fragment 9','Claes Oldenburg','Bright|Beach|Blues','95B1C9263656698946F8D440C82720'],
+ ['Dance At Le Moulin De La Galette','Pierre-Auguste Renoir','Bright|Beach|Pastel','2B5275A69F55F1D395FFFBDDD16647'],
+ ['Diver','Bridget Riley','Bright|Beach|Pastel','FAB9AC7BBC53DE673667C1ECE6B90D'],
+ ['The Kiss','Gustav Klimt','Bright|Classy|Neutral','4A5FAB609F5CE3C454A27CBAB85031'],
+ ['Gravity','M.C. Escher','Bright|Neon|Beach','C1395EAEC17BF0CA50E07B4289A7C2'],
+ ['Nude','Jack Bush','Bright|Neon|Beach','A1D8B6D2C48EF45F40F9AE8D80B9CE'],
+ ['Rainbow','Billy Apple','Bright|Neon|Beach','F24D98813B7C59D044F3A002F2F44D'],
+ ['Untitled (Black King Catch Scorpio)','Jean-Michel Basquiat','Bright|Neon|Beach','8CABD9F6A7B8F1EC7A1D4D9FF08838'],
+ ['Untitled, 1961','CY Twombly','Bright|Neon|Beach','F2788FF591EAF0C333F5C2AFF23B3F'],
+ ['The Creation of Adam','Michelangelo','Browns|Blues|Neutral|Pastel|Cityscape','42819F86AA7DCBB3965552344D280F'],
+ ['Woman and Dog in Front of the Moon','Joan Miró','Browns|Blues|Neutral|Pastel|Cityscape','C047593B6C73383431F1D87FEDE5D2'],
+ ['The Night Watch','Rembrandt','Browns|Cityscape|Greens|Classy|Neutral','DBC99AA683295B52248A350C090A04'],
+ ['Las Meninas','Diego Velázquez','Browns|Cityscape|Pastel|Neutral|Classy','413A2C241F1AC5B49BA57F5B5C351E'],
+ ['Bicycle Rider by the Loire','Milton Avery','Browns|Classy|Neutral','F3C9377B533EBFA588604847552723'],
+ ['American Gothic','Grant Wood','Browns|Classy|Neutral|Cityscape','A6BDB08B842F41240B9C4823D6AA7E'],
+ ['Wine Barrels Sailing Barge','Johann Jacob Ulrich','Browns|Pastel|Neutral|Classy','FDDDABE7A974A872507B533D6A4531'],
+ ['A Basket of Clams','Winslow Homer','Browns|Yellows|Pastel|Neutral|Classy','A9944AF2D9B37254358E9DBFBD483C'],
+ ['Leatherstocking\'s Rescue','John Quidor','Browns|Yellows|Pastel|Neutral|Classy','B79A59826C3754442FDBCEAFC4AA52'],
+ ['Girl with a Pearl Earring','Johannes Vermeer','Cityscape|Pastel|Browns','0C0B10707DA6CCAD9DB08E4A863B34'],
+ ['Number 1','Jackson Pollock','Cityscape|Pastel|Classy','D89CA91962A0F1ECD7E8C0511A1C23'],
+ ['Street Shadows','Jacob Lawrence','Classy|Neutral|Cityscape','614671BE994AC8B595BD43358B3834'],
+ ['Turnsole','Kenneth Noland','Classy|Neutral|Cityscape','D0D8CD586180E2AC291A1915E6E1CE'],
+ ['Radioactive Cats','Sandy Skoglund','Greens|Bright|Neutral|Classy','D7F96E457D24879387E1C39F394835'],
+ ['Bouquet of Sunflowers','Claude Monet','Greens|Browns|Neutral','184430548150DEB738734321852419'],
+ ['The Large Piece of Turf','Albrecht Dürer','Greens|Browns|Pastel|Neutral|Classy','6573599AA5828B775FD7C9BEF1E4DB'],
+ ['Harmony','Remedios Varo','Greens|Pastel|Classy|Neutral','C8DAAD989E53738D60DEBC319D471A'],
+ ['Apple Tree','Wassily Kandinsky','Greens|Pastel|Neutral|Classy','5D7388A08F27E5A7294F4D1D8AAE8A'],
+ ['Anthracite Minuet','Gene Davis','Neutral|Classy','293757568D4BD5BB56D26A1BA41D1A'],
+ ['Poker Game, 1894','C.M. Coolidge','Neutral|Dark|Classy','2040354A7169BEB59C73523149271B'],
+ ['Mystery and Melancholy of a Street','Giorgio De Chirico','Neutral|Dark|Greens|Classy','27403D48725C212412F3E4C2D88F2E'],
+ ['Hide-And-Seek','Pavel Tchelitchew','Neutral|Warm','AC2527F8CC5A5C844761221A2B4868'],
+ ['A Mountain Scene, Val D\'Aosta','J. M. W. Turner','Pastel|Cityscape|Browns|Neutral','F1ECCE9EA3B5E9D688A85835AE8045'],
+ ['Marilyn Monroe, I','James Rosenquist','Pastel|Cityscape|Classy','E25D753F4C8C6A79B0D7BC1FDCCFAB'],
+ ['Rhythm of a Russian Dance','Theo Van Doesburg','Pastel|Cityscape|Classy','BD748F3D578EBFAB68DAD7D0272928'],
+ ['The Starry Night','Vincent Van Gogh','Pastel|Cityscape|Classy','1A34312B41A76283C8CCC776C7AD24'],
+ ['Girl With A Kitten','Lucian Freud','Pastel|Cityscape|Neutral|Classy','E1D2BDA77E5E2D291D85868B83774D'],
+ ['Mauve District','Helen Frankenthaler','Pastel|Cityscape|Neutral|Classy','5D7342D7AE04ECD7B8A58B8C272727'],
+ ['Harlem','Karl Zerbe','Pastel|Classy|Neutral|Cityscape','46734FCAAB6CD0CCAF617F979A352D'],
+ ['The Letter','Mary Cassatt','Pastel|Classy|Neutral|Cityscape','1C5679BBB592CAC3B2808C5C5F4B3B'],
+ ['Portrait Of Dante','Sandro Botticelli','Pastel|Classy','272725DDBD85DA694FA54A48FDFFE5'],
+ ['The Persistence Of Memory','Salvador Dalí','Pastel|Cool|Neutral|Classy','40798CBCA455BFB37F805730514A2E'],
+ ['Destruction And Hope','Paul Klee','Pastel|Neutral|Classy','A7B3CDE6DA9E676155CDB296CCD7AD'],
+ ['I Saw The Figure 5 In Gold','Charles Demuth','Pastel|Neutral|Classy','E4AF79DF9C41AF72319236212D2A28'],
+ ['La Mariée Sous Le Baldaquin','Marc Chagall','Pastel|Neutral|Classy','3F6F7669B7CEC65840F4CE4B62496F'],
+ ['Landscape','Marcel Duchamp','Pastel|Neutral|Classy','D0CEC27BAA804B6B5EBF9A41980019'],
+ ['Les Demoiselles D\'Avignon','Pablo Picasso','Pastel|Neutral|Classy','CD6C74566C7DDD9D91A1544BD5898D'],
+ ['Rift Scull','James Jean','Pastel|Neutral|Classy','51394EF6DE7DC8AF8A658385B04838'],
+ ['Self-Portrait','Frida Kahlo','Pastel|Neutral|Classy','1215106D8325D6CFB7E5AD4FBD5630'],
+ ['The Siesta','Paul Gauguin','Pastel|Neutral|Classy','21344F8AAD05E2CE1BDF5D22E17976'],
+ ['Woman, Old Man, And Flower','Max Ernst','Pastel|Neutral|Classy','91323A3A4960D7C9696D7345554540'],
+ ['Untitled (Pink And Orange)','Rupprecht Geiger','Warm|Bright|Neon|Beach','FF62A9F77177FA9849FE6E3AFD5A35'],
+ ['Suspended Forms','Terry Frost','Warm|Bright|Neon|Beach','EF59508D5A78C66F26FB6B22DC2227'],
+ ['Untitled (1968)','Mark Rothko','Warm|Browns|Classy|Neutral','E49A16E19713D67629DA6E2ED85434'],
+ ['Target','Jasper Johns','Yellows|Bright|Pastel|Neon|Beach','4B6892F9E583FED43FF6BD28BE4C46'],
+ ['Tobacco Rose','Mel Ramos','Yellows|Pastel|Neutral','C13E43376EA5565654F9D502E7CA6B']
+];
+function clPalette(i){
+ /* one row of CL_PALETTES as an object. Pure. */
+ const r=CL_PALETTES[i];if(!r)return null;
+ const cols=[];for(let k=0;k<5;k++)cols.push('#'+r[3].substr(k*6,6));
+ return {i,painting:r[0],artist:r[1],cats:r[2].split('|'),colors:cols};
+}
+function clCategories(){
+ /* the client's own category words, DERIVED from the palettes rather than kept as a second list —
+    one source of truth, so a palette can never advertise a category the filter does not offer. */
+ const out=[];
+ for(let i=0;i<CL_PALETTES.length;i++)for(const c of CL_PALETTES[i][2].split('|'))
+  if(out.indexOf(c)<0)out.push(c);
+ return out.sort();
+}
+function clSearch(q,cat){
+ /* his "searchable by the client's category words", plus free text over painting and artist.
+    Returns indices. Pure. */
+ const t=String(q||'').trim().toLowerCase();
+ const out=[];
+ for(let i=0;i<CL_PALETTES.length;i++){
+  const r=CL_PALETTES[i];
+  if(cat&&r[2].split('|').indexOf(cat)<0)continue;
+  if(t&&(r[0]+' '+r[1]+' '+r[2]).toLowerCase().indexOf(t)<0)continue;
+  out.push(i);
+ }
+ return out;
+}
+function cnvHexRgb(h){
+ const x=String(h||'').replace('#','');
+ const v=x.length===3?x.split('').map(c=>c+c).join(''):x;
+ return [parseInt(v.substr(0,2),16)||0,parseInt(v.substr(2,2),16)||0,parseInt(v.substr(4,2),16)||0];
+}
+function cnvRgbHex(c){
+ return '#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+}
+function cnvLum(h){
+ /* WCAG relative luminance. Pure. */
+ const f=v=>{const s=v/255;return s<=0.03928?s/12.92:Math.pow((s+0.055)/1.055,2.4);};
+ const c=cnvHexRgb(h);
+ return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]);
+}
+function cnvContrast(a,b){
+ /* WCAG contrast ratio, 1..21. Pure. */
+ const x=cnvLum(a),y=cnvLum(b);
+ return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);
+}
+function cnvMix(a,b,t){
+ const A=cnvHexRgb(a),B=cnvHexRgb(b),k=Math.max(0,Math.min(1,t));
+ return cnvRgbHex([A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k]);
+}
+function cnvChroma(h){
+ const c=cnvHexRgb(h);
+ return Math.max.apply(null,c)-Math.min.apply(null,c);
+}
+function cnvPaletteMap(colors){
+ /* ROADMAP 6.4: five painting colours → the seven app slots, BY ROLE, with contrast guaranteed.
+    ⛔ Ground and text are the two extremes of the palette, pushed apart until they clear AAA; the
+    mid tones are then MIXED FROM those two, so panels and borders can never invert against the
+    ground they sit on. The accent is the most chromatic member of the palette — the one that
+    looks like the painting — lifted only as far as it must be to stay visible. Pure. */
+ const list=(colors||[]).filter(c=>/^#?[0-9a-f]{6}$/i.test(String(c).replace('#','')+''))
+  .map(c=>c[0]==='#'?c:'#'+c);
+ if(list.length<2)return null;
+ const bySort=list.slice().sort((a,b)=>cnvLum(a)-cnvLum(b));
+ let bg=bySort[0],tx=bySort[bySort.length-1];
+ for(let i=0;i<40&&cnvContrast(tx,bg)<7;i++){bg=cnvMix(bg,'#000000',.08);tx=cnvMix(tx,'#ffffff',.08);}
+ let dim=cnvMix(tx,bg,.34);
+ for(let i=0;i<40&&cnvContrast(dim,bg)<4.5;i++)dim=cnvMix(dim,tx,.12);
+ let accent=list.slice().sort((a,b)=>cnvChroma(b)-cnvChroma(a))[0];
+ for(let i=0;i<40&&cnvContrast(accent,bg)<3;i++)accent=cnvMix(accent,tx,.1);
+ return {'--bg':bg,'--panel':cnvMix(bg,tx,.10),'--panel2':cnvMix(bg,tx,.18),
+         '--line':cnvMix(bg,tx,.30),'--text':tx,'--dim':dim,'--accent':accent};
+}
+function cnvPaletteApply(i){
+ /* ⭐ IT RIDES THE LAYER THAT ALREADY EXISTS: the map is written into canvasState.colors, which
+    canvasApplyColors() pushes onto the :root custom properties and persistCanvas() saves. So a
+    painting palette persists, the per-slot ↺ still works on top of it, and every surface already
+    wearing a CSS variable — chord buttons included — recolours with it. Nothing was re-plumbed. */
+ const p=clPalette(i);if(!p)return false;
+ if(!cnvPaletteMap(p.colors))return false;
+ /* ⛔ 82nd R6 (his forty-ninth): the palette is recorded as an ID, NOT painted into
+    canvasState.colors. That store is his by-hand layer and stays his. */
+ canvasState.palId=i;
+ canvasApplyColors();
+ try{persistCanvas();}catch(e){}
+ try{cnvSaveSync();}catch(e){}
+ return true;
+}
+function cnvPalMapNow(){
+ /* 82nd R6 (his FORTY-NINTH message): the applied swatch palette as a slot map, or null. Guarded
+    because CL_PALETTES is a const declared above but read at CALL time — the TDZ lesson-class this
+    file already carries for cnvWins. */
+ try{
+  if(canvasState.palId==null)return null;
+  const p=clPalette(canvasState.palId);
+  return p?cnvPaletteMap(p.colors):null;
+ }catch(e){return null;}
+}
 function canvasApplyColors(){
+ /* ⛔⭐ 82nd R6 — HIS FORTY-NINTH MESSAGE, VERBATIM: "The existing colors in the existing color
+    palette window should be kept separately from the swatches of 5.  In case I later want to
+    delete the temporary colors (Non-swatch colors)".
+    ⚠ R5's FIRST CUT WAS WRONG IN EXACTLY THE WAY HE NAMES: applying a painting wrote its map
+    straight INTO canvasState.colors, the same store the seven by-hand pickers use, so the two
+    became indistinguishable the instant a palette was applied and "delete the temporary colours"
+    had nothing to delete.
+    ➡ THEY ARE TWO LAYERS NOW AND THEY ARE COMPOSED, NEVER MERGED:
+        canvasState.palId  — the swatch palette (one number)
+        canvasState.colors — the BY-HAND colours only, and they win
+      effective = by-hand ?? palette ?? the stylesheet's own value.
+    ⭐ A SECOND THING FALLS OUT OF THIS FOR FREE AND IS WORTH KEEPING: a per-slot ↺ now falls back
+    to the PALETTE when one is applied, instead of jumping all the way to the app's shipped colour
+    — which is what a reader of that button would expect and what R5 got wrong. */
+ const pal=cnvPalMapNow();
  for(const [v] of CNV_COLORS){
-  const ov=canvasState.colors[v];
+  const ov=canvasState.colors[v]||(pal?pal[v]:'');
   if(ov)document.documentElement.style.setProperty(v,ov);
   else document.documentElement.style.removeProperty(v);
  }
@@ -10325,22 +10533,124 @@ function cnvColDefault(v){
  if(live)document.documentElement.style.setProperty(v,live);
  return d;
 }
+var cnvPalQ='',cnvPalCat='';   /* ROADMAP 6.4: the browser's own filter — deliberately NOT on
+   canvasState. That parser is a whitelist and would drop them, and a search box that pretends to
+   persist and does not is worse than one that plainly does not. Only palId is persisted. */
+function cnvPalRowHtml(i){
+ const p=clPalette(i);if(!p)return '';
+ const on=canvasState.palId===i;
+ return '<div class="cnvPalRow" data-pal="'+i+'" title="'+p.painting+' — '+p.artist+' · '+p.cats.join(', ')+'"'
+  +' style="display:flex;gap:7px;align-items:center;padding:4px 5px;border-radius:6px;cursor:pointer;'
+  +(on?'outline:1px solid var(--accent);background:rgba(232,163,61,.12);':'')+'">'
+  +'<span style="display:flex;flex:0 0 auto;border-radius:3px;overflow:hidden;border:1px solid var(--line);">'
+  +p.colors.map(c=>'<span class="cnvPalSw" style="width:15px;height:15px;display:inline-block;background:'+c+';"></span>').join('')
+  +'</span>'
+  +'<span style="flex:1;min-width:0;font-size:10.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+  +p.painting+' <span style="color:var(--dim);">· '+p.artist+'</span></span></div>';
+}
+function cnvHandSync(){
+ /* 82nd R6 (his forty-ninth): refresh only what a by-hand edit changes — each row's readout and
+    its layer word, and the "delete the by-hand colours" button with its live count. No rebuild, so
+    an open colour picker keeps focus. */
+ const w=document.getElementById('cnvColWin');if(!w)return;
+ const pal=cnvPalMapNow();
+ for(const [v] of CNV_COLORS){
+  const el=w.querySelector('[data-cnvval="'+v+'"]');if(!el)continue;
+  const byHand=canvasState.colors[v];
+  el.textContent=(byHand||(pal?pal[v]:'')||cnvColDefault(v))+(byHand?' · by hand':(pal?' · from the swatch':''));
+ }
+ const n=Object.keys(canvasState.colors).length;
+ const b=w.querySelector('#cnvHandClear');
+ if(b){b.disabled=!n;b.textContent='✕ Delete the by-hand colours'+(n?' ('+n+')':'');}
+ const c=w.querySelector('#cnvPalCount');
+ if(c)c.textContent=(canvasState.palId!=null?'applied: '+clPalette(canvasState.palId).painting:'no swatch applied')
+  +(n?' · '+n+' by hand on top':'');
+}
 function cnvColBuild(){
  const w=document.getElementById('cnvColWin');if(!w||w.style.display==='none')return;
  const rows=w.querySelector('#cnvColRows');rows.innerHTML='';
+ /* ==== ROADMAP 6.4 (client, August 28: "it'd be great to build now if you can") — THE PALETTE
+    BROWSER, above the seven slots it drives. ⭐ It writes through the SAME canvasState.colors
+    layer the manual pickers already use, so a painting palette persists, the per-slot ↺ still
+    overrides it afterwards, and every surface already wearing a CSS variable recolours with it.
+    ⚠ WHAT THAT DOES AND DOES NOT REACH, said plainly rather than implied: anything painted from
+    the :root variables follows a palette immediately. Surfaces with HARDCODED colour — the
+    Wanderer's parchment skin is the big one — do not, and are their own cut (the spec's
+    svg-paint note). ==== */
+ const hits=clSearch(cnvPalQ,cnvPalCat);
+ const brow=document.createElement('div');
+ brow.style.cssText='margin-bottom:10px;';
+ brow.innerHTML='<div class="cp-title">Painting palettes · '+CL_PALETTES.length+' groups of five</div>'
+  +'<input id="cnvPalQ" placeholder="search paintings, artists, categories…" value="'+String(cnvPalQ).replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:11.5px;">'
+  +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0;">'
+  +'<span class="cnvPalCat" data-cat="" style="cursor:pointer;font-size:10px;padding:2px 8px;border-radius:12px;border:1px solid var(--line);'+(cnvPalCat===''?'background:var(--accent);color:#1b1d22;':'color:var(--dim);')+'">All</span>'
+  +clCategories().map(c=>'<span class="cnvPalCat" data-cat="'+c+'" style="cursor:pointer;font-size:10px;padding:2px 8px;border-radius:12px;border:1px solid var(--line);'+(cnvPalCat===c?'background:var(--accent);color:#1b1d22;':'color:var(--dim);')+'">'+c+'</span>').join('')
+  +'</div>'
+  +'<div id="cnvPalList" style="max-height:208px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px;">'
+  +(hits.length?hits.map(cnvPalRowHtml).join(''):'<div style="font-size:10.5px;color:var(--dim);padding:8px;">No palette matches that — try one of the category words above.</div>')
+  +'</div>'
+  +'<div style="display:flex;gap:6px;align-items:center;margin-top:6px;">'
+  /* ⛔ 82nd R6 (his forty-ninth): TWO clears, because they are two layers. The first deletes the
+     by-hand colours and LEAVES the swatch standing — his "in case I later want to delete the
+     temporary colors (Non-swatch colors)". The second clears everything. */
+  +'<button id="cnvHandClear"'+(Object.keys(canvasState.colors).length?'':' disabled')+' style="font-size:10.5px;padding:4px 9px;" title="Delete only the colours you set by hand. An applied swatch palette stays.">✕ Delete the by-hand colours'+(Object.keys(canvasState.colors).length?' ('+Object.keys(canvasState.colors).length+')':'')+'</button>'
+  +'<button id="cnvPalClear" style="font-size:10.5px;padding:4px 9px;" title="Clear both layers — the swatch palette and every by-hand colour.">↺ Everything back to the app’s own colours</button></div>'
+  +'<div style="font-size:9.5px;color:var(--dim);margin-top:3px;">'+hits.length+' of '+CL_PALETTES.length+' · '
+  +'<span id="cnvPalCount">'+(canvasState.palId!=null?'applied: '+clPalette(canvasState.palId).painting:'no swatch applied')
+  +(Object.keys(canvasState.colors).length?' · '+Object.keys(canvasState.colors).length+' by hand on top':'')+'</span></div>'
+  /* the attribution line ROADMAP 6.4 names by hand — it is a condition of using the set */
+  +'<div style="font-size:9px;color:var(--dim);margin-top:6px;border-top:1px solid var(--line);padding-top:5px;">'+CL_ATTRIB+'</div>';
+ rows.appendChild(brow);
+ const q=brow.querySelector('#cnvPalQ');
+ q.oninput=()=>{cnvPalQ=q.value;cnvColBuild();
+  const q2=document.getElementById('cnvPalQ');
+  if(q2){q2.focus();try{q2.setSelectionRange(q2.value.length,q2.value.length);}catch(e){}}};
+ brow.querySelectorAll('.cnvPalCat').forEach(el=>{el.onclick=()=>{
+  const c=el.getAttribute('data-cat');
+  cnvPalCat=(cnvPalCat===c)?'':c;   /* a second click on the same chip clears it */
+  cnvColBuild();};});
+ brow.querySelectorAll('.cnvPalRow').forEach(el=>{el.onclick=()=>{
+  cnvPaletteApply(+el.getAttribute('data-pal'));cnvColBuild();};});
+ const wipe=(hand,pal)=>{
+  if(hand)for(const [v] of CNV_COLORS)delete canvasState.colors[v];
+  if(pal)canvasState.palId=null;
+  canvasApplyColors();
+  try{persistCanvas();}catch(e){}try{cnvSaveSync();}catch(e){}
+  cnvColBuild();};
+ const hc=brow.querySelector('#cnvHandClear');
+ if(hc)hc.onclick=()=>wipe(true,false);   /* his forty-ninth: the temporary colours only */
+ brow.querySelector('#cnvPalClear').onclick=()=>wipe(true,true);
+ const slots=document.createElement('div');
+ slots.innerHTML='<div class="cp-title">Every colour, by hand</div>';
+ rows.appendChild(slots);
+ const palNow=cnvPalMapNow();
  for(const [v,name] of CNV_COLORS){
-  const cur=canvasState.colors[v]||cnvColDefault(v);
+  /* 82nd R6: a slot shows its EFFECTIVE colour and says which layer it came from, because with two
+     layers "edited" alone no longer tells him what he is looking at. */
+  const byHand=canvasState.colors[v];
+  const cur=byHand||(palNow?palNow[v]:'')||cnvColDefault(v);
+  const src=byHand?' · by hand':(palNow?' · from the swatch':'');
   const row=document.createElement('div');
+  /* ⛔ 82nd R5: the seven by-hand rows carry a CLASS now. They used to be findable only as
+     `#cnvColRows > div`, a SHAPE selector — and the moment the palette browser was appended above
+     them that selector started returning the browser too and threw on its missing span. A row
+     that other code has to locate should say what it is. */
+  row.className='cnvColRow';
   row.style.cssText='display:flex;align-items:center;gap:8px;margin:3px 0;';
   row.innerHTML='<span style="flex:0 0 150px;font-size:11px;color:var(--dim);">'+name+'</span>'
    +'<input type="color" value="'+cur+'" data-cnvcol="'+v+'" style="flex:0 0 40px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;cursor:pointer;">'
-   +'<span style="font-size:10.5px;color:var(--dim);flex:1 1 auto;">'+cur+(canvasState.colors[v]?' · edited':'')+'</span>'
-   +'<span class="wbtn" data-cnvrst="'+v+'" title="Back to the app’s own color">↺</span>';
+   +'<span data-cnvval="'+v+'" style="font-size:10.5px;color:var(--dim);flex:1 1 auto;">'+cur+src+'</span>'
+   +'<span class="wbtn" data-cnvrst="'+v+'" title="'+(byHand&&palNow?'Drop the by-hand colour — this slot falls back to the swatch palette':'Back to the app’s own color')+'">↺</span>';
   const inp=row.querySelector('input');
-  inp.oninput=()=>{canvasState.colors[v]=inp.value;canvasApplyColors();persistCanvas();cnvSaveSync();};
+  /* ⛔ 82nd R6: a LIVE sync, not a rebuild. The row rebuild deliberately waits for `change` so the
+     open colour picker does not lose focus mid-drag — but that left the by-hand clear button
+     DISABLED and its count stale while he was still dragging, so the button silently did nothing.
+     A control that is disabled because the screen is out of date is a trap, not a guard. */
+  inp.oninput=()=>{canvasState.colors[v]=inp.value;canvasApplyColors();persistCanvas();cnvSaveSync();cnvHandSync();};
   inp.onchange=()=>cnvColBuild();
   row.querySelector('[data-cnvrst]').onclick=()=>{delete canvasState.colors[v];canvasApplyColors();persistCanvas();cnvColBuild();cnvSaveSync();};
-  rows.appendChild(row);
+  rows.appendChild(row);   /* the seven by-hand slots still sit under the browser, and a hand edit
+                              on top of a palette is kept: the palette seeds, it does not lock */
  }
 }
 function cnvTplPick(mode){
