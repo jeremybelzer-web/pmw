@@ -701,7 +701,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28s</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-28t</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -18840,13 +18840,24 @@ function wanPcLof(pc,minor){
  const hi=minor?8:5;
  return m>hi?m-12:m;
 }
+/* 81st R4 (his thirty-eighth message): "2 more rows wider and taller by default".
+   ⛔ THESE WERE HARDCODED AT SEVEN SITES — the grid builder, two render loops, the
+   terrain scatter, the degree-box clamps and the px() geometry clamps — and two of them
+   were CLAMPS (Math.min(12,…)/Math.min(9,…)), which fail silently by pinning the last
+   row/column instead of throwing. Naming them is the fix that outlives this round.
+   ⚠ WEB_CA MUST STAY EVEN: columns alternate major/minor (`minor:c%2===1`), so the home
+   MAJOR only seats on an even index. 12 columns therefore cannot split evenly around it;
+   c=6 gives 6 left / 5 right, preserving the old grid's own off-by-one balance (4/5)
+   rather than tripling it (c=4 of 12 would be 4 left / 7 right). Labeled as a judgement. */
+var WEB_ROWS=15, WEB_COLS=12, WEB_RC=7, WEB_CA=6;
 function weberGrid(centerLof){
- /* 13 rows × 10 cols of {lof,minor}; the anchor MAJOR sits at r6 c4 */
+ /* WEB_ROWS × WEB_COLS of {lof,minor}; the anchor MAJOR sits at (WEB_RC, WEB_CA) */
  const rows=[];
- for(let r=0;r<13;r++){
-  const base=centerLof-6-(r-6);
+ const anchorOff=3*Math.ceil(WEB_CA/2);
+ for(let r=0;r<WEB_ROWS;r++){
+  const base=centerLof-anchorOff-(r-WEB_RC);
   const row=[];
-  for(let c=0;c<10;c++)row.push({lof:base+3*Math.ceil(c/2),minor:c%2===1});
+  for(let c=0;c<WEB_COLS;c++)row.push({lof:base+3*Math.ceil(c/2),minor:c%2===1});
   rows.push(row);
  }
  return rows;
@@ -19097,7 +19108,7 @@ function wanWeberDraw(){
     select · ⌥+click = reset — the universal click rules, applied here first. */
  const W=document.getElementById('wanWeber');if(!W)return;
  const st=wanState;
- if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView='letters';st.webPaths=[];st.webSel=new Set();}
+ if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView='roman';st.webPaths=[];st.webSel=new Set();}   /* 81st R4 (his thirty-eighth message): ROMAN NUMERALS ARE THE DEFAULT — the ctrl+click map menu still switches back to Letters */
  if(!Array.isArray(st.webRoadsOff))st.webRoadsOff=[];   /* 80th R23: legend-toggled-off roads */
  if(st.webLegAll===undefined)st.webLegAll=false;
  if(st.webReduce===undefined)st.webReduce=false;   /* 80th R24 (his thirty-second message): Reduce Accidentals — OFF by default */
@@ -19119,9 +19130,9 @@ function wanWeberDraw(){
      so arming ⏺ ships the pair and costs no WINDOW_DEFS entry. */
   +'<span class="wanAllTog'+(wanState.rec?' on':'')+'" id="wanRecTog" title="Experiment, and record your trips. Every key you land on joins 🧳 Upcoming Trips as a stop; the trail below becomes a string of chords you can drag straight onto the chord lane.">'+(wanState.rec?'⏺':'⏵')+' Record your trips</span></div>'
   +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="flex:1 1 auto;min-width:0;">';
- for(let r=0;r<13;r++){
+ for(let r=0;r<WEB_ROWS;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
-  for(let c=0;c<10;c++){
+  for(let c=0;c<WEB_COLS;c++){
    const cell=grid[r][c];
    /* 80th R24 (his thirty-second message): Reduce Accidentals ON → a double-accidental
       spelling SHOWS its plain enharmonic (B𝄫 → A · G𝄫 → F) — the lattice position
@@ -19130,7 +19141,14 @@ function wanWeberDraw(){
    const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);   /* 80th R25 (his 33rd message): 3+ sharps spell as ♯♯♯, not × — the detector reads BOTH accidental families now */
    const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
    const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,st.tonic):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
-   const isKey=cell.minor===minor&&cell.lof===tonicLof;
+   /* 81st R4 (his thirty-eighth message): "all of the I chords... including the one in
+      the upper right hand and lower left hand corners". ⛔ THE BUG WAS `cell.lof===tonicLof`
+      — a LINE-OF-FIFTHS position, which is unique. The same PITCH CLASS recurs across the
+      lattice at enharmonic lof values (C at 0, B♯ at 12, D𝄫 at −12), and those recurrences
+      land at the EXTREMES — which is exactly why the corners were the instances he could
+      see going dark. Comparing pitch class lights every one of them. ⭐ His corners are the
+      acceptance test, and the suite asserts them by name. */
+   const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
    const selKey=st.webSel.has(cell.lof+':'+(cell.minor?1:0));
    h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'"'
     +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'"'
@@ -19186,7 +19204,7 @@ function wanWeberDraw(){
     glyphAt(p,obst[(p.r*3+p.c)%obst.length],'tOb');
    }
   }
-  for(let r=0;r<13;r++)for(let c=0;c<10;c++){
+  for(let r=0;r<WEB_ROWS;r++)for(let c=0;c<WEB_COLS;c++){
    const k2=r+':'+c;if(seen.has(k2))continue;
    const roll=(r*7+c*3)%9;
    if(roll===0)glyphAt({r,c},'🌊','tFar');
@@ -19196,8 +19214,8 @@ function wanWeberDraw(){
  }else{
   centers.forEach((hcell,ci2)=>{
    for(let k=1;k<=Math.max(1,Math.min(4,st.webRadius));k++){
-    const r0=Math.max(0,hcell.r-k),r1=Math.min(12,hcell.r+k);
-    const c0=Math.max(0,hcell.c-k),c1=Math.min(9,hcell.c+k);
+    const r0=Math.max(0,hcell.r-k),r1=Math.min(WEB_ROWS-1,hcell.r+k);
+    const c0=Math.max(0,hcell.c-k),c1=Math.min(WEB_COLS-1,hcell.c+k);
     const tl=chipAt(r0,c0),br=chipAt(r1,c1);
     if(!tl||!br)continue;
     const d=document.createElement('div');
@@ -19260,8 +19278,8 @@ function wanWeberDraw(){
       corners in the gutters */
    const ri=Math.floor(pt2.y),ci=Math.floor(pt2.x);
    const isCtr=(pt2.x%1)!==0;
-   if(isCtr){const el2=chipAt(Math.min(12,ri),Math.min(9,ci));if(el2)return {x:el2.offsetLeft+el2.offsetWidth/2,y:el2.offsetTop+el2.offsetHeight/2};}
-   const rr=Math.max(0,Math.min(12,pt2.y===13?12:ri)),cc=Math.max(0,Math.min(9,pt2.x===10?9:ci));
+   if(isCtr){const el2=chipAt(Math.min(WEB_ROWS-1,ri),Math.min(WEB_COLS-1,ci));if(el2)return {x:el2.offsetLeft+el2.offsetWidth/2,y:el2.offsetTop+el2.offsetHeight/2};}
+   const rr=Math.max(0,Math.min(WEB_ROWS-1,pt2.y===WEB_ROWS?WEB_ROWS-1:ri)),cc=Math.max(0,Math.min(WEB_COLS-1,pt2.x===WEB_COLS?WEB_COLS-1:ci));
    const el2=chipAt(rr,cc);if(!el2)return {x:pt2.x*47,y:pt2.y*25};
    return {x:el2.offsetLeft+(pt2.x>ci||pt2.x===10?el2.offsetWidth+1.5:-1.5),y:el2.offsetTop+(pt2.y>ri||pt2.y===13?el2.offsetHeight+1.5:-1.5)};
   };
