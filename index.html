@@ -735,7 +735,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-01b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-01c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4033,6 +4033,70 @@ function voiceFromFirstInvI(c,tonic,minor){
   }
  }
  return best||voice(c,null);
+}
+function audVoice(c,prev){
+ /* 84th R3 (his FIFTY-THIRD message, Sept 1): THE AUDITION VOICING LAW for every
+    audition engine window — "Right now these chords only ascend in root position
+    which is incorrect. They should use voice leading and be contained within a 9th
+    (instead of a strict octave). The chord's root note should also be played down
+    2 octaves from the chord."
+    · prev = the previous voiced chord (notes only, no bass) → the cheapest
+      voice-for-voice move wins (padded like voiceFromFirstInvI's scorer).
+    · prev null = a fresh start → FIRST INVERSION, register just under middle C
+      (his 42nd: "start with a 1st inversion chord on whichever chord is selected
+      for the center chord"). A chord with no third (sus, no-3) starts on register
+      preference alone — labelled degradation, his words define no start for those.
+    · THE 9TH LAW: candidates spanning more than 14 semitones are dropped (an
+      extended chord that cannot fit falls back to its narrowest shapes — labelled).
+    · bass = the chord's ROOT pc at the nearest instance of (lowest − 24) — the
+      reading of "down 2 octaves from the chord"; played even when the voicing
+      omits the root (a (no R) chord is still named by its root). Pure.
+    Returns {notes,bass} or null on junk. */
+ const pcs=[];for(const x of ((c&&c.iv)||[])){const p=(((+c.r||0)+x)%12+12)%12;if(pcs.indexOf(p)<0)pcs.push(p);}
+ if(!pcs.length)return null;
+ const rootPc=(((+c.r||0)%12)+12)%12;
+ const thirdPc=(c.iv&&c.iv.length>1)?(((+c.r||0)+c.iv[1])%12+12)%12:null;
+ const cands=[];
+ for(let rot=0;rot<pcs.length;rot++){
+  const order=pcs.slice(rot).concat(pcs.slice(0,rot));
+  for(let o=3;o<=5;o++){
+   const notes=[];let last=-1;
+   for(const pc of order){let m=o*12+pc;while(m<=last)m+=12;notes.push(m);last=m;}
+   cands.push(notes);
+  }
+ }
+ let pool=cands.filter(n=>n[n.length-1]-n[0]<=14);
+ if(!pool.length){const ms=Math.min.apply(null,cands.map(n=>n[n.length-1]-n[0]));
+  pool=cands.filter(n=>n[n.length-1]-n[0]===ms);}
+ let best=null,bd=1e9;
+ for(const notes of pool){
+  let d;
+  if(prev&&prev.length){
+   const L=Math.max(notes.length,prev.length);d=0;
+   for(let i=0;i<L;i++)d+=Math.abs(notes[Math.min(i,notes.length-1)]-prev[Math.min(i,prev.length-1)]);
+  }else{
+   d=Math.abs(notes[0]-57)+((thirdPc!=null&&notes[0]%12!==thirdPc)?24:0);
+  }
+  if(d<bd){bd=d;best=notes;}
+ }
+ let b=best[0]-24;
+ b+=((rootPc-b)%12+12)%12;
+ if(b>best[0]-18)b-=12;
+ return {notes:best,bass:b};
+}
+var audLed={surf:null,notes:null};   /* 84th R3: the per-surface voice-leading memory — a different surface (or a reset) starts fresh at first inversion */
+function audLedReset(){audLed.surf=null;audLed.notes=null;}
+function audLedVoice(surf,c){
+ /* the stateful half, kept tiny: voice against this surface's own last chord, remember, return */
+ const v=audVoice(c,(audLed.surf===surf)?audLed.notes:null);
+ if(v){audLed.surf=surf;audLed.notes=v.notes;}
+ return v;
+}
+function audLedPlay(surf,c,dur,when,vel){
+ const v=audLedVoice(surf,c);
+ if(!v)return null;
+ try{inst.note('comping',[v.bass].concat(v.notes),dur,when,vel);}catch(e){}
+ return v;
 }
 function padVoice(c,prev){const pcs=c.iv.map(x=>(c.r+x)%12);
  if(!prev)return voice(c,null);
@@ -9615,7 +9679,7 @@ function mkPalCell(ch,opts){
   /* July 24 r3 (client): clicking a palette chord SELECTS it — arrow keys then walk
      and audition the palette in any direction from here */
   if(b.dataset.pi!==undefined){palSelIdx=+b.dataset.pi;markPalSel();}
-  auditionChord(ch);
+  if(audioReady)audLedPlay('pal',ch,.6,Tone.now(),.5);   /* 84th R3: the palette chips voice-lead through the 'pal' memory */
  };
  return b;
 }
@@ -9658,7 +9722,7 @@ function palNav(dx,dy){
 function palAuditionCell(el){
  const ch=el&&el.__ch;
  if(!ch)return;
- const go=()=>{try{auditionChord(ch);}catch(e){}};
+ const go=()=>{try{audLedPlay('pal',ch,.6,Tone.now(),.5);}catch(e){}};   /* 84th R3: arrow-key walks voice-lead — which is exactly where parallel planing was most audible */
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
 document.addEventListener('keydown',e=>{
@@ -9675,7 +9739,9 @@ function palPlayColumn(chs,btn){
  const bpm=Math.max(20,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||120)),spb=60/bpm;
  const go=()=>{try{
   const t0=Tone.now()+.03;let at=0,prev=null;
-  chs.forEach((c,i)=>{const d=rate[i%rate.length];const v=voice({r:c.r,iv:c.iv},prev);prev=v;inst.note('comping',v,d*spb*.92,t0+at,.6);at+=d*spb;});
+  /* 84th R3 (his FIFTY-THIRD message): the column already voice-led through voice();
+     it upgrades to the shared law — first-inversion start, the 9th, the bass root. */
+  chs.forEach((c,i)=>{const d=rate[i%rate.length];const v=audVoice({r:c.r,iv:c.iv},prev);if(!v)return;prev=v.notes;inst.note('comping',[v.bass].concat(v.notes),d*spb*.92,t0+at,.6);at+=d*spb;});
   if(btn){btn.classList.add('on');setTimeout(()=>btn.classList.remove('on'),Math.round(at*1000));}
  }catch(e){}};
  if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
@@ -11447,8 +11513,10 @@ function progAudition(run){
  const go=()=>{try{
   if(!audioReady||!inst||!run)return;
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
-  let at=0;
-  for(const c of run){const d=(typeof c.d==='number'&&c.d>0)?Math.min(c.d,2):1;inst.note('comping',voice({r:c.r,iv:c.iv},null),d*spb*.95,t0+at*spb,.5);at+=d;}
+  let at=0,pv=null;   /* 84th R3 (his FIFTY-THIRD message): the phrase voice-leads, within a 9th, root two octaves under */
+  for(const c of run){const d=(typeof c.d==='number'&&c.d>0)?Math.min(c.d,2):1;
+   const v=audVoice({r:c.r,iv:c.iv},pv);if(!v){at+=d;continue;}pv=v.notes;
+   inst.note('comping',[v.bass].concat(v.notes),d*spb*.95,t0+at*spb,.5);at+=d;}
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
@@ -12347,8 +12415,9 @@ function mimicAudition(tpl){
   const k=keyFor(beat);
   const rows=mimicAuditionChords(tpl,k.tonic,modeIsMinor(k.mode));
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
-  let at=0;
-  for(const c of rows){inst.note('comping',voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+  let at=0,pv=null;   /* 84th R3 (his FIFTY-THIRD message): the card's moment voice-leads, within a 9th, root two octaves under */
+  for(const c of rows){const v=audVoice({r:c.r,iv:c.iv},pv);if(!v){at+=c.d;continue;}pv=v.notes;
+   inst.note('comping',[v.bass].concat(v.notes),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
   modAudFx(tpl.id,rows,spb);   /* [M6c]/[M6d]: the card's shape spins, the fox recolours per chord */
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
@@ -13655,8 +13724,13 @@ function cadAudition(){
   const m=modeIsMinor(k.mode);
   const rows=[{d:1,r:((k.tonic%12)+12)%12,iv:(m?MIN:MAJ).slice(),bass:0}].concat(run);
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
-  let at=0;
-  for(const c of rows){inst.note('comping',voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+  /* 84th R3 (his FIFTY-THIRD message): the run VOICE-LEADS — first inversion on the
+     opening home chord (his 42nd), then the cheapest move, within a 9th, the root two
+     octaves under. The old per-chord voice(...,null) was the memoryless shape he
+     reported across the audition windows. */
+  let at=0,pv=null;
+  for(const c of rows){const v=audVoice({r:c.r,iv:c.iv},pv);if(!v){at+=c.d;continue;}pv=v.notes;
+   inst.note('comping',[v.bass].concat(v.notes),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
  }catch(e){}};   /* an audition must never break the gesture it rides on */
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
@@ -18625,9 +18699,19 @@ function ragaPlayStep(e,pcAbs,when,dur,vel){
  const degIdx=e.pcs.indexOf(((pcAbs%12)+12)%12);
  const pb=(ragaState.micro&&degIdx>=0)?ragaDegMelisma(e,degIdx):null;
  inst.melAud(root+pcAbs,dur,when,vel,pb);
- if(ragaState.chords&&degIdx>=0)
-  for(const off of ragaDegChord(e,degIdx))
-   inst.melAud(root+off-12,dur*.96,when,vel*.42);   /* accompaniment an octave under */
+ if(ragaState.chords&&degIdx>=0){
+  /* 84th R3 (his FIFTY-THIRD message): ragaDegChord's offsets stacked straight up from
+     the degree were the "only ascend in root position" shape, verbatim. The chord now
+     voice-leads through the shared law ('raga' memory), still an octave under the
+     melody (the client's note-louder-than-chord mix stands), the root two octaves
+     under the chord AS HEARD (so the bass shifts down with the accompaniment). */
+  const offs=ragaDegChord(e,degIdx);
+  if(offs.length){
+   const v=audLedVoice('raga',{r:(((root+offs[0])%12)+12)%12,iv:offs.map(o2=>o2-offs[0])});
+   if(v)for(const m of [v.bass-12].concat(v.notes.map(n2=>n2-12)))
+    inst.melAud(m,dur*.96,when,vel*.42);
+  }
+ }
 }
 function ragaAudSeqPlay(e,riff){
  /* [Scale ▸]: up & down in the song's key at an easy eighth-note walk. [➿ Riffs] on a
@@ -19411,7 +19495,7 @@ function wanCellAt(row,deg){
 function wanAudition(){
  const cell=wanCellAt(wanState.cur.row,wanState.cur.deg);
  if(!cell)return;
- const go=()=>{try{auditionChord({r:cell.r,iv:cell.iv});}catch(e){}};
+ const go=()=>{try{audLedPlay('wan',{r:cell.r,iv:cell.iv},.8,Tone.now(),.55);}catch(e){}};   /* 84th R3: the matrix cells voice-lead too (and carry the R2 mods — one seam) */
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
 function wanUse(){
@@ -19649,7 +19733,11 @@ function wanRomanOf(pc,minor,homePc){
 }
 function wanKeyAudition(pc,minor){
  try{
-  const go=()=>{try{inst.note('comping',voiceFromFirstInvI({r:pc,iv:(minor?MIN:MAJ).slice()},pc,minor),1.2,Tone.now(),.6);}catch(e){}};
+  /* 84th R3 (his FIFTY-THIRD message): voice-led now — the old call planed every key
+     as its own first-inversion I in parallel, which is exactly the "only ascend in
+     root position" shape he reported. Consecutive plays (map keys, chain chips, the
+     path stops) voice-lead through the 'wan' memory; a re-seat starts fresh. */
+  const go=()=>{try{audLedPlay('wan',{r:pc,iv:(minor?MIN:MAJ).slice()},1.2,Tone.now(),.6);}catch(e){}};
   if(typeof audioReady!=='undefined'&&audioReady)go();
   else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
  }catch(e){}
@@ -20640,6 +20728,7 @@ function wanWeberDraw(){
    wanState.cur={row:0,deg:0};
    st.webShift=0;
    wanRecord(wanState.tonic,mn(),'a double-click on the map');   /* 81st R3 */
+   audLedReset();   /* 84th R3: a NEW CENTER starts the voicing fresh — first inversion on it (his 42nd) */
    wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
   };
  });
@@ -22662,7 +22751,7 @@ function orbPivotAudition(pv){
  const steps=pv.bridge==='iiV'?[{deg:2,iv:MIN7},{deg:7,iv:DOM7}]:pv.bridge==='IVV'?[{deg:5,iv:MAJ},{deg:7,iv:DOM7}]:pv.bridge==='V7'?[{deg:7,iv:DOM7}]:[{r:pv.r,iv:pv.iv}];
  const bpm=Math.max(20,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||120)),spb=60/bpm;
  const ck=orbCurrentKey();
- const go=()=>{try{const t0=Tone.now()+.03;steps.forEach((st,i)=>{const r=st.r!=null?st.r:((tg+st.deg)%12+12)%12;inst.note('comping',voiceFromFirstInvI({r,iv:(st.iv||[0,4,7]).slice()},ck.tonic,ck.minor),spb*.9,t0+i*spb,.6);});}catch(e){}};
+ const go=()=>{try{const t0=Tone.now()+.03;let pv=null;steps.forEach((st,i)=>{const r=st.r!=null?st.r:((tg+st.deg)%12+12)%12;const v=audVoice({r,iv:(st.iv||[0,4,7]).slice()},pv);if(!v)return;pv=v.notes;inst.note('comping',[v.bass].concat(v.notes),spb*.9,t0+i*spb,.6);});}catch(e){}};   /* 84th R3 (his 53rd): the run voice-leads, within a 9th, root two octaves under */
  if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
 }
 function orbPivotRide(at,landAt,landed){
@@ -22753,7 +22842,7 @@ function orbTripAnim(from,done,ride){
   const mute=!!orbState.djMute;
   ride.chords.forEach((c,i)=>{
    setTimeout(()=>{if(road.isConnected){road.setAttribute('stroke',c.col);road.style.filter='drop-shadow(0 0 3px '+c.col+')';}
-    if(!playing&&!mute){const go=()=>{try{const ck=orbCurrentKey();inst.note('comping',voiceFromFirstInvI({r:c.r,iv:c.iv},ck.tonic,ck.minor),Math.max(.3,c.ms/1000*.9),Tone.now()+.02,.6);}catch(e){}};
+    if(!playing&&!mute){const go=()=>{try{audLedPlay('orb',{r:c.r,iv:c.iv},Math.max(.3,c.ms/1000*.9),Tone.now()+.02,.6);}catch(e){}};   /* 84th R3 (his 53rd): voice-led through the 'orb' memory */
      if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});}
    },Math.round(c.startMs*(DUR_ARRIVE/Math.max(1,ride.chords.reduce((a,q)=>a+q.ms,0)))));
   });
@@ -23577,7 +23666,7 @@ function renderOrb(){
      orbState._ct=setTimeout(()=>{orbState._ct=null;
       if(wasSel){orbState.sel=null;renderOrb();setOrbStatus('Planet de-selected.');return;}
       const iv=it.minor?[0,3,7]:[0,4,7];
-      const go=()=>{try{inst.note('comping',voiceFromFirstInvI({r:it.tonic,iv},it.tonic,it.minor),.9,Tone.now()+.02,.6);}catch(e){}};
+      const go=()=>{try{audLedPlay('orb',{r:it.tonic,iv},.9,Tone.now()+.02,.6);}catch(e){}};   /* 84th R3 (his 53rd): voice-led */
       if(!orbState.djMute){if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});}
       const lit=document.querySelector('#orbBody .orbNode[data-orb="'+i+'"]');if(lit)lit.classList.add('on');
       setOrbStatus('🔊 '+PCN[it.tonic]+(it.minor?' minor':' major')+' — double-click to travel there (stopped: at the playhead · playing: through 🧳 Upcoming Trips).');
@@ -23596,7 +23685,7 @@ function renderOrb(){
     if(orbState._ct)clearTimeout(orbState._ct);
     orbState._ct=setTimeout(()=>{orbState._ct=null;
      if(wasSel){orbState.sel=null;renderOrb();setOrbStatus('Moon de-selected.');return;}
-     try{const ck=orbCurrentKey();const go=()=>{try{inst.note('comping',voiceFromFirstInvI({r:it.r,iv:it.iv},ck.tonic,ck.minor),.7,Tone.now()+.02,.6);}catch(e){}};if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});}catch(e){}   /* 20l [56]: the inversion nearest a first-inversion I */
+     try{const go=()=>{try{audLedPlay('orb',{r:it.r,iv:it.iv},.7,Tone.now()+.02,.6);}catch(e){}};if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});}catch(e){}   /* 84th R3 (his 53rd): voice-led through the 'orb' memory — supersedes the 20l [56] static reference here */
      const lit=document.querySelector('#orbBody .orbNode[data-orb="'+i+'"]');if(lit)lit.classList.add('on');
      setOrbStatus('🔊 '+(it.lbl||'chord')+' — double-click to play it as the next chord (stopped: at the playhead · playing: through 🧳 Upcoming Trips).');
     },230);
