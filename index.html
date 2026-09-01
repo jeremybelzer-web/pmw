@@ -222,7 +222,22 @@
   .wanLegRow{margin-bottom:9px;padding:6px 8px;border:1px solid rgba(107,79,40,.35);border-radius:8px;background:rgba(232,220,196,.45);}
   .wanLegTitle{font-weight:800;font-size:12.5px;cursor:pointer;letter-spacing:.4px;display:inline-block;}
   .wanLegChain{margin-top:3px;cursor:grab;font-size:11.5px;color:#5a4426;line-height:1.5;}
-  #wanRoadDlg{position:fixed;z-index:1200;width:300px;background:#efe6d2;border:2px solid #6b4f28;border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.4);color:#4a3a20;font-family:Georgia,serif;font-size:12px;padding:0 10px 10px;}
+  /* 84th (his THIRTY-NINTH message): the path's chords are OBJECTS now — each key in the
+     chain is its own chip: click selects (and hears) it, double-click opens its editor,
+     Delete/Backspace removes the selected ones. The chain as a whole still drags. */
+  .wanLegKey{display:inline-block;padding:0 3px;margin:0 1px;border-radius:4px;border:1px solid transparent;cursor:pointer;}
+  .wanLegKey:hover{border-color:rgba(107,79,40,.5);background:rgba(232,220,196,.7);}
+  .wanLegKeySel{border-color:#6b4f28;background:#e8dcc4;box-shadow:0 0 0 1.5px rgba(107,79,40,.35);}
+  #wanPathRec{display:inline-block;margin-left:auto;padding:1px 9px 2px;border:2px double #6b2a1a;border-radius:50%/60%;background:radial-gradient(circle at 40% 35%,#f2e7cb,#e4d2a8);color:#6b2a1a;font-family:Georgia,serif;font-weight:800;font-size:10.5px;letter-spacing:.8px;cursor:pointer;user-select:none;box-shadow:1px 2px 4px rgba(58,44,24,.35);}
+  #wanPathRec.on{background:radial-gradient(circle at 40% 35%,#c86a4a,#8a2a12);color:#f6ecd4;border-color:#4a1408;box-shadow:0 0 7px rgba(160,40,15,.65),inset 0 0 4px rgba(0,0,0,.3);}
+  /* 84th R2 (his FORTY-FOURTH message): the per-scale colour brush. ⚠ 🖌 and NOT 🎨 —
+     his fifty-first made the paint glyph mean the Color Palette and nothing else, and
+     that ruling is LATER than this ask; the brush half of "a painting palette and
+     brush" carries the affordance without re-poisoning the glyph. Labelled inference. */
+  .wanBrush{position:relative;display:inline-block;flex:0 0 auto;cursor:pointer;border:1px solid #a8895f;border-radius:5px;background:#f6ecd4;padding:2px 6px 1px;font-size:12px;line-height:1.3;}
+  .wanBrush input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;padding:0;border:0;}
+  #wanRoadDlg,#wanChainDlg{position:fixed;z-index:1200;width:300px;background:#efe6d2;border:2px solid #6b4f28;border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.4);color:#4a3a20;font-family:Georgia,serif;font-size:12px;padding:0 10px 10px;}
+  #wanChainDlg select,#wanChainDlg button{background:#f6ecd4;color:#3a2c18;border:1px solid #a8895f;font-family:Georgia,serif;font-size:11px;border-radius:5px;padding:1px 7px;cursor:pointer;}
   #wanRoadDlg .wanPopStrip{margin:0 -10px 8px;}
   #wanWebMenu{position:fixed;z-index:130;background:#f2e7cb;border:2px double #6b4f28;border-radius:8px;padding:6px;box-shadow:0 8px 26px rgba(0,0,0,.45);font-size:12px;min-width:210px;display:none;font-family:Georgia,serif;color:#3a2c18;}
   #wanWebMenu .wmit{padding:5px 9px;border-radius:5px;cursor:pointer;}
@@ -720,7 +735,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-08-29c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-01b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11864,6 +11879,10 @@ document.addEventListener('keydown',e=>{
  try{innerOwn=inner&&typeof GRID_WORLDS==='object'&&typeof CUR_GRID==='string'
   &&GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].pairFor===winSelId;}catch(err){}
  if(innerOwn)return;   /* the rig's own selection wins — the app's delete takes it */
+ /* 84th (his THIRTY-NINTH message): selected PATH-CHAIN keys are "something inside the
+    window is selected" — his 78th-R4b law's own carve-out. Delete takes the stops, not
+    the Wanderer; the chain's own keydown handler (bubble phase) does the deleting. */
+ try{if(winSelId==='wanPanel'&&typeof wanState==='object'&&wanState.webChainSel instanceof Set&&wanState.webChainSel.size)return;}catch(err){}
  if(inner){try{selNotes.clear();selChordSet.clear();selChord=null;selHead=null;selHeads.clear();
   if(typeof xselClear==='function')xselClear();
   if(typeof drawTrackSel==='function')drawTrackSel();if(typeof refresh==='function')refresh(false);}catch(err){}}
@@ -19119,6 +19138,17 @@ var wanFnCols=(function(){
   return out;}catch(e){return {};}
 })();
 function persistWanFnCols(){try{localStorage.setItem('cp_wanFnCols',JSON.stringify(wanFnCols));}catch(e){}}
+/* 84th R2 (his FORTY-FOURTH message): "the user should be able to color code each scale
+   and it's chords... and selecting a color for the entire scale." ⚠ Labelled inference:
+   the colour is keyed by SLOT (scale 1/2/3), not by scale id — he colours to tell the
+   SETS apart while improvising, and the sets are the slots. Same store pattern and the
+   same cp_ namespace as the function colours above. */
+var wanScaleCols=(function(){
+ try{const o=JSON.parse(localStorage.getItem('cp_wanScaleCols')||'{}');
+  const out={};for(const k of ['1','2','3'])if(typeof o[k]==='string'&&/^#[0-9a-f]{6}$/i.test(o[k]))out[k]=o[k];
+  return out;}catch(e){return {};}
+})();
+function persistWanScaleCols(){try{localStorage.setItem('cp_wanScaleCols',JSON.stringify(wanScaleCols));}catch(e){}}
 function wanRespellPcs(pcs,fromRoot,toRoot){
  /* 82nd R3 (his FORTY-FIFTH message, verbatim: "it takes the existing Scale 2 and keeps all
     the same notes, but retranslates the scale as if it's root were the same key as the Scale
@@ -19294,12 +19324,86 @@ function wanRows(){
   ?{name:PCN[wanState.tonic]+' '+sc3.name,pcs:sc3.pcs,tonic:wanState.tonic}
   :{name:'(empty — pick a scale)',pcs:sc.pcs,tonic:wanState.tonic,blank:true}];
 }
+const WAN_EXTS=[
+ /* 84th R2 (his FORTY-FOURTH message) — HIS OWN LIST, verbatim order: "Add 2, sus 4,
+    add 4 (11), sus 2, 7, 6 (13)". k = scale steps above the chord's degree, so every
+    extension is DIATONIC — the row's own scale supplies the 2nd/4th/6th/7th, exactly
+    as the triads themselves are stacked. mode 'sus' replaces the third. NO SEMICOLONS
+    inside this literal (the grabConst rule) */
+ {id:'add2',lbl:'Add 2',k:1,mode:'add',tag:'add2'},
+ {id:'sus4',lbl:'Sus 4',k:3,mode:'sus',tag:'sus4'},
+ {id:'add4',lbl:'Add 4 (11)',k:3,mode:'add',tag:'add11'},
+ {id:'sus2',lbl:'Sus 2',k:1,mode:'sus',tag:'sus2'},
+ {id:'7',lbl:'7',k:6,mode:'add',tag:'7'},
+ {id:'6',lbl:'6 (13)',k:5,mode:'add',tag:'6'}
+];
+function wanChordModNorm(x){
+ /* the per-cell chord mod {ext:[ids],omit:[0|1|2]} — junk or an empty mod → null.
+    At most ONE sus survives (both replace the third — the LAST one written wins),
+    dupes drop, omit clamps to the base triad's three tones and never takes all three.
+    Pure. */
+ if(!x||typeof x!=='object')return null;
+ const ids=WAN_EXTS.map(e=>e.id);
+ let ext=Array.isArray(x.ext)?x.ext.filter(e=>ids.indexOf(e)>=0):[];
+ ext=ext.filter((e,i)=>ext.indexOf(e)===i);
+ const sus=ext.filter(e=>e==='sus2'||e==='sus4');
+ if(sus.length>1){const keep=sus[sus.length-1];ext=ext.filter(e=>(e!=='sus2'&&e!=='sus4')||e===keep);}
+ let omit=Array.isArray(x.omit)?x.omit.map(v=>+v).filter(v=>v===0||v===1||v===2):[];
+ omit=omit.filter((v,i)=>omit.indexOf(v)===i).sort();
+ if(omit.length>=3)omit=omit.slice(0,2);
+ if(!ext.length&&!omit.length)return null;
+ return {ext,omit};
+}
+function wanChordModApply(pcs,deg,mod){
+ /* 84th R2 (his FORTY-FOURTH message): "However a user modifies the chords at the
+    bottom will be how they show up in the matrix.  Including omitting notes." The
+    base stacked-third triad, sus replacing the third, adds landing diatonically,
+    omissions dropping base tones. Returns {iv,tag} — tag null when the mod changes
+    nothing (the caller keeps its own base naming). Pure. */
+ const n=(pcs||[]).length;if(!n)return null;
+ const at=k=>pcs[(deg+k)%n]+12*Math.floor((deg+k)/n);
+ const r0=at(0);
+ const rel=k=>(((at(k)-r0)%12)+12)%12;
+ const base={iv:[0,rel(2),rel(4)],tag:null};
+ const m=wanChordModNorm(mod);
+ if(!m)return base;
+ const sus=m.ext.indexOf('sus2')>=0?'sus2':(m.ext.indexOf('sus4')>=0?'sus4':null);
+ const omit={};m.omit.forEach(i=>omit[i]=1);
+ const tones=[];
+ if(!omit[0])tones.push(0);
+ if(!omit[1])tones.push(sus?rel(sus==='sus2'?1:3):rel(2));
+ if(!omit[2])tones.push(rel(4));
+ const tokens=[];
+ if(sus)tokens.push(sus);
+ for(const e of m.ext){
+  const def=WAN_EXTS.find(d=>d.id===e);
+  if(!def||def.mode==='sus')continue;
+  tones.push(rel(def.k));
+  tokens.push(def.tag);
+ }
+ m.omit.forEach(i=>tokens.push('(no '+['R','3','5'][i]+')'));
+ let q='';
+ if(!sus&&!omit[1]){const t3=rel(2),f5=rel(4);q=(t3===3?(f5===6?'dim':'m'):(f5===8?'+':''));}
+ const iv=tones.filter((v,i)=>tones.indexOf(v)===i).sort((a,b)=>a-b);
+ return {iv,tag:q+tokens.join(' ')};
+}
 function wanCellAt(row,deg){
  const rows=wanRows();
  const R=rows[row]||rows[0];
  const tri=scaleDegreeTriad(R.pcs,deg);
  if(!tri)return null;
  const r=(((R.tonic!=null?R.tonic:wanState.tonic)+tri.off)%12+12)%12;   /* 81st R2: row 2 has its own root now — a cell names itself from ITS row, not from scale 1 */
+ /* 84th R2 (his FORTY-FOURTH message): the user's mod IS the chord now — display,
+    audition and the function listing all read this one seam. Session-local, like the
+    rest of wanState. */
+ const mod=(wanState.chordMods||{})[row+':'+deg];
+ if(mod){
+  const app=wanChordModApply(R.pcs,deg,mod);
+  if(app&&app.tag!==null){
+   const name=PCN[r]+app.tag;
+   return {r,iv:app.iv,lbl:name,name,roman:degRomanW(deg,tri.iv,R.pcs.length),mod:true};
+  }
+ }
  const suffix=(tri.iv[1]===3?(tri.iv[2]===6?'dim':'m'):(tri.iv[2]===8?'+':''));
  const name=PCN[r]+suffix;
  return {r,iv:tri.iv,lbl:name,name,roman:degRomanW(deg,tri.iv,R.pcs.length)};
@@ -19402,6 +19506,140 @@ function weberGrid(centerLof){
   rows.push(row);
  }
  return rows;
+}
+/* ==== Tonnetz cube — triadic neo-Riemannian navigation (pure layer) ====
+   Axes: X = perfect fifth · Y = major third · Z = parallel major/minor (even = major).
+   Adjacency: diagonals count — the 3×3×3 shell around home (26 cells, Weber's 8-neighbor
+   law lifted into 3D). Planes of nine: DEFAULT = 9 AXIS-ALIGNED slices (3 through-home
+   at offset 0 + 6 outer at ±1 on each axis). OPTIONAL = +6 DIAGONAL through-home planes
+   (x=y · x=-y · x=z · x=-z · y=z · y=-z), each still a 9-cell sheet with home in the
+   middle — Weber diagonals as plane membership, not just neighbor adjacency. ⛔ Separate
+   from the 1817 Weber key table (its own UI). Not a claim that planes = PLRSHN. ==== */
+function tonnetzAt(x,y,z){
+ return {x:+x,y:+y,z:+z,tonic:((7*x+4*y)%12+12)%12,minor:!!(z&1)};
+}
+function tonnetzCoord(tonic,minor){
+ /* nearest-small canonical coordinate for a major/minor triad. Pure. */
+ const t=((+tonic%12)+12)%12,m=!!minor;
+ for(let rad=0;rad<=6;rad++)for(let x=-rad;x<=rad;x++)for(let y=-rad;y<=rad;y++){
+  if(rad&&Math.abs(x)+Math.abs(y)!==rad)continue;
+  const z=m?1:0;
+  if(((7*x+4*y)%12+12)%12===t)return {x,y,z};
+ }
+ return {x:0,y:0,z:m?1:0};
+}
+function tonnetzKey(tonic,minor){return ((+tonic%12)+12)%12+':'+(minor?1:0);}
+function tonnetzNr(op,tonic,minor){
+ /* one neo-Riemannian letter → {tonic,minor}, or null on junk. Pure. */
+ const T=t=>((+t%12)+12)%12,r=T(tonic),m=!!minor,o=String(op||'').toUpperCase();
+ if(o==='P')return {tonic:r,minor:!m};
+ if(o==='L')return m?{tonic:T(r+8),minor:false}:{tonic:T(r+4),minor:true};
+ if(o==='R')return m?{tonic:T(r+3),minor:false}:{tonic:T(r+9),minor:true};
+ if(o==='S')return m?{tonic:T(r+11),minor:false}:{tonic:T(r+1),minor:true};
+ if(o==='N')return m?{tonic:T(r+7),minor:false}:{tonic:T(r+5),minor:true};
+ if(o==='H')return m?{tonic:T(r+8),minor:true}:{tonic:T(r+4),minor:false};
+ return null;
+}
+function tonnetzNrTag(home,cell){
+ for(const op of ['P','L','R','S','N','H']){
+  const t=tonnetzNr(op,home.tonic,home.minor);
+  if(t&&t.tonic===cell.tonic&&t.minor===cell.minor)return op;
+ }
+ return null;
+}
+function tonnetzFaceTouch(hx,hy,hz,nx,ny,nz){
+ const dx=Math.abs(nx-hx),dy=Math.abs(ny-hy),dz=Math.abs(nz-hz);
+ return dx+dy+dz===1;
+}
+function tonnetzNeighbors26(x,y,z){
+ const out=[],home=tonnetzAt(x,y,z);
+ for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++){
+  if(!dx&&!dy&&!dz)continue;
+  const nx=x+dx,ny=y+dy,nz=z+dz,axes=(dx?1:0)+(dy?1:0)+(dz?1:0);
+  const cell=tonnetzAt(nx,ny,nz);
+  out.push(Object.assign({},cell,{dx,dy,dz,
+   kind:axes===1?'face':axes===2?'edge':'corner',
+   faceTouch:tonnetzFaceTouch(x,y,z,nx,ny,nz),
+   tag:tonnetzNrTag(home,cell)}));
+ }
+ return out;
+}
+function tonnetzPlanes(x,y,z,opts){
+ /* planes of nine around (x,y,z). Default = 9 axis-aligned. opts.diag = also the 6
+    diagonal through-home planes (home in the middle of each). Pure. */
+ const home=tonnetzAt(x,y,z),o=opts&&typeof opts==='object'?opts:{};
+ const pack=(id,kind,axis,offset,includesHome,pts)=>{
+  const cells=pts.map(p=>{
+   const cell=tonnetzAt(p.cx,p.cy,p.cz);
+   return Object.assign({a:p.a,b:p.b,isHome:p.cx===x&&p.cy===y&&p.cz===z,
+    faceTouch:tonnetzFaceTouch(x,y,z,p.cx,p.cy,p.cz),tag:tonnetzNrTag(home,cell)},cell);
+  });
+  return {id,kind,axis,offset,includesHome,cells};
+ };
+ const grid2=(fa,fb)=>{const o2=[];for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)o2.push(fa(a,b));return o2;};
+ const out=[
+  pack('through_xy','axis','xy',0,true,grid2((a,b)=>({a,b,cx:x+a,cy:y+b,cz:z}))),
+  pack('through_xz','axis','xz',0,true,grid2((a,b)=>({a,b,cx:x+a,cy:y,cz:z+b}))),
+  pack('through_yz','axis','yz',0,true,grid2((a,b)=>({a,b,cx:x,cy:y+a,cz:z+b}))),
+  pack('offset_z_m','axis','z',-1,false,grid2((a,b)=>({a,b,cx:x+a,cy:y+b,cz:z-1}))),
+  pack('offset_z_p','axis','z',1,false,grid2((a,b)=>({a,b,cx:x+a,cy:y+b,cz:z+1}))),
+  pack('offset_y_m','axis','y',-1,false,grid2((a,b)=>({a,b,cx:x+a,cy:y-1,cz:z+b}))),
+  pack('offset_y_p','axis','y',1,false,grid2((a,b)=>({a,b,cx:x+a,cy:y+1,cz:z+b}))),
+  pack('offset_x_m','axis','x',-1,false,grid2((a,b)=>({a,b,cx:x-1,cy:y+a,cz:z+b}))),
+  pack('offset_x_p','axis','x',1,false,grid2((a,b)=>({a,b,cx:x+1,cy:y+a,cz:z+b})))
+ ];
+ if(o.diag){
+  const shell=[];
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++)
+   shell.push({cx:x+dx,cy:y+dy,cz:z+dz,a:dx,b:dy,c:dz});
+  const diags=[
+   {id:'diag_x_eq_y',pred:p=>p.a===p.b},
+   {id:'diag_x_neg_y',pred:p=>p.a===-p.b},
+   {id:'diag_x_eq_z',pred:p=>p.a===p.c},
+   {id:'diag_x_neg_z',pred:p=>p.a===-p.c},
+   {id:'diag_y_eq_z',pred:p=>p.b===p.c},
+   {id:'diag_y_neg_z',pred:p=>p.b===-p.c}
+  ];
+  for(const d of diags){
+   const pts=shell.filter(d.pred).map(p=>({a:p.a,b:p.b,cx:p.cx,cy:p.cy,cz:p.cz}));
+   out.push(pack(d.id,'diag',d.id.slice(5),0,true,pts));
+  }
+ }
+ return out;
+}
+var TONNETZ_CHOPIN_PATHS=[
+ {id:'hex-ride',name:'Hexatonic ride',src:'nrt PL-cycle',
+  steps:[{tonic:0,minor:false},{tonic:0,minor:true},{tonic:8,minor:false},{tonic:8,minor:true},{tonic:4,minor:false},{tonic:4,minor:true}]},
+ {id:'bVI-lean',name:'♭VI lean',src:'Nocturne color (transposed to C)',
+  steps:[{tonic:0,minor:false},{tonic:8,minor:false},{tonic:5,minor:true}]},
+ {id:'rel-par',name:'Relative then parallel',src:'nrt R·P',
+  steps:[{tonic:0,minor:false},{tonic:9,minor:true},{tonic:9,minor:false}]},
+ {id:'chrom-med',name:'Chromatic mediant arc',src:'Ballade vocabulary',
+  steps:[{tonic:0,minor:false},{tonic:4,minor:false},{tonic:8,minor:false},{tonic:0,minor:false}]},
+ {id:'L-then-H',name:'Leading-tone then hexatonic pole',src:'Two-step PL neighborhood',
+  steps:[{tonic:0,minor:false},{tonic:4,minor:true},{tonic:4,minor:false}]},
+ {id:'prelude4',name:'Prelude Op.28 No.4 (triads, approx)',src:'E minor opening',
+  steps:[{tonic:4,minor:true},{tonic:3,minor:false},{tonic:5,minor:false},{tonic:4,minor:true}]}
+];
+function tonnetzPathsFrom(homeTonic,homeMinor){
+ const t=((+homeTonic%12)+12)%12,m=!!homeMinor;
+ return TONNETZ_CHOPIN_PATHS.filter(p=>p.steps.length&&p.steps[0].tonic===t&&!!p.steps[0].minor===m);
+}
+function tonnetzPivotTree(homeTonic,homeMinor){
+ /* six PLRSHN branches from home, each carrying corpus paths that visit its target. Pure. */
+ const c=tonnetzCoord(homeTonic,homeMinor),home=tonnetzAt(c.x,c.y,c.z);
+ const planes=tonnetzPlanes(c.x,c.y,c.z),neighbors=tonnetzNeighbors26(c.x,c.y,c.z);
+ const branches=['P','L','R','S','N','H'].map(op=>{
+  const to=tonnetzNr(op,home.tonic,home.minor);
+  const slot=neighbors.find(n=>n.tonic===to.tonic&&n.minor===to.minor);
+  const plane=(planes.find(pl=>pl.cells.some(cl=>cl.tonic===to.tonic&&cl.minor===to.minor))||{}).id||null;
+  const paths=TONNETZ_CHOPIN_PATHS.filter(p=>{
+   if(!p.steps.length||p.steps[0].tonic!==home.tonic||!!p.steps[0].minor!==home.minor)return false;
+   return p.steps.some((s,i)=>i>0&&s.tonic===to.tonic&&!!s.minor===to.minor);
+  }).map(p=>({id:p.id,name:p.name,steps:p.steps.slice()}));
+  return {op,to,kind:slot?slot.kind:null,faceTouch:!!(slot&&slot.faceTouch),plane,paths};
+ });
+ return {home,coord:c,planes,neighbors,branches,pathsFrom:tonnetzPathsFrom(home.tonic,home.minor)};
 }
 function wanRomanOf(pc,minor,homePc){
  /* the Roman Numerals view: a key labeled by its relation to HOME (lowercase = minor) */
@@ -19514,6 +19752,48 @@ const WAN_PATH_TYPES=[
  {id:'crossroads',name:'Cross-roads',def:'Where the ancient highways intersect.',harm:'Unassigned — search both libraries.',style:{w:3.2,dash:'',col:'#4a3a20'},cad:null,prog:null},
  {id:'ford',name:'Ford',def:'A shallow river crossing continuing a land path.',harm:'Unassigned — search both libraries.',style:{w:2.2,dash:'1 4',col:'#3a6a8a'},cad:null,prog:null}
 ];
+function wanPathStopsNorm(x){
+ /* 84th (his THIRTY-NINTH message): a road's user-edited BETWEEN stops, persisted in
+    cp_wanPaths types[road].stops. Same contract as wanRoadWaypoints' return — home and
+    destination excluded. An EMPTY array is a real value (every between-stop deleted:
+    the road runs home→destination direct), so [] returns [] and only junk returns
+    null — the caller falls back to the road's own computed waypoints on null. Pure. */
+ if(!Array.isArray(x))return null;
+ const out=[];
+ for(const e of x){
+  if(!e||typeof e!=='object')return null;
+  const pc=+e.pc;
+  if(!isFinite(pc)||pc!==Math.floor(pc)||pc<0||pc>11)return null;
+  out.push({pc,minor:!!e.minor});
+ }
+ return out;
+}
+function wanRecPathBuild(played,homePc,homeMinor){
+ /* 84th (his THIRTY-NINTH message): "click on a 'Rec' button... so that whatever I play
+    it will make a path out of that and record it." The played keys become the path:
+    consecutive duplicates collapse, leading plays of HOME are the departure (not stops),
+    the LAST key is the destination, everything between is the road's between-stops.
+    Returns {stops,dest} or null when nothing playable remains (no keys, or only home).
+    ⚠ A path home→home is no path: a recording ENDING on home is refused. Pure. */
+ if(!Array.isArray(played))return null;
+ const N=p=>((p%12)+12)%12;
+ const hm=!!homeMinor,hp=N(+homePc||0);
+ const seq=[];
+ for(const e of played){
+  if(!e||typeof e!=='object')continue;
+  const pc=+e.pc;
+  if(!isFinite(pc)||pc!==Math.floor(pc)||pc<0||pc>11)continue;
+  const k={pc,minor:!!e.minor};
+  const last=seq[seq.length-1];
+  if(last&&last.pc===k.pc&&last.minor===k.minor)continue;
+  seq.push(k);
+ }
+ while(seq.length&&seq[0].pc===hp&&seq[0].minor===hm)seq.shift();
+ if(!seq.length)return null;
+ const dest=seq[seq.length-1];
+ if(dest.pc===hp&&dest.minor===hm)return null;
+ return {stops:seq.slice(0,-1),dest:{pc:dest.pc,minor:dest.minor}};
+}
 function wanBoxPerim(hr,hc,k,rows,cols){
  /* the k-th degree box's PERIMETER cells around home (hr,hc), clipped to the table —
     pure; the terrain view builds its mountain ranges and obstacle lines from this */
@@ -19683,6 +19963,8 @@ function wanWeberDraw(){
  const st=wanState;
  if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView='roman';st.webPaths=[];st.webSel=new Set();}   /* 81st R4 (his thirty-eighth message): ROMAN NUMERALS ARE THE DEFAULT — the ctrl+click map menu still switches back to Letters */
  if(!Array.isArray(st.webRoadsOff))st.webRoadsOff=[];   /* 80th R23: legend-toggled-off roads */
+ if(!(st.webChainSel instanceof Set))st.webChainSel=new Set();   /* 84th (his 39th message): the selected path-chain keys, as 'road:index' */
+ if(st.webPathRecSeq===undefined)st.webPathRecSeq=null;   /* 84th: the path Rec tape — null = not recording */
  if(st.webLegAll===undefined)st.webLegAll=false;
  if(st.webReduce===undefined)st.webReduce=false;   /* 80th R24 (his thirty-second message): Reduce Accidentals — OFF by default */
  const minor=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
@@ -19899,7 +20181,11 @@ function wanWeberDraw(){
        thing — each road computes its OWN musical waypoints and VISITS them (in one
        side, out the other: the on-path chords are the ones to click). Roads without
        a rule yet take the direct stair-stepped route, honoring the ⇧ waypoints. */
-    const wps=wanRoadWaypoints(rd.id,homePc,minor,tPc,!!t.minor);
+    /* 84th (his THIRTY-NINTH message): a USER-EDITED stop list overrides the road's
+       computed waypoints — [] is a real edit (all between-stops deleted → direct),
+       null (absent/junk) falls back to the road's own rule. */
+    const ovr=wanPathStopsNorm((PS.types[rd.id]||{}).stops);
+    const wps=ovr!==null?ovr:wanRoadWaypoints(rd.id,homePc,minor,tPc,!!t.minor);
     const stops=[{r:home.r,c:home.c}];
     let prev=stops[0];
     for(const wp of wps){
@@ -19907,7 +20193,7 @@ function wanWeberDraw(){
       .map(cellPos).sort((a2,b2)=>Math.hypot(a2.c-prev.c,a2.r-prev.r)-Math.hypot(b2.c-prev.c,b2.r-prev.r))[0];
      if(inst&&!(inst.r===tc.r&&inst.c===tc.c)){stops.push(inst);prev=inst;}
     }
-    if(!wps.length)ways.forEach(w2=>stops.push(w2));
+    if(!wps.length&&ovr===null)ways.forEach(w2=>stops.push(w2));   /* 84th: an EXPLICIT empty edit means direct — the ⇧ waypoints only join a road with no rule and no edit */
     stops.push(tc);
     let pts=[];
     for(let s2=0;s2<stops.length-1;s2++){
@@ -19985,8 +20271,14 @@ function wanWeberDraw(){
      dialog ---- */
   const leg=W.querySelector('#wanLegend');
   if(leg){
-   leg.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:2px;">Path Trips</div>'
-    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · double-click a name to populate it and open the road’s own dialogue · ctrl+click here for the menu</div>';
+   /* 84th (his THIRTY-NINTH message): the old-looking Rec button — the parchment skin
+      applied to a transport control (RAW [8]; the styling name stays in the private
+      docs, §3's caution class). ⚠ A DIFFERENT RECORDER from ⏺ Record your trips: that
+      one records keys LANDED ON into 🧳 Upcoming Trips; this one records keys PLAYED
+      (plain-clicked) into a PATH on the ACTIVE road. Two recorders, two destinations. */
+   leg.innerHTML='<div style="display:flex;align-items:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:2px;">Path Trips'
+    +'<span id="wanPathRec"'+(st.webPathRecSeq?' class="on"':'')+' role="button" title="'+(st.webPathRecSeq?'Recording — every key you play (a plain click) joins the path. Click again to seal it onto the active road.':'Rec — press, then play keys on the map (plain clicks); press again and what you played becomes the active road’s path, its last key the destination.')+'">'+(st.webPathRecSeq?'⏺ REC':'REC')+'</span></div>'
+    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · click a chord selects it (Delete removes it) · double-click a chord edits it · double-click a name to populate it and open the road’s own dialogue · ctrl+click here for the menu</div>';
    /* 80th R23 (his thirty-first message): the three ruled roads lead; expand… below
       them reveals the other roads so the user can populate more paths */
    const ruled=['way','greenway','passageway'];
@@ -20006,7 +20298,8 @@ function wanWeberDraw(){
        user who aims at the box gets the box, not the name. */
     row.innerHTML='<span class="wanLegTog" data-road="'+rid+'" role="checkbox" aria-checked="'+(isOff?'false':'true')+'" style="color:'+rd2.style.col+';cursor:pointer;font-size:12px;margin-right:5px;user-select:none;'+(isOff?'opacity:.5;':'')+'" title="'+(isOff?'Off — this road’s path is not on the map. Click to put it back.':'On — this road’s path is drawn on the map. Click to take it off.')+'">'+(isOff?'☐':'☑')+'</span>'
      +'<span class="wanLegTitle" data-road="'+rid+'" style="color:'+rd2.style.col+';border-bottom:2.5px '+deco+' '+rd2.style.col+';'+(isOff?'opacity:.35;':'')+'" title="'+(isOff?'Dulled — its path is off the map. Click to relight it.':'Click dulls this road (its path leaves the map) · hover lights its route · double-click opens its dialogue.')+'">'+rd2.name+'</span>'
-     +(info?'<div class="wanLegChain" draggable="false" data-road="'+rid+'" style="'+(isOff?'opacity:.4;':'')+'" title="The chord changes this road makes — drag them onto the chord lane (they fill BACKWARDS ending at the drop chord, the lane’s own rate kept).">'+info.keys.map(k3=>k3.lbl).join(' → ')+'</div>'
+     +(info?'<div class="wanLegChain" draggable="false" data-road="'+rid+'" style="'+(isOff?'opacity:.4;':'')+'" title="The chord changes this road makes — drag them onto the chord lane (they fill BACKWARDS ending at the drop chord, the lane’s own rate kept). Click a chord selects it and hears it · Delete removes the selected · double-click one edits it.">'
+      +info.keys.map((k3,i4)=>'<span class="wanLegKey'+(st.webChainSel.has(rid+':'+i4)?' wanLegKeySel':'')+'" data-road="'+rid+'" data-i="'+i4+'" data-pc="'+k3.pc+'" data-minor="'+(k3.minor?1:0)+'">'+k3.lbl+'</span>').join(' → ')+'</div>'
       :'<div style="font-size:10px;color:#8a6f4d;font-style:italic;margin-top:2px;">unpopulated — double-click the name to populate it</div>');
     leg.appendChild(row);
    }
@@ -20109,7 +20402,19 @@ function wanWeberDraw(){
       if(ghost)ghost.remove();
       const lane=document.getElementById('chordlane');
       if(lane)lane.style.outline='';
-      if(!went)return;
+      if(!went){
+       /* 84th (his THIRTY-NINTH message): a CLICK (no drag) on a chain key SELECTS it —
+          and hears it, the map's own click law applied to the chain. */
+       const kEl=(e3.target&&e3.target.closest)?e3.target.closest('.wanLegKey'):null;
+       if(kEl&&kEl.getAttribute('data-road')===rid){
+        const i4=+kEl.getAttribute('data-i');
+        const sk=rid+':'+i4;
+        st.webChainSel.has(sk)?st.webChainSel.delete(sk):st.webChainSel.add(sk);
+        kEl.classList.toggle('wanLegKeySel',st.webChainSel.has(sk));
+        try{wanKeyAudition(+kEl.getAttribute('data-pc'),kEl.getAttribute('data-minor')==='1');}catch(e4){}
+        legSay(st.webChainSel.size?st.webChainSel.size+' selected — Delete removes, double-click edits.':'');
+       }
+       return;}
       if(!lane||!lane.getClientRects().length){legSay('No chord lane on screen to drop into.');return;}
       const lr=lane.getBoundingClientRect();
       if(!(ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom))return;
@@ -20127,6 +20432,131 @@ function wanWeberDraw(){
      document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
     };
    });
+   /* ---- 84th (his THIRTY-NINTH message): the chain's keys are OBJECTS — edit,
+      delete, and the path Rec button. The user's stop list persists in
+      cp_wanPaths types[road].stops (wanPathStopsNorm guards it; [] means direct). ---- */
+   const chainBetween=rid=>{
+    const PS4=wanPathsState();
+    const cur=wanPathStopsNorm((PS4.types[rid]||{}).stops);
+    if(cur!==null)return cur.slice();
+    const info4=routeInfo[rid];
+    return info4?info4.keys.slice(1,-1).map(k4=>({pc:k4.pc,minor:!!k4.minor})):[];
+   };
+   const chainWrite=(rid,between)=>{
+    const PS4=wanPathsState();
+    (PS4.types[rid]=PS4.types[rid]||{}).stops=between;
+    wanPathsPersist(PS4);
+   };
+   const destIndexOf=d4=>st.webPaths.findIndex(p4=>wanLofPc(p4.lof)===d4.pc&&!!p4.minor===!!d4.minor);
+   const deleteSel=()=>{
+    if(!st.webChainSel.size)return false;
+    const byRoad={};let homeTouched=false,destKilled=0;
+    for(const sk of st.webChainSel){
+     const m4=/^(.+):(\d+)$/.exec(sk);if(!m4)continue;
+     const rid=m4[1],i4=+m4[2];const info4=routeInfo[rid];if(!info4)continue;
+     if(i4===0){homeTouched=true;continue;}
+     if(i4===info4.keys.length-1){
+      const j4=destIndexOf(info4.keys[i4]);
+      if(j4>=0){st.webPaths.splice(j4,1);destKilled++;}
+      continue;}
+     (byRoad[rid]=byRoad[rid]||[]).push(i4);
+    }
+    for(const rid in byRoad){
+     const between=chainBetween(rid);
+     byRoad[rid].sort((a4,b4)=>b4-a4).forEach(i4=>between.splice(i4-1,1));
+     chainWrite(rid,between);
+    }
+    st.webChainSel.clear();
+    wanWeberDraw();
+    setWanStatus((destKilled?'The destination left the map — it was the endpoint of every road there. ':'')
+     +(homeTouched?'Home stays: it is the seated key (double-click a map key to re-seat it). ':'')
+     +'Deleted — the road remembers your edit.');
+    return true;
+   };
+   window._wanChainDel=deleteSel;   /* refreshed each draw so the once-bound key handler never goes stale */
+   if(!window._wanChainKeyBound){window._wanChainKeyBound=true;
+    document.addEventListener('keydown',e4=>{
+     if(e4.key!=='Delete'&&e4.key!=='Backspace')return;
+     const ae=document.activeElement;
+     if(ae&&(/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)||ae.isContentEditable))return;
+     const lg4=document.getElementById('wanLegend');
+     if(!lg4||!lg4.getClientRects().length)return;
+     if(!(wanState.webChainSel instanceof Set)||!wanState.webChainSel.size)return;
+     e4.preventDefault();
+     if(window._wanChainDel)window._wanChainDel();
+    });}
+   const chainEdit=(rid,i4)=>{
+    const info4=routeInfo[rid];if(!info4)return;
+    if(i4===0){setWanStatus('Home is the seated key — every road departs from it. Double-click a key on the MAP to re-seat home.');return;}
+    const isDest=i4===info4.keys.length-1;
+    const k4=info4.keys[i4];
+    let d4=document.getElementById('wanChainDlg');if(d4)d4.remove();
+    d4=document.createElement('div');d4.id='wanChainDlg';
+    d4.style.left='calc(50% - 150px)';d4.style.top='150px';
+    const rd4=WAN_PATH_TYPES.find(t4=>t4.id===rid);
+    const opts=PCN.map((n4,p4)=>'<option value="'+p4+'"'+(p4===k4.pc?' selected':'')+'>'+n4+'</option>').join('');
+    d4.innerHTML='<div class="wanPopStrip"><span style="cursor:grab;">✥ drag</span><span class="wbtn" style="margin-left:auto;cursor:pointer;" data-w="ceclose">✕</span></div>'
+     +'<div style="font-weight:800;font-size:13px;color:'+(rd4?rd4.style.col:'#4a3a20')+';margin-bottom:6px;">'+(isDest?'The destination':'A stop on the '+(rd4?rd4.name:rid))+' — '+k4.lbl+'</div>'
+     +(isDest?'<div style="font-size:10.5px;color:#6b4f28;font-style:italic;margin-bottom:6px;">The destination is shared by every road on the map — changing it moves ALL their paths; deleting it takes the path off the map.</div>':'')
+     +'<div style="display:flex;gap:7px;align-items:center;margin-bottom:9px;">'
+     +'<select id="wanCeRoot">'+opts+'</select>'
+     +'<select id="wanCeMode"><option value="0"'+(k4.minor?'':' selected')+'>Major</option><option value="1"'+(k4.minor?' selected':'')+'>Minor</option></select></div>'
+     +'<div style="display:flex;gap:8px;"><button id="wanCeOk">Change it</button><button id="wanCeDel">Delete it</button><button id="wanCeX">Cancel</button></div>';
+    document.body.appendChild(d4);
+    const close4=()=>d4.remove();
+    d4.querySelector('[data-w="ceclose"]').onclick=close4;
+    d4.querySelector('#wanCeX').onclick=close4;
+    d4.querySelector('#wanCeOk').onclick=()=>{
+     const pc4=+d4.querySelector('#wanCeRoot').value,mn4=d4.querySelector('#wanCeMode').value==='1';
+     if(isDest){const j4=destIndexOf(k4);
+      if(j4>=0)st.webPaths[j4]={lof:wanPcLof(pc4,mn4),minor:mn4};}
+     else{const between=chainBetween(rid);between[i4-1]={pc:pc4,minor:mn4};chainWrite(rid,between);}
+     st.webChainSel.clear();close4();wanWeberDraw();
+     try{wanKeyAudition(pc4,mn4);}catch(e5){}
+     setWanStatus('Changed — the road remembers your edit'+(isDest?', and every road now runs to the new destination.':'.'));};
+    d4.querySelector('#wanCeDel').onclick=()=>{
+     if(isDest){const j4=destIndexOf(k4);if(j4>=0)st.webPaths.splice(j4,1);}
+     else{const between=chainBetween(rid);between.splice(i4-1,1);chainWrite(rid,between);}
+     st.webChainSel.clear();close4();wanWeberDraw();
+     setWanStatus(isDest?'The destination left the map — it was the endpoint of every road there.':'The stop left the road — the road remembers your edit.');};
+    const strip4=d4.querySelector('.wanPopStrip');
+    strip4.onmousedown=e5=>{
+     if(e5.target.dataset&&e5.target.dataset.w==='ceclose')return;
+     e5.preventDefault();
+     const x0=e5.clientX-d4.offsetLeft,y0=e5.clientY-d4.offsetTop;
+     const mv4=ev4=>{d4.style.left=(ev4.clientX-x0)+'px';d4.style.top=(ev4.clientY-y0)+'px';};
+     const up4=()=>{document.removeEventListener('mousemove',mv4);document.removeEventListener('mouseup',up4);};
+     document.addEventListener('mousemove',mv4);document.addEventListener('mouseup',up4);};
+   };
+   leg.querySelectorAll('.wanLegKey').forEach(kEl=>{
+    kEl.ondblclick=e4=>{e4.stopPropagation();e4.preventDefault();
+     chainEdit(kEl.getAttribute('data-road'),+kEl.getAttribute('data-i'));};
+   });
+   /* the Rec button — arm, play (plain clicks on the map record), press again to seal:
+      what was played becomes the ACTIVE road's path, its last key the ⌘ destination.
+      ⚠ Labelled inference: "whatever I play" is read as the map's own play gesture
+      (the plain click that auditions a key); a double-click re-seats HOME and changes
+      the map's frame mid-take, so it deliberately does not record. */
+   const prb=leg.querySelector('#wanPathRec');
+   if(prb)prb.onclick=e4=>{e4.stopPropagation();
+    if(!Array.isArray(st.webPathRecSeq)){
+     st.webPathRecSeq=[];
+     prb.classList.add('on');prb.textContent='⏺ REC';
+     const actNm=(WAN_PATH_TYPES.find(t4=>t4.id===(wanPathsState().active||'way'))||WAN_PATH_TYPES[0]).name;
+     setWanStatus('Rec is rolling — play keys on the map (plain clicks); press REC again and what you played becomes the '+actNm+'’s path.');
+     return;}
+    const tape=st.webPathRecSeq;st.webPathRecSeq=null;
+    const built=wanRecPathBuild(tape,wanLofPc(tonicLof),minor);
+    if(!built){wanWeberDraw();setWanStatus('Nothing to make a path from — play at least one key that is not home, and don’t end the take on home.');return;}
+    const PS4=wanPathsState();const act4=PS4.active||'way';
+    (PS4.types[act4]=PS4.types[act4]||{}).stops=built.stops;wanPathsPersist(PS4);
+    st.webPaths=[{lof:wanPcLof(built.dest.pc,built.dest.minor),minor:built.dest.minor}];
+    const io4=st.webRoadsOff.indexOf(act4);if(io4>=0)st.webRoadsOff.splice(io4,1);
+    st.webChainSel.clear();
+    wanWeberDraw();
+    const rdn=(WAN_PATH_TYPES.find(t4=>t4.id===act4)||WAN_PATH_TYPES[0]).name;
+    setWanStatus('Recorded — your '+(built.stops.length+1)+'-key journey is the '+rdn+'’s path now, ending at its destination. (This recorder writes a PATH; ⏺ Record your trips writes 🧳 Upcoming Trips.)');
+   };
   }
  /* ---- the toggle ---- */
  const tog=W.querySelector('#wanAllTog');
@@ -20192,6 +20622,13 @@ function wanWeberDraw(){
    if(e.altKey){   /* ⌥+click: reset to default */
     st.webShift=0;st.webPaths=[];st.webSel.clear();st.webRadius=2;st.webAll=false;st.webView='letters';
     wanWeberDraw();return;
+   }
+   /* 84th (his THIRTY-NINTH message): while the path REC is rolling, every key he
+      PLAYS (this very gesture) joins the tape — the button's counter follows live. */
+   if(Array.isArray(st.webPathRecSeq)){
+    st.webPathRecSeq.push({pc:pc(),minor:mn()});
+    const pr=document.getElementById('wanPathRec');
+    if(pr)pr.textContent='⏺ REC '+st.webPathRecSeq.length;
    }
    wanKeyAudition(pc(),mn());   /* a plain click just HEARS the key */
   };
@@ -20277,6 +20714,12 @@ function renderWan(){
     the state on a tick would have silently eaten it. */
  const respellOnly=!!wanState.respell&&!wanState.also;
  const SEARCH_BTN='<button class="wanSrchBtn" data-wansearch="1" title="Open the Scale/Raga Browser as a floating pop-up — the 72 melakartas, the 107 janyas and every Western mode, searchable.">&#8981; SEARCH</button>';
+ /* 84th R2 (his FORTY-FOURTH message): "a painting palette and brush to the right of
+    each scale drop down menu" — the 🖌 sits right of each scale's picker, its underline
+    wearing the chosen colour. The native picker opens directly (the input rides the
+    button); repaint-in-place on input, full rebuild only on change (the R6 lesson:
+    a rebuild mid-drag closes the picker under his cursor). */
+ const BRUSH=slot=>'<span class="wanBrush" data-slot="'+slot+'" style="border-bottom:3px solid '+(wanScaleCols[String(slot)]||'#a8895f')+';" title="Colour scale '+slot+' and its chords — one colour for the entire scale: its row title and each chord’s border in the matrix, to help improvising between the sets.">🖌<input type="color" data-slotc="'+slot+'" value="'+(wanScaleCols[String(slot)]||'#6b4f28')+'"></span>';
  /* 81st R2: ⭐ UNISON JOINS THE LIST (his "built from the same root note" case needs a
     way to be ASKED for, not only detected), and his CHROMATIC button swaps the whole
     list for literal intervals — "so the user can choose the scale relationship down a
@@ -20331,11 +20774,19 @@ function renderWan(){
       roman numeral and the chord name have to stay readable at every colour he might pick. */
    const fn=wanChordFunction(d,c.iv,wanState.fnScheme);
    const fc=wanFnCol(fn);
-   cells.push('<div class="wanCell" data-r="'+ri+'" data-d="'+d+'" data-fn="'+fn+'" title="'+(WAN_FN.find(x=>x.id===fn)||{}).label+'" style="width:'+cellW+'px;box-sizing:border-box;padding:6px 4px;border:1px solid '+(cur?'var(--accent)':'var(--line)')+';border-radius:6px;cursor:pointer;text-align:center;'+(wanState.fnOn?'border-left:4px solid '+fc+';':'')+(cur?'background:rgba(232,163,61,.14);':wanState.fnOn?'background:'+fc+'22;':'background:rgba(255,255,255,.02);')+'">'
+   /* 84th R2 (his FORTY-FOURTH message): the SCALE's own colour rides the cell BORDER
+      and the row title — the function colour keeps the left bar and the wash, so the
+      two colourings read together ("that will visually help the user improvise
+      between the 2 or more sets of chords"). */
+   const scol=wanScaleCols[String(ri+1)]||null;
+   cells.push('<div class="wanCell" data-r="'+ri+'" data-d="'+d+'" data-fn="'+fn+'" title="'+(WAN_FN.find(x=>x.id===fn)||{}).label+' — click plays it · ctrl+click adds extensions or omits notes'+(c.mod?' · modified by you (ctrl+click → Reset restores it)':'')+'" style="width:'+cellW+'px;box-sizing:border-box;padding:6px 4px;border:1px solid '+(cur?'var(--accent)':(scol||'var(--line)'))+';border-radius:6px;cursor:pointer;text-align:center;'+(wanState.fnOn?'border-left:4px solid '+fc+';':'')+(cur?'background:rgba(232,163,61,.14);':wanState.fnOn?'background:'+fc+'22;':'background:rgba(255,255,255,.02);')+'">'
     +'<div style="font-size:9.5px;color:var(--dim);">'+c.roman+'</div>'
     +'<div style="font-size:13px;font-weight:700;">'+c.name+'</div></div>');
   }
-  return '<div style="margin-bottom:6px;"><div style="font-size:10.5px;color:var(--dim);margin-bottom:3px;">'+(ri===0?'SCALE 1 — ':'SCALE 2 — ')+R.name+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;">'+cells.join('')+'</div></div>';
+  /* 84th R2: 'SCALE '+(ri+1) — the old ternary labeled a THIRD row "SCALE 2", a real
+     mislabel since 28x opened the third slot. Corrected forward, recorded. */
+  const scol2=wanScaleCols[String(ri+1)]||null;
+  return '<div style="margin-bottom:6px;"><div class="wanScaleHead" data-slot="'+(ri+1)+'" style="font-size:10.5px;'+(scol2?'color:'+scol2+';font-weight:700;':'color:var(--dim);')+'margin-bottom:3px;">SCALE '+(ri+1)+' — '+R.name+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;">'+cells.join('')+'</div></div>';
  }).join('');
  B.innerHTML='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
   +'<div style="flex:0 0 250px;display:flex;flex-direction:column;gap:8px;">'
@@ -20348,7 +20799,7 @@ function renderWan(){
   +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
   +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" '+(wanState.follow?'disabled':'')+' style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
-  +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select></div>'
+  +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select>'+BRUSH(1)+'</div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:#3a2c18;cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
   /* ⛔⭐ 82nd R3 (his FORTY-FIFTH message, first sentence): "We don't need the relationship
      drop down menu in the middle.  Please get rid of it." — GONE, one round after it shipped.
@@ -20380,7 +20831,7 @@ function renderWan(){
      not mint an override, it moves the RELATIVE ROW to the step and direction that lands
      there (wanRelFromRoot), so the two controls can never disagree. */
   +'<div style="display:flex;gap:6px;"><select id="wanRoot2" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanRel2Root()?' selected':'')+'>'+p+'</option>').join('')+'</select>'
-  +'<select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select></div>'
+  +'<select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select>'+BRUSH(2)+'</div>'
   /* ⛔ 82nd R2: the READOUT KEEPS ITS ID, and 82nd R3 brings it home. Two suites (rh80t,
      rh81b) read #wanRelationship for the reported name; it belongs under scale 2, which is
      what it describes. */
@@ -20409,8 +20860,8 @@ function renderWan(){
   +((wanState.also&&!wanState.respell)?('<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
     +'<input id="wanSearch3" placeholder="search scales &amp; ragas…" value="'+(wanState.search3||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
     +'<div style="display:flex;gap:6px;"><span style="font-size:12px;color:#6b4f28;flex:0 0 auto;padding-top:5px;">'+PCN[wanState.tonic]+'</span>'
-    +'<select id="wanMode3" style="flex:1;min-width:0;">'+wanModeOpts(wanState.mode3,wanState.search3,'— pick a third scale —')+'</select></div>'):'')
-  +((wanState.also&&wanState.respell)?'<div style="font-size:11px;color:#3a2c18;border:1px dashed #a8895f;border-radius:6px;padding:4px 8px;">'+wanRows()[2].name+'</div>':'')
+    +'<select id="wanMode3" style="flex:1;min-width:0;">'+wanModeOpts(wanState.mode3,wanState.search3,'— pick a third scale —')+'</select>'+BRUSH(3)+'</div>'):'')
+  +((wanState.also&&wanState.respell)?'<div style="display:flex;gap:6px;align-items:center;"><div style="flex:1;font-size:11px;color:#3a2c18;border:1px dashed #a8895f;border-radius:6px;padding:4px 8px;">'+wanRows()[2].name+'</div>'+BRUSH(3)+'</div>':'')
   +'<div style="display:flex;gap:8px;align-items:center;margin-top:4px;">'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Weber neighbors</label>'
   /* 82nd R4 (his FORTY-FIFTH message): "a color pallete next to 'Weber Neighbors' so the user can
@@ -20454,10 +20905,67 @@ function renderWan(){
  /* wiring */
  B.querySelectorAll('.wanCell').forEach(el=>{
   el.onmousedown=ev=>{
+   if(ev.ctrlKey)return;   /* 84th R2: ctrl+click is the extensions menu (macOS fires contextmenu) — don't also play/move */
    ev.preventDefault();
    wanState.cur={row:+el.dataset.r,deg:+el.dataset.d};
    wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
   };
+  /* 84th R2 (his FORTY-FOURTH message): "at the bottom the user should be able to add
+     chord extensions to any chords they want... Including omitting notes" — the app's
+     one menu idiom (macOS: ctrl+click IS contextmenu), on the chord itself. */
+  el.oncontextmenu=ev=>{
+   ev.preventDefault();ev.stopPropagation();
+   const ri=+el.dataset.r,d=+el.dataset.d;
+   const key=ri+':'+d;
+   if(!wanState.chordMods||typeof wanState.chordMods!=='object')wanState.chordMods={};
+   const cur=wanChordModNorm(wanState.chordMods[key])||{ext:[],omit:[]};
+   let m=document.getElementById('wanWebMenu');
+   if(m)m.remove();
+   m=document.createElement('div');m.id='wanWebMenu';m.style.display='block';
+   const mk=(label,fn2,on)=>{const it=document.createElement('div');it.className='wmit';
+    it.textContent=(on?'● ':'')+label;it.onclick=()=>{m.remove();fn2();};m.appendChild(it);};
+   const hd=t2=>{const dv=document.createElement('div');dv.className='wmhd';dv.textContent=t2;m.appendChild(dv);};
+   const write=nm=>{const norm=wanChordModNorm(nm);
+    if(norm)wanState.chordMods[key]=norm;else delete wanState.chordMods[key];
+    renderWan();};
+   const c0=wanCellAt(ri,d);
+   hd('Chord extensions — '+(c0?c0.name:''));
+   for(const e of WAN_EXTS){
+    const on=cur.ext.indexOf(e.id)>=0;
+    mk(e.lbl,()=>{const ext=on?cur.ext.filter(x=>x!==e.id):cur.ext.concat([e.id]);
+     write({ext,omit:cur.omit});},on);
+   }
+   hd('Omit notes');
+   ['Root','3rd','5th'].forEach((nm2,i2)=>{
+    const on=cur.omit.indexOf(i2)>=0;
+    mk(nm2,()=>{const omit=on?cur.omit.filter(x=>x!==i2):cur.omit.concat([i2]);
+     write({ext:cur.ext,omit});},on);
+   });
+   hd('');
+   mk('Reset this chord',()=>{delete wanState.chordMods[key];renderWan();},false);
+   document.body.appendChild(m);
+   m.style.left=Math.min(ev.clientX,window.innerWidth-m.offsetWidth-14)+'px';
+   m.style.top=Math.min(ev.clientY+4,window.innerHeight-m.offsetHeight-14)+'px';
+   const away=ev2=>{if(!m.contains(ev2.target)){m.remove();document.removeEventListener('mousedown',away,true);}};
+   setTimeout(()=>document.addEventListener('mousedown',away,true),0);
+  };
+ });
+ /* 84th R2: the per-scale colour brushes — repaint IN PLACE on input (a rebuild
+    mid-drag closes the native picker, the R6 lesson), full rebuild on change. */
+ B.querySelectorAll('.wanBrush input[data-slotc]').forEach(ci=>{
+  const slot=ci.getAttribute('data-slotc');
+  ci.oninput=()=>{
+   wanScaleCols[slot]=ci.value;persistWanScaleCols();
+   const hd2=B.querySelector('.wanScaleHead[data-slot="'+slot+'"]');
+   if(hd2){hd2.style.color=ci.value;hd2.style.fontWeight='700';}
+   B.querySelectorAll('.wanCell[data-r="'+(+slot-1)+'"]').forEach(cl=>{
+    if(wanState.cur.row===+cl.dataset.r&&wanState.cur.deg===+cl.dataset.d)return;
+    /* three sides only — the LEFT border is the function colour's bar (28y) and stays its own */
+    cl.style.borderTopColor=ci.value;cl.style.borderRightColor=ci.value;cl.style.borderBottomColor=ci.value;
+    if(!wanState.fnOn)cl.style.borderLeftColor=ci.value;});
+   const br=ci.closest('.wanBrush');if(br)br.style.borderBottomColor=ci.value;
+  };
+  ci.onchange=()=>{renderWan();};
  });
  B.querySelectorAll('.wanNb').forEach(el=>{
   el.onclick=()=>{const o=nb[+el.dataset.i];wanWander(o.tonic,o.minor,o.tag);};
