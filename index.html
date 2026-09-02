@@ -742,7 +742,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02l</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02n</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14402,7 +14402,7 @@ function buildPrism(reanalyze){
   d.title='Press = audition · drag onto the GRID = apply to the selected notes there · drag onto a TRACK row below the grid = the app asks: expand into multiple tracks, collapse into 1, or just apply · ✓ applies to the grid selection · double-click the name to rename · ✕ removes.'+(twin?' ↔ An identical '+o.strand+' also lives on the shelf: '+twin.name:'');
   d.onmousedown=e=>{
    /* r2: shelf objects are grid-DRAG objects — >4px promotes to the chipDrag ghost */
-   if(e.button!==0||e.target.classList.contains('przApplyB')||e.target.classList.contains('przDelB')||e.target.classList.contains('przShName'))return;
+   if(e.button!==0||e.target.classList.contains('przApplyB')||e.target.classList.contains('przDelB')||e.target.classList.contains('przShName')||e.target.classList.contains('essExB'))return;
    e.preventDefault();   /* the melChipPress rule: without this a text selection forms, and the NEXT drag becomes a native text-drag that swallows every mouse event */
    const x0=e.clientX,y0=e.clientY;
    const mm=ev=>{
@@ -14429,7 +14429,7 @@ function buildPrism(reanalyze){
   const mini=essMiniSvg(o,false);
   d.innerHTML='<div class="mimName przShName'+(mini?' essTName':'')+'" style="cursor:text;">'+o.name+(twin?' <span class="mimIv">↔</span>':'')+'</div>'
    +'<div style="margin:4px 0;">'+(mini||przThumb(o.strand,o.data))+'</div>'
-   +'<div style="display:flex;gap:8px;"><span class="cpchip przApplyB">✓ Apply</span><span class="cpchip przDelB">✕</span></div>';
+   +'<div style="display:flex;gap:8px;"><span class="cpchip przApplyB">✓ Apply</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span><span class="cpchip przDelB">✕</span></div>';
   d.ondblclick=e=>{
    if(e.target.classList.contains('przShName'))return;   /* the name keeps its rename */
    e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});
@@ -14437,6 +14437,7 @@ function buildPrism(reanalyze){
   d.onclick=e=>{
    if(przState.dragAte){przState.dragAte=false;return;}   /* r2: the drag ate its own click */
    if(e.target.classList.contains('przApplyB')){e.stopPropagation();przApply(o.strand,o.data);return;}
+   if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
    if(e.target.classList.contains('przDelB')){e.stopPropagation();snapshot();project.shelf.splice(i,1);autosaveSoon();buildPrism();setPrzStatus('Removed from the Shelf · ⌘Z undoes.');return;}
    przAudition(o.strand,o.data,project.base+7,0);
   };
@@ -15140,6 +15141,29 @@ function essObjWinClose(){
  try{buildPrism();}catch(e){}
  try{essShelfWinDrawAll();}catch(e){}
 }
+function essObjWorldExpand(full){
+ /* his 69th: "It should actually be a multi-track grid. Fully expandable ... to
+    expand it and show all hidden tracks and hidden controls." ONE world, TWO states:
+    minimized (one track, no controls — the object's face) ⇄ FULL (every track
+    unhidden, the grid head and track chips back, the chord lane back). */
+ if(!essObjWin)return;
+ const w=essObjWin.w,shell=essObjWin.shell;
+ essObjWin.full=!!full;
+ const root=w.els.root;
+ const gh=root.querySelector('[id="gridWinHead"]');if(gh)gh.style.display=full?'':'none';
+ const ts=root.querySelector('[id="trackSel"]');if(ts)ts.style.display=full?'':'none';
+ const body=shell.querySelector('.essObjPopBody');if(body){body.style.zoom=full?'0.85':'0.62';body.style.maxWidth=full?'1100px':'860px';}
+ withGridWorld(w.id,()=>{
+  if(full){hiddenTracks.clear();chordLaneHidden=false;}
+  else{
+   chordLaneHidden=true;
+   for(const t of pitchedTrackIds(project.tracks))if(t!=='melody')hiddenTracks.add(t);
+  }
+  drawTrackSel();refresh(true);drawChordLane();
+ });
+ const ex=shell.querySelector('.essObjPopEx');if(ex){ex.textContent=full?'⤡':'⤢';ex.title=full?'Minimize back to the object’s single-track face.':'Expand — the object IS a multi-track grid: every hidden track and hidden control comes back.';}
+ const hint=shell.querySelector('.essObjPopHint');if(hint)hint.textContent=full?'the ACTUAL multi-track grid — every track, every control · ✕ keeps your edit':'the real grid, minimized — every grid rule applies · ✕ keeps your edit';
+}
 function essObjWorldOpen(o,name,at){
  /* his 61st/62nd/64th/65th — THE CORRECT IMPLEMENTATION, his words: "Just a minimized
     multi-track grid." The REAL world machinery (gridWorldSpawn + the melody-rig law:
@@ -15172,7 +15196,8 @@ function essObjWorldOpen(o,name,at){
  shell.style.top=Math.max(8,Math.min((at&&at.y||100),window.innerHeight-320))+'px';
  shell.innerHTML='<div class="essObjPopHead" style="display:flex;align-items:center;gap:8px;cursor:grab;">'
   +'<span style="font-size:11px;font-weight:700;">'+(name||(o&&o.name)||'object')+'</span>'
-  +'<span style="font-size:9.5px;color:var(--dim);flex:1;">the real grid, minimized — every grid rule applies · ✕ keeps your edit</span>'
+  +'<span class="essObjPopHint" style="font-size:9.5px;color:var(--dim);flex:1;">the real grid, minimized — every grid rule applies · ✕ keeps your edit</span>'
+  +'<span class="cpchip essObjPopEx" title="Expand — the object IS a multi-track grid: every hidden track and hidden control comes back.">⤢</span>'
   +'<span class="cpchip essObjPopX">\u2715</span></div>';
  const body=document.createElement('div');
  body.className='essObjPopBody';
@@ -15181,6 +15206,7 @@ function essObjWorldOpen(o,name,at){
  w.els.root.style.marginTop='0';
  shell.appendChild(body);
  shell.querySelector('.essObjPopX').onclick=()=>essObjWinClose();
+ shell.querySelector('.essObjPopEx').onclick=()=>essObjWorldExpand(!(essObjWin&&essObjWin.full));
  shell.querySelector('.essObjPopHead').onmousedown=e=>{
   if(e.target.classList.contains('essObjPopX'))return;
   e.preventDefault();
@@ -20220,6 +20246,33 @@ function wanRomanOf(pc,minor,homePc){
  const base={0:'I',1:'♭II',2:'II',3:'♭III',4:'III',5:'IV',6:'♭V',7:'V',8:'♭VI',9:'VI',10:'♭VII',11:'VII'}[iv];
  return minor?base.toLowerCase():base;
 }
+function wanRerootShiftDelta(oldTonic,oldMinor,newPc,newMinor){
+ /* 85th (his 68th): the reroot HOLDS THE MAP STILL — the pan absorbs the anchor's
+    move. anchor = (minor? lof-3 : lof) + shift; keeping it constant means
+    shift += oldBase - newBase. Pure. */
+ const b0=oldMinor?wanPcLof(oldTonic,true)-3:wanPcLof(oldTonic,false);
+ const b1=newMinor?wanPcLof(newPc,true)-3:wanPcLof(newPc,false);
+ return b0-b1;
+}
+function wanRerootStable(newPc,newMinor,at,label){
+ /* his 68th, whole: the map holds still (webShift compensates), THE TWO RECTANGLES
+    FLOAT over to the new chord and stop there (old offsets recorded here, the
+    transition applied at the draw), the clicked instance anchors home — and with the
+    map still, the clicked chord's label flips to I/i by the label law itself. */
+ const st=wanState;
+ const oldMin=wanState.mode==='aeolian';
+ const dlt=wanRerootShiftDelta(wanState.tonic,oldMin,((newPc%12)+12)%12,!!newMinor);
+ wanState.follow=false;
+ wanState.tonic=((newPc%12)+12)%12;
+ wanState.mode=newMinor?'aeolian':'ionian';
+ if(typeof st.webShift==='number')st.webShift+=dlt;else st.webShift=dlt;
+ st.webHomeAt=at||null;
+ try{st._degFloatFrom=[...document.querySelectorAll('#wanWeber .wanDegBox')].map(x=>({l:x.offsetLeft,t:x.offsetTop}));}catch(e){st._degFloatFrom=null;}
+ wanState.cur={row:0,deg:0};
+ wanRecord(wanState.tonic,!!newMinor,label);
+ audLedReset();
+ wanAudition();renderWan();
+}
 function wanKeyAudition(pc,minor){
  try{
   /* 84th R3 (his FIFTY-THIRD message): voice-led now — the old call planed every key
@@ -20618,7 +20671,16 @@ function wanWeberDraw(){
  const roomOf=h2=>Math.min(h2.r,12-h2.r,h2.c,9-h2.c);
  let centers=homes;
  if(!st.webAll&&homes.length){
-  centers=[homes.reduce((a,b)=>roomOf(a)>=roomOf(b)?a:b)];
+  /* his 68th: the CLICKED instance anchors home — the boxes stop where he pointed;
+     the roomiest pick is the fallback when no click seeded one */
+  let pick=null;
+  if(st.webHomeAt){
+   pick=homes.reduce((a,b)=>{
+    const da=Math.abs(a.r-st.webHomeAt.r)+Math.abs(a.c-st.webHomeAt.c);
+    const db=Math.abs(b.r-st.webHomeAt.r)+Math.abs(b.c-st.webHomeAt.c);
+    return da<=db?a:b;});
+  }
+  centers=[pick||homes.reduce((a,b)=>roomOf(a)>=roomOf(b)?a:b)];
  }else if(st.webAll&&homes.length){
   centers=homes.slice().sort((a,b)=>roomOf(b)-roomOf(a));
  }
@@ -20668,12 +20730,27 @@ function wanWeberDraw(){
     const d=document.createElement('div');
     d.className='wanDegBox'+(k>1?' k'+k:'');
     if(ci2>0)d.style.opacity='.5';   /* All Boxes: the roomiest instance leads full-strength, its echoes fade */
-    d.style.left=(tl.offsetLeft-4)+'px';d.style.top=(tl.offsetTop-3)+'px';
+    const _fl=(tl.offsetLeft-4)+'px',_ft=(tl.offsetTop-3)+'px';
     d.style.width=(br.offsetLeft+br.offsetWidth-tl.offsetLeft+8)+'px';
     d.style.height=(br.offsetTop+br.offsetHeight-tl.offsetTop+6)+'px';
-    wrap.appendChild(d);
+    /* his 68th: the rectangles FLOAT from where they were to the new chord and STOP —
+       start at the recorded old offsets, transition to the final seat (offset geometry
+       only — the zoom² law) */
+    const _ff=(st._degFloatFrom&&ci2===0)?st._degFloatFrom[k-1]:null;
+    if(_ff&&isFinite(_ff.l)){
+     d.style.transition='none';
+     d.style.left=_ff.l+'px';d.style.top=_ff.t+'px';
+     wrap.appendChild(d);
+     void d.offsetWidth;
+     d.style.transition='left .45s ease,top .45s ease';
+     d.style.left=_fl;d.style.top=_ft;
+    }else{
+     d.style.left=_fl;d.style.top=_ft;
+     wrap.appendChild(d);
+    }
    }
   });
+  st._degFloatFrom=null;
  }
  /* ---- the PATHS (⌘+click destinations — solid = the direct 2-5-1 / 4-5-1 route,
     dashed and dotted = round-about ways) ---- */
@@ -21209,16 +21286,9 @@ function wanWeberDraw(){
    }
    wanKeyAudition(pc(),mn());   /* a plain click just HEARS the key */
   };
-  el.ondblclick=e=>{   /* double-click: the new root key */
+  el.ondblclick=e=>{   /* double-click: the new root key — the STABLE reroot (his 68th) */
    e.preventDefault();
-   wanState.follow=false;
-   wanState.tonic=pc();
-   wanState.mode=mn()?'aeolian':'ionian';
-   wanState.cur={row:0,deg:0};
-   st.webShift=0;
-   wanRecord(wanState.tonic,mn(),'a double-click on the map');   /* 81st R3 */
-   audLedReset();   /* 84th R3: a NEW CENTER starts the voicing fresh — first inversion on it (his 42nd) */
-   wanAudition();renderWan();   /* 80th (his 24th message): the SOUND fires before the heavy redraw */
+   wanRerootStable(pc(),mn(),{r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c')},'a double-click on the map');
   };
  });
  /* ---- the ctrl+click MAP MENU (macOS: ctrl+click IS contextmenu — the one dispatcher) ---- */
@@ -21510,15 +21580,9 @@ function renderWan(){
    if(lp&&lp.row===ri&&lp.deg===d&&now-lp.t<420){
     const c0=wanCellAt(ri,d);
     if(c0){
-     wanState.follow=false;
-     wanState.tonic=((c0.r%12)+12)%12;
-     wanState.mode=(c0.iv&&c0.iv[1]===3)?'aeolian':'ionian';
-     wanState.cur={row:0,deg:0};
      wanState._cellPress=null;
-     wanRecord(wanState.tonic,wanState.mode==='aeolian','a double-click on a chord');
-     audLedReset();   /* a new center starts the voicing fresh (his 42nd) */
-     wanAudition();renderWan();
-     setWanStatus(c0.name+' is the new root — the top scale re-seats on it.');
+     wanRerootStable(c0.r,(c0.iv&&c0.iv[1]===3),null,'a double-click on a chord');
+     setWanStatus(c0.name+' is the new root — the top scale re-seats on it; the boxes float to it on the map.');
      return;
     }
    }
@@ -29007,10 +29071,11 @@ function essShelfWinDraw(w){
    d.title=(o.note||'')+' — press = audition · double-click = the pop-up grid · ✓ selects it in the Melisma Search window.';
    const _mini=essMiniSvg(o,false);
    d.innerHTML='<div class="mimName'+(_mini?' essTName':'')+'">'+o.name+'</div>'+(_mini||'<div style="font-size:10px;color:var(--dim);margin:2px 0;">melisma · '+o.fam+'</div>')
-    +'<div style="display:flex;gap:8px;"><span class="cpchip melEssSel">✓</span></div>';
+    +'<div style="display:flex;gap:8px;"><span class="cpchip melEssSel">✓</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
    d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
    d.onclick=e=>{
     if(d._dragAte){d._dragAte=false;return;}
+    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
     if(e.target.classList.contains('melEssSel')){e.stopPropagation();melState.sel=o.id;if(typeof renderMelismaList==='function')renderMelismaList();if(typeof renderMelismaInfo==='function')renderMelismaInfo(o);return;}
     if(typeof melismaAudition==='function')melismaAudition(o);
    };
@@ -29018,7 +29083,7 @@ function essShelfWinDraw(w){
       a SELECTED group writes the melisma onto every selected note; a drop on ONE note
       selects it first. The przShelf chipDrag idiom, the write under the DROP's world. */
    d.onmousedown=e=>{
-    if(e.button!==0||e.target.classList.contains('melEssSel'))return;
+    if(e.button!==0||e.target.classList.contains('melEssSel')||e.target.classList.contains('essExB'))return;
     e.preventDefault();
     const x0=e.clientX,y0=e.clientY;
     const mm=ev=>{
@@ -29059,9 +29124,10 @@ function essShelfWinDraw(w){
   const _mini2=essMiniSvg(o,false);
   d.innerHTML='<div class="mimName'+(_mini2?' essTName':'')+'">'+o.name+'</div>'
    +(_mini2||'<div style="font-size:10px;color:var(--dim);margin:2px 0;">'+o.strand+' · '+(o.level||'')+'</div>')
-   +'<div style="display:flex;gap:8px;"><span class="cpchip essApB">✓ Apply</span></div>';
+   +'<div style="display:flex;gap:8px;"><span class="cpchip essApB">✓ Apply</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
   d.onclick=e=>{
    if(e.target.classList.contains('essApB')){e.stopPropagation();withGridWorld(w.id,()=>przApply(o.strand,o.data));return;}
+   if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
    przAudition(o.strand,o.data,project.base+7,0);
   };
   d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
