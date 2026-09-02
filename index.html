@@ -739,7 +739,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14838,17 +14838,24 @@ function essDropRowAt(x,y){
  const t=row.dataset.stackId;
  if(!t||t==='__grid')return null;
  if(!/^x\d+$/.test(t)&&MIX_TRACKS.indexOf(t)<0)return null;
- /* the drop beat off the row's own surface (a tstrip starts at beat 0 at its left
-    edge; a transformed full-grid strip draws beats at GUT+b*PPB inside its svg).
-    Width-relative math so CSS zoom cannot skew it; snapped to the whole beat
-    [labelled inference — he named no landing law; the beat is the honest default]. */
+ /* THE LANDING LAW — his 56th (Sept 2, verbatim in RHYTHM-ENGINE-RAW-2026-08-27.md),
+    reversing this round's own whole-beat inference the same day it was labelled:
+    ② a drop ON A NOTE starts the element at that note's own start · ① a drop on the
+    surface lands at the closest beat AT THE GRID'S CURRENT ZOOM GRANULARITY
+    (gridStep — the same law that quantizes note entry). Width-relative math so CSS
+    zoom cannot skew the raw beat. */
+ const noteR=el.closest('rect[data-n]');
+ if(noteR){
+  const arr=project.tracks[t]||[];
+  const nn=arr[+noteR.dataset.n];
+  if(nn&&isFinite(nn[0]))return {t,at:Math.max(0,Math.min(LOOP,+nn[0])),onNote:true};
+ }
  let at=0;
  const strip=row.querySelector('.tstrip');
  const sv=strip?null:row.querySelector('.gvwrap svg');
  if(strip){const r=strip.getBoundingClientRect();if(r.width>0)at=(x-r.left)/r.width*LOOP;}
  else if(sv){const r=sv.getBoundingClientRect();if(r.width>0)at=((x-r.left)/r.width*(sv.width&&sv.width.baseVal?sv.width.baseVal.value:r.width)-GUT)/PPB;}
- at=Math.max(0,Math.min(LOOP,Math.round(at)));
- return {t,at};
+ return {t,at:essDropSnap(at,gridStep(),LOOP)};
 }
 let essDropEl=null;
 function essDropClose(){if(essDropEl){try{essDropEl.remove();}catch(e){}essDropEl=null;}}
@@ -14898,7 +14905,8 @@ function essDropDialog(hit,o){
   const its=items();
   const plan=essDropPlan(its,essDropOpts(hit));
   const first=its[0];
-  let h='<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;">Into '+trackLabel(hit.t)+' · beat '+hit.at+'</div>';
+  let h='<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;">'
+   +(hit.chordLbl?'At '+hit.chordLbl:'Into '+trackLabel(hit.t))+' · beat '+hit.at+(hit.onNote?' (the note’s start)':'')+'</div>';
   h+='<div class="essDropChips" style="display:flex;flex-wrap:wrap;gap:4px;cursor:pointer;" title="Click to choose from the available elements on the Shelf.">'
    +its.map(s=>'<span class="cpchip">'+s.name+'</span>').join('')
    +'<span class="cpchip" style="opacity:.7;">'+(pickerOpen?'▴':'▾')+' elements</span></div>';
@@ -14938,7 +14946,20 @@ function essDropDialog(hit,o){
 }
 function essDropTryDialog(dv,o){
  if(!Array.isArray(project.shelf)||!project.shelf.find(s=>s.id===o.id))return false;
- const hit=essDropRowAt(dv.clientX,dv.clientY);
+ let hit=essDropRowAt(dv.clientX,dv.clientY);
+ if(!hit){
+  /* his 56th, case ③: a drop ON A CHORD in the chord lane — the element starts at
+     that chord's start. The dialog's visible "1 track" there is the ACTIVE track
+     (the view the ghosts land in). A drop on the lane's background stays with the
+     shipped apply law — his words name "a chord", not the lane. */
+  const el=document.elementFromPoint(dv.clientX,dv.clientY);
+  const cb=el&&el.closest?el.closest('#chordlane .cb'):null;
+  if(cb&&/^cb\d+$/.test(cb.id||'')){
+   const i=+cb.id.slice(2);
+   const c=project.chords[i];
+   if(c)hit={t:activeTrack,at:Math.max(0,Math.min(LOOP,chordStartOf(i))),chordLbl:c.lbl||'the chord'};
+  }
+ }
  if(!hit)return false;
  hit.x=dv.clientX;hit.y=dv.clientY;
  essDropDialog(hit,o);
@@ -29779,6 +29800,14 @@ function strandTrackRows(strand,data,opts){
   return {kind:'chords',rows};
  }
  return null;
+}
+function essDropSnap(b,step,loop){
+ /* his 56th (Sept 2), case ①: a grid drop lands at the closest beat AT THE GRID'S OWN
+    ZOOM GRANULARITY — the same gridStepForPPB law the grid uses to draw notes. Pure. */
+ const s=(typeof step==='number'&&step>0)?step:1;
+ const L=(typeof loop==='number'&&loop>0)?loop:32;
+ const raw=(typeof b==='number'&&isFinite(b))?b:0;
+ return Math.max(0,Math.min(L,snapBeat(raw,s)));
 }
 function essDropPlan(items,opts){
  /* the dialog's listing law: which of the picked elements expand into tracks and
