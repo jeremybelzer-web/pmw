@@ -68,6 +68,9 @@
   #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard{
     display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px 6px;}
   .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
+  /* his 102nd: with the title living on the tile, the caption's chips pin RIGHT so the
+     row's left side is clean grab space — a press there drags, never hits a chip */
+  .essObjCard .essObjCap{justify-content:flex-end;min-height:15px;}
   /* his 81st/91st: the Melisma SEARCH results are card-worlds — the caption reads like
      a name box, the card grows to the track face's width */
   #melList .part.essObjCard{width:auto;max-width:620px;}
@@ -752,7 +755,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02t</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02u</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15546,10 +15549,15 @@ function essDropTryDialog(dv,o){
  return true;
 }
 function chipDrag(e0,label,onDrop){
+ /* his 102nd (Sept 2): under the Canvas "Everything" zoom the fixed ghost's px are
+    SCALED by the body zoom, so it rendered at clientX·z — far left and above the
+    cursor, and drops aimed by the ghost missed. The zoom² family: divide by the
+    body's effective zoom so the ghost rides the cursor at every zoom. */
+ const _bz=(()=>{try{const z=parseFloat(getComputedStyle(document.body).zoom);return (isFinite(z)&&z>0)?z:1;}catch(e){return 1;}})();
  const g=document.createElement('div');g.className='dragGhost';g.textContent=label;
- g.style.left=(e0.clientX+10)+'px';g.style.top=(e0.clientY-10)+'px';
+ g.style.left=(e0.clientX/_bz+10)+'px';g.style.top=(e0.clientY/_bz-10)+'px';
  document.body.appendChild(g);
- const mv=e=>{g.style.left=(e.clientX+10)+'px';g.style.top=(e.clientY-10)+'px';};
+ const mv=e=>{g.style.left=(e.clientX/_bz+10)+'px';g.style.top=(e.clientY/_bz-10)+'px';};
  const up=e=>{
   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
   try{g.remove();}catch(err){}
