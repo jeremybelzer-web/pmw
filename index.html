@@ -746,7 +746,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02r</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02s</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15070,6 +15070,16 @@ function essObjRows(o){
    return {kind:'melody',rows:r.notes.map(n=>[n[0],n[1],n[2]])};
   }catch(e){return null;}
  }
+ if(o&&Array.isArray(o.run)){
+  /* his 79th: a CADENCE_LIB entry is an object too — its run resolved at the current
+     key (cadenceRun, the window's own law), then the chords sounding law */
+  try{
+   const k=melismaKeyAt(0);
+   const run=cadenceRun(o,{tonic:k.tonic,mode:(typeof keyFor==='function'?keyFor(0).mode:'ionian')});
+   if(!run||!run.length)return null;
+   return strandTrackRows('chords',{chords:run},{});
+  }catch(e){return null;}
+ }
  if(o&&o.strand){
   try{return strandTrackRows(o.strand,o.data,{base:project.base,pcs:melismaPcs(melismaKeyAt(0))});}catch(e){return null;}
  }
@@ -15203,9 +15213,9 @@ function essObjWinClose(){
  if(!rows.length||JSON.stringify(rows)===JSON.stringify(orig))return;
  snapshot();
  noteEngine('ess-object-edit',{n:rows.length});
- if(o&&Array.isArray(o.pat)){
+ if(o&&(Array.isArray(o.pat)||Array.isArray(o.run))){
   project.shelf.push({id:shelfNextId(project.shelf),strand:'melody',name:(o.name+' (mine)').slice(0,60),level:'L2',
-   data:{rows},fp:prismHash(rows.map(r=>r.join(':')).join(',')),org:'melPanel'});
+   data:{rows},fp:prismHash(rows.map(r=>r.join(':')).join(',')),org:Array.isArray(o.run)?'cadPanel':'melPanel'});
   setPrzStatus('Your edit of '+o.name+' landed on the Essence Shelf as your own copy · ⌘Z undoes.');
  }else{
   const live=(Array.isArray(project.shelf)?project.shelf.find(s2=>s2.id===o.id):null);
@@ -29189,6 +29199,26 @@ function essShelfWinDraw(w){
     const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
     document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
    };
+   body.appendChild(d);
+  }
+ }
+ /* his 79th (Sept 2): the library-population law GENERALIZES beyond Melisma — the
+    Cadences shelf ships its CLASSICAL cadences as card-world objects (the subset
+    precedent; 'mod'/'psy' and the other engines' libraries follow this same seam). */
+ if(w.pairFor==='cadPanel'&&typeof CADENCE_LIB!=='undefined'){
+  for(const o of CADENCE_LIB.filter(x=>x.cat==='cls')){
+   const d=document.createElement('div');
+   d.className='mimCard cadEssCard essObjCard';
+   d.title=(o.desc||'')+' — ✓ selects it in the Cadence Search window · double-click = the pop-up grid.';
+   d.innerHTML='<div class="essObjCap"><div class="mimName">'+o.name+'</div>'
+    +'<span class="cpchip cadEssSel">✓</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+   essObjCardMount(d,o,'cad');
+   d.onclick=e=>{
+    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
+    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
+    if(e.target.classList.contains('cadEssSel')){e.stopPropagation();try{cadState.sel=o.id;cadState.cat=o.cat;if(typeof renderCadList==='function')renderCadList();}catch(err){}return;}
+   };
+   d.ondblclick=e=>{if(e.target.closest&&e.target.closest('.essObjCardW'))return;e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
    body.appendChild(d);
   }
  }
