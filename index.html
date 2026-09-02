@@ -68,6 +68,12 @@
   #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard{
     display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px 6px;}
   .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
+  /* his 81st/91st: the Melisma SEARCH results are card-worlds — the caption reads like
+     a name box, the card grows to the track face's width */
+  #melList .part.essObjCard{width:auto;max-width:620px;}
+  #melList .mimName{font-size:11px;font-weight:600;white-space:nowrap;}
+  #melList .cpchip{padding:0 5px;font-size:9.5px;}
+  #csCards .csCard .essObjCardW{margin-top:3px;}
   #zimBtn[data-retired]{display:none;}   /* his ninth message: the top button retires — the zim paths stay alive (the Lower Window and the note menus reach it) */
   .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
   .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
@@ -746,7 +752,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02s</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02t</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11586,17 +11592,49 @@ function progBuild(){
  const cards=w.querySelector('#progCards');cards.innerHTML='';
  const ctx=sel?progCtxFor(sel):{tonic:project.tonic,minor:modeIsMinor(project.mode),lane:null};
  const q=String(progState.q||'').trim().toLowerCase();
+ /* his 85th (Sept 2): every progression card IS the universal card-world object —
+    chords-faced, resolved at THIS phrase's key (the run rides the sig, so a phrase
+    or key change re-mints the face). The first 10 mount eagerly, the rest on first
+    visibility. Drag = Shelf Keep-mint or a track drop through the [E4]⑤ dialog. */
+ let _pgi=0;
  for(const e of progCards()){
   const run=progRunFor(e,ctx);if(!run)continue;
   const chain=run.map(c=>dispLbl(c.lbl)).join(' – ');
   if(q&&!((e.name||'')+' '+chain).toLowerCase().includes(q))continue;
   const d=document.createElement('div');
-  d.className='mimCard'+(progState.sel===e.id?' on':'');
-  d.title='Press = hear it in this phrase’s key (nothing is written) · ✓ writes it across the WHOLE phrase.';
-  d.innerHTML=(e.name?'<div class="mimName">'+e.name+'</div>':'')+'<div class="mimChain">'+chain+'</div>';
-  d.onclick=()=>{progState.sel=e.id;progBuild();progAudition(run);};
+  d.className='mimCard essObjCard progResCard'+(progState.sel===e.id?' on':'');
+  d.title='Press = hear it in this phrase’s key (nothing is written) · ✓ writes it across the WHOLE phrase · drag = onto the Essence Shelf or a track row.';
+  d.innerHTML='<div class="essObjCap">'+(e.name?'<div class="mimName">'+e.name+'</div>':'')+'<div class="mimChain" style="flex:1;min-width:0;">'+chain+'</div></div>';
+  const po={id:'pg:'+e.id,name:e.name||chain,runv:run,data:run,org:'progPanel'};
+  (_pgi++<10)?essObjCardMount(d,po,'prog'):essObjCardLazy(d,po,'prog');
+  d.onclick=ev=>{
+   if(d._dragAte){d._dragAte=false;return;}
+   if(ev.target.closest&&ev.target.closest('.essObjCardW'))return;
+   progState.sel=e.id;progBuild();progAudition(run);
+  };
+  d.onmousedown=ev=>{
+   if(ev.button!==0)return;
+   if(ev.target.closest&&ev.target.closest('.essObjCardW'))return;
+   ev.preventDefault();
+   const x0=ev.clientX,y0=ev.clientY;
+   const mm=e2=>{
+    if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+     cleanup();d._dragAte=true;
+     chipDrag(e2,'𝄋 '+po.name,dv=>{
+      const el=document.elementFromPoint(dv.clientX,dv.clientY);
+      const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+      if(shelfEl){essLibShelfMint(po,'progPanel');return;}
+      if(essDropTryDialog(dv,po))return;
+      if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands), the Essence Shelf — or press ✓ to write it across the phrase.');
+     });
+    }};
+   const mu=()=>cleanup();
+   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
   cards.appendChild(d);
  }
+ essObjCardSweep('prog');
  if(!cards.children.length)cards.innerHTML='<span style="font-size:11.5px;color:var(--dim);">'+(q?'Nothing matches the 🔎 — clear it to see every progression.':'Nothing here yet.')+'</span>';
  /* the info pane */
  const info=w.querySelector('#progInfo');
@@ -15080,10 +15118,53 @@ function essObjRows(o){
    return strandTrackRows('chords',{chords:run},{});
   }catch(e){return null;}
  }
+ if(o&&Array.isArray(o.runv)){
+  /* his 85th: a PROGRESSIONS card is an object too — its run arrives already resolved
+     at the phrase's key (progRunFor, the window's own law), then the chords law.
+     A run's missing d defaults to 1 beat, capped 2 — progAudition's own timing law. */
+  try{
+   const cs=o.runv.map(c=>({r:c.r,iv:Array.isArray(c.iv)?c.iv.slice():[],lbl:c.lbl,
+    d:(typeof c.d==='number'&&c.d>0)?Math.min(c.d,2):1}));
+   return strandTrackRows('chords',{chords:cs},{});
+  }catch(e){return null;}
+ }
+ if(o&&Array.isArray(o.shape)){
+  /* his 87th: a CONTOUR SHAPE is an object too — the line realized into notes walking
+     the song's own scale (the drop law's walking law at card scale) */
+  try{
+   const steps=contourFaceSteps(o.shape,9);
+   if(!steps)return null;
+   const midis=melismaWalk(project.base+7,melismaPcs(melismaKeyAt(0)),steps);
+   return {kind:'melody',rows:midis.map((m,i)=>[i*.5,.5,m])};
+  }catch(e){return null;}
+ }
  if(o&&o.strand){
   try{return strandTrackRows(o.strand,o.data,{base:project.base,pcs:melismaPcs(melismaKeyAt(0))});}catch(e){return null;}
  }
  return null;
+}
+function contourFaceSteps(pts,n){
+ /* his 87th, pure: sample a contour line ([[x,y]…], y 0…1) at n positions → scale-rung
+    offsets from the first sample, an octave-wide band (0…7 rungs). The face realizer's
+    step list for melismaWalk. */
+ if(!Array.isArray(pts)||pts.length<2)return null;
+ const N=Math.max(3,Math.min(17,Math.round(+n||9)));
+ const s=pts.filter(p=>Array.isArray(p)&&p.length>=2&&isFinite(p[0])&&isFinite(p[1]));
+ if(s.length<2)return null;
+ const rungs=[];
+ for(let i=0;i<N;i++){
+  const x=i/(N-1);
+  let y=s[s.length-1][1];
+  for(let j=1;j<s.length;j++){
+   if(x<=s[j][0]+1e-9){
+    const a=s[j-1],c=s[j];
+    const f=(c[0]-a[0])>1e-9?Math.max(0,Math.min(1,(x-a[0])/(c[0]-a[0]))):1;
+    y=a[1]+(c[1]-a[1])*f;break;
+   }
+  }
+  rungs.push(Math.round(Math.max(0,Math.min(1,y))*7));
+ }
+ return rungs.map(r=>r-rungs[0]);
 }
 function essMiniGhosts(sp){
  /* [E1] (his 67th): the chord-lane VOICING GHOSTS behind the miniature track — the
@@ -15169,25 +15250,70 @@ function essObjCardSig(o){
  /* the DATA rides the sig whole — an edit through the pop-up must refresh the card */
  try{return JSON.stringify([o.id,o.paste||null,o.org||null,o.strand,o.data]);}catch(e){return String(o&&o.id);}
 }
-function essObjCardMount(host,o,surface){
- const key=(surface||'s')+':'+((o&&o.id)||('lib:'+(o&&o.name)));
- const sig=essObjCardSig(o||{});
- let ent=essCardWorlds[key];
- if(ent&&ent.sig!==sig){try{gridWorldClose(ent.w.id);}catch(e){}ent=null;delete essCardWorlds[key];}
- if(!ent){
-  const m=essObjWorldMint(o);
-  if(!m)return null;
-  withGridWorld(m.w.id,()=>{PPB=16;theadW=58;setViewPx(GRID_VIEWS.main,110);refresh(true);});   /* a slim name column at card scale */
-  ent={w:m.w,sig};essCardWorlds[key]=ent;
+function essClipTile(o){
+ /* his 93rd-95th (the reference tile, described in RHYTHM-ENGINE-RAW): the un-opened
+    object is a CLIP TILE — kind-colored ground, the TITLE in dark text across the top,
+    the notes as DARK MARKS on a faint beat grid below. It REPRESENTS what's in it;
+    opening (double-press) and dragging live on the card's own handlers. */
+ const st=essObjRows(o);
+ if(!st||!st.rows||!st.rows.length)return null;
+ const KIND_COL={melody:'#edc948',drums:'#e8a33d',chords:'#93c47d'};
+ const bg=KIND_COL[st.kind]||'#edc948';
+ let span=0,lo=127,hi=0;
+ for(const r of st.rows){if(r[0]+r[1]>span)span=r[0]+r[1];if(r[2]<lo)lo=r[2];if(r[2]>hi)hi=r[2];}
+ span=Math.max(1,Math.ceil(span));
+ const minW=Math.min(200,Math.max(96,Math.round(String(o&&o.name||'').length*6.2)));   /* the title fits */
+ const W=Math.max(minW,Math.min(260,Math.round(span*30)));
+ const H=36,pad=3;
+ const band=Math.max(1,hi-lo+1);
+ const rh=Math.max(2,Math.min(6,Math.floor((H-2*pad)/band)));
+ let marks='';
+ for(let b2=1;b2<span;b2++)marks+='<line x1="'+(b2/span*W).toFixed(1)+'" y1="0" x2="'+(b2/span*W).toFixed(1)+'" y2="'+H+'" stroke="rgba(0,0,0,.14)"/>';
+ /* his 98th/99th: the CLOSED tile carries the chord-lane GHOST NOTES — dark outlines
+    behind the object's own marks, "a bit clearer" than the reference's faint ghosts.
+    Melody-kind tiles only: a chords-kind object's content IS the chords [labeled]. */
+ if(st.kind==='melody')try{
+  const chs=project.chords||[];
+  const vt=laneVoicingsTop(chs,[]);
+  let tb=0;
+  chs.forEach((c,i)=>{
+   const d2=c.d||0,a2=tb;tb+=d2;
+   const b0=Math.max(a2,0),b1=Math.min(tb,span);
+   if(b1<=b0||!vt[i])return;
+   for(const m of vt[i]){
+    if(m<lo||m>hi)continue;
+    const gy=pad+(hi-m)/band*(H-2*pad-rh)*(band>1?band/(band-1):0);
+    marks+='<rect x="'+(b0/span*W).toFixed(1)+'" y="'+Math.max(0,Math.min(H-rh,gy)).toFixed(1)+'" width="'+Math.max(2,(b1-b0)/span*W-1).toFixed(1)+'" height="'+rh+'" rx="1" fill="none" stroke="#141414" stroke-opacity=".4" class="essClipGh"/>';
+   }
+  });
+ }catch(e){}
+ for(const r of st.rows){
+  const x=r[0]/span*W,w2=Math.max(2,r[1]/span*W-1);
+  const y=pad+(hi-r[2])/band*(H-2*pad-rh)*(band>1?band/(band-1):0);
+  marks+='<rect x="'+x.toFixed(1)+'" y="'+Math.max(0,Math.min(H-rh,y)).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+rh+'" rx="1" fill="#141414" opacity=".9"/>';
  }
- ent.live=true;
+ return '<div class="essClipT" style="background:'+bg+';border-radius:5px;overflow:hidden;width:'+W+'px;flex:0 0 auto;">'
+  +'<div class="essClipName" style="color:#1b1204;font-size:10px;font-weight:700;padding:1px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+String(o&&o.name||'object')+'</div>'
+  +'<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;">'+marks+'</svg></div>';
+}
+function essObjCardMount(host,o,surface){
+ /* his 93rd (same day, forward): the world-in-card face RETIRES — the card renders the
+    CLIP TILE; the REAL multi-track grid (his 72nd's law) lives whole in the double-
+    press pop-up (essObjWorldOpen). The registry entry for this key closes if one
+    stands — worlds now belong to pop-ups only. */
+ const key=(surface||'s')+':'+((o&&o.id)||('lib:'+(o&&o.name)));
+ const ent=essCardWorlds[key];
+ if(ent){try{gridWorldClose(ent.w.id);}catch(e){}delete essCardWorlds[key];}
+ const tile=essClipTile(o);
+ if(!tile)return null;
  const box=document.createElement('div');
- box.className='essObjCardW';
- box.style.cssText='zoom:.55;max-width:560px;max-height:150px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:#14161c;';
- ent.w.els.root.style.marginTop='0';
- box.appendChild(ent.w.els.root);
+ box.className='essClipW';
+ box.style.cssText='cursor:grab;flex:0 0 auto;';
+ box.innerHTML=tile;
+ const nm=host.querySelector&&host.querySelector('.essObjCap .mimName');
+ if(nm)nm.style.display='none';   /* the tile carries the title — the caption keeps only the verbs */
  host.appendChild(box);
- return ent;
+ return {tile:true};
 }
 function essObjCardSweep(surface){
  /* close THIS surface's worlds whose cards did not come back this draw */
@@ -15197,6 +15323,32 @@ function essObjCardSweep(surface){
   if(!e.live){try{gridWorldClose(e.w.id);}catch(err){}delete essCardWorlds[k];}
   else e.live=false;
  }
+}
+function essObjCardLazy(d,o,surface){
+ /* his 93rd made this cheap: a tile is a small svg, not a world clone — every card
+    mounts eagerly (the lazy IntersectionObserver machinery retired with the
+    world-in-card face; "Show all 65" is 65 tiles, the proven scale). */
+ essObjCardMount(d,o,surface);
+}
+function essLibShelfMint(o,org){
+ /* his 90th/91st: a card-world DRAGS onto the Essence Shelf — the Keep-mint. Rows
+    through essObjRows (the one law), the melody kind carries them (the essObjWinClose
+    precedent: pat AND run objects both land as melody rows). Main's shelf — essences
+    ride the MAIN project file. One snapshot = one undo. */
+ const st=essObjRows(o);
+ if(!st||!st.rows||!st.rows.length)return false;
+ const run=()=>{
+  snapshot();
+  const rows=st.rows.map(r=>[r[0],r[1],r[2]]);
+  project.shelf.push({id:shelfNextId(project.shelf),strand:'melody',name:String(o.name||'object').slice(0,60),level:'L2',
+   data:{rows},fp:prismHash(rows.map(r=>r.join(':')).join(',')),org:org||o.org||'melPanel'});
+  autosaveSoon();
+ };
+ (typeof CUR_GRID==='string'&&CUR_GRID!=='main')?withGridWorld('main',run):run();
+ try{buildPrism();}catch(e){}
+ try{essShelfWinDrawAll();}catch(e){}
+ setPrzStatus(String(o.name||'The object')+' landed on the Essence Shelf — it rides the project file · ⌘Z undoes.');
+ return true;
 }
 let essObjWin=null;
 function essObjWinClose(){
@@ -15346,8 +15498,16 @@ function essDropTryDialog(dv,o){
  /* the same live-object law as the menu: after an undo the card's closure is stale */
  if(!Array.isArray(project.shelf))return false;
  const live=project.shelf.find(s=>s.id===o.id);
- if(!live)return false;
- o=live;
+ if(live)o=live;
+ else{
+  /* his 90th: LIBRARY card-worlds drop onto tracks too — an unkept object rides the
+     dialog as the melody strand it realizes to (essObjRows, the one law). Nothing
+     joins the Shelf; only the drop writes. */
+  const st=essObjRows(o);
+  if(!st||!st.rows||!st.rows.length)return false;
+  o={id:null,_lib:true,strand:'melody',name:String(o.name||'object'),
+     data:{rows:st.rows.map(r=>[r[0],r[1],r[2]])},org:o.org||(Array.isArray(o.run)?'cadPanel':'melPanel'),paste:o.paste};
+ }
  let hit=essDropRowAt(dv.clientX,dv.clientY);
  if(!hit){
   /* his 56th, case ③: a drop ON A CHORD in the chord lane — the element starts at
@@ -15370,6 +15530,16 @@ function essDropTryDialog(dv,o){
   if(o.paste==='expand')essDropWrite(hit,[o],false);
   else if(o.paste==='collapse')essDropWrite(hit,[o],true);
   else essDropPaste(hit,[o],o.paste);
+  return true;
+ }
+ if(o._lib){
+  /* his 90th: a LIBRARY object's drop applies its ORIGIN default straight away — the
+     question dialog resolves its items from the Shelf, which a library card never
+     joined (Keep it first and the full dialog is yours). A drop on a track with no
+     stored rows (the pattern tracks) EXPANDS into a new track instead — the dialog's
+     own fallback. [LABELED INFERENCE: the dialog-for-library-drops question is open —
+     this is the lawful cheap reading.] */
+  if(!essDropPaste(hit,[o],essPasteDefault(o)||'melody'))essDropWrite(hit,[o],false);
   return true;
  }
  essDropDialog(hit,o);
@@ -17823,8 +17993,12 @@ function createCurveEditor(host,opts){
   else if(!state.pencil){
    o+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(state.pts[0])}" y2="${Y(state.pts[1])}" stroke="#6fa8dc" stroke-dasharray="3 3"/>`;
    o+=`<line x1="${X(1)}" y1="${Y(1)}" x2="${X(state.pts[2])}" y2="${Y(state.pts[3])}" stroke="#6fa8dc" stroke-dasharray="3 3"/>`;
-   o+=`<circle data-h="0" cx="${X(state.pts[0])}" cy="${Y(state.pts[1])}" r="6.5" fill="#6fa8dc" stroke="#0c1826" stroke-width="1.5" style="cursor:grab"/>`;
-   o+=`<circle data-h="1" cx="${X(state.pts[2])}" cy="${Y(state.pts[3])}" r="6.5" fill="#6fa8dc" stroke="#0c1826" stroke-width="1.5" style="cursor:grab"/>`;
+   /* his 86th: a handle BALL must never leave the plot — y may overshoot (−.2…1.2 is
+      the curve's honest range) but the GRAB POINT clamps into the visible box, so it
+      can always be caught again. The dashed tangent keeps the true geometry. */
+   const HB=y=>Math.max(7,Math.min(Hc-7,y));
+   o+=`<circle data-h="0" cx="${X(state.pts[0])}" cy="${HB(Y(state.pts[1]))}" r="6.5" fill="#6fa8dc" stroke="#0c1826" stroke-width="1.5" style="cursor:grab"/>`;
+   o+=`<circle data-h="1" cx="${X(state.pts[2])}" cy="${HB(Y(state.pts[3]))}" r="6.5" fill="#6fa8dc" stroke="#0c1826" stroke-width="1.5" style="cursor:grab"/>`;
   }
   svgEl.style.cursor=state.pencil?'crosshair':'';
   svgEl.innerHTML=o;
@@ -17996,7 +18170,7 @@ function renderContourCards(){
   const card=document.createElement('div');
   card.className='csCard';
   card.dataset.cs=s.id;
-  card.style.cssText='flex:0 0 112px;background:#171a22;border:1px solid var(--line);border-radius:8px;padding:6px;';
+  card.style.cssText='flex:0 0 auto;max-width:400px;background:#171a22;border:1px solid var(--line);border-radius:8px;padding:6px;';
   card.innerHTML='<div data-a="face" style="cursor:pointer;" title="'+(s.id==='line'
     ?'The LINE tool — ends stay anchored: drag ↕ on it to warp the bow, ctrl+click it for the preset slide angles, press to audition'
     :'Press to audition “'+s.name+'” on the selected notes — nothing is written')+'">'+contourShapeSVG(contourCardSamples(s),false)+'</div>'
@@ -18007,6 +18181,12 @@ function renderContourCards(){
    +'<button data-a="draw" title="Redraw this shape freehand — the Draw box opens seeded with it" style="padding:1px 5px;font-size:10px;background:#2a2d38;color:#e9eaef;">✏</button>'
    +'<button data-a="apply" title="Write the shape onto the selected notes (one undo)" style="padding:1px 5px;font-size:10px;background:#2a2d38;color:#e9eaef;">✓</button>'
    +'</span></div>';
+  /* his 87th: the line ALSO appears realized on a single-track grid with chord ghost
+     notes — the card-world under the drawing face; ▽/✏/warp re-realize it (the samples
+     ride the sig). The line stays the tool; the world shows it as music. */
+  const _cs=contourCardSamples(s);
+  const _co={id:'cs:'+s.id,name:s.name,shape:_cs,data:{sh:_cs}};
+  essObjCardLazy(card,_co,'cs');
   card.querySelector('[data-a=face]').onclick=()=>{if(!csDragDid)contourAudition(s);};
   card.querySelector('[data-a=flip]').onclick=ev=>{ev.stopPropagation();csState.flip[s.id]=!csState.flip[s.id];renderContourCards();};
   card.querySelector('[data-a=draw]').onclick=ev=>{ev.stopPropagation();openContourDraw(ev,contourCardSamples(s));};
@@ -18025,7 +18205,8 @@ function renderContourCards(){
      csState.linePts=null;
      face.innerHTML=contourShapeSVG(contourCardSamples(s),false);
     };
-    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);setTimeout(()=>{csDragDid=false;},0);};
+    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);setTimeout(()=>{csDragDid=false;},0);
+     renderContourCards();};   /* his 87th: the warped line re-realizes on its card-world */
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
    };
    face.oncontextmenu=ev=>{
@@ -18035,6 +18216,7 @@ function renderContourCards(){
   }
   host.appendChild(card);
  }
+ essObjCardSweep('cs');
 }
 var csDragDid=false;
 function openLineCardMenu(s,e){
@@ -18962,6 +19144,7 @@ function melismaFiltered(){
  return melismaCatalog(MELISMA_LIB,{tier:(!melState.all&&!anyFilter)?1:0,
   trad:melState.trad,era:melState.era,fam:melState.fam,search:melState.search});
 }
+let _melResDbl={id:null,t:0};   /* the search cards' double-press clock (the select re-render breaks native dblclick) */
 function renderMelismaList(){
  const L=document.getElementById('melList');if(!L)return;
  const rows=melismaFiltered();
@@ -18970,38 +19153,83 @@ function renderMelismaList(){
  if(allBtn)allBtn.textContent=anyFilter?(rows.length+' match'+(rows.length===1?'':'es'))
   :(melState.all?'Showing all '+MELISMA_LIB.length+' · Essentials':'Essentials ('+rows.length+') · Show all '+MELISMA_LIB.length);
  L.innerHTML='';
+ /* his 81st (Sept 2): the sparkline result-cards RETIRE — every search result IS the
+    universal card-world object (his 91st face: an expanded midi-track look). The first
+    15 mount eagerly (the essentials, the proven scale); "Show all 65" mounts the tail
+    LAZILY on first visibility. The old ⤢ pattern-editor entry (5.0 r2 .mexp) is
+    SUPERSEDED by the pop-up grid: edit there, ✕ mints your own copy. */
+ let _mri=0;
  for(const o of rows){
   const d=document.createElement('div');
-  d.className='part';
+  d.className='part essObjCard melResCard';
   const isSel=melState.sel===o.id;
-  d.style.cssText='flex-direction:column;align-items:stretch;gap:2px;width:150px;max-width:150px;'+(isSel?'border-color:var(--accent);background:rgba(232,163,61,.12);':'');
-  d.title=(o.note||'')+' — press to audition on your selected note. ▲ plays it as written, ▼ mirrors it (only one direction at a time).'+(o.src?' (curve: derived approximation, ear-approval pending)':'');
-  /* July 27a: ▲▼ direction pair (one selected at a time, app-wide) + the ornament's
-     own MIDI pattern drawn on the card */
+  d.style.cssText='flex-direction:column;align-items:stretch;gap:3px;'+(isSel?'border-color:var(--accent);background:rgba(232,163,61,.12);':'');
+  d.title=(o.note||'')+' — press = audition on your selected note · double-press = the pop-up grid (editable, hear-able) · drag = onto the Essence Shelf or a track. ▲ as written, ▼ mirrored.'+(o.src?' (curve: derived approximation, ear-approval pending)':'');
   const arrow=dir=>{
    const on=isSel&&melState.dir===dir;
    return `<span class="mdir" data-d="${dir}" title="${dir==='up'?'▲ upward — the melisma as written':'▼ downward — the melisma mirrored (steps and bend curve negated)'}" style="font-size:9.5px;line-height:14px;padding:0 3px;border-radius:3px;cursor:pointer;user-select:none;${on?'color:#0d0f14;background:var(--accent);font-weight:800;':'color:var(--dim);border:1px solid var(--line);'}">${dir==='up'?'▲':'▼'}</span>`;
   };
-  d.innerHTML=`<div style="display:flex;gap:3px;align-items:center;width:100%;">
-    <div style="font-weight:600;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.name}${o.ours?' <span style="font-size:9px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 3px;" title="An invented name, visibly labeled — not a standard musicological term">our name</span>':''}</div>
-    <span class="mexp" title="Open this melisma up — edit its pattern, audition the changes, save your own variant" style="font-size:10px;line-height:14px;padding:0 3px;border-radius:3px;cursor:pointer;color:var(--dim);border:1px solid var(--line);">⤢</span>
-    ${arrow('up')}${arrow('down')}</div>
-   ${melThumbSVG(o,isSel?melState.dir:'up')}
+  d.innerHTML=`<div class="essObjCap"><div class="mimName" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${o.name}${o.ours?' <span style="font-size:9px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 3px;" title="An invented name, visibly labeled — not a standard musicological term">our name</span>':''}</div>
+    ${arrow('up')}${arrow('down')}<span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>
    <div style="font-size:10px;color:var(--dim);">${(MELISMA_FAMS.filter(f=>f[0]===o.fam)[0]||[o.fam,o.fam])[1]} · ${melEraLabel(o.era)}</div>`;
+  (_mri++<15)?essObjCardMount(d,o,'melres'):essObjCardLazy(d,o,'melres');
   d.onmousedown=ev=>{
+   if(ev.button!==0)return;
+   if(ev.target.closest&&ev.target.closest('.essObjCardW'))return;
    ev.preventDefault();
-   if(ev.target&&ev.target.closest&&ev.target.closest('.mexp')){   /* 5.0 r2: cards expand on click */
-    melState.sel=o.id;melExpand(o.id);renderMelismaList();renderMelismaInfo(o);return;
+   if(ev.target.classList&&ev.target.classList.contains('essExB')){
+    essObjWorldOpen(o,o.name,{x:ev.clientX-60,y:ev.clientY-40});essObjWorldExpand(true);return;
    }
    const ar=ev.target&&ev.target.closest&&ev.target.closest('.mdir');
-   if(ar)melState.dir=ar.dataset.d;   /* pressing an arrow picks the card AND its direction */
+   if(ar){   /* pressing an arrow picks the card AND its direction */
+    melState.dir=ar.dataset.d;melState.sel=o.id;
+    renderMelismaList();renderMelismaInfo(o);
+    if(melRun.active&&melRun.orn===o.id)melismaRunGo(0);   /* an arrow flip re-shapes a live run (slider convention) */
+    else melismaAudition(o);
+    return;
+   }
+   /* the double-press pop-up (the re-render on select replaces the node, so native
+      dblclick can never fire — a 400ms same-card second press opens the grid) */
+   const now=Date.now();
+   if(_melResDbl.id===o.id&&now-_melResDbl.t<400){_melResDbl={id:null,t:0};essObjWorldOpen(o,o.name,{x:ev.clientX-40,y:ev.clientY-30});return;}
+   _melResDbl={id:o.id,t:now};
+   /* a moving press DRAGS the object (his 90th) — Shelf = Keep-mint · a note = the
+      melisma write · a bare track row = the [E4]⑤ dialog */
+   const x0=ev.clientX,y0=ev.clientY;
+   const mm=e2=>{
+    if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+     cleanup();
+     chipDrag(e2,'➿ '+o.name,dv=>{
+      const el=document.elementFromPoint(dv.clientX,dv.clientY);
+      const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+      if(shelfEl){essLibShelfMint(o,'melPanel');return;}
+      const rootEl=el&&el.closest?el.closest('[data-gridworld],#gridRowWrap'):null;
+      if(rootEl){
+       const gid=rootEl.getAttribute&&rootEl.getAttribute('data-gridworld');
+       const nEl=el.closest?el.closest('[data-n]'):null;
+       const run=()=>{
+        melState.sel=o.id;
+        if(!selNotes.size&&nEl)selNotes.add(+nEl.getAttribute('data-n'));
+        if(selNotes.size&&typeof melismaRunGo==='function'){melismaRunGo(0);return;}
+        if(!essDropTryDialog(dv,o)&&typeof flashHint==='function')flashHint('Drop it on a note (the melisma writes onto it), a track row, or the Essence Shelf.');
+       };
+       (gid&&gid!=='main'&&typeof withGridWorld==='function'&&GRID_WORLDS[gid])?withGridWorld(gid,run):run();
+       return;
+      }
+      if(essDropTryDialog(dv,o))return;
+      if(typeof flashHint==='function')flashHint('Drop it on a grid, a track row, or the Essence Shelf.');
+     });
+    }};
+   const mu=()=>cleanup();
+   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
    melState.sel=o.id;
    renderMelismaList();renderMelismaInfo(o);
-   if(ar&&melRun.active&&melRun.orn===o.id)melismaRunGo(0);   /* an arrow flip re-shapes a live run (slider convention) */
-   else melismaAudition(o);   /* otherwise the psych-out audition — nothing written */
+   melismaAudition(o);   /* the psych-out audition — nothing written */
   };
   L.appendChild(d);
  }
+ essObjCardSweep('melres');
  if(!rows.length)L.innerHTML='<div style="font-size:12px;color:var(--dim);">Nothing matches — clear a filter or the search box.</div>';
  /* 5.0 r2 (client: "Less than 20!"): the essentials tier must never read as the whole
     library — an always-on count line under the cards says exactly what is shown */
@@ -29180,19 +29408,27 @@ function essShelfWinDraw(w){
       cleanup();d._dragAte=true;
       chipDrag(ev,'➿ '+o.name,dv=>{
        const el=document.elementFromPoint(dv.clientX,dv.clientY);
+       /* his 90th: the object DRAGS onto the Essence Shelf — the Keep-mint (checked
+          FIRST: the shelf windows carry data-gridworld too) */
+       const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+       if(shelfEl){essLibShelfMint(o,'melPanel');return;}
        const rootEl=el&&el.closest?el.closest('[data-gridworld],#gridRowWrap'):null;
-       if(!rootEl){if(typeof flashHint==='function')flashHint('Drop it on a grid — the melisma writes onto the notes selected there (or the note under the drop).');return;}
-       const gid=rootEl.getAttribute&&rootEl.getAttribute('data-gridworld');
-       const run=()=>{
-        melState.sel=o.id;
-        if(!selNotes.size){
-         const nEl=el.closest?el.closest('[data-n]'):null;
-         if(nEl)selNotes.add(+nEl.getAttribute('data-n'));
-        }
-        if(!selNotes.size){if(typeof flashHint==='function')flashHint('Select notes first (or drop ON a note) — the melisma writes onto them.');return;}
-        if(typeof melismaRunGo==='function')melismaRunGo(0);
-       };
-       (gid&&gid!=='main'&&typeof withGridWorld==='function'&&GRID_WORLDS[gid])?withGridWorld(gid,run):run();
+       if(rootEl){
+        const gid=rootEl.getAttribute&&rootEl.getAttribute('data-gridworld');
+        const nEl=el.closest?el.closest('[data-n]'):null;
+        const run=()=>{
+         melState.sel=o.id;
+         if(!selNotes.size&&nEl)selNotes.add(+nEl.getAttribute('data-n'));
+         if(selNotes.size&&typeof melismaRunGo==='function'){melismaRunGo(0);return;}
+         /* no note under the drop — the [E4]⑤ dialog takes it (his 90th: the object
+            drops onto tracks like any object) */
+         if(!essDropTryDialog(dv,o)&&typeof flashHint==='function')flashHint('Drop it on a note (the melisma writes onto it), a track row, or the Essence Shelf.');
+        };
+        (gid&&gid!=='main'&&typeof withGridWorld==='function'&&GRID_WORLDS[gid])?withGridWorld(gid,run):run();
+        return;
+       }
+       if(essDropTryDialog(dv,o))return;
+       if(typeof flashHint==='function')flashHint('Drop it on a grid (the melisma writes onto the selected notes) or on the Essence Shelf (it lives there).');
       });
      }};
     const mu=()=>cleanup();
@@ -29214,9 +29450,31 @@ function essShelfWinDraw(w){
     +'<span class="cpchip cadEssSel">✓</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
    essObjCardMount(d,o,'cad');
    d.onclick=e=>{
+    if(d._dragAte){d._dragAte=false;return;}
     if(e.target.closest&&e.target.closest('.essObjCardW'))return;
     if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
     if(e.target.classList.contains('cadEssSel')){e.stopPropagation();try{cadState.sel=o.id;cadState.cat=o.cat;if(typeof renderCadList==='function')renderCadList();}catch(err){}return;}
+   };
+   /* his 90th: the cadence object drags too — Shelf = the Keep-mint, a track = the dialog */
+   d.onmousedown=e=>{
+    if(e.button!==0||e.target.classList.contains('cadEssSel')||e.target.classList.contains('essExB'))return;
+    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
+    e.preventDefault();
+    const x0=e.clientX,y0=e.clientY;
+    const mm=ev=>{
+     if(Math.abs(ev.clientX-x0)>4||Math.abs(ev.clientY-y0)>4){
+      cleanup();d._dragAte=true;
+      chipDrag(ev,'♪ '+o.name,dv=>{
+       const el=document.elementFromPoint(dv.clientX,dv.clientY);
+       const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+       if(shelfEl){essLibShelfMint(o,'cadPanel');return;}
+       if(essDropTryDialog(dv,o))return;
+       if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
+      });
+     }};
+    const mu=()=>cleanup();
+    const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
    };
    d.ondblclick=e=>{if(e.target.closest&&e.target.closest('.essObjCardW'))return;e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
    body.appendChild(d);
@@ -29237,10 +29495,33 @@ function essShelfWinDraw(w){
    +(_isO2?'':'<div style="font-size:10px;color:var(--dim);margin:2px 0;">'+o.strand+' · '+(o.level||'')+'</div>');
   if(_isO2)essObjCardMount(d,o,'ew'+w.id);
   d.onclick=e=>{
+   if(d._dragAte){d._dragAte=false;return;}
    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
    if(e.target.classList.contains('essApB')){e.stopPropagation();withGridWorld(w.id,()=>przApply(o.strand,o.data));return;}
    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
    przAudition(o.strand,o.data,project.base+7,0);
+  };
+  /* his 90th: a SHELF object drags off its window card too — a track drop rides the
+     [E4]⑤ dialog under the live-object law (resolved by id inside) */
+  d.onmousedown=e=>{
+   if(e.button!==0||e.target.classList.contains('essApB')||e.target.classList.contains('essExB'))return;
+   if(e.target.closest&&e.target.closest('.essObjCardW'))return;
+   e.preventDefault();
+   const x0=e.clientX,y0=e.clientY;
+   const mm=ev=>{
+    if(Math.abs(ev.clientX-x0)>4||Math.abs(ev.clientY-y0)>4){
+     cleanup();d._dragAte=true;
+     chipDrag(ev,'◆ '+o.name,dv=>{
+      const el=document.elementFromPoint(dv.clientX,dv.clientY);
+      const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+      if(shelfEl){if(typeof flashHint==='function')flashHint(o.name+' already lives on the Essence Shelf.');return;}
+      if(essDropTryDialog(dv,o))return;
+      if(typeof flashHint==='function')flashHint('Drop it on a track row — the dialog asks how it lands.');
+     });
+    }};
+   const mu=()=>cleanup();
+   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
   };
   d.ondblclick=e=>{if(e.target.closest&&e.target.closest('.essObjCardW'))return;e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
   body.appendChild(d);
