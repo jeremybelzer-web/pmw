@@ -735,7 +735,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-01c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-01d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4121,8 +4121,16 @@ function padVoice(c,prev){const pcs=c.iv.map(x=>(c.r+x)%12);
 const VOICE_SYS_BEATS=16;
 const VOICE_LO=36,VOICE_HI=96;
 function chordVoicingOf(c,prev){
+ /* 84th R4 (his FIFTY-THIRD message + his app-wide ruling, Sept 1): the SOUNDING
+    voicing everywhere the chain reaches — the user's hand voicing verbatim (his hand
+    IS the law there), else the AUDITION LAW: voice-led within a 9th, over the root
+    two octaves down. ⭐ The bass rides IN the array, exactly the shape renderPad's
+    slash bass already uses — so the ghosts ("the same pitches the band plays"),
+    the export and the voicing editor all carry it with zero extra seams. */
  if(Array.isArray(c.vo)&&c.vo.length)return c.vo.slice().sort((a,b)=>a-b);
- return voice(c,prev);}
+ const av=audVoice(c,prev);
+ if(!av)return voice(c,prev);
+ return [av.bass].concat(av.notes);}
 function laneVoicings(chords,sectionStarts){
  const secs=Array.isArray(sectionStarts)?sectionStarts.filter(s=>s>0):[];
  const out=[];let t=0,prev=null,sys0=0;
@@ -4130,9 +4138,16 @@ function laneVoicings(chords,sectionStarts){
   let reset=t===0;
   if(!reset&&(t-sys0>=VOICE_SYS_BEATS-1e-6||secs.some(s=>s>sys0+1e-6&&s<=t+1e-6))){reset=true;}
   if(reset){prev=null;sys0=t;}
-  const v=chordVoicingOf(c,prev);
+  /* 84th R4: the CHAIN leads from the NOTES WITHOUT the law's bass (a doubled root
+     two octaves down would drag every travel score); a hand voicing leads as played.
+     The row's midis are the full sounding set, bass included — one law, one shape. */
+  let v,chain;
+  if(Array.isArray(c.vo)&&c.vo.length){chain=c.vo.slice().sort((a,b)=>a-b);v=chain;}
+  else{const av=audVoice(c,prev);
+   if(av){chain=av.notes;v=[av.bass].concat(av.notes);}
+   else{chain=voice(c,prev);v=chain;}}
   out.push({beat:t,midis:v,reset,ov:!!(Array.isArray(c.vo)&&c.vo.length)});
-  if(!c.off)prev=v;
+  if(!c.off)prev=chain;
   t+=c.d;}
  return out;}
 function laneVoicingsTop(chords,sectionStarts){
