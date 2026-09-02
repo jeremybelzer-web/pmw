@@ -739,7 +739,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -3053,7 +3053,7 @@ function validShelf(a){
     EN4 (build 2026-08-20c): 'form' is the FIFTH kind and the first with a SHAPE guard — admitted only through validFormData (the strand rule: the whitelist entry ships with the extractor)
     4.7 R4 (build 2026-08-23b): 'travel' is the SIXTH kind — E-079/E-080 as a list of 4.3 mod-templates, admitted only through validTravelData (the form pattern: own guard, own clause, the four-kind literal untouched) */
  return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
-  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
+  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data))||(x.strand==='melody'&&validMelodyRows(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
 function shelfNextId(shelf){
  let n=1;
  const ids=new Set((shelf||[]).map(x=>x.id));
@@ -14093,6 +14093,11 @@ function przAudition(strand,data,startMidi,atBeat){
     inst.note('comping',voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
     acc+=c.d;
    }
+  }else if(strand==='melody'){
+   for(const r of (((data&&data.rows)||[]).slice(0,64))){
+    if(r[0]>=16)continue;
+    inst.note('comping',r[2],Math.max(.1,r[1]*spb*.9),t0+r[0]*spb,.55);
+   }
   }else if(strand==='rhythm'){
    const base=(typeof gridBase==='function')?project.base:60;
    data.forEach(([t,d])=>inst.note('comping',base,Math.max(.1,d*spb*.9),t0+t*spb,.55));
@@ -14115,6 +14120,9 @@ function przSelRows(){
  return {idxs,rows:idxs.map(i=>{const n=project.melody[i];return [n[0],n[1],n[2]];})};
 }
 function przApply(strand,data){
+ /* [E1] (85th): a 'melody' object places through the DRAG-INTO-A-TRACK dialog — its
+    rows land at a beat the user picks; the bare ✓ has no landing to offer. */
+ if(strand==='melody'){setPrzStatus('Drag it onto a track row below the grid — the dialog places its notes at the drop beat (expand · collapse · paste).');return false;}
  /* EN4 (20c): a 'form' strand is a RECORD — ✓ has nothing to write yet. Said plainly,
     nothing faked: the apply verb for forms (re-order the sections to this letter scheme,
     E-112's Form LEGO) is its own round. No snapshot, nothing changes. */
@@ -14408,7 +14416,7 @@ function buildPrism(reanalyze){
    +'<div style="display:flex;gap:8px;"><span class="cpchip przApplyB">✓ Apply</span><span class="cpchip przDelB">✕</span></div>';
   d.ondblclick=e=>{
    if(e.target.classList.contains('przShName'))return;   /* the name keeps its rename */
-   e.stopPropagation();essGridPop(o,o.name,{x:e.clientX-40,y:e.clientY-30});
+   e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});
   };
   d.onclick=e=>{
    if(przState.dragAte){przState.dragAte=false;return;}   /* r2: the drag ate its own click */
@@ -15042,52 +15050,110 @@ function essObjRows(o){
 function essMiniSvg(o,big){
  const st=essObjRows(o);
  if(!st||!st.rows.length)return null;
- const sp=essMiniSpec(st.rows,big?{pxb:26,rh:14}:{pxb:7,rh:3});
+ const sp=essMiniSpec(st.rows,big?{pxb:26,rh:14,pad:4}:{pxb:7,rh:3});
  if(!sp)return null;
  let lat='';
  if(big)for(let y=0;y<=sp.hi-sp.lo;y++)lat+='<line x1="0" y1="'+((y+1)*sp.rh)+'" x2="'+sp.w+'" y2="'+((y+1)*sp.rh)+'" stroke="rgba(255,255,255,.07)"/>';
  let inner='';
- for(const r of sp.rects)inner+='<rect data-mi="'+r.i+'" data-m="'+r.m+'" x="'+r.x.toFixed(1)+'" y="'+r.y.toFixed(1)+'" width="'+r.w.toFixed(1)+'" height="'+r.h.toFixed(1)+'" rx="'+(big?3:1)+'" fill="var(--accent)" opacity=".88"'+(big?' style="cursor:pointer"':'')+'/>';
- return '<svg class="'+(big?'essObjBig':'essObjMini')+'" width="'+sp.w+'" height="'+sp.h+'" viewBox="0 0 '+sp.w+' '+sp.h+'"'
+ for(const r of sp.rects)inner+='<rect data-mi="'+r.i+'" data-m="'+r.m+'" data-t="'+r.t+'" x="'+r.x.toFixed(1)+'" y="'+r.y.toFixed(1)+'" width="'+r.w.toFixed(1)+'" height="'+r.h.toFixed(1)+'" rx="'+(big?3:1)+'" fill="var(--accent)" opacity=".88"'+(big?' style="cursor:pointer"':'')+'/>';
+ return '<svg class="'+(big?'essObjBig':'essObjMini')+'" data-hi="'+sp.hi+'" data-lo="'+sp.lo+'" data-rh="'+sp.rh+'" width="'+sp.w+'" height="'+sp.h+'" viewBox="0 0 '+sp.w+' '+sp.h+'"'
   +' style="display:block;background:#14161c;border-radius:'+(big?'8':'3')+'px;'+(big?'':'max-width:96px;max-height:22px;')+'flex:0 0 auto;">'+lat+inner+'</svg>';
 }
 function essObjPing(m){
  const go=()=>{try{if(audioReady&&inst)inst.note('comping',m,.45,Tone.now()+.02,.6);}catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
-let essPopEl=null;
-function essPopClose(){if(essPopEl){try{essPopEl.remove();}catch(e){}essPopEl=null;}}
-function essGridPop(o,name,at){
- /* his 10th: "expand and make quick edits to it by double clicking and a pop-up window
-    appears which you can move around (floating)". Well-rounded corners per his 41st. */
- essPopClose();
- const svg=essMiniSvg(o,true);
- if(!svg){if(typeof flashHint==='function')flashHint('That object is a map or a line — it edits in its own surface, not a note grid.');return null;}
- const m=document.createElement('div');
- m.className='essObjPop';
- m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;max-width:640px;';
- m.style.left=Math.max(8,Math.min((at&&at.x||120),window.innerWidth-360))+'px';
- m.style.top=Math.max(8,Math.min((at&&at.y||120),window.innerHeight-240))+'px';
- m.innerHTML='<div class="essObjPopHead" style="display:flex;align-items:center;gap:8px;cursor:grab;">'
-  +'<span style="font-size:11px;font-weight:700;">'+(name||o.name||'object')+'</span>'
-  +'<span style="font-size:9.5px;color:var(--dim);flex:1;">click a note = hear it</span>'
-  +'<span class="cpchip essObjPopX">✕</span></div>'
-  +'<div style="overflow:auto;max-width:620px;max-height:300px;">'+svg+'</div>';
- m.querySelector('.essObjPopX').onclick=essPopClose;
- /* the header drags the pop-up around (floating — his word) */
- m.querySelector('.essObjPopHead').onmousedown=e=>{
+let essObjWin=null;
+function essObjWinClose(){
+ /* ✕ = write back, then the world leaves whole. dna stays dna when the half-beat
+    lattice survives; otherwise THE OBJECT PROMOTES to the melody kind (his 60th: the
+    object is the home). A library card's edit MINTS a Shelf copy — the
+    drums-materialize precedent. One snapshot = one undo. */
+ if(!essObjWin)return;
+ const {w,o,orig,shell}=essObjWin;essObjWin=null;
+ let rows=[];
+ try{rows=withGridWorld(w.id,()=>((project.tracks.melody)||[]).map(n=>[n[0],n[1],n[2]]));}catch(e){}
+ try{gridWorldClose(w.id);}catch(e){}
+ try{shell.remove();}catch(e){}
+ if(!rows.length||JSON.stringify(rows)===JSON.stringify(orig))return;
+ snapshot();
+ noteEngine('ess-object-edit',{n:rows.length});
+ if(o&&Array.isArray(o.pat)){
+  project.shelf.push({id:shelfNextId(project.shelf),strand:'melody',name:(o.name+' (mine)').slice(0,60),level:'L2',
+   data:{rows},fp:prismHash(rows.map(r=>r.join(':')).join(',')),org:'melPanel'});
+  setPrzStatus('Your edit of '+o.name+' landed on the Essence Shelf as your own copy · ⌘Z undoes.');
+ }else{
+  const live=(Array.isArray(project.shelf)?project.shelf.find(s2=>s2.id===o.id):null);
+  if(!live){dropNoopSnapshot();return;}
+  if(live.strand==='dna'&&essRowsFitDna(rows)){live.data=rows.map(r=>Math.round(r[2]));}
+  else{live.strand='melody';live.data={rows};}
+  setPrzStatus('The edit is in '+live.name+' — it rides the project file · ⌘Z undoes.');
+ }
+ autosaveSoon();
+ try{buildPrism();}catch(e){}
+ try{essShelfWinDrawAll();}catch(e){}
+}
+function essObjWorldOpen(o,name,at){
+ /* his 61st/62nd/64th/65th — THE CORRECT IMPLEMENTATION, his words: "Just a minimized
+    multi-track grid." The REAL world machinery (gridWorldSpawn + the melody-rig law:
+    one visible track, chord lane hidden, its chords as ghost notes), floating in a
+    well-rounded shell, minimized by CSS zoom, NO controls (the grid head hides). The
+    lattice rows ARE the per-beat scale (his 59th comes native — rowOfK under
+    withKeyAt). The song's chords/key are COPIED in so the ghosts and the scale are
+    the song's own. */
+ essObjWinClose();
+ /* the live-object law (the paste-config lesson): after an undo the card's closure is
+    stale — resolve the shelf object by id before reading its notes */
+ if(o&&o.id&&Array.isArray(project.shelf)){const lv=project.shelf.find(s2=>s2.id===o.id);if(lv)o=lv;}
+ const st=essObjRows(o);
+ if(!st||!st.rows.length){if(typeof flashHint==='function')flashHint('That object is a map or a line — it edits in its own surface, not a note grid.');return null;}
+ const src=withGridWorld('main',()=>({chords:JSON.parse(JSON.stringify(project.chords||[])),
+  sections:JSON.parse(JSON.stringify(project.sections||[])),tonic:project.tonic,mode:project.mode,base:project.base}));
+ const w=gridWorldSpawn({rig:auditionRigDefaults('melPanel'),active:'melody'});
+ if(!w)return null;
+ w.essObj=(o&&o.id)||true;
+ /* OUT of the column's jurisdiction: the collectors match ^gridRowWrap_g\d+$ by id —
+    a floating object grid is not a column member and never joins a swipe layout */
+ w.els.root.id='essObjWrap_'+w.id;
+ const gh=w.els.root.querySelector('[id="gridWinHead"]');if(gh)gh.style.display='none';   /* NO controls */
+ const ts=w.els.root.querySelector('[id="trackSel"]');if(ts)ts.style.display='none';
+ const zs=w.els.root.querySelector('[id="zoomStrip"]');if(zs)zs.style.display='none';
+ const shell=document.createElement('div');
+ shell.className='essObjPop';
+ shell.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;';
+ shell.style.left=Math.max(8,Math.min((at&&at.x||120),window.innerWidth-560))+'px';
+ shell.style.top=Math.max(8,Math.min((at&&at.y||100),window.innerHeight-320))+'px';
+ shell.innerHTML='<div class="essObjPopHead" style="display:flex;align-items:center;gap:8px;cursor:grab;">'
+  +'<span style="font-size:11px;font-weight:700;">'+(name||(o&&o.name)||'object')+'</span>'
+  +'<span style="font-size:9.5px;color:var(--dim);flex:1;">the real grid, minimized — every grid rule applies · ✕ keeps your edit</span>'
+  +'<span class="cpchip essObjPopX">\u2715</span></div>';
+ const body=document.createElement('div');
+ body.className='essObjPopBody';
+ body.style.cssText='zoom:.62;max-width:860px;max-height:460px;overflow:auto;';
+ body.appendChild(w.els.root);
+ w.els.root.style.marginTop='0';
+ shell.appendChild(body);
+ shell.querySelector('.essObjPopX').onclick=()=>essObjWinClose();
+ shell.querySelector('.essObjPopHead').onmousedown=e=>{
   if(e.target.classList.contains('essObjPopX'))return;
   e.preventDefault();
-  const x0=e.clientX-m.offsetLeft,y0=e.clientY-m.offsetTop;
-  const mm=ev=>{m.style.left=(ev.clientX-x0)+'px';m.style.top=(ev.clientY-y0)+'px';};
+  const x0=e.clientX-shell.offsetLeft,y0=e.clientY-shell.offsetTop;
+  const mm=ev=>{shell.style.left=(ev.clientX-x0)+'px';shell.style.top=(ev.clientY-y0)+'px';};
   const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
  };
- /* his 37th: each note can be clicked — listened to */
- m.querySelectorAll('rect[data-mi]').forEach(r=>{r.addEventListener('mousedown',e=>{e.stopPropagation();essObjPing(+r.dataset.m);});});
- m.onmousedown=e=>e.stopPropagation();
- document.body.appendChild(m);essPopEl=m;
- return m;
+ shell.onmousedown=e=>{const r=e.target.closest?e.target.closest('.essObjPopHead'):null;if(!r)e.stopPropagation();};
+ document.body.appendChild(shell);
+ const orig=st.rows.map(r=>[r[0],r[1],r[2]]);
+ withGridWorld(w.id,()=>{
+  project.lanes[0].chords=src.chords;
+  project.sections=src.sections;
+  project.tonic=src.tonic;project.mode=src.mode;project.base=src.base;
+  project.tracks.melody=orig.map(r=>r.slice());
+  refresh(true);drawTrackSel();drawChordLane();
+ });
+ essObjWin={w,o,orig,shell};
+ return shell;
 }
 let essPmEl=null;
 function essPmClose(){if(essPmEl){try{essPmEl.remove();}catch(e){}essPmEl=null;}}
@@ -28872,7 +28938,7 @@ function essShelfWinDraw(w){
    d.title=(o.note||'')+' — press = audition · double-click = the pop-up grid · ✓ selects it in the Melisma Search window.';
    d.innerHTML='<div class="mimName">'+o.name+'</div>'+(essMiniSvg(o,false)||'<div style="font-size:10px;color:var(--dim);margin:2px 0;">melisma · '+o.fam+'</div>')
     +'<div style="display:flex;gap:8px;"><span class="cpchip melEssSel">✓</span></div>';
-   d.ondblclick=e=>{e.stopPropagation();essGridPop(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
+   d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
    d.onclick=e=>{
     if(d._dragAte){d._dragAte=false;return;}
     if(e.target.classList.contains('melEssSel')){e.stopPropagation();melState.sel=o.id;if(typeof renderMelismaList==='function')renderMelismaList();if(typeof renderMelismaInfo==='function')renderMelismaInfo(o);return;}
@@ -28927,7 +28993,7 @@ function essShelfWinDraw(w){
    if(e.target.classList.contains('essApB')){e.stopPropagation();withGridWorld(w.id,()=>przApply(o.strand,o.data));return;}
    przAudition(o.strand,o.data,project.base+7,0);
   };
-  d.ondblclick=e=>{e.stopPropagation();essGridPop(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
+  d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
   body.appendChild(d);
  });
 }
@@ -29991,6 +30057,11 @@ function strandTrackRows(strand,data,opts){
   const midis=melismaWalk(base+7,pcs,steps);
   return {kind:'melody',rows:midis.map((m,i)=>[at+i*.5,.5,m])};
  }
+ if(strand==='melody'){
+  /* the [E1] object's own rows — verbatim, the drop beat offsetting */
+  if(!validMelodyRows(data))return null;
+  return {kind:'melody',rows:data.rows.map(r=>[at+r[0],r[1],Math.round(r[2])])};
+ }
  if(strand==='chords'){
   const cs=(data&&Array.isArray(data.chords))?data.chords.filter(c=>c&&isFinite(c.d)&&c.d>0&&(Array.isArray(c.iv)&&c.iv.length||Array.isArray(c.sub)&&c.sub.length)):[];
   if(!cs.length)return null;
@@ -30002,6 +30073,26 @@ function strandTrackRows(strand,data,opts){
   return {kind:'chords',rows};
  }
  return null;
+}
+function validMelodyRows(d){
+ /* [E1] (85th, his 60th-65th): the object's own notes as a SHELF shape — {rows:[[t,d,midi],...]}.
+    The guard IS the gate: finite t>=0, d>0, midi 0..127, 1..512 rows. Pure. */
+ if(!d||typeof d!=='object'||!Array.isArray(d.rows)||!d.rows.length||d.rows.length>512)return false;
+ for(const r of d.rows){
+  if(!Array.isArray(r)||r.length<3)return false;
+  if(!isFinite(r[0])||r[0]<0||!isFinite(r[1])||r[1]<=0||!isFinite(r[2])||r[2]<0||r[2]>127)return false;
+ }
+ return true;
+}
+function essRowsFitDna(rows){
+ /* lossless back to a dna pitch list only when every row sits on dna's own half-beat
+    lattice in order — otherwise the object PROMOTES to the melody kind. Pure. */
+ if(!Array.isArray(rows)||!rows.length)return false;
+ for(let i=0;i<rows.length;i++){
+  const r=rows[i];
+  if(!Array.isArray(r)||Math.abs(r[0]-i*.5)>1e-6||Math.abs(r[1]-.5)>1e-6)return false;
+ }
+ return true;
 }
 function essPasteDefault(o){
  /* his 57th (Sept 2): the paste question's DEFAULT rides WHERE THE OBJECT WAS CREATED —
@@ -30016,10 +30107,36 @@ function essPasteDefault(o){
  if(/wan|weber|orb/i.test(org))return 'chords';
  if(/rhy/i.test(org))return 'drums';
  const s=o?o.strand:null;
- if(s==='contour'||s==='dna')return 'melody';
+ if(s==='contour'||s==='dna'||s==='melody')return 'melody';
  if(s==='chords'||s==='travel')return 'chords';
  if(s==='rhythm')return 'drums';
  return null;
+}
+function essDragLadder(midi,pcs){
+ /* [E1] R2 (his 37th): the rungs a dragged note walks — THE BACKGROUND GRID'S OWN
+    SCALE, not the chromatic ladder. melismaWalk's ladder law (ties resolve upward),
+    exposed for the drag. Returns {ladder,i0}. Pure. */
+ const P=(Array.isArray(pcs)&&pcs.length)?pcs:[0,2,4,5,7,9,11];
+ const m0=(typeof midi==='number'&&isFinite(midi))?Math.round(midi):60;
+ const ladder=[];
+ for(let m=m0-30;m<=m0+30;m++)if(P.indexOf(((m%12)+12)%12)>=0)ladder.push(m);
+ if(!ladder.length)return {ladder:[m0],i0:0};
+ let i0=0,best=1e9;
+ ladder.forEach((m,i)=>{const d=Math.abs(m-m0)+(m<m0?.25:0);if(d<best){best=d;i0=i;}});
+ return {ladder,i0};
+}
+function essDnaSetPitch(data,k,m){
+ /* write the k-th FINITE entry of a dna list (essObjRows filters junk, so the rect
+    index k counts finite entries; junk entries keep their seats). Returns the changed
+    ORIGINAL index or -1. Mutates data — the caller owns the snapshot. */
+ if(!Array.isArray(data)||!isFinite(m))return -1;
+ let seen=-1;
+ for(let i=0;i<data.length;i++){
+  if(!isFinite(data[i]))continue;
+  seen++;
+  if(seen===k){data[i]=Math.round(m);return i;}
+ }
+ return -1;
 }
 function essMiniSpec(rows,opts){
  /* [E1]–[E3] (85th; his 10th + 37th messages): the playable grid object's own little
@@ -30035,11 +30152,13 @@ function essMiniSpec(rows,opts){
  if(!ok.length)return null;
  let lo=1e9,hi=-1e9,t0=1e9,tN=-1e9;
  for(const r of ok){if(r[2]<lo)lo=r[2];if(r[2]>hi)hi=r[2];if(r[0]<t0)t0=r[0];if(r[0]+r[1]>tN)tN=r[0]+r[1];}
+ const pad=(typeof opts.pad==='number'&&opts.pad>0)?Math.round(opts.pad):0;   /* R2: headroom rows so a drag can leave the object's own range */
+ lo-=pad;hi+=pad;
  const span=tN-t0;
  const w=Math.max(24,Math.ceil(span*pxb));
  const h=Math.max(rh*2,(hi-lo+1)*rh);
  return {w,h,span,lo,hi,t0,rh,
-  rects:ok.map(r=>({x:(r[0]-t0)*pxb,y:(hi-r[2])*rh,w:Math.max(2,r[1]*pxb-1),h:Math.max(2,rh-1),m:r[2],i:r[3]}))};
+  rects:ok.map(r=>({x:(r[0]-t0)*pxb,y:(hi-r[2])*rh,w:Math.max(2,r[1]*pxb-1),h:Math.max(2,rh-1),m:r[2],t:r[0],i:r[3]}))};
 }
 function essDropSnap(b,step,loop){
  /* his 56th (Sept 2), case ①: a grid drop lands at the closest beat AT THE GRID'S OWN
