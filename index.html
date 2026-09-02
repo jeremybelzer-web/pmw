@@ -739,7 +739,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -13977,7 +13977,7 @@ function przKeepForm(){
  const tl=(typeof trackLabel==='function'?trackLabel(przState.track):przState.track);
  const name=('form · '+tl+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled')).slice(0,60);
  const fp=prismHash(rec.songForm+'|'+rec.sections.map(s2=>s2.form).join('/'));
- project.shelf.push({id:shelfNextId(project.shelf),strand:'form',name,level:'L1',data:rec,fp});
+ project.shelf.push({id:shelfNextId(project.shelf),strand:'form',name,level:'L1',data:rec,fp,org:'prism'});
  autosaveSoon();
  buildPrism();
  const np=rec.pairs.length;
@@ -14180,7 +14180,7 @@ function przKeep(strand,data,segLetter,level){
  noteEngine('prism-keep',{strand});
  const name=(segLetter?segLetter+' · ':'')+PRZ_LABELS[strand].toLowerCase()+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled');
  const fp=strand==='contour'?prismHash(String(data)):strand==='dna'?prismHash(data.join(',')):prismHash(data.map(s=>s.join(':')).join(','));
- project.shelf.push({id:shelfNextId(project.shelf),strand,name:name.slice(0,60),level:level||'L2',data:JSON.parse(JSON.stringify(data)),fp});
+ project.shelf.push({id:shelfNextId(project.shelf),strand,name:name.slice(0,60),level:level||'L2',data:JSON.parse(JSON.stringify(data)),fp,org:'prism'});   /* his 57th: provenance rides every Keep */
  autosaveSoon();
  buildPrism();
  setPrzStatus('Kept on the Essence Shelf — it rides the project file · ⌘Z undoes.');
@@ -14414,6 +14414,8 @@ function buildPrism(reanalyze){
    const name=prompt('Name this essence:',o.name);
    if(name){snapshot();o.name=name.slice(0,60);autosaveSoon();buildPrism();}
   };
+  /* his 57th, place 1: ctrl+click the object → choose what a drop of it pastes */
+  d.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();essShelfPasteMenu(e,o);};
   sh.appendChild(d);
  });
  /* 78th R2b: the engine stacks' Essence Shelf windows mirror this one shelf — every
@@ -14891,6 +14893,54 @@ function essDropWrite(hit,items,collapse){
   :'Expanded — '+names+' each landed in a new track at beat '+hit.at+' · ⌘Z undoes.');
  return true;
 }
+function essDropPaste(hit,items,kind){
+ /* his 57th: "Paste only the melody" / "Paste only the chords (polyphony)" — INTO the
+    drop track at the landing. Note-carrying objects OVER-WRITE the span they cover;
+    the contour is A LINE and MODIFIES instead — his words: "it won't replace it with
+    it's own notes.  It will generate notes based on the notes it's dropped on and
+    based on it's own lines" — so it re-shapes the track's own notes from the landing
+    beat onward (the shipped contourReshape law aimed at a track). One undo. */
+ const arr=project.tracks[hit.t];
+ if(!Array.isArray(arr)){setPrzStatus('That track has no stored notes yet — expand into a new track instead.');return false;}
+ const opts=essDropOpts(hit);
+ const mods=items.filter(o=>o.strand==='contour'&&kind==='melody');
+ const srcs=items.filter(o=>o.strand!=='contour'&&(strandTrackRows(o.strand,o.data,opts)||{}).kind===kind);
+ if(!mods.length&&!srcs.length){setPrzStatus('Nothing in that pick carries that content.');return false;}
+ snapshot();
+ let did=0,shaped=0;
+ if(srcs.length){
+  const rows=[];
+  for(const o of srcs){const st=strandTrackRows(o.strand,o.data,opts);if(st)for(const r of st.rows)rows.push(r.slice());}
+  if(rows.length){
+   const end=Math.max.apply(null,rows.map(r=>r[0]+r[1]));
+   const kept=arr.filter(n=>!(n[0]>=hit.at-1e-6&&n[0]<end-1e-6));   /* over-write the covered span only */
+   kept.push.apply(kept,rows);
+   kept.sort((a,b)=>a[0]-b[0]);
+   project.tracks[hit.t]=kept;
+   did=rows.length;
+  }
+ }
+ if(mods.length){
+  const cur=project.tracks[hit.t];
+  const idxs=[];cur.forEach((n,i)=>{if(n[0]>=hit.at-1e-6)idxs.push(i);});
+  if(idxs.length<2&&!did){dropNoopSnapshot();setPrzStatus('The rise-and-fall line needs at least 2 notes after the landing beat to re-shape.');return false;}
+  if(idxs.length>=2){
+   const key=melismaKeyAt(hit.at),pcs=melismaPcs(key);
+   for(const o of mods){
+    const samples=contourToSamples(o.data);
+    const rowsIn=idxs.map(i=>[cur[i][0],cur[i][1],cur[i][2]]);
+    const out=contourReshape(rowsIn,samples,pcs,{});
+    if(out)idxs.forEach((i,k)=>{cur[i][2]=out[k];});
+   }
+   shaped=idxs.length;
+  }
+ }
+ autosaveSoon();
+ drawTrackSel();refresh(true);
+ noteEngine('essence-drop-paste',{kind,n:items.length});
+ setPrzStatus('Pasted onto '+trackLabel(hit.t)+(did?' — '+did+' notes over-wrote the span from beat '+hit.at:'')+(shaped?(did?' · ':' — ')+'the line re-shaped '+shaped+' notes from beat '+hit.at:'')+' · ⌘Z undoes.');
+ return true;
+}
 function essDropDialog(hit,o){
  essDropClose();
  const KIND_WORD={melody:'a melody',drums:'a drum beat',chords:'chords'};
@@ -14919,9 +14969,25 @@ function essDropDialog(hit,o){
   const clLines=plan.expand.map(p=>'· '+p.name+(p.kind==='drums'?' → audible, not shown (a hidden drum track)':' → ghost notes behind '+trackLabel(hit.t))).join('<br>');
   const refLines=plan.refused.map(r=>'· '+r.name+' — a map, not notes; it stays on the Shelf').join('<br>');
   const can=plan.expand.length>0;
-  h+='<div class="part essDropExp" style="padding:6px 10px;font-size:11.5px;'+(can?'':'opacity:.45;cursor:default;')+'" title="Each element lands in its own new track; the new tracks show each other and the rest as ghost notes (the Ghost Notes law).">⊞ Expand all selected elements into multiple tracks (recommended)'
+  /* his 57th: THE PASTE QUESTION leads — one option per content kind the pick carries,
+     the DEFAULT marked in his own phrasing ("Default = Paste only the melody · OK?"),
+     chosen by the dragged object's ORIGIN (essPasteDefault; the ctrl+click shelf
+     config verbatim-wins). A note-carrier over-writes the span it covers; the contour
+     is a line and MODIFIES the notes it lands on. */
+  const def=essPasteDefault(o);
+  const KIND_PASTE={melody:'Paste only the melody',chords:'Paste only the chords (polyphony)',drums:'Paste only the rhythm'};
+  const kindsHere=[];for(const p of plan.expand)if(kindsHere.indexOf(p.kind)<0)kindsHere.push(p.kind);
+  kindsHere.sort((a,b)=>(a===def?-1:0)-(b===def?-1:0));
+  for(const k of kindsHere){
+   const riders=plan.expand.filter(p=>p.kind===k)
+    .map(p=>'· '+p.name+((its.find(s2=>s2.name===p.name)||{}).strand==='contour'?' (a line — modifies the notes it lands on)':' (over-writes the span it covers)')).join('<br>');
+   h+='<div class="part essDropPk" data-k="'+k+'" style="padding:6px 10px;font-size:11.5px;" title="Into '+trackLabel(hit.t)+' at the landing beat — one undo.">'
+    +(k===def?'⭐ Default = '+KIND_PASTE[k]+' · OK?':KIND_PASTE[k])
+    +(riders?'<div style="font-size:10px;color:var(--dim);margin-top:2px;">'+riders+'</div>':'')+'</div>';
+  }
+  h+='<div class="part essDropExp" style="padding:6px 10px;font-size:11.5px;'+(can?'':'opacity:.45;cursor:default;')+'" title="Each element lands in its own new track; the new tracks show each other and the rest as ghost notes (the Ghost Notes law).">'+(def==='expand'?'⭐ Default = ':'')+'⊞ Expand all selected elements into multiple tracks'
    +(exLines?'<div style="font-size:10px;color:var(--dim);margin-top:2px;">'+exLines+'</div>':'')+'</div>';
-  h+='<div class="part essDropCol" style="padding:6px 10px;font-size:11.5px;'+(can?'':'opacity:.45;cursor:default;')+'" title="The elements land hidden: audible, and pitched ones stay present as ghost notes in this track’s view — like a hidden drum beat track.">▣ Collapse the selected elements into 1 track'
+  h+='<div class="part essDropCol" style="padding:6px 10px;font-size:11.5px;'+(can?'':'opacity:.45;cursor:default;')+'" title="The elements land hidden: audible, and pitched ones stay present as ghost notes in this track’s view — like a hidden drum beat track.">'+(def==='collapse'?'⭐ Default = ':'')+'▣ Collapse the selected elements into 1 track'
    +(clLines?'<div style="font-size:10px;color:var(--dim);margin-top:2px;">'+clLines+'</div>':'')+'</div>';
   h+='<div class="part essDropApp" style="padding:6px 10px;font-size:11.5px;" title="The shipped ✓ Apply — one undo; contour/dna/rhythm re-shape the notes selected in the grid.">✓ Just apply '+(first?first.name:'')+' to hear the result</div>';
   if(refLines)h+='<div style="font-size:10px;color:var(--dim);">'+refLines+'</div>';
@@ -14934,6 +15000,9 @@ function essDropDialog(hit,o){
     if(cb.checked)checked.add(id);else{checked.delete(id);if(!checked.size)checked.add(id);}
     draw();};
   });
+  m.querySelectorAll('.essDropPk').forEach(pk=>{
+   pk.onclick=()=>{const k=pk.dataset.k;essDropClose();essDropPaste(hit,its,k);};
+  });
   m.querySelector('.essDropExp').onclick=()=>{if(!can)return;essDropClose();essDropWrite(hit,its,false);};
   m.querySelector('.essDropCol').onclick=()=>{if(!can)return;essDropClose();essDropWrite(hit,its,true);};
   m.querySelector('.essDropApp').onclick=()=>{const f=its[0];essDropClose();if(f)przApply(f.strand,f.data);};
@@ -14944,8 +15013,55 @@ function essDropDialog(hit,o){
  document.body.appendChild(m);essDropEl=m;
  setTimeout(()=>{document.addEventListener('mousedown',essDropClose,{once:true});},0);
 }
+let essPmEl=null;
+function essPmClose(){if(essPmEl){try{essPmEl.remove();}catch(e){}essPmEl=null;}}
+function essShelfPasteMenu(e,o){
+ /* his 57th, place 1: "In the Essence shelf the user can control+click an object and
+    select which elements get pasted and where." The pick lives ON the object (o.paste,
+    rides the project file) and verbatim-wins over the origin default in the drop
+    dialog. Auto returns to the origin law.
+    ⛔ RESOLVE THE LIVE OBJECT BY ID FIRST: an undo() replaces project.shelf with fresh
+    objects while the rendered cards still close over the old ones — a write to the
+    closure object configures a ghost (the suite forced this out). */
+ o=(Array.isArray(project.shelf)?project.shelf.find(s=>s.id===o.id):null)||o;
+ essPmClose();
+ const st=strandTrackRows(o.strand,o.data,{});
+ const auto=essPasteDefault({strand:o.strand,org:o.org});
+ const KIND_PASTE={melody:'Paste only the melody',chords:'Paste only the chords (polyphony)',drums:'Paste only the rhythm'};
+ const m=document.createElement('div');
+ m.className='essPm';
+ m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:4px;min-width:250px;';
+ m.style.left=Math.min(e.clientX,window.innerWidth-270)+'px';m.style.top=Math.min(e.clientY,window.innerHeight-180)+'px';
+ const head=document.createElement('div');
+ head.style.cssText='font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;padding:2px 10px;';
+ head.textContent='When '+o.name+' is dropped on a track…';
+ m.appendChild(head);
+ const mk=(label,tip,val)=>{
+  const b=document.createElement('span');b.className='part';b.style.cssText='padding:4px 12px;font-size:11.5px;';
+  const on=(o.paste||null)===val;
+  b.textContent=(on?'● ':'○ ')+label;b.title=tip;
+  b.onclick=()=>{essPmClose();o.paste=val||undefined;if(!val)delete o.paste;autosaveSoon();
+   setPrzStatus(val
+    ?o.name+' is configured: '+label+' — drops paste this way without asking (his 58th). Auto brings the question back.'
+    :o.name+' is back on Auto — a drop asks, with the origin default leading.');};
+  m.appendChild(b);
+ };
+ mk('Auto — by where it was made'+(auto?' (currently: '+(KIND_PASTE[auto]||auto)+')':''),'The origin law: Melisma-made → melody, Wanderer-made → harmony; older objects by their kind.',null);
+ if(st&&KIND_PASTE[st.kind])mk(KIND_PASTE[st.kind],(o.strand==='contour'?'A line — it modifies the notes it lands on, never replaces them.':'Over-writes the span it covers in the drop track.'),st.kind);
+ if(st){mk('Expand into multiple tracks','Each element lands in its own new track.','expand');
+  mk('Collapse into 1 track (hidden)','Lands hidden: audible, present as ghost notes.','collapse');}
+ if(!st){const n2=document.createElement('div');n2.style.cssText='font-size:10px;color:var(--dim);padding:2px 10px;';
+  n2.textContent='A '+(PRZ_LABELS[o.strand]||o.strand||'map').toLowerCase()+' is a map, not notes — it has nothing to paste.';m.appendChild(n2);}
+ m.onmousedown=e2=>e2.stopPropagation();
+ document.body.appendChild(m);essPmEl=m;
+ setTimeout(()=>{document.addEventListener('mousedown',essPmClose,{once:true});},0);
+}
 function essDropTryDialog(dv,o){
- if(!Array.isArray(project.shelf)||!project.shelf.find(s=>s.id===o.id))return false;
+ /* the same live-object law as the menu: after an undo the card's closure is stale */
+ if(!Array.isArray(project.shelf))return false;
+ const live=project.shelf.find(s=>s.id===o.id);
+ if(!live)return false;
+ o=live;
  let hit=essDropRowAt(dv.clientX,dv.clientY);
  if(!hit){
   /* his 56th, case ③: a drop ON A CHORD in the chord lane — the element starts at
@@ -14962,6 +15078,14 @@ function essDropTryDialog(dv,o){
  }
  if(!hit)return false;
  hit.x=dv.clientX;hit.y=dv.clientY;
+ /* his 58th: a paste CONFIGURED on the Shelf never re-asks — the drop just does it.
+    The question is only for an object nobody configured (its default by origin). */
+ if(['melody','chords','drums','expand','collapse'].indexOf(o.paste)>=0){
+  if(o.paste==='expand')essDropWrite(hit,[o],false);
+  else if(o.paste==='collapse')essDropWrite(hit,[o],true);
+  else essDropPaste(hit,[o],o.paste);
+  return true;
+ }
  essDropDialog(hit,o);
  return true;
 }
@@ -24116,7 +24240,7 @@ function renderOrb(){
       const nm=('Cadence to '+PCN[t4]+(it3.pv.dest.minor?'m':'')+' · '+(it3.pv.lbl||'pivot')).slice(0,60);
       project.shelf.push({id:shelfNextId(project.shelf),strand:'chords',name:nm,level:'L2',
        data:{chords:run.map(c=>({r:c.r,iv:c.iv.slice(),lbl:c.lbl,d:1})),sections:[]},
-       fp:prismHash(run.map(c=>c.r+':'+c.iv.join('.')).join(','))});
+       fp:prismHash(run.map(c=>c.r+':'+c.iv.join('.')).join(',')),org:'orbPanel'});
       autosaveSoon();
       if(typeof buildPrism==='function'&&typeof uiWinShown==='function'&&uiWinShown('prismPanel'))try{buildPrism();}catch(e2){}
       if(typeof essShelfWinDrawAll==='function')try{essShelfWinDrawAll();}catch(e2){}
@@ -24258,7 +24382,7 @@ function orbKeepTravel(which){
  const nm=(label+' · '+src).slice(0,60);
  project.shelf.push({id:shelfNextId(project.shelf),strand:'travel',name:nm,level:'L1',
   data:{moments:JSON.parse(JSON.stringify(moments)),src},
-  fp:prismHash(moments.map(t=>t.kind+':'+t.interval+':'+t.bridge.map(b=>b.rel+b.deg).join('/')).join(','))});
+  fp:prismHash(moments.map(t=>t.kind+':'+t.interval+':'+t.bridge.map(b=>b.rel+b.deg).join('/')).join(',')),org:'orbPanel'});
  autosaveSoon();
  noteEngine('orbit-keep-travel',{which,n:moments.length});
  renderOrb();
@@ -24277,7 +24401,7 @@ function orbRecToggle(){
   const nm=('Orbits journey · '+PCN[cur.tonic]+(cur.minor?'m':'')+' · '+project.chords.length+' chords').slice(0,60);
   project.shelf.push({id:shelfNextId(project.shelf),strand:'chords',name:nm,level:'L2',
    data:{chords:JSON.parse(JSON.stringify(project.chords)),sections:JSON.parse(JSON.stringify(project.sections))},
-   fp:prismHash(project.chords.map(c=>c.r+':'+c.d).join(','))});
+   fp:prismHash(project.chords.map(c=>c.r+':'+c.d).join(',')),org:'orbPanel'});
   autosaveSoon();
   noteEngine('orbit-keep',{n:project.chords.length});
   setOrbStatus('Journey captured — one chords object on the Essence Shelf (open the △ Prism window to see it). ⌘Z undoes the keep.');
@@ -29799,6 +29923,24 @@ function strandTrackRows(strand,data,opts){
   vs.forEach((v,i)=>{for(const m of v.midis)rows.push([at+v.beat,flat[i].d,m]);});
   return {kind:'chords',rows};
  }
+ return null;
+}
+function essPasteDefault(o){
+ /* his 57th (Sept 2): the paste question's DEFAULT rides WHERE THE OBJECT WAS CREATED —
+    "If it was created in the Melisma Engine Window, then it should default to just
+    pasting a melody.  Wanderer window should default to just pasting a harmony."
+    An explicit user pick (o.paste — the ctrl+click shelf config) verbatim-wins; objects
+    minted before provenance existed fall back by strand kind. Pure. */
+ const P=['melody','chords','drums','expand','collapse'];
+ if(o&&P.indexOf(o.paste)>=0)return o.paste;
+ const org=(o&&typeof o.org==='string')?o.org:'';
+ if(/mel/i.test(org))return 'melody';
+ if(/wan|weber|orb/i.test(org))return 'chords';
+ if(/rhy/i.test(org))return 'drums';
+ const s=o?o.strand:null;
+ if(s==='contour'||s==='dna')return 'melody';
+ if(s==='chords'||s==='travel')return 'chords';
+ if(s==='rhythm')return 'drums';
  return null;
 }
 function essDropSnap(b,step,loop){
