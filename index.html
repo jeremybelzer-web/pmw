@@ -64,6 +64,10 @@
   /* [E1] (his 67th): an object card's name IS its track name box — the real nbox look,
      colored ground, dark text, rounded — left of the miniature lattice */
   .essTName{background:#edc948;color:#1b1204;border-radius:4px;padding:1px 6px;font-weight:700;}
+  /* his 72nd: an object card IS a grid — the card goes column, caption over the world */
+  #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard{
+    display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px 6px;}
+  .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
   #zimBtn[data-retired]{display:none;}   /* his ninth message: the top button retires — the zim paths stay alive (the Lower Window and the note menus reach it) */
   .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
   .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
@@ -742,7 +746,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02o</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02p</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14403,6 +14407,7 @@ function buildPrism(reanalyze){
   d.onmousedown=e=>{
    /* r2: shelf objects are grid-DRAG objects — >4px promotes to the chipDrag ghost */
    if(e.button!==0||e.target.classList.contains('przApplyB')||e.target.classList.contains('przDelB')||e.target.classList.contains('przShName')||e.target.classList.contains('essExB'))return;
+   if(e.target.closest&&e.target.closest('.essObjCardW'))return;   /* inside the world = the grid's own gestures */
    e.preventDefault();   /* the melChipPress rule: without this a text selection forms, and the NEXT drag becomes a native text-drag that swallows every mouse event */
    const x0=e.clientX,y0=e.clientY;
    const mm=ev=>{
@@ -14424,18 +14429,23 @@ function buildPrism(reanalyze){
    const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
   };
-  /* [E1] R1: a note-carrying object wears its OWN mini grid (only as long as its notes —
-     his 10th); a line/map keeps the przThumb sketch. Double-click the grid = the pop-up. */
-  const mini=essMiniSvg(o,false);
-  d.innerHTML='<div class="mimName przShName'+(mini?' essTName':'')+'" style="cursor:text;">'+o.name+(twin?' <span class="mimIv">↔</span>':'')+'</div>'
-   +'<div style="margin:4px 0;">'+(mini||przThumb(o.strand,o.data))+'</div>'
-   +'<div style="display:flex;gap:8px;"><span class="cpchip przApplyB">✓ Apply</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span><span class="cpchip przDelB">✕</span></div>';
+  /* his 71st/72nd: a note-carrying object IS one real multi-track grid — 1 visible
+     track + ghost notes, mounted live in the card; the caption row above carries the
+     name, the verbs, the drag and the dblclick. A line/map keeps the przThumb sketch. */
+  const _isObj=!!(essObjRows(o)&&essObjRows(o).rows&&essObjRows(o).rows.length);
+  if(_isObj)d.className+=' essObjCard';
+  d.innerHTML='<div class="essObjCap"><div class="mimName przShName" style="cursor:text;">'+o.name+(twin?' <span class="mimIv">↔</span>':'')+'</div>'
+   +'<span class="cpchip przApplyB">✓ Apply</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span><span class="cpchip przDelB">✕</span></div>'
+   +(_isObj?'':'<div style="margin:4px 0;">'+przThumb(o.strand,o.data)+'</div>');
+  if(_isObj)essObjCardMount(d,o,'prz');
   d.ondblclick=e=>{
    if(e.target.classList.contains('przShName'))return;   /* the name keeps its rename */
+   if(e.target.closest&&e.target.closest('.essObjCardW'))return;   /* inside the world = grid gestures */
    e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});
   };
   d.onclick=e=>{
-   if(przState.dragAte){przState.dragAte=false;return;}   /* r2: the drag ate its own click */
+   if(przState.dragAte){przState.dragAte=false;return;}
+   if(e.target.closest&&e.target.closest('.essObjCardW'))return;   /* r2: the drag ate its own click */
    if(e.target.classList.contains('przApplyB')){e.stopPropagation();przApply(o.strand,o.data);return;}
    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
    if(e.target.classList.contains('przDelB')){e.stopPropagation();snapshot();project.shelf.splice(i,1);autosaveSoon();buildPrism();setPrzStatus('Removed from the Shelf · ⌘Z undoes.');return;}
@@ -14450,6 +14460,7 @@ function buildPrism(reanalyze){
   d.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();essShelfPasteMenu(e,o);};
   sh.appendChild(d);
  });
+ essObjCardSweep('prz');
  /* 78th R2b: the engine stacks' Essence Shelf windows mirror this one shelf — every
     Keep/remove/rename lands here, so they redraw here */
  if(typeof essShelfWinDrawAll==='function')try{essShelfWinDrawAll();}catch(e){}
@@ -15111,6 +15122,72 @@ function essObjPing(m){
  const go=()=>{try{if(audioReady&&inst)inst.note('comping',m,.45,Tone.now()+.02,.6);}catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
+function essObjWorldMint(o){
+ /* the object's world — ONE mint for the card and the pop-up (his 72nd: the card IS
+    a real multi-track grid). The face rig (his 70th), the song's chords/key copied in,
+    the rows in the face track, and LOOP cut to the object's own span — "only as long
+    as its notes" (his 10th) as a WORLD SLOT, so nothing outside feels it. */
+ if(o&&o.id&&Array.isArray(project.shelf)){const lv=project.shelf.find(s2=>s2.id===o.id);if(lv)o=lv;}
+ const st=essObjRows(o);
+ if(!st||!st.rows.length)return null;
+ const src=withGridWorld('main',()=>({chords:JSON.parse(JSON.stringify(project.chords||[])),
+  sections:JSON.parse(JSON.stringify(project.sections||[])),tonic:project.tonic,mode:project.mode,base:project.base}));
+ const face=essObjFace(o,st.kind);
+ const w=gridWorldSpawn({rig:{active:face.track,soloTrack:face.track,chordLaneHidden:true,chordGhosts:face.track!=='drums'},active:face.track});
+ if(!w)return null;
+ w.essObj=(o&&o.id)||true;
+ w.els.root.id='essObjWrap_'+w.id;
+ const gh=w.els.root.querySelector('[id="gridWinHead"]');if(gh)gh.style.display='none';
+ const ts=w.els.root.querySelector('[id="trackSel"]');if(ts)ts.style.display='none';
+ const zs=w.els.root.querySelector('[id="zoomStrip"]');if(zs)zs.style.display='none';
+ const orig=st.rows.map(r=>[r[0],r[1],r[2]]);
+ let span=0;for(const r of orig)if(r[0]+r[1]>span)span=r[0]+r[1];
+ withGridWorld(w.id,()=>{
+  project.lanes[0].chords=src.chords;
+  project.sections=src.sections;
+  project.tonic=src.tonic;project.mode=src.mode;project.base=src.base;
+  project.tracks[face.track]=orig.map(r=>r.slice());
+  LOOP=Math.max(2,Math.ceil(span));
+  refresh(true);drawTrackSel();drawChordLane();
+ });
+ return {w,o,face,orig};
+}
+/* his 71st/72nd: the CARD-WORLD registry — shelf redraws ADOPT a standing world for an
+   unchanged object instead of churning clones; stale ones close at the next draw. */
+let essCardWorlds={};
+function essObjCardSig(o){
+ /* the DATA rides the sig whole — an edit through the pop-up must refresh the card */
+ try{return JSON.stringify([o.id,o.paste||null,o.org||null,o.strand,o.data]);}catch(e){return String(o&&o.id);}
+}
+function essObjCardMount(host,o,surface){
+ const key=(surface||'s')+':'+((o&&o.id)||('lib:'+(o&&o.name)));
+ const sig=essObjCardSig(o||{});
+ let ent=essCardWorlds[key];
+ if(ent&&ent.sig!==sig){try{gridWorldClose(ent.w.id);}catch(e){}ent=null;delete essCardWorlds[key];}
+ if(!ent){
+  const m=essObjWorldMint(o);
+  if(!m)return null;
+  withGridWorld(m.w.id,()=>{PPB=16;theadW=58;setViewPx(GRID_VIEWS.main,110);refresh(true);});   /* a slim name column at card scale */
+  ent={w:m.w,sig};essCardWorlds[key]=ent;
+ }
+ ent.live=true;
+ const box=document.createElement('div');
+ box.className='essObjCardW';
+ box.style.cssText='zoom:.55;max-width:560px;max-height:150px;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:#14161c;';
+ ent.w.els.root.style.marginTop='0';
+ box.appendChild(ent.w.els.root);
+ host.appendChild(box);
+ return ent;
+}
+function essObjCardSweep(surface){
+ /* close THIS surface's worlds whose cards did not come back this draw */
+ for(const k in essCardWorlds){
+  if(surface&&k.indexOf(surface+':')!==0)continue;
+  const e=essCardWorlds[k];
+  if(!e.live){try{gridWorldClose(e.w.id);}catch(err){}delete essCardWorlds[k];}
+  else e.live=false;
+ }
+}
 let essObjWin=null;
 function essObjWinClose(){
  /* ✕ = write back, then the world leaves whole. dna stays dna when the half-beat
@@ -15174,25 +15251,10 @@ function essObjWorldOpen(o,name,at){
     withKeyAt). The song's chords/key are COPIED in so the ghosts and the scale are
     the song's own. */
  essObjWinClose();
- /* the live-object law (the paste-config lesson): after an undo the card's closure is
-    stale — resolve the shelf object by id before reading its notes */
- if(o&&o.id&&Array.isArray(project.shelf)){const lv=project.shelf.find(s2=>s2.id===o.id);if(lv)o=lv;}
- const st=essObjRows(o);
- if(!st||!st.rows.length){if(typeof flashHint==='function')flashHint('That object is a map or a line — it edits in its own surface, not a note grid.');return null;}
- const src=withGridWorld('main',()=>({chords:JSON.parse(JSON.stringify(project.chords||[])),
-  sections:JSON.parse(JSON.stringify(project.sections||[])),tonic:project.tonic,mode:project.mode,base:project.base}));
- /* his 70th: the UNIVERSAL object — the face track follows the creating window (the
-    org law), never the engine that happens to host the card */
- const face=essObjFace(o,st.kind);
- const w=gridWorldSpawn({rig:{active:face.track,soloTrack:face.track,chordLaneHidden:true,chordGhosts:face.track!=='drums'},active:face.track});
- if(!w)return null;
- w.essObj=(o&&o.id)||true;
- /* OUT of the column's jurisdiction: the collectors match ^gridRowWrap_g\d+$ by id —
-    a floating object grid is not a column member and never joins a swipe layout */
- w.els.root.id='essObjWrap_'+w.id;
- const gh=w.els.root.querySelector('[id="gridWinHead"]');if(gh)gh.style.display='none';   /* NO controls */
- const ts=w.els.root.querySelector('[id="trackSel"]');if(ts)ts.style.display='none';
- const zs=w.els.root.querySelector('[id="zoomStrip"]');if(zs)zs.style.display='none';
+ const m0=essObjWorldMint(o);
+ if(!m0){if(typeof flashHint==='function')flashHint('That object is a map or a line — it edits in its own surface, not a note grid.');return null;}
+ const w=m0.w,face=m0.face;
+ o=m0.o;
  const shell=document.createElement('div');
  shell.className='essObjPop';
  shell.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;';
@@ -15221,15 +15283,10 @@ function essObjWorldOpen(o,name,at){
  };
  shell.onmousedown=e=>{const r=e.target.closest?e.target.closest('.essObjPopHead'):null;if(!r)e.stopPropagation();};
  document.body.appendChild(shell);
- const orig=st.rows.map(r=>[r[0],r[1],r[2]]);
- withGridWorld(w.id,()=>{
-  project.lanes[0].chords=src.chords;
-  project.sections=src.sections;
-  project.tonic=src.tonic;project.mode=src.mode;project.base=src.base;
-  project.tracks[face.track]=orig.map(r=>r.slice());
-  refresh(true);drawTrackSel();drawChordLane();
- });
- essObjWin={w,o,orig,shell,track:face.track};
+ /* the pop-up zooms the SAME world a card would hold — restore an editing-friendly
+    scale (the card mint may have shrunk it) */
+ withGridWorld(w.id,()=>{PPB=34;setViewPx(GRID_VIEWS.main,NROWS0*CELLH);refresh(true);});
+ essObjWin={w,o,orig:m0.orig,shell,track:face.track};
  return shell;
 }
 let essPmEl=null;
@@ -29073,12 +29130,14 @@ function essShelfWinDraw(w){
    const d=document.createElement('div');
    d.className='mimCard melEssCard';
    d.title=(o.note||'')+' — press = audition · double-click = the pop-up grid · ✓ selects it in the Melisma Search window.';
-   const _mini=essMiniSvg(o,false);
-   d.innerHTML='<div class="mimName'+(_mini?' essTName':'')+'">'+o.name+'</div>'+(_mini||'<div style="font-size:10px;color:var(--dim);margin:2px 0;">melisma · '+o.fam+'</div>')
-    +'<div style="display:flex;gap:8px;"><span class="cpchip melEssSel">✓</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
-   d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
+   d.className+=' essObjCard';
+   d.innerHTML='<div class="essObjCap"><div class="mimName">'+o.name+'</div>'
+    +'<span class="cpchip melEssSel">✓</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+   essObjCardMount(d,o,'mel');
+   d.ondblclick=e=>{if(e.target.closest&&e.target.closest('.essObjCardW'))return;e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
    d.onclick=e=>{
     if(d._dragAte){d._dragAte=false;return;}
+    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
     if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
     if(e.target.classList.contains('melEssSel')){e.stopPropagation();melState.sel=o.id;if(typeof renderMelismaList==='function')renderMelismaList();if(typeof renderMelismaInfo==='function')renderMelismaInfo(o);return;}
     if(typeof melismaAudition==='function')melismaAudition(o);
@@ -29088,6 +29147,7 @@ function essShelfWinDraw(w){
       selects it first. The przShelf chipDrag idiom, the write under the DROP's world. */
    d.onmousedown=e=>{
     if(e.button!==0||e.target.classList.contains('melEssSel')||e.target.classList.contains('essExB'))return;
+    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
     e.preventDefault();
     const x0=e.clientX,y0=e.clientY;
     const mm=ev=>{
@@ -29125,18 +29185,23 @@ function essShelfWinDraw(w){
   const d=document.createElement('div');
   d.className='mimCard';
   d.title='Press = audition · double-click = the pop-up grid · ✓ applies to the selection in the grid above.';
-  const _mini2=essMiniSvg(o,false);
-  d.innerHTML='<div class="mimName'+(_mini2?' essTName':'')+'">'+o.name+'</div>'
-   +(_mini2||'<div style="font-size:10px;color:var(--dim);margin:2px 0;">'+o.strand+' · '+(o.level||'')+'</div>')
-   +'<div style="display:flex;gap:8px;"><span class="cpchip essApB">✓ Apply</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+  const _isO2=!!(essObjRows(o)&&essObjRows(o).rows&&essObjRows(o).rows.length);
+  if(_isO2)d.className+=' essObjCard';
+  d.innerHTML='<div class="essObjCap"><div class="mimName">'+o.name+'</div>'
+   +'<span class="cpchip essApB">✓ Apply</span><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>'
+   +(_isO2?'':'<div style="font-size:10px;color:var(--dim);margin:2px 0;">'+o.strand+' · '+(o.level||'')+'</div>');
+  if(_isO2)essObjCardMount(d,o,'ew'+w.id);
   d.onclick=e=>{
+   if(e.target.closest&&e.target.closest('.essObjCardW'))return;
    if(e.target.classList.contains('essApB')){e.stopPropagation();withGridWorld(w.id,()=>przApply(o.strand,o.data));return;}
    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
    przAudition(o.strand,o.data,project.base+7,0);
   };
-  d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
+  d.ondblclick=e=>{if(e.target.closest&&e.target.closest('.essObjCardW'))return;e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
   body.appendChild(d);
  });
+ essObjCardSweep('ew'+w.id);
+ if(w.pairFor==='melPanel')essObjCardSweep('mel');   /* only the owner's draw judges the library cards */
 }
 function essShelfWinDrawAll(){
  if(typeof GRID_WORLDS!=='object')return;
