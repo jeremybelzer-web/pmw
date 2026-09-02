@@ -746,7 +746,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02p</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02q</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -20723,8 +20723,20 @@ function wanWeberDraw(){
  const wrap=W.querySelector('#wanWebWrap');
  /* ---- the DEGREE BOXES (drawn from live chip geometry — the coordinate law) ---- */
  const chipAt=(r,c)=>wrap.querySelector('.wanWebKey[data-r="'+r+'"][data-c="'+c+'"]');
+ /* his 74th (Sept 2): the SPECIFIC clicked button anchors — even a corner duplicate
+    (an enharmonic respelling, lof ±12, which the strict filter excludes). ⛔ The first
+    cut widened the WHOLE filter to pitch class and the bank caught two laws dying: the
+    pan-off recenter (pc matches exist everywhere on a fifths line, so homes never
+    emptied) and the route origin (the roomiest pick moved). The narrow law: homes stay
+    STRICT — and the CLICKED cell, when it is a pc-true respelling, JOINS them. */
  const homes=[...wrap.querySelectorAll('.wanWebKey')].filter(el=>+el.getAttribute('data-lof')===tonicLof&&(el.getAttribute('data-minor')==='1')===minor)
   .map(el=>({r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c'),el}));
+ if(st.webHomeAt){
+  const hEl=[...wrap.querySelectorAll('.wanWebKey')].find(el=>+el.getAttribute('data-r')===st.webHomeAt.r&&+el.getAttribute('data-c')===st.webHomeAt.c);
+  if(hEl&&wanLofPc(+hEl.getAttribute('data-lof'))===wanLofPc(tonicLof)&&(hEl.getAttribute('data-minor')==='1')===minor
+   &&!homes.some(h2=>h2.r===st.webHomeAt.r&&h2.c===st.webHomeAt.c))
+   homes.push({r:st.webHomeAt.r,c:st.webHomeAt.c,el:hEl});
+ }
  /* 80th (his 25th message: "1 broken box in a random place"): the single-box pick
     takes the ROOMIEST home instance — full rings whenever one exists — never a
     clipped edge instance; and a home panned clean off the map recenters once. */
@@ -28511,7 +28523,7 @@ function uiWinShown(id){
  if(typeof uiState!=='object'||!uiState)return false;
  return Array.isArray(uiState.openWins)?uiState.openWins.indexOf(id)>=0:uiState.open===id;
 }
-function uiDefault(){return {open:'varPanel',openWins:['varPanel'],collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false,colOrder:null,chrome:{tr:{min:false,closed:false},nav:{min:false,closed:false}}};}   /* 76th R2: chrome = the fixed Transport/Navigator windows' min/closed */   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized; Phase 2 R0: openWins = the multi-open set */
+function uiDefault(){/* his 73rd (Sept 2): the Variations Window is NOT ready — "don't auto-populate the lower window"; 4.5 re-opened as a DESIGN lane, so a fresh boot opens NO window */return {open:null,openWins:[],collapsed:{},heights:{},iconsHidden:false,trips:null,links:[],gridMin:false,colOrder:null,chrome:{tr:{min:false,closed:false},nav:{min:false,closed:false}}};}   /* 76th R2: chrome = the fixed Transport/Navigator windows' min/closed */   /* Phase 1: links = THE CONNECTION GRAPH; gridMin = the grid window minimized; Phase 2 R0: openWins = the multi-open set */
 function parseUiState(str,defs){
  const def=uiDefault(),ids=(defs||WINDOW_DEFS).map(d=>d.id);
  try{
