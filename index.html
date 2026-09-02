@@ -739,7 +739,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02i</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6748,10 +6748,19 @@ function drawGridView(v,svgEl){
    if(blk){
     out+=`<rect x="0" y="${y0+2.5}" width="11.5" height="${CELLH-5}" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
     out+=`<rect x="1" y="${y0+3.5}" width="1.6" height="${CELLH-7}" fill="rgba(255,255,255,.14)" pointer-events="none"/>`;
-   }else if(r>0){
-    const pup=scalePitch(k+1),upc=((pup%12)+12)%12;
-    if(pup-pmid===2&&!isBlkPc(upc))   /* two naturals a whole step apart — the black key between them */
-     out+=`<rect x="0" y="${y0-5}" width="11.5" height="10" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
+   }
+   if(r>0){
+    /* [PR1] (his 63rd): EVERY missing chromatic key between adjacent rows straddles
+       the boundary in true keyboard order — whites as full-width ivory slivers (so
+       two accidental rows never touch), blacks as the narrow inset; whites first,
+       blacks on top, higher pitch nearer the top (keyGapSpec, pure). */
+    const gap=keyGapSpec(pmid,scalePitch(k+1));
+    if(gap&&gap.length){
+     for(const g of gap)if(!g.blk)
+      out+=`<rect x="0" y="${(y0+g.yOff).toFixed(1)}" width="18" height="${g.h}" fill="#e8eaf1" stroke="#9aa0b0" stroke-width="0.6" pointer-events="none"/>`;
+     for(const g of gap)if(g.blk)
+      out+=`<rect x="0" y="${(y0+g.yOff).toFixed(1)}" width="11.5" height="${g.h}" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
+    }
    }
    if(ppc===0)out+=`<text x="2" y="${y0+14.5}" font-size="7.5" fill="#565a68" font-weight="700" pointer-events="none">C${Math.floor(pmid/12)-1}</text>`;
   }
@@ -30137,6 +30146,29 @@ function essDnaSetPitch(data,k,m){
   if(seen===k){data[i]=Math.round(m);return i;}
  }
  return -1;
+}
+function keyGapSpec(pmid,pup){
+ /* [PR1] (85th, his 63rd's parenthetical: "get right the visual order of black and
+    white keys"): the chromatic keys that lie STRICTLY BETWEEN two adjacent scale rows,
+    as compact straddle keys at the row boundary — the old law drew only a missing
+    BLACK between two naturals, so an accidental-heavy key showed black keys TOUCHING
+    (G♯ against F♯ with no G) and E meeting F♯ with no F, orders no piano has.
+    Returns [{q,blk,yOff,h}] (yOff relative to the boundary, higher pitch nearer the
+    top), [] when the rows are a semitone apart, null when the gap is too wide to
+    draw honestly (>3 missing — exotic-scale leaps stay undrawn rather than mush).
+    A single missing key keeps the shipped 10px straddle geometry. Pure. */
+ if(!isFinite(pmid)||!isFinite(pup)||pup-pmid<2)return [];
+ const n=pup-pmid-1;
+ if(n>3)return null;
+ const isBlkPc=p=>{const x=((p%12)+12)%12;return x===1||x===3||x===6||x===8||x===10;};
+ const slotH=n===1?10:n===2?6:4.5;
+ const band=slotH*n;
+ const out=[];
+ for(let j=0;j<n;j++){
+  const q=pmid+1+j;   /* ascending pitch */
+  out.push({q,blk:isBlkPc(q),yOff:band/2-(j+1)*slotH,h:slotH});
+ }
+ return out;
 }
 function essMiniSpec(rows,opts){
  /* [E1]–[E3] (85th; his 10th + 37th messages): the playable grid object's own little
