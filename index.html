@@ -746,7 +746,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02q</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02r</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -843,7 +843,7 @@
        here as a generated shape-icon and liked results accumulate until the final
        arranging stages. Same lineage data as always (0.4) — the tree view and the
        per-track A/B (map Part 6) are two views over that one tree. -->
-  <div class="gridwrap" id="varPanel" style="margin:12px 0;">
+  <div class="gridwrap" id="varPanel"><!-- his 77th (Sept 2): the inline margin:12px 0 made Variations the ONE window with its own top band; the column's spacing rules it now, like every sibling -->
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Library surface · Variations — every ★ Keep lands here <span style="text-transform:none;letter-spacing:0;">(“Favorite Transformations” — naming brainstorm pending)</span></div>
     <div id="varBody"></div>
     <div id="varStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
@@ -28583,8 +28583,11 @@ function uiReduce(state,action,defs){
    s.openWins.push(action.id);
    s.open=action.id;
    delete s.collapsed[action.id];                    /* opening un-collapses */
-   /* [75] opening Wanderer or Orbits auto-launches minimized Trips under them */
-   if((action.id==='wanPanel'||action.id==='orbPanel')&&!s.trips)s.trips='min';
+   /* [75] opening Wanderer or Orbits auto-launches Trips under them — ⭐ FULL now, his
+      75th/76th (Sept 2): "some windows get auto-populated in their 'minimized' form
+      instead of being open" · "Trips is shipping as minimized." An auto-populated
+      window arrives OPEN. */
+   if((action.id==='wanPanel'||action.id==='orbPanel')&&!s.trips)s.trips='full';
   }
  }
  else if(action.type==='collapse'&&action.id==='tripsPanel'){
