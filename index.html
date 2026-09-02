@@ -742,7 +742,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02o</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15118,9 +15118,9 @@ function essObjWinClose(){
     object is the home). A library card's edit MINTS a Shelf copy — the
     drums-materialize precedent. One snapshot = one undo. */
  if(!essObjWin)return;
- const {w,o,orig,shell}=essObjWin;essObjWin=null;
+ const {w,o,orig,shell,track}=essObjWin;essObjWin=null;
  let rows=[];
- try{rows=withGridWorld(w.id,()=>((project.tracks.melody)||[]).map(n=>[n[0],n[1],n[2]]));}catch(e){}
+ try{rows=withGridWorld(w.id,()=>((project.tracks[track||'melody'])||[]).map(n=>[n[0],n[1],n[2]]));}catch(e){}
  try{gridWorldClose(w.id);}catch(e){}
  try{shell.remove();}catch(e){}
  if(!rows.length||JSON.stringify(rows)===JSON.stringify(orig))return;
@@ -15157,7 +15157,8 @@ function essObjWorldExpand(full){
   if(full){hiddenTracks.clear();chordLaneHidden=false;}
   else{
    chordLaneHidden=true;
-   for(const t of pitchedTrackIds(project.tracks))if(t!=='melody')hiddenTracks.add(t);
+   const ft=(essObjWin&&essObjWin.track)||'melody';
+   for(const t of pitchedTrackIds(project.tracks))if(t!==ft)hiddenTracks.add(t);
   }
   drawTrackSel();refresh(true);drawChordLane();
  });
@@ -15180,7 +15181,10 @@ function essObjWorldOpen(o,name,at){
  if(!st||!st.rows.length){if(typeof flashHint==='function')flashHint('That object is a map or a line — it edits in its own surface, not a note grid.');return null;}
  const src=withGridWorld('main',()=>({chords:JSON.parse(JSON.stringify(project.chords||[])),
   sections:JSON.parse(JSON.stringify(project.sections||[])),tonic:project.tonic,mode:project.mode,base:project.base}));
- const w=gridWorldSpawn({rig:auditionRigDefaults('melPanel'),active:'melody'});
+ /* his 70th: the UNIVERSAL object — the face track follows the creating window (the
+    org law), never the engine that happens to host the card */
+ const face=essObjFace(o,st.kind);
+ const w=gridWorldSpawn({rig:{active:face.track,soloTrack:face.track,chordLaneHidden:true,chordGhosts:face.track!=='drums'},active:face.track});
  if(!w)return null;
  w.essObj=(o&&o.id)||true;
  /* OUT of the column's jurisdiction: the collectors match ^gridRowWrap_g\d+$ by id —
@@ -15222,10 +15226,10 @@ function essObjWorldOpen(o,name,at){
   project.lanes[0].chords=src.chords;
   project.sections=src.sections;
   project.tonic=src.tonic;project.mode=src.mode;project.base=src.base;
-  project.tracks.melody=orig.map(r=>r.slice());
+  project.tracks[face.track]=orig.map(r=>r.slice());
   refresh(true);drawTrackSel();drawChordLane();
  });
- essObjWin={w,o,orig,shell};
+ essObjWin={w,o,orig,shell,track:face.track};
  return shell;
 }
 let essPmEl=null;
@@ -30319,6 +30323,17 @@ function essMiniSpec(rows,opts){
  const h=Math.max(rh*2,(hi-lo+1)*rh);
  return {w,h,span,lo,hi,t0,rh,pxb,
   rects:ok.map(r=>({x:(r[0]-t0)*pxb,y:(hi-r[2])*rh,w:Math.max(2,r[1]*pxb-1),h:Math.max(2,rh-1),m:r[2],t:r[0],i:r[3]}))};
+}
+function essObjFace(o,contentKind){
+ /* his 70th: ONE universal object — "all identical, but defaulting to a different
+    default of the 1 track shown depending on the window that created it." The SAME
+    org law that picks the paste default (his 57th) picks the face track: melody
+    windows face melody, the Rhythm window faces percussion, harmony windows face the
+    polyphonic track. The ctrl+click pick verbatim-wins (his 58th); expand/collapse
+    picks are placements, not faces, and fall through to the content kind. Pure. */
+ const p=essPasteDefault(o);
+ const k=(p==='melody'||p==='chords'||p==='drums')?p:((contentKind==='melody'||contentKind==='chords'||contentKind==='drums')?contentKind:'melody');
+ return {kind:k,track:k==='drums'?'drums':k==='chords'?'comping':'melody'};
 }
 function essDropSnap(b,step,loop){
  /* his 56th (Sept 2), case ①: a grid drop lands at the closest beat AT THE GRID'S OWN
