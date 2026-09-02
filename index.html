@@ -739,7 +739,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14375,7 +14375,7 @@ function buildPrism(reanalyze){
   const d=document.createElement('div');
   d.className='mimCard';
   const twin=project.shelf.find(x=>x!==o&&x.strand===o.strand&&x.fp===o.fp);
-  d.title='Press = audition · drag onto the GRID = apply to the selected notes there · ✓ applies to the grid selection · double-click the name to rename · ✕ removes.'+(twin?' ↔ An identical '+o.strand+' also lives on the shelf: '+twin.name:'');
+  d.title='Press = audition · drag onto the GRID = apply to the selected notes there · drag onto a TRACK row below the grid = the app asks: expand into multiple tracks, collapse into 1, or just apply · ✓ applies to the grid selection · double-click the name to rename · ✕ removes.'+(twin?' ↔ An identical '+o.strand+' also lives on the shelf: '+twin.name:'');
   d.onmousedown=e=>{
    /* r2: shelf objects are grid-DRAG objects — >4px promotes to the chipDrag ghost */
    if(e.button!==0||e.target.classList.contains('przApplyB')||e.target.classList.contains('przDelB')||e.target.classList.contains('przShName'))return;
@@ -14385,6 +14385,10 @@ function buildPrism(reanalyze){
     if(Math.abs(ev.clientX-x0)>4||Math.abs(ev.clientY-y0)>4){
      cleanup();przState.dragAte=true;
      chipDrag(ev,'△ '+o.name,dv=>{
+      /* [E4]⑤ (85th, his 41st): a drop ON A MULTI-TRACK TRACK ROW asks first —
+         expand into tracks / collapse into 1 / just apply. A drop on the main
+         Grid block keeps the shipped law: apply to the selection. */
+      if(essDropTryDialog(dv,o))return;
       const gw=document.getElementById('gridWrap');
       const r2=gw?gw.getBoundingClientRect():null;
       if(!r2||dv.clientX<r2.left||dv.clientX>r2.right||dv.clientY<r2.top||dv.clientY>r2.bottom){
@@ -14810,6 +14814,135 @@ function laneDropBeat(e){
  const r=lane.getBoundingClientRect();
  if(e.clientY<r.top-10||e.clientY>r.bottom+10||e.clientX<r.left||e.clientX>r.right)return null;
  return Math.max(0,Math.min(LOOP-1e-6,(e.clientX-r.left)/PPB));
+}
+/* ==== [E4]⑤ THE DRAG-INTO-A-TRACK DIALOG (85th, his 41st message) — the runtime ====
+   His words, near-verbatim in the option labels: "Expand all selected elements into
+   multiple tracks (recommended)… or collapse the selected elements into 1 track…
+   or would you just like to apply an element from this track to hear the result?"
+   COLLAPSE uses shipped machinery end to end: every picked element still lands as its
+   own track, immediately HIDDEN — a hidden pitched track stays PRESENT as ghost notes
+   in the visible track's view (the global ghost law reads pitchedTrackIds, not the
+   hidden set), and a hidden drums-kind track is AUDIBLE BUT NOT SHOWN, exactly his
+   "audible like a hidden drum beat track, but not shown". [Labelled inference: his
+   "1 track" is the drop track the user keeps seeing — nothing merges into it.]
+   Scope, recorded: MAIN-grid track rows only this round — the engine-rig instance
+   grids keep their own shelf-drop law (przApply under the world, 78th R5). */
+function essDropRowAt(x,y){
+ /* elementFromPoint, not rects — the 82nd's clipping lesson; chipDrag removes its
+    ghost before the drop callback runs, so the point reads the real page. */
+ const el=document.elementFromPoint(x,y);
+ if(!el||!el.closest)return null;
+ const row=el.closest('.trow[data-stack-id]');
+ if(!row)return null;
+ if(row.closest('[id^="gridRowWrap_g"]'))return null;   /* instance worlds keep their shipped law */
+ const t=row.dataset.stackId;
+ if(!t||t==='__grid')return null;
+ if(!/^x\d+$/.test(t)&&MIX_TRACKS.indexOf(t)<0)return null;
+ /* the drop beat off the row's own surface (a tstrip starts at beat 0 at its left
+    edge; a transformed full-grid strip draws beats at GUT+b*PPB inside its svg).
+    Width-relative math so CSS zoom cannot skew it; snapped to the whole beat
+    [labelled inference — he named no landing law; the beat is the honest default]. */
+ let at=0;
+ const strip=row.querySelector('.tstrip');
+ const sv=strip?null:row.querySelector('.gvwrap svg');
+ if(strip){const r=strip.getBoundingClientRect();if(r.width>0)at=(x-r.left)/r.width*LOOP;}
+ else if(sv){const r=sv.getBoundingClientRect();if(r.width>0)at=((x-r.left)/r.width*(sv.width&&sv.width.baseVal?sv.width.baseVal.value:r.width)-GUT)/PPB;}
+ at=Math.max(0,Math.min(LOOP,Math.round(at)));
+ return {t,at};
+}
+let essDropEl=null;
+function essDropClose(){if(essDropEl){try{essDropEl.remove();}catch(e){}essDropEl=null;}}
+function essDropOpts(hit){
+ const key=melismaKeyAt(hit.at);
+ return {at:hit.at,base:project.base,pcs:melismaPcs(key)};
+}
+function essDropWrite(hit,items,collapse){
+ const plan=essDropPlan(items,essDropOpts(hit));
+ if(!plan.expand.length){setPrzStatus('Nothing in that pick carries notes — a form or travel essence is a map; it stays on the Shelf.');return false;}
+ snapshot();
+ noteEngine(collapse?'essence-drop-collapse':'essence-drop-expand',{n:plan.expand.length});
+ const made=[];
+ for(const p of plan.expand){
+  const id=nextCustomId(project.tracks);
+  project.tracks[id]=p.rows.map(r=>r.slice());
+  mutes[id]=false;
+  trackLabels[id]=p.name.slice(0,40);
+  made.push(id);
+ }
+ persistTrackLabels();
+ if(collapse){
+  /* hidden = audible, no surface; a pitched one stays present as ghost notes.
+     (⌘Z removes the tracks; a leftover hidden/mute id with no track is inert.) */
+  for(const id of made)hiddenTracks.add(id);
+ }
+ autosaveSoon();
+ drawTrackSel();refresh(true);
+ if(collapse){drawChordLane();positionMainRz();}
+ const names=plan.expand.map(p=>p.name).join(' · ');
+ setPrzStatus(collapse
+  ?'Collapsed into '+trackLabel(hit.t)+' — '+names+' now play'+(plan.expand.length===1?'s':'')+' hidden (pitched ones show as ghost notes; the track menu shows them again) · ⌘Z undoes.'
+  :'Expanded — '+names+' each landed in a new track at beat '+hit.at+' · ⌘Z undoes.');
+ return true;
+}
+function essDropDialog(hit,o){
+ essDropClose();
+ const KIND_WORD={melody:'a melody',drums:'a drum beat',chords:'chords'};
+ const checked=new Set([o.id]);
+ let pickerOpen=false;
+ const m=document.createElement('div');
+ m.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:6px;min-width:320px;max-width:420px;';
+ m.style.left=Math.min(window.innerWidth-440,Math.max(8,hit.x||0))+'px';
+ m.style.top=Math.min(window.innerHeight-260,Math.max(8,hit.y||0))+'px';
+ const items=()=>project.shelf.filter(s=>checked.has(s.id));
+ const draw=()=>{
+  const its=items();
+  const plan=essDropPlan(its,essDropOpts(hit));
+  const first=its[0];
+  let h='<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;">Into '+trackLabel(hit.t)+' · beat '+hit.at+'</div>';
+  h+='<div class="essDropChips" style="display:flex;flex-wrap:wrap;gap:4px;cursor:pointer;" title="Click to choose from the available elements on the Shelf.">'
+   +its.map(s=>'<span class="cpchip">'+s.name+'</span>').join('')
+   +'<span class="cpchip" style="opacity:.7;">'+(pickerOpen?'▴':'▾')+' elements</span></div>';
+  if(pickerOpen){
+   h+='<div style="max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:6px;padding:4px;">'
+    +project.shelf.map(s=>'<label style="display:flex;gap:6px;align-items:center;font-size:11.5px;cursor:pointer;"><input type="checkbox" data-eid="'+s.id+'"'+(checked.has(s.id)?' checked':'')+'> '+s.name+' <span style="color:var(--dim);font-size:9.5px;">'+(PRZ_LABELS[s.strand]||s.strand||'').toLowerCase()+'</span></label>').join('')
+    +'</div>';
+  }
+  const exLines=plan.expand.map(p=>'· '+p.name+' → its own new track ('+(KIND_WORD[p.kind]||p.kind)+')').join('<br>');
+  const clLines=plan.expand.map(p=>'· '+p.name+(p.kind==='drums'?' → audible, not shown (a hidden drum track)':' → ghost notes behind '+trackLabel(hit.t))).join('<br>');
+  const refLines=plan.refused.map(r=>'· '+r.name+' — a map, not notes; it stays on the Shelf').join('<br>');
+  const can=plan.expand.length>0;
+  h+='<div class="part essDropExp" style="padding:6px 10px;font-size:11.5px;'+(can?'':'opacity:.45;cursor:default;')+'" title="Each element lands in its own new track; the new tracks show each other and the rest as ghost notes (the Ghost Notes law).">⊞ Expand all selected elements into multiple tracks (recommended)'
+   +(exLines?'<div style="font-size:10px;color:var(--dim);margin-top:2px;">'+exLines+'</div>':'')+'</div>';
+  h+='<div class="part essDropCol" style="padding:6px 10px;font-size:11.5px;'+(can?'':'opacity:.45;cursor:default;')+'" title="The elements land hidden: audible, and pitched ones stay present as ghost notes in this track’s view — like a hidden drum beat track.">▣ Collapse the selected elements into 1 track'
+   +(clLines?'<div style="font-size:10px;color:var(--dim);margin-top:2px;">'+clLines+'</div>':'')+'</div>';
+  h+='<div class="part essDropApp" style="padding:6px 10px;font-size:11.5px;" title="The shipped ✓ Apply — one undo; contour/dna/rhythm re-shape the notes selected in the grid.">✓ Just apply '+(first?first.name:'')+' to hear the result</div>';
+  if(refLines)h+='<div style="font-size:10px;color:var(--dim);">'+refLines+'</div>';
+  h+='<div class="part essDropX" style="padding:4px 10px;font-size:11px;color:var(--dim);">✕ Cancel</div>';
+  m.innerHTML=h;
+  m.querySelector('.essDropChips').onclick=()=>{pickerOpen=!pickerOpen;draw();};
+  m.querySelectorAll('input[data-eid]').forEach(cb=>{
+   cb.onclick=e2=>{e2.stopPropagation();
+    const id=cb.dataset.eid;   /* shelf ids are STRINGS ('sh1') — never coerce */
+    if(cb.checked)checked.add(id);else{checked.delete(id);if(!checked.size)checked.add(id);}
+    draw();};
+  });
+  m.querySelector('.essDropExp').onclick=()=>{if(!can)return;essDropClose();essDropWrite(hit,its,false);};
+  m.querySelector('.essDropCol').onclick=()=>{if(!can)return;essDropClose();essDropWrite(hit,its,true);};
+  m.querySelector('.essDropApp').onclick=()=>{const f=its[0];essDropClose();if(f)przApply(f.strand,f.data);};
+  m.querySelector('.essDropX').onclick=essDropClose;
+ };
+ draw();
+ m.onmousedown=e2=>e2.stopPropagation();
+ document.body.appendChild(m);essDropEl=m;
+ setTimeout(()=>{document.addEventListener('mousedown',essDropClose,{once:true});},0);
+}
+function essDropTryDialog(dv,o){
+ if(!Array.isArray(project.shelf)||!project.shelf.find(s=>s.id===o.id))return false;
+ const hit=essDropRowAt(dv.clientX,dv.clientY);
+ if(!hit)return false;
+ hit.x=dv.clientX;hit.y=dv.clientY;
+ essDropDialog(hit,o);
+ return true;
 }
 function chipDrag(e0,label,onDrop){
  const g=document.createElement('div');g.className='dragGhost';g.textContent=label;
@@ -29603,6 +29736,61 @@ function ghostTracksFor(scope,cur,pitched){
 function persistGhostScope(){
  try{localStorage.setItem('cp_ghostScope',ghostScope);localStorage.setItem('cp_ghosts',ghostScope==='off'?'0':'1');}catch(e){}
  try{const c=document.getElementById('chkGhosts');if(c)c.checked=(ghostScope==='all');}catch(e){}
+}
+/* ==== [E4]⑤ THE DRAG-INTO-A-TRACK DIALOG (85th, his 41st message) — the pure layer ====
+   An element (essence/curiosity — one concept, four words) dropped into a multi-track
+   track becomes writable note rows. The card's own audition laws are the writing laws:
+   contour walks the scale from base+7 (melismaWalk), dna the half-beat ladder, rhythm
+   its own [t,d] pattern at the base pitch, chords the app-wide SOUNDING law
+   (laneVoicings — a hand voicing verbatim-wins through it, the root bass rides in the
+   rows). form/travel return null: the legal gate — neither strand may carry a note
+   stream, so there is nothing to write and the dialog says so honestly. Pure. */
+function strandTrackRows(strand,data,opts){
+ opts=opts||{};
+ const at=(typeof opts.at==='number'&&isFinite(opts.at)&&opts.at>0)?opts.at:0;
+ const base=(typeof opts.base==='number'&&isFinite(opts.base))?Math.round(opts.base):60;
+ const pcs=(Array.isArray(opts.pcs)&&opts.pcs.length)?opts.pcs:[0,2,4,5,7,9,11];
+ if(strand==='rhythm'){
+  if(!Array.isArray(data))return null;
+  const rows=data.filter(r=>Array.isArray(r)&&r.length>=2&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0)
+   .map(r=>[at+r[0],r[1],base]);
+  return rows.length?{kind:'drums',rows}:null;
+ }
+ if(strand==='dna'){
+  if(!Array.isArray(data))return null;
+  const rows=data.filter(m=>isFinite(m)).map((m,i)=>[at+i*.5,.5,Math.round(m)]);
+  return rows.length?{kind:'melody',rows}:null;
+ }
+ if(strand==='contour'){
+  if(typeof data!=='string'||!data.length)return null;
+  let cum=0;
+  const steps=[0].concat([...data].map(ch=>cum+=(ch==='U'?1:ch==='D'?-1:0)));
+  const midis=melismaWalk(base+7,pcs,steps);
+  return {kind:'melody',rows:midis.map((m,i)=>[at+i*.5,.5,m])};
+ }
+ if(strand==='chords'){
+  const cs=(data&&Array.isArray(data.chords))?data.chords.filter(c=>c&&isFinite(c.d)&&c.d>0&&(Array.isArray(c.iv)&&c.iv.length||Array.isArray(c.sub)&&c.sub.length)):[];
+  if(!cs.length)return null;
+  const flat=flatChords(cs).filter(c=>c&&isFinite(c.d)&&c.d>0&&Array.isArray(c.iv)&&c.iv.length);
+  if(!flat.length)return null;
+  const vs=laneVoicings(flat,[]);
+  const rows=[];
+  vs.forEach((v,i)=>{for(const m of v.midis)rows.push([at+v.beat,flat[i].d,m]);});
+  return {kind:'chords',rows};
+ }
+ return null;
+}
+function essDropPlan(items,opts){
+ /* the dialog's listing law: which of the picked elements expand into tracks and
+    which refuse (a form or travel essence is a map, not notes). Pure. */
+ const out={expand:[],refused:[]};
+ for(const o of (Array.isArray(items)?items:[])){
+  if(!o||typeof o!=='object')continue;
+  const st=strandTrackRows(o.strand,o.data,opts);
+  if(st)out.expand.push({name:String(o.name||o.strand||'element'),kind:st.kind,rows:st.rows});
+  else out.refused.push({name:String(o.name||o.strand||'element'),strand:o.strand||null});
+ }
+ return out;
 }
 /* v3: user-picked name-box colors (ctrl+click menu → palette). Pure resolver + a
    persisted override map, the trackLabels pattern. */
