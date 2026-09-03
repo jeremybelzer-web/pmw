@@ -222,8 +222,9 @@
   .nboxMicro .tghold{display:none;}   /* micro keeps [on][S][R] — the glance rides the full head */
   body.ghFront .gnGhost{opacity:.88;}
   body.ghFront .cgGhost{opacity:.85;}
-  /* his 174th: inside the Harmonizer's expanded grid the ghosts are CLICKABLE (double-click = switch to that voice) and a touch clearer */
-  .harmInline svg rect.gnGhost{pointer-events:auto;cursor:pointer;opacity:.32;}
+  /* his 174th: inside the Harmonizer's expanded grid the ghosts are CLICKABLE (double-click = switch to that voice) ·
+     his 180th, THE HOLLOW-VOICES RULE: the non-current voices are HOLLOW — the fill goes, the note keeps its COLOR as the boundary only */
+  .harmInline svg rect.gnGhost{pointer-events:auto;cursor:pointer;opacity:.55;fill:none;stroke-width:1.4;}
   /* THE POP-UP ROLL SKIN (2.6 Q7 · the 85th R21 look ruling — decision numbers, the §3 name rule):
      inside an .essObjPop the real grid wears the roll look — light note blocks on the dark
      ground, the ghosts as HOLLOW OUTLINES ("a bit clearer", his 98th). Fill only — the
@@ -796,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ai</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ak</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6918,7 +6919,7 @@ function drawGridView(v,svgEl){
   for(const n of gn){
    if(!noteInWindow(n,W.b0,W.bEnd))continue;
    const gr=withKeyAt(n[0],()=>rowOfK(midiToK(n[2],v),v));
-   out+=`<rect class="gnGhost" data-gt="${gt}" x="${bx(n[0])+1}" y="${viewRowY(v,gr)+5}" width="${Math.max(n[1]*PPB-2,5)}" height="${CELLH-10}" rx="3" fill="${gc}" opacity=".2" pointer-events="none"/>`;   /* data-gt: his 174th — a ghost knows its track, the Harmonizer's dbl-click switch reads it */
+   out+=`<rect class="gnGhost" data-gt="${gt}" x="${bx(n[0])+1}" y="${viewRowY(v,gr)+5}" width="${Math.max(n[1]*PPB-2,5)}" height="${CELLH-10}" rx="3" fill="${gc}" stroke="${gc}" opacity=".2" pointer-events="none"/>`;   /* data-gt: his 174th — a ghost knows its track · stroke: his 180th — the harmInline scope hollows the fill and the COLOR stays as the boundary */
   }
  }
  /* 78th R2 (his words): CHORD-LANE GHOSTS — a melody-window audition rig hides its chord
@@ -11492,6 +11493,7 @@ function swLayoutApply(layout){
  const remember=el=>{_swSaved.push({el,next:el.nextSibling});};
  const rows=swLayoutState.rows;
  const shelfRides=_swShelfWithLower&&rows.some(r=>r.cat==='shelf');
+ try{magClose('shelf');magClose('engines');}catch(e){}   /* his 179th: standing magnifiers close before the re-apply re-mounts them */
  rows.forEach((r,ri)=>{
   if(r.cat==='shelf'&&shelfRides)return;   /* his toggle ON — the shelf joins the lower row instead */
   const row=document.createElement('div');
@@ -11501,8 +11503,46 @@ function swLayoutApply(layout){
    +(r.swipe==='h'?'overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x mandatory;':'overflow-y:auto;overflow-x:hidden;');
   layer.appendChild(row);
   if(r.cat==='shelf'){
-   const d=swShelfBlock();remember(d);row.appendChild(d);d.style.height='100%';
-   try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+   if(swMagState.shelf){
+    /* his 179th Way 1: the middle band IS the Track MIDI Magnifier */
+    const host=document.createElement('div');
+    host.style.cssText='height:100%;overflow:hidden;';
+    row.appendChild(host);
+    try{magMount(host,'shelf');}catch(e){}
+   }else{
+    const d=swShelfBlock();remember(d);row.appendChild(d);d.style.height='100%';
+    if(swShelfDup)d.style.cssText+=';display:inline-block;width:49%;vertical-align:top;overflow:auto;';
+    try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+    if(swShelfDup){
+     /* his 179th Way 2: the DUPLICATED shelf — a second live view of the one
+        project.shelf (the essShelfWinDraw precedent at the Canvas save panes) */
+    const d2=document.createElement('div');
+     d2.className='swShelfDup';
+     d2.style.cssText='display:inline-block;width:49%;height:100%;vertical-align:top;overflow:auto;border-left:1px solid var(--line);';
+     d2.innerHTML='<div class="essBody" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px;"></div>';
+     row.appendChild(d2);
+     try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d2}});}catch(e){}
+    }
+    /* his 179th Way 2: ctrl+click the shelf → the menu */
+    d.oncontextmenu=e=>{
+     e.preventDefault();e.stopPropagation();
+     wanFloatMenu(e,[
+      {hd:'The Essence Shelf'},
+      {label:'Duplicate the Essence Shelf',cur:swShelfDup,fn:()=>{swShelfDup=!swShelfDup;swLayoutApply(swLayoutState);}},
+      {label:'Add a Track MIDI Magnifier (the lower band)',cur:swMagState.engines,fn:()=>{swMagState.engines=!swMagState.engines;swLayoutApply(swLayoutState);}}
+     ]);
+    };
+   }
+   swMagTgAdd(row,'shelf');
+   return;
+  }
+  if(r.cat==='engines'&&swMagState.engines){
+   /* his 179th: the LOWER band as the magnifier, the same toggle law */
+   const host=document.createElement('div');
+   host.style.cssText='height:100%;overflow:hidden;white-space:normal;';
+   row.appendChild(host);
+   try{magMount(host,'engines');}catch(e){}
+   swMagTgAdd(row,'engines');
    return;
   }
   const members=swRowMembers(r.cat);
@@ -11527,6 +11567,7 @@ function swLayoutApply(layout){
    plus.onclick=()=>{try{gridUserSpawn();}catch(e){}swLayoutApply(swLayoutState);};
    row.appendChild(plus);
   }
+  if(r.cat==='engines')swMagTgAdd(row,'engines');   /* his 179th: the border toggle rides the lower band too */
   if(r.swipe==='h'&&members.length){
    /* his 156th: the LAST window must reach the left edge too — a measured tail spacer
       gives the row the room its final cell needs to snap flush */
@@ -19439,9 +19480,104 @@ function buildHarmWindow(){
  on('harmSplitBtn',()=>harmApply(true));
  if(_split)harmInlineMount();else harmObjMount();   /* his 173rd: the split view carries the EXPANDED object */
 }
+/* ==== his 179th — THE TRACK MIDI MAGNIFIER: the fixed-zoom band (2.6 Q7 class; the
+   reference's name stays in the private docs). One engine serves the Harmonizer's
+   inline grid AND the band magnifiers. ==== */
+function magLinkScroll(scrollEl,worldId,mainEl){
+ /* THE MAGNIFIER LAW (his 175th/177th): beat-locked both ways, the metrics read LIVE
+    at every scroll so the lock survives any zoom. Returns the unhook. */
+ if(!scrollEl||!mainEl)return null;
+ const met=id2=>withGridWorld(id2,()=>({g:GUT,p:PPB}));
+ let lock=false;
+ const sync=(from,to,fromId,toId)=>{
+  if(lock)return;lock=true;
+  try{
+   const fm=met(fromId),tm=met(toId);
+   if(fm.p>0&&tm.p>0){
+    const beat=Math.max(0,(from.scrollLeft-fm.g)/fm.p);
+    to.scrollLeft=Math.max(0,tm.g+beat*tm.p);
+   }
+  }catch(e){}
+  lock=false;
+ };
+ const _ws=()=>sync(scrollEl,mainEl,worldId,'main');
+ const _ms=()=>sync(mainEl,scrollEl,'main',worldId);
+ scrollEl.addEventListener('scroll',_ws,{passive:true});
+ mainEl.addEventListener('scroll',_ms,{passive:true});
+ return {unhook(){try{scrollEl.removeEventListener('scroll',_ws);}catch(e){}try{mainEl.removeEventListener('scroll',_ms);}catch(e){}}};
+}
+function magMainGridEl(){return [...document.querySelectorAll('[id="gridWrap"]')].find(el=>!el.closest('[id^="essObjWrap_"]'))||null;}
+var swMagState={shelf:false,engines:false};   /* his 179th: which bands ride as magnifiers */
+var swShelfDup=false;                          /* his 179th Way 2: the duplicated shelf */
+var _magPolls={};
+function magMount(host,tag){
+ /* a band-sized, beat-locked magnified view of the MAIN grid's active pitched track —
+    edits flow BOTH WAYS (an 800ms mirror; a write-back lands as ONE undo step). */
+ const tr=withGridWorld('main',()=>((typeof activeTrack==='string'&&activeTrack!=='drums')?activeTrack:'melody'));
+ const rows=withGridWorld('main',()=>(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]]));
+ const o={id:'mag:'+tag,name:'Track MIDI Magnifier — '+(typeof trackLabel==='function'?trackLabel(tr):tr),strand:'melody',data:{rows:rows.length?rows:[[0,1,60]]},org:'magnifier'};
+ const m=essObjWorldMint(o);
+ if(!m)return null;
+ withGridWorld(m.w.id,()=>{
+  project.tracks[m.face.track]=rows.map(r2=>r2.slice());
+  PPB=Math.max(90,PPB);
+  if(LOOP>256)LOOP=256;   /* his 176th: 3-hour songs — the window clamps under the raster cap */
+  refresh(true);
+ });
+ host.appendChild(m.w.els.root);
+ m.w.els.root.style.marginTop='0';
+ const scrollEl=m.w.els.root.querySelector('[id="gridWrap"]')||m.w.els.root;
+ const link=magLinkScroll(scrollEl,m.w.id,magMainGridEl());
+ let lastMain=JSON.stringify(rows),lastWorld=lastMain;
+ const iv=setInterval(()=>{
+  if(!GRID_WORLDS[m.w.id]||!host.isConnected){magClose(tag);return;}
+  try{
+   const mainNow=JSON.stringify(withGridWorld('main',()=>(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]])));
+   const worldNow=JSON.stringify(withGridWorld(m.w.id,()=>(project.tracks[m.face.track]||[]).map(n=>[n[0],n[1],n[2]])));
+   if(worldNow!==lastWorld&&worldNow!==mainNow){
+    withGridWorld('main',()=>{snapshot();project.tracks[tr]=JSON.parse(worldNow);refresh(true);});
+    lastMain=worldNow;lastWorld=worldNow;
+   }else if(mainNow!==lastMain){
+    withGridWorld(m.w.id,()=>{project.tracks[m.face.track]=JSON.parse(mainNow);refresh(true);});
+    lastMain=mainNow;lastWorld=mainNow;
+   }else{lastWorld=worldNow;}
+  }catch(e){}
+ },800);
+ _magPolls[tag]={iv,wid:m.w.id,link};
+ return m;
+}
+function magClose(tag){
+ const p=_magPolls[tag];if(!p)return;
+ clearInterval(p.iv);
+ if(p.link)try{p.link.unhook();}catch(e){}
+ try{if(GRID_WORLDS[p.wid])gridWorldClose(p.wid);}catch(e){}
+ delete _magPolls[tag];
+}
+function swMagTgAdd(row,tag){
+ /* his 179th Way 1: the toggle is PART OF THE BORDER, upper right of the band — it
+    pins to the row (never scrolls with the content) and straddles the top rule */
+ const tg=document.createElement('div');
+ tg.className='swMagTg';
+ tg.title=swMagState[tag]
+  ?'Back to '+(tag==='shelf'?'the Essence Shelf':'the engine windows')
+  :'Turn this band into the TRACK MIDI MAGNIFIER — a fixed zoom view of the main grid’s track, beat-locked to it (edits flow both ways).';
+ tg.innerHTML=magIconSvg(swMagState[tag]);
+ tg.style.cssText='position:sticky;top:0;float:right;right:8px;margin:2px 8px 0 0;z-index:6;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:2px 4px;line-height:0;display:inline-block;';
+ tg.onmousedown=e=>e.stopPropagation();
+ tg.onclick=e=>{e.stopPropagation();swMagState[tag]=!swMagState[tag];swLayoutApply(swLayoutState);};
+ row.insertBefore(tg,row.firstChild);
+}
+function magIconSvg(on){
+ /* his icon, verbatim: one rectangle split into two equal boxes — the left holds 2×4
+    mini squares (the shelf objects), the right horizontal lines (the multi-track grid) */
+ let sq='';for(let r2=0;r2<2;r2++)for(let c2=0;c2<4;c2++)sq+='<rect x="'+(2+c2*3)+'" y="'+(2.5+r2*4.5)+'" width="2.2" height="3.2" rx=".5" fill="currentColor"/>';
+ let ln='';for(let r2=0;r2<3;r2++)ln+='<rect x="16" y="'+(3+r2*3.4)+'" width="9" height="1.6" rx=".8" fill="currentColor"/>';
+ return '<svg width="27" height="13" viewBox="0 0 27 13" style="display:block;color:'+(on?'var(--accent)':'var(--dim)')+';"><rect x=".5" y=".5" width="26" height="12" rx="2" fill="none" stroke="currentColor"/><line x1="13.5" y1=".5" x2="13.5" y2="12.5" stroke="currentColor"/>'+sq+ln+'</svg>';
+}
+/* ==== /the magnifier engine ==== */
 function harmInlineClose(){
  const w=harmState.world;
- if(w&&w._mainEl&&w._mainSync){try{w._mainEl.removeEventListener('scroll',w._mainSync);}catch(e){}}
+ if(w&&w._magLink){try{w._magLink.unhook();}catch(e){}}
  if(w&&w.w&&GRID_WORLDS[w.w.id]){try{gridWorldClose(w.w.id);}catch(e){}}
  harmState.world=null;
 }
@@ -19518,31 +19654,8 @@ function harmInlineMount(){
  },true);
  /* his 174th ②: A WINDOW INTO THE MELODY ABOVE — the scrolls move together (both ways,
     proportional by scrollable width; a reentrance flag stops the echo) */
- const mainEl=[...document.querySelectorAll('[id="gridWrap"]')].find(el=>!el.closest('[id^="essObjWrap_"]'));   /* MAIN's — the worlds clone the id */
- if(mainEl){
-  /* his 175th, THE MAGNIFIER LAW: the link maps by BEAT, never by width fraction —
-     the beat at one viewport's left edge IS the beat at the other's, the whole way.
-     Each side's GUT/PPB read under its own world (PPB rides the slots). */
-  /* his 177th: the main grid ZOOMS live — the metrics read FRESH at every scroll,
-     never from a mount-time capture, so the beat lock survives any zoom */
-  const met=id2=>withGridWorld(id2,()=>({g:GUT,p:PPB}));
-  let lock=false;
-  const sync=(from,to,fromId,toId)=>{
-   if(lock)return;lock=true;
-   try{
-    const fm=met(fromId),tm=met(toId);
-    if(fm.p>0&&tm.p>0){
-     const beat=Math.max(0,(from.scrollLeft-fm.g)/fm.p);
-     to.scrollLeft=Math.max(0,tm.g+beat*tm.p);
-    }
-   }catch(e){}
-   lock=false;
-  };
-  scrollEl.addEventListener('scroll',()=>sync(scrollEl,mainEl,m.w.id,'main'),{passive:true});
-  const _ms=()=>sync(mainEl,scrollEl,'main',m.w.id);
-  mainEl.addEventListener('scroll',_ms,{passive:true});
-  harmState.world._mainSync=_ms;harmState.world._mainEl=mainEl;
- }
+ const _lnk=magLinkScroll(scrollEl,m.w.id,magMainGridEl());   /* the ONE magnifier-law engine (his 175th/177th) */
+ if(_lnk)harmState.world._magLink=_lnk;
 }
 function harmFloatToggle(){
  /* his 173rd: ⤢ Maximize — the WHOLE Harmonizer (grid + all controls) as a floating
