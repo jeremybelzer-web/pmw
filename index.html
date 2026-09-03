@@ -781,7 +781,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03v</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03w</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -20520,7 +20520,12 @@ const WAN_FN=[
  {id:'par',label:'Parallel',   col:'#3f5aa6'},
  {id:'sub',label:'Subdominant',col:'#3f7a4a'},
  {id:'dom',label:'Dominant',   col:'#a6432f'},
- {id:'rel',label:'Relative',   col:'#7a4a8a'}
+ {id:'rel',label:'Relative',   col:'#7a4a8a'},
+ /* his 166th "Expand": the 5th and 6th categories — two fifths out, both ways.
+    hyper:true keeps them folded until the Expand word is pressed; their colours ride
+    the ONE table (wanFnCol), so every view built later inherits them for free. */
+ {id:'hdom',label:'Hyper dominant',   col:'#6e1d10',hyper:true},
+ {id:'hsub',label:'Hyper subdominant',col:'#1e4f33',hyper:true}
 ];
 function wanChordFunction(deg,iv,scheme){
  /* 82nd R4 (his FORTY-FIFTH message). ⛔ HE SPECIFIED BOTH SCHEMES AND THEY DISAGREE ON PURPOSE,
@@ -21411,6 +21416,96 @@ function wanPathsWinOpen(){
   const S2=wanPathsState();(S2.types[s2.getAttribute('data-pt')]=S2.types[s2.getAttribute('data-pt')]||{}).progSel=+s2.value;wanPathsPersist(S2);
  });
 }
+function wanWeb2State(){
+ /* his 166th: the dual board's right-side state — LINKED by default (same key, same
+    scale); view picks what the side shows; shift is its own pan; tonic/minor hold an
+    UNLINKED side's independent home. Session state, like the rest of the view. */
+ const st=wanState;
+ return st.web2||(st.web2={linked:true,view:'weber',shift:0,tonic:null,minor:null});
+}
+function wanFloatMenu(e,rows){
+ /* the map-menu shell (same id — #wanWebMenu's styles serve): rows = [{label,fn,cur,dis}] */
+ let m=document.getElementById('wanWebMenu');
+ if(m)m.remove();
+ m=document.createElement('div');m.id='wanWebMenu';m.style.display='block';
+ for(const r of rows){
+  if(r.hd){const d=document.createElement('div');d.className='wmhd';d.textContent=r.hd;m.appendChild(d);continue;}
+  const it=document.createElement('div');it.className='wmit'+(r.dis?' dis':'');
+  it.innerHTML=(r.cur?'● ':'')+r.label;
+  if(!r.dis&&r.fn)it.onclick=()=>{m.remove();r.fn();};
+  m.appendChild(it);
+ }
+ document.body.appendChild(m);
+ m.style.left=Math.min(e.clientX,window.innerWidth-m.offsetWidth-14)+'px';
+ m.style.top=Math.min(e.clientY+4,window.innerHeight-m.offsetHeight-14)+'px';
+ const away=ev2=>{if(!m.contains(ev2.target)){m.remove();document.removeEventListener('mousedown',away,true);}};
+ setTimeout(()=>document.addEventListener('mousedown',away,true),0);
+}
+function wanLinkMenu(e){
+ /* his 166th, verbatim shape: a drop-down of ICONS with their explanations after */
+ const w2=wanWeb2State();
+ wanFloatMenu(e,[
+  {label:'<b>◅━▻</b>&nbsp; Linked — the left side is linked with the right side. They both are in the same key, with the same scale.',
+   cur:w2.linked,fn:()=>{w2.linked=true;w2.tonic=null;w2.minor=null;wanWeberDraw();}},
+  {label:'<b>━</b>&nbsp; Unlinked — each side is independent of the other.',
+   cur:!w2.linked,fn:()=>{w2.linked=false;wanWeberDraw();}}
+ ]);
+}
+function wanViewMenu(e,side){
+ /* his 166th: the View / Skin button above each side — the views join as they build */
+ const w2=wanWeb2State();
+ const cur=side===2?w2.view:'weber';
+ const pick=v=>{if(side===2){w2.view=v;wanSide2Draw();}};
+ wanFloatMenu(e,[
+  {hd:'View / Skin'},
+  {label:'Weber&#8217;s Matrix of Related Keys (scales)',cur:cur==='weber',fn:()=>pick('weber')},
+  {label:'3D Matrix',cur:cur==='3d',dis:side!==2,fn:()=>pick('3d')},
+  {label:'Decision Trees',cur:cur==='tree',dis:side!==2,fn:()=>pick('tree')},
+  {label:'More views land with their rounds',dis:true}
+ ]);
+}
+function wanSide2Draw(){
+ /* his 165th/166th: THE 2ND WANDERER — the dual board's right side. v1, recorded
+    honestly: the same Weber lattice with its OWN pan-free draw; LINKED (default) =
+    the same home key/scale (a double-click reroots the SHARED home, both boards
+    move); UNLINKED = this side keeps its own home ring (double-click sets it here
+    only; clicks still audition). ⌘-paths and the degree rectangles stay side 1's —
+    the next rounds' territory, not claimed. */
+ const host=document.getElementById('wanSide2');if(!host)return;
+ const st=wanState,w2=wanWeb2State();
+ if(w2.view!=='weber'){
+  host.innerHTML='<div style="font-size:11px;color:#6b4f28;padding:22px 10px;line-height:1.5;">'+(w2.view==='3d'?'The <b>3D Matrix</b> view lands with its own round — the colour categories you set here will paint it too.':'The <b>Decision Trees</b> view lands with its own round — the colour categories you set here will paint it too.')+'</div>';
+  return;
+ }
+ const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
+ const tonic=(w2.linked||w2.tonic==null)?st.tonic:w2.tonic;
+ const minor=(w2.linked||w2.minor==null)?minor1:!!w2.minor;
+ const tonicLof=wanPcLof(tonic,minor);
+ const anchor=(minor?tonicLof-3:tonicLof)+(w2.shift||0);
+ const grid=weberGrid(anchor);
+ let h='';
+ for(let r=0;r<WEB_ROWS;r++){
+  h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
+  for(let c=0;c<WEB_COLS;c++){
+   const cell=grid[r][c];
+   const nm=wanLofName(cell.lof);
+   const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
+   const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
+   h+='<span class="cpchip wanWebKey wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+letter+'</span>';
+  }
+  h+='</div>';
+ }
+ host.innerHTML=h;
+ host.querySelectorAll('.wan2Key').forEach(el=>{
+  const pc=()=>wanLofPc(+el.getAttribute('data-lof'));
+  const mn=()=>el.getAttribute('data-minor')==='1';
+  el.onclick=()=>{try{wanKeyAudition(pc(),mn());}catch(err){}};
+  el.ondblclick=ev=>{ev.preventDefault();
+   if(w2.linked){try{wanRerootStable(pc(),mn(),null,'a double-click on the 2nd map');}catch(err){}}
+   else{w2.tonic=pc();w2.minor=mn();wanSide2Draw();}
+  };
+ });
+}
 function wanWeberDraw(){
  /* 80th (his eighteenth message): the degree boxes · All Boxes · drag-to-pan · the
     ctrl+click map menu (radius 1–4 · Roman Numerals · Save As Template) · click =
@@ -21428,6 +21523,7 @@ function wanWeberDraw(){
  const tonicLof=wanPcLof(st.tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+st.webShift;
  const grid=weberGrid(anchor);
+ const _w2on=typeof swLayoutState!=='undefined'&&!!swLayoutState;   /* his 165th: the 2nd Wanderer rides the 3-split view */
  /* 82nd R4 (his FORTY-SIXTH message: "lets change the title of Weber's Matrix to say created
     between 1817-1824 - or whatever is true"). ⛔ "OR WHATEVER IS TRUE" WAS AN INSTRUCTION TO GO
     AND CHECK, AND CHECKING CHANGED THE ANSWER: the treatise the table lives in — Versuch einer
@@ -21460,7 +21556,10 @@ function wanWeberDraw(){
      an Upcoming Trips Window"), and 🧳 Upcoming Trips is already built as the
      one-window-law COMPANION ("a bridge between the window above and the one below"),
      so arming ⏺ ships the pair and costs no WINDOW_DEFS entry. */
-  +'<span class="wanAllTog'+(wanState.rec?' on':'')+'" id="wanRecTog" title="Experiment, and record your trips. Every key you land on joins 🧳 Upcoming Trips as a stop; the trail below becomes a string of chords you can drag straight onto the chord lane.">'+(wanState.rec?'⏺':'⏵')+' Record your trips</span></div>'
+  +'<span class="wanAllTog'+(wanState.rec?' on':'')+'" id="wanRecTog" title="Experiment, and record your trips. Every key you land on joins 🧳 Upcoming Trips as a stop; the trail below becomes a string of chords you can drag straight onto the chord lane.">'+(wanState.rec?'⏺':'⏵')+' Record your trips</span>'
+  /* his 166th: a View/Skin button ABOVE the left side (the right side wears its own) */
+  +(_w2on?'<span class="wanAllTog" id="wanView1Btn" title="View / Skin — what the LEFT side shows. More views join as they are built.">View: Weber&#8217;s Matrix ▾</span>':'')
+  +'</div>'
   +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="flex:1 1 auto;min-width:0;">';
  for(let r=0;r<WEB_ROWS;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
@@ -21488,7 +21587,16 @@ function wanWeberDraw(){
   }
   h+='</div>';
  }
- h+='<svg id="wanPathsSvg"></svg></div><div id="wanLegend"></div></div>';   /* 80th R21: the arrow marker stood down; R22: the legend rides the right */
+ h+='<svg id="wanPathsSvg"></svg></div>'
+  /* his 165th/166th: THE 2ND WANDERER fills the empty middle IN THE 3-SPLIT VIEW —
+     the link icon between the maps (small triangles pointing at both), a View/Skin
+     button above the side, the second lattice under it. */
+  +(_w2on?'<div style="align-self:center;flex:0 0 auto;"><span id="wanLinkBtn" class="cpchip" style="font-size:12px;letter-spacing:-1px;" title="'+(wanWeb2State().linked?'Linked — the left side is linked with the right side. They both are in the same key, with the same scale. Click for options.':'Unlinked — each side is independent of the other. Click for options.')+'">'+(wanWeb2State().linked?'◅━▻':'━')+'</span></div>'
+   +'<div style="flex:1 1 auto;min-width:280px;display:flex;flex-direction:column;gap:4px;">'
+   +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='3d'?'3D Matrix':'Decision Trees')+' ▾</span>'
+   +(wanWeb2State().linked?'':'<span style="font-size:9.5px;color:#6b4f28;">independent — double-click a key to set THIS side&#8217;s home</span>')+'</div>'
+   +'<div id="wanSide2" style="overflow-x:auto;"></div></div>':'')
+  +'<div id="wanLegend"></div></div>';   /* 80th R21: the arrow marker stood down; R22: the legend rides the right */
  W.innerHTML=h;
  W.title='Weber intended the matrix as a practical, visual roadmap for modulation and a chart of the psychological “distance” between keys. One step in any direction is a closely related key — vertically by fifths (dominant/subdominant), horizontally through parallel and relative modes. To reach a distant key, trace a path through the boxes (C → G → D → b) and build pivot bridges along it. Adjacent keys are first-degree relations; each box further is a degree more distant — a one-box move sounds smooth, a leap across many sounds dramatic. The full story is in ℹ About.';
  const wrap=W.querySelector('#wanWebWrap');
@@ -22192,6 +22300,12 @@ function wanWeberDraw(){
   const away=ev2=>{if(!m.contains(ev2.target)){m.remove();document.removeEventListener('mousedown',away,true);}};
   setTimeout(()=>document.addEventListener('mousedown',away,true),0);
  };
+ /* his 165th/166th: the dual-board furniture wires last — the link, the two View
+    buttons, and the second lattice's own draw */
+ const _v1b=W.querySelector('#wanView1Btn');if(_v1b)_v1b.onclick=e=>{e.stopPropagation();wanViewMenu(e,1);};
+ const _v2b=W.querySelector('#wanView2Btn');if(_v2b)_v2b.onclick=e=>{e.stopPropagation();wanViewMenu(e,2);};
+ const _lb=W.querySelector('#wanLinkBtn');if(_lb)_lb.onclick=e=>{e.stopPropagation();wanLinkMenu(e);};
+ try{wanSide2Draw();}catch(e){}
 }
 function renderWan(){
  try{wanWeberDraw();}catch(e){}   /* its own surface — a fault here must never take the board down */
@@ -22256,7 +22370,16 @@ function renderWan(){
  const relNames=wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom);
  const sameRoot=relNames.dir==='----';
  const nb=weberNeighbors(wanState.tonic,wanScale().pcs.indexOf(3)>=0&&wanScale().pcs.indexOf(4)<0);
- const nbChips=nb.map((o,i)=>'<span class="part wanNb" data-i="'+i+'" title="'+o.tag+' on Weber\'s table — click to wander there (first-degree neighborhood: fifths both ways, the relative, the parallel)" style="padding:3px 8px;font-size:11px;">'+PCN[o.tonic]+' '+(o.minor?'Minor':'Major')+'<span style="color:var(--dim);font-size:9px;"> · '+o.tag+'</span></span>').join('');
+ /* his 166th "Expand": the hyper pair joins the neighborhood — two fifths out, same mode */
+ if(wanState.fnExpand){
+  const _hm=nb[0].minor,_T=t=>((t%12)+12)%12;
+  nb.push({tonic:_T(wanState.tonic+2),minor:_hm,tag:'Hyper dominant'},
+          {tonic:_T(wanState.tonic+10),minor:_hm,tag:'Hyper subdominant'});
+ }
+ /* his 166th: every category's colour REFLECTS on its chip (the one wanFnCol table) */
+ const _nbFn={'Dominant':'dom','Subdominant':'sub','Relative':'rel','Parallel':'par','Hyper dominant':'hdom','Hyper subdominant':'hsub'};
+ const nbChips=nb.map((o,i)=>{const _fc=wanFnCol(_nbFn[o.tag]||'dom');
+  return '<span class="part wanNb" data-i="'+i+'" title="'+o.tag+' on Weber\'s table — click to wander there" style="padding:3px 8px;font-size:11px;border-left:3px solid '+_fc+';">'+PCN[o.tonic]+' '+(o.minor?'Minor':'Major')+'<span style="font-size:9px;color:'+_fc+';"> · '+o.tag+'</span></span>';}).join('');
  /* 82nd R4 (his FORTY-FIFTH message): "the actual chords in both chord name, and roman numeral
     should be listed underneath each category: Subdominant: ii, IV; Dominant: iii, V, vii;
     Relative: vi, Parallel: I, i." ⭐ BOTH SPELLINGS, because that is the pairing that teaches —
@@ -22414,12 +22537,17 @@ function renderWan(){
     +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'
     +'<span class="wanAllTog'+(wanState.fnScheme==='degree'?' on':'')+'" data-fnscheme="degree" title="His first scheme: all versions of 2s and 4s are Subdominant, all the 6s (VI, ♭VI, vi) are Relative, I and i are Parallel, the rest are Dominant — by DEGREE, whatever the chord quality.">By degree</span>'
     +'<span class="wanAllTog'+(wanState.fnScheme==='majdom'?' on':'')+'" data-fnscheme="majdom" title="His second scheme: every MAJOR chord except the 1 and the 4 is a Dominant — so a major II or a major VI reads as the secondary dominant it is behaving as. Everything else keeps its degree colour.">Majors are dominants</span>'
-    +'<span class="wanAllTog'+(wanState.fnOn?' on':'')+'" id="wanFnOnTog" title="Paint the chord buttons with these colours.">'+(wanState.fnOn?'☑':'☐')+' paint the chords</span></div>'
-    +'<div style="font-size:9.5px;color:#6b4f28;">The four function colours live in the Color Palette Window now — press 🎨 above.</div>'
+    +'<span class="wanAllTog'+(wanState.fnOn?' on':'')+'" id="wanFnOnTog" title="Paint the chord buttons with these colours.">'+(wanState.fnOn?'☑':'☐')+' paint the chords</span>'
+    /* his 166th: the Expand word grows the 5th and 6th categories */
+    +'<span class="wanAllTog'+(wanState.fnExpand?' on':'')+'" id="wanFnExpand" title="Two more categories, two fifths out both ways: Hyper dominant and Hyper subdominant — they join the neighborhood chips and the legend, each with its own colour.">'+(wanState.fnExpand?'Collapse ▴':'Expand ▾')+'</span></div>'
+    +'<div style="font-size:9.5px;color:#6b4f28;">Colour any category with the swatch beside its name below, or in the Color Palette Window — press 🎨 above. One colour table serves every view.</div>'
     +'</div>')
   +'<div style="display:flex;flex-direction:column;gap:2px;">'
-  +fnGroups.map(g=>'<div style="display:flex;gap:6px;align-items:baseline;font-size:11px;line-height:1.45;">'
-    +'<span style="flex:0 0 76px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:'+wanFnCol(g.f.id)+';font-weight:700;">'+g.f.label+'</span>'
+  /* his 166th FIX ("I still see no option to color the Weber Neighbors"): the swatch
+     rides the row itself now — data-fncol/data-fnrst wiring below already existed */
+  +fnGroups.filter(g=>wanState.fnExpand||!g.f.hyper).map(g=>'<div style="display:flex;gap:6px;align-items:baseline;font-size:11px;line-height:1.45;">'
+    +'<input type="color" data-fncol="'+g.f.id+'" value="'+wanFnCol(g.f.id)+'" title="Colour the '+g.f.label+' category — it reflects on the chips, the chords and every view." style="flex:0 0 20px;width:20px;height:15px;padding:0;border:1px solid #a8895f;border-radius:3px;background:none;cursor:pointer;align-self:center;">'
+    +'<span style="flex:0 0 96px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:'+wanFnCol(g.f.id)+';font-weight:700;">'+g.f.label+'</span>'
     +'<span style="flex:1;min-width:0;color:#3a2c18;">'+(g.items.length?g.items.join(' · '):'<span style="color:#8a6f4d;">—</span>')+'</span></div>').join('')
   +'</div>'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">The trail</label>'
@@ -22599,6 +22727,8 @@ function renderWan(){
  if(wfo)wfo.onclick=e=>{e.stopPropagation();wanState.fnOn=!wanState.fnOn;renderWan();};
  B.querySelectorAll('[data-fnscheme]').forEach(el=>{el.onclick=e=>{e.stopPropagation();
   wanState.fnScheme=el.getAttribute('data-fnscheme');renderWan();};});
+ const _fx=document.getElementById('wanFnExpand');
+ if(_fx)_fx.onclick=e=>{e.stopPropagation();wanState.fnExpand=!wanState.fnExpand;renderWan();};
  B.querySelectorAll('input[data-fncol]').forEach(inp=>{
   const id=inp.getAttribute('data-fncol');
   inp.oninput=()=>{wanFnCols[id]=inp.value;persistWanFnCols();renderWan();};});
