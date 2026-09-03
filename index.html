@@ -86,6 +86,7 @@
   #csCards .csCard .essObjCardW{margin-top:3px;}
   #zimBtn[data-retired]{display:none;}   /* his ninth message: the top button retires — the zim paths stay alive (the Lower Window and the note menus reach it) */
   .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
+  .swRow .swCell.winCollapsed{height:auto!important;}   /* his 129th: a collapsed window SHRINKS to its title bar — the R31 uniform height held it open as a full-size empty box, which read as "hidden + blank space" */
   .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
   body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
   body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
@@ -762,7 +763,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02af</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ag</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11349,7 +11350,11 @@ function swLayoutApply(layout){
  const padB=parseFloat(document.body.style.paddingBottom)||0;
  const layer=document.createElement('div');
  layer.id='swRows';
- layer.style.cssText='position:fixed;left:0;right:0;top:'+padT+'px;bottom:'+padB+'px;display:flex;flex-direction:column;z-index:40;background:var(--bg);';
+ /* his 130th: the left icon rail must never overlap the rows — the layer starts right of it */
+ let _railR=0;
+ try{const _re=document.getElementById('rail');
+  if(_re){const _rr=_re.getBoundingClientRect();if(_rr.width>0)_railR=Math.ceil(_rr.right)+6;}}catch(e){}
+ layer.style.cssText='position:fixed;left:'+_railR+'px;right:0;top:'+padT+'px;bottom:'+padB+'px;display:flex;flex-direction:column;z-index:40;background:var(--bg);';
  document.body.appendChild(layer);
  document.body.style.overflow='hidden';
  _swSaved=[];
