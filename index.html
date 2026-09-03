@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03s</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03t</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -30995,9 +30995,15 @@ function colGripAdd(head,memberId){
  if(!head||head.querySelector('.colGrip'))return;
  const g=document.createElement('span');
  g.className='colGrip';g.textContent='⠿';
- g.title='Drag ↕ to move this window up or down the column — the stack reorders around where you drop it.';
- g.onmousedown=e=>{
-  e.preventDefault();e.stopPropagation();
+ g.title='Drag ↕ to move this window up or down the column — the stack reorders around where you drop it. (The whole title bar drags too.)';
+ g.onmousedown=e=>colDragStart(e,memberId);
+ head.insertBefore(g,head.firstChild);
+}
+function colDragStart(e,memberId){
+ /* his 157th (the ⑥ merge): the column drag's ONE engine — the ⠿ grip calls it, and a
+    VERTICAL pull anywhere on the title bar hands over to it from the dock gesture. */
+ e.preventDefault();if(e.stopPropagation)e.stopPropagation();
+ {
   /* 78th R3 (his words): a linked window drags its WHOLE group; the app auto-scrolls as
      the cursor gestures past the edges; every landing slot is marked, the live one gold */
   const group=(typeof linkedColGroup==='function')?linkedColGroup(memberId):[memberId];
@@ -31046,8 +31052,7 @@ function colGripAdd(head,memberId){
   };
   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);document.addEventListener('keydown',esc,true);
   paint();requestAnimationFrame(tick);
- };
- head.insertBefore(g,head.firstChild);
+ }
 }
 /* ==== VERTICAL DOCKING (2.1b-e ⑦, its own round — July 30) ====
    Drag any window's HEADER toward the left or right screen edge — a gold line
@@ -31136,6 +31141,17 @@ document.addEventListener('mousemove',e=>{
  if(!dockPend)return;
  if(!dockPend.live){
   if(Math.abs(e.clientX-dockPend.x)+Math.abs(e.clientY-dockPend.y)<=6)return;
+  /* his 157th (queue ⑥, the MERGE): a VERTICAL pull on the title bar IS the column
+     drag — the whole head is the ⠿ grip now; a horizontal pull keeps the dock
+     gesture. Direction decides, the R46 precedent (a horizontal pull in the lower
+     band already goes to the row drag, which nulls this pend when it takes). */
+  const _dx=Math.abs(e.clientX-dockPend.x),_dy=Math.abs(e.clientY-dockPend.y);
+  if(_dy>_dx*1.2&&typeof colDragStart==='function'&&typeof colMembersNow==='function'
+     &&colMembersNow().indexOf(dockPend.id)>=0){
+   const _cid=dockPend.id;dockPend=null;
+   colDragStart(e,_cid);
+   return;
+  }
   dockPend.live=true;
   document.body.style.cursor='grabbing';
  }
