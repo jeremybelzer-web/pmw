@@ -64,13 +64,17 @@
   /* [E1] (his 67th): an object card's name IS its track name box — the real nbox look,
      colored ground, dark text, rounded — left of the miniature lattice */
   .essTName{background:#edc948;color:#1b1204;border-radius:4px;padding:1px 6px;font-weight:700;}
-  /* his 72nd: an object card IS a grid — the card goes column, caption over the world */
-  #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard{
-    display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:4px 6px;}
+  /* his 72nd: an object card IS a grid — the card goes column, caption over the world.
+     his 106th: the card HUGS the tile — the 216px .mimCard width lock and the fat
+     padding read as "extra grey border"; an object card is its tile plus a slim verb row */
+  #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard,#progCards .mimCard.essObjCard{
+    display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:3px 4px;width:auto;}
+  #melList .part.essObjCard{padding:3px 5px;}
+  .essObjCard .essObjCap{min-height:13px;}
   .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
   /* his 102nd: with the title living on the tile, the caption's chips pin RIGHT so the
      row's left side is clean grab space — a press there drags, never hits a chip */
-  .essObjCard .essObjCap{justify-content:flex-end;min-height:15px;}
+  .essObjCard .essObjCap{justify-content:flex-end;}
   /* his 81st/91st: the Melisma SEARCH results are card-worlds — the caption reads like
      a name box, the card grows to the track face's width */
   #melList .part.essObjCard{width:auto;max-width:620px;}
@@ -755,7 +759,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02v</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02w</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15269,10 +15273,10 @@ function essClipTile(o){
  for(const r of st.rows){if(r[0]+r[1]>span)span=r[0]+r[1];if(r[2]<lo)lo=r[2];if(r[2]>hi)hi=r[2];}
  span=Math.max(1,Math.ceil(span));
  const minW=Math.min(200,Math.max(96,Math.round(String(o&&o.name||'').length*6.2)));   /* the title fits */
- const W=Math.max(minW,Math.min(260,Math.round(span*30)));
- const H=32,pad=2,KW=7;   /* "even smaller still" — a slimmer body than the 02t tile */
+ const W=Math.max(minW,Math.min(300,Math.round(span*34)));
+ const H=40,pad=2,KW=8;   /* his 106th: the tile GROWS — it is the card now, the frame hugs it */
  const band=Math.max(1,hi-lo+1);
- const rh=Math.max(2,Math.min(5,Math.floor((H-2*pad)/band)));
+ const rh=Math.max(2,Math.min(6,Math.floor((H-2*pad)/band)));
  const gx=t=>KW+1+(t/span)*(W-KW-1);
  const yOf=m=>Math.max(0,Math.min(H-rh,pad+(hi-m)/band*(H-2*pad-rh)*(band>1?band/(band-1):0)));
  /* the keys sliver: ivory ground, the black-key rows notched dark — the roll's own left edge */
