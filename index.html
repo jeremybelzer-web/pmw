@@ -406,7 +406,7 @@
   #palette input{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;width:256px;outline:none;}
   #palette input:focus{border-color:var(--accent);}
   /* 3.3: the palette dock runs lengthwise below the grid */
-  .palWin{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}   /* 75th r3 · Sept 3: same radius + inset as .gridwrap */
+  .palWin{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}   /* 75th r3 · Sept 3: same radius + TOP inset as .gridwrap · the 88th certify: LEFT stays 12px — the lane-registration laws (his 145th, pal64/palw71's pins) calibrate against it, and the 87th's 14px shifted every palette column +2px off the lane */
   .palWin .cp-title{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin:2px 0 1px;}
   #cpHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   #cpCtl{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto;}
@@ -794,7 +794,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ac</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ad</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14221,6 +14221,9 @@ function buildCadWindow(){
    const po={id:'cur:'+i,name:h.kind,runv,org:'cadPanel'};
    d.innerHTML='<div class="essObjCap"><div class="mimName">'+h.kind+'</div>'
     +'<div class="mimChain" style="flex:1;min-width:0;">'+h.steps.map(s=>dispLbl(s.lbl)).join(' → ')+'</div>'
+    /* the 88th certify: the per-song COUNTS line survives the object rebuild (the census's
+       whole point, verify-53's pin — the 87th's rebuild dropped it) */
+    +'<div class="mimMeta">in '+h.songs.length+' song'+(h.songs.length>1?'s':'')+' · '+h.count+' phrase end'+(h.count>1?'s':'')+'</div>'
     +'<span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
    essObjCardMount(d,po,'cadw');
    d.onclick=e=>{
