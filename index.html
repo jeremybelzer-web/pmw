@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03o</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03p</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -24810,8 +24810,11 @@ function renderOrb(){
  })();
  /* 80th (his thirteenth message): the ORBITING SCREEN at the very top — the map column
     wraps FIRST (order 1) so a narrow split pane shows the orbits before the controls */
- B.innerHTML='<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
-  +'<div style="flex:0 0 252px;display:flex;flex-direction:column;gap:7px;order:2;">'
+ /* his 141st — the planets ride the TOP of the window, the words and controls the BOTTOM:
+    one flex COLUMN; the old two-column shell flattens (display:contents) and every block
+    wears an order — map 1 · chips 2 · Limitation 3 · prose/details 4 · the ghost words 5. */
+ B.innerHTML='<div style="display:flex;flex-direction:column;gap:10px;">'
+  +'<div style="order:5;max-width:560px;display:flex;flex-direction:column;gap:7px;">'
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="Import any song you want through time and space which has modulations in it — the app analyzes it and lists its modulations and its psych-outs, then builds their planets and pivot roads onto the map.">👻 Ghost Song Modulator</label>'
   +'<select id="orbGhost">'+ghostOpts+'</select>'
   +(ana.note?'<div style="font-size:10.5px;color:var(--dim);line-height:1.45;">'+ana.note+'</div>':'')
@@ -24824,15 +24827,15 @@ function renderOrb(){
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="A MIDI-controller grid travels too — pads index the map (recording always wins)"><input type="checkbox" id="orbMidi"'+(orbState.midi?' checked':'')+' style="accent-color:var(--accent);">🎹 MIDI pads travel</label>'
   +'<div style="font-size:10.5px;color:var(--dim);line-height:1.45;margin-top:4px;" title="Weber&#8217;s table lives in the Wanderer now (RAW [68] [79]) — open 🧭 for the map.">🧭 Weber&#8217;s map → Wanderer</div>'
   +'</div>'
-  +'<div style="flex:1;min-width:520px;order:1;">'
+  +'<div style="display:contents;">'
   /* R6 (20j) — LIMITATION = CREATIVITY (client, Aug 21): the title, a ▶/▼ triangle, and a small lane
      listing the song's scale and its same-root relative, one toggle per degree; only the toggled
      degrees grow a moon. */
-  +'<div id="orbLimHead" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none;" title="Limitation = Creativity — choose which chords of this song&#8217;s scale (and its same-root relative) become moons. Fewer moons, sharper choices.">'
+  +'<div id="orbLimHead" style="order:3;display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none;" title="Limitation = Creativity — choose which chords of this song&#8217;s scale (and its same-root relative) become moons. Fewer moons, sharper choices.">'
   +'<span style="font-size:14px;font-weight:800;letter-spacing:.4px;color:var(--accent);">Limitation = Creativity</span>'
   +'<span id="orbLimTri" style="font-size:12px;color:var(--accent);transition:transform .2s;display:inline-block;'+(orbState.lim.open?'transform:rotate(90deg);':'')+'">▶</span>'
   +'<span style="font-size:10px;color:var(--dim);">'+(orbState.lim.open?'the chords that grow moons':'click to choose which chords grow moons')+'</span></div>'
-  +(orbState.lim.open?'<div id="orbLimLane" style="border:1px dashed var(--line);border-radius:8px;padding:6px 8px;margin-bottom:8px;display:flex;flex-direction:column;gap:5px;">'
+  +(orbState.lim.open?'<div id="orbLimLane" style="order:3;border:1px dashed var(--line);border-radius:8px;padding:6px 8px;margin-bottom:8px;display:flex;flex-direction:column;gap:5px;">'
    +orbLimScales(cur,pcs).map(sc=>'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
      +'<span style="min-width:150px;font-size:11px;font-weight:700;color:'+(orbState.lim.scale[sc.id]?'var(--text)':'var(--dim)')+';">'+sc.name+' <span style="font-weight:400;color:var(--dim);font-size:9.5px;">'+sc.sub+'</span></span>'
      +'<label class="orbLimScale" data-sc="'+sc.id+'" title="'+sc.name+' generates moons — switch off and this whole scale grows none" style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--dim);cursor:pointer;margin-right:6px;"><span class="orbSw'+(orbState.lim.scale[sc.id]?' on':'')+'"></span>'+(orbState.lim.scale[sc.id]?'ON':'OFF')+'</label>'
@@ -24841,7 +24844,7 @@ function renderOrb(){
         +'<input type="checkbox"'+(on?' checked':'')+(orbState.lim.scale[sc.id]?'':' disabled')+' style="accent-color:var(--accent);margin:0;width:11px;height:11px;">'+degRomanW(k,tri.iv,sc.pcs.length)+' <span style="color:var(--dim);font-size:9px;">'+chipLbl(root,tri.iv)+'</span></label>';}).join('')
      +'</div>').join('')
    +'</div>':'')
-  +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
+  +'<div style="order:2;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
   +'<span class="cpchip'+(solar?' on':'')+'" id="orbView" title="Two views of the same worlds — 🪐 Solar System (GEMS: the sun is the essence, the planet the current object, the moons its parts; the 🌐 3D chip beside it is its depth skin) ↔ ⭕ the Circles wheel, exactly as it shipped. Nothing is thrown away; switching is free.">'+(solar?'🪐 Solar':'⭕ Circles')+'</span>'
   +(solar?'<span class="cpchip'+(orbState.view==='3d'?' on':'')+'" id="orb3d" title="🌐 3D — the Solar System as a different skin (ORBIT FEEDBACK R3, the 20f skin, kept as it shipped): the moons circle the planet back to front. Passing IN FRONT only their tops overlap the planet&#8217;s bottom; passing BEHIND only their bottoms hide under its top — and every moon stays clickable either way. Click again for the flat Solar view.">🌐 3D</span>'
    +'<span class="cpchip'+(orbState.view==='deep'?' on':'')+'" id="orbDeep" title="🌌 Deep space — the same 3D orbit as a PAINTED skin (ORBIT FEEDBACK R5, from the client&#8217;s reference pictures): shaded spheres lit from one side, a ringed planet, a starfield, tilted orbit rings, the far worlds as blue worlds. Same functionality, different skin. Click again for the flat Solar view.">🌌 Deep space</span>':'')
@@ -24864,7 +24867,7 @@ function renderOrb(){
   +'<span class="cpchip'+(orbState.djMute?' on':'')+'" id="orbDjMute" title="Mute DJ&#8217;s actions from listener (GEMS ⑧) — ON, your auditions (tone moons, 🌌 ▶ Hear it) make no sound; real travels still play through the band. Honest note: until the multi-output substrate lands the whole room shares one stereo pair, so a muted audition is silent for you too. Pairs with 6.7.">🔇 Mute DJ</span>'
   +'<span style="font-size:10.5px;color:var(--dim);">Written route: <span style="color:var(--text);">'+route+'</span></span>'
   +'</div>'
-  +'<div style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
+  +'<div style="order:4;font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
    ?(zoomed
     ?'Zoomed in (the fractal law: every level is a solar system) — the planet is now the <b style="color:var(--text);">'+(frame.lbl||'chord')+'</b> chord: its TONES are the moons, dashed moons are the key&#8217;s colors, and dotted roads reach the worlds that share its tones. ⬅ Back returns; double-click any world to travel deeper.'
     :twin
@@ -24873,7 +24876,7 @@ function renderOrb(){
     ?(deep?'🌌 Deep space — ':'3D view — ')+'the same solar system as a skin with depth: the planet is the key you are in and its diatonic chords circle it back to front, very slowly — passing IN FRONT they overlap only the planet&#8217;s bottom edge, passing BEHIND only their bottoms hide under its top, and every moon is clickable either way. The grey moons between them are DOORWAYS — ii–V into each chord&#8217;s key: <b style="color:var(--text);">hover one</b> and its world appears at the end of a curved road; click it to take the trip. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the ⏱ boundary.'
     :'Solar System view — the ☀ is the essence, the planet is the key you are in, and its diatonic chords orbit as moons (the glowing ones are what the grid plays; the 🚀 rides the chord sounding now). The four big worlds are Weber&#8217;s neighbours; the small far ones are every other key a doorway opens. The grey moons between the moons are DOORWAYS — ii–V into each chord&#8217;s key, each with its curved road to the world it opens. <b style="color:var(--text);">A click on a moon</b> plays it (a second click de-selects it); <b style="color:var(--text);">a double-click</b> makes it the next chord — song stopped: at the playhead (the melody fits to it) · song playing: through 🧳 Upcoming Trips, departing on the ⏱ boundary. A doorway or a far world drifts in to the centre. ← → picks, Enter fires live. 🚀 Pilot view zooms in for more detail. 💡 Alt+double-click a moon to zoom into it.')
    :'The big planet is the key you are in — its diatonic chords ring it clockwise from 12 o&#8217;clock, the glowing ones are what the grid plays, and the 🚀 rides the chord sounding now. Dashed chords are pivots; dotted roads lead to their planets. ← → picks, <b style="color:var(--text);">Enter fires</b> — every landing waits for the next boundary.')+'</div>'
-  +'<div id="orbMapWrap" class="'+((orbState.pilot||(orbState.cam&&orbState.cam.s>=ORB_LOD_ZOOM))?'orbZoomed':'')+'" style="position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 30% 25%,#131722 0%,#0a0c12 70%);">'
+  +'<div id="orbMapWrap" class="'+((orbState.pilot||(orbState.cam&&orbState.cam.s>=ORB_LOD_ZOOM))?'orbZoomed':'')+'" style="order:1;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 30% 25%,#131722 0%,#0a0c12 70%);">'
   +'<div id="orbMapIn" style="transition:transform .9s ease;transform-origin:'+cx+'px '+cy+'px;position:relative;">'
   +'<div id="orbCam" style="position:relative;transform-origin:0 0;transform:'+orbCamCss()+';">'
   +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" class="'+(solar&&!orbState.rotate?'orbRoadsFlow':'')+'" style="display:block;max-width:'+W+'px;overflow:visible;">'
@@ -24887,7 +24890,7 @@ function renderOrb(){
   +'<div style="display:flex;gap:4px;"><span id="orbZoomIn" class="cpchip" style="font-size:13px;padding:1px 9px;" title="Zoom in (the wheel over the map zooms too) — zoomed past 1.6× the grey doorways reveal their pivot chords and a 🔍 search button">＋</span><span id="orbZoomOut" class="cpchip" style="font-size:13px;padding:1px 9px;" title="Zoom out — to see the further-away worlds">－</span></div>'
   +'</div>'
   +'</div>'
-  +'<details style="margin-top:10px;border-top:1px solid var(--line);padding-top:6px;">'
+  +'<details style="order:4;margin-top:10px;border-top:1px solid var(--line);padding-top:6px;">'
   +'<summary style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);cursor:pointer;" title="Any good piece of music has its own logic which can always be expanded on — an advanced toy, tucked away: the main circle always just starts in the key the grid is in.">🌌 Ecosystem expansion (advanced)</summary>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px;">'+degs
   +'<select id="orbEcoSrc" style="margin-left:6px;" title="The relative pairing — anything but “this scale” also docks the TWIN PLANETS on the map (GEMS ⑦: two keys, one sky).">'
