@@ -762,7 +762,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ad</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ae</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14936,6 +14936,15 @@ function essDropRowAt(x,y){
   if(gsvg&&/svg/i.test(gsvg.tagName||'')){
    const wrapW=el.closest('[data-gridworld]');
    if(wrapW&&/^gridRowWrap_g/.test(wrapW.id||''))return null;
+   /* his 127th: the NOTE-HIT law fires FIRST on the big lattice too — a drop ON a
+      note starts at that note's own start (his 56th ②); the step quantize is only
+      for the open surface */
+   const bigN=el.closest('rect[data-n]');
+   if(bigN){
+    const arr2=project.tracks[activeTrack]||[];
+    const nn2=arr2[+bigN.getAttribute('data-n')];
+    if(nn2&&isFinite(nn2[0]))return {t:activeTrack,at:Math.max(0,Math.min(LOOP,+nn2[0])),onNote:true};
+   }
    try{
     const r2=gsvg.getBoundingClientRect();
     const declW=+gsvg.getAttribute('width')||r2.width;
