@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03al</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03am</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -17779,8 +17779,8 @@ let lastGridClick=null,lastLaneClick=null;
   const bg=t===wrap||t===strip||(t.classList&&t.classList.contains('parts'));
   if(!bg)return;   /* chips, toggles and buttons inside the strip keep their own behavior */
   e.preventDefault();
-  const r=svg.getBoundingClientRect();
-  drag={mode:'zoom',x0:e.clientX-r.left,y0:e.clientY-r.top,p0:PPB,fromStrip:true};
+  const r=svg.getBoundingClientRect(),ez=effZoomOf(svg);
+  drag={mode:'zoom',x0:(e.clientX-r.left)/ez,y0:(e.clientY-r.top)/ez,p0:PPB,fromStrip:true};
  });
 })();
 function gridMouseDown(e){
@@ -18130,7 +18130,7 @@ document.addEventListener('mousemove',e=>{
  if(drag.mode==='xmove'){
   /* MG round: the whole cross-track capture slides in time (whole-step snap) */
   const st=gridStep();
-  const db=Math.round(((e.clientX-drag.x0)/PPB)/st)*st;
+  const db=Math.round((((e.clientX-drag.x0)/effZoomOf(curSvg()))/PPB)/st)*st;
   if(db!==drag.last){
    drag.last=db;
    for(const t in drag.orig){
@@ -18148,7 +18148,7 @@ document.addEventListener('mousemove',e=>{
   /* MG round (client items 1+2): the band leaving its origin lane PROMOTES to the
      cross-track marquee — page space, every lane participates */
   if(!drag.cross&&!drag.additive){
-   const orR=(activeGridView.el||svg).getBoundingClientRect();
+   const orR=(activeGridView.el||curSvg()).getBoundingClientRect();
    if(e.clientY<orR.top-8||e.clientY>orR.bottom+8)drag.cross=true;
   }
   if(drag.cross){rb=null;xMarqueeUpdate(drag.cx0,drag.cy0,e);return;}
@@ -18183,7 +18183,7 @@ document.addEventListener('mousemove',e=>{
  }else if(drag.mode==='lanescroll'){
   /* ⑪a: grab-the-timeline scroll — dragging right brings earlier bars into view */
   const w=document.getElementById('gridWrap');
-  if(w)w.scrollLeft=Math.max(0,drag.s0-(e.clientX-drag.cx0));
+  if(w)w.scrollLeft=Math.max(0,drag.s0-(e.clientX-drag.cx0)/effZoomOf(w));
   return;
  }else if(drag.mode==='zoom'){
   PPB=Math.max(14,Math.min(240,drag.p0*Math.exp((pt.y-drag.y0)/110)));window._swUserZoom=true;   /* deeper max zoom: room for the 32nd band · his 151st: a hand zoom outranks the fit law */
@@ -18354,7 +18354,7 @@ window.addEventListener('mouseup',e=>{
  }
  if(drag.mode==='band'){
   rb=null;
-  const gr0=(activeGridView.el||svg).getBoundingClientRect();
+  const gr0=(activeGridView.el||curSvg()).getBoundingClientRect();
   const moved=Math.abs(e.clientX-(gr0.left+drag.x0))+Math.abs(e.clientY-(gr0.top+drag.y0));
   if(moved<4&&!drag.additive&&!drag.xor){selNotes.clear();selChordSet.clear();} /* plain click on empty = deselect (⌘/⇧-click on empty: keep selection) */
   /* …and a plain click on empty grid also moves the playhead (a drag or ⇧/⌘-click never does) */
@@ -18367,14 +18367,14 @@ window.addEventListener('mouseup',e=>{
      (strip/background-initiated zooms never touch the playhead) — measured against the
      GESTURE's own lane element (July 24 r3: the lane can be docked anywhere).
      July 30 fix 4: an undecided lanepend press = the same plain click. */
-  const r=(activeGridView.el&&activeGridView.el.isConnected?activeGridView.el:svg).getBoundingClientRect();
+  const r=(activeGridView.el&&activeGridView.el.isConnected?activeGridView.el:curSvg()).getBoundingClientRect();
   const moved=Math.abs(e.clientX-(r.left+drag.x0))+Math.abs(e.clientY-(r.top+drag.y0));
   if(!drag.fromStrip&&playheadMoveIntent(false,moved>=4,false))
    setPlayheadBeat(beatFromClickX(drag.x0,GUT,PPB,gridStep(),LOOP));
   drag=null;refresh(false);return;
  }
  if(drag.mode==='loopsel'||drag.mode==='loopmove'){
-  const r=(activeGridView.el&&activeGridView.el.isConnected?activeGridView.el:svg).getBoundingClientRect();
+  const r=(activeGridView.el&&activeGridView.el.isConnected?activeGridView.el:curSvg()).getBoundingClientRect();
   const moved=Math.abs(e.clientX-(r.left+drag.x0))+Math.abs(e.clientY-(r.top+drag.y0));
   if(moved<4){
    if(drag.fromDbl){loopSel=null;loopOn=false;drawLoopBtn();}       /* double-click = delete */
@@ -18396,7 +18396,7 @@ window.addEventListener('mouseup',e=>{
    const st=gridStep();
    const rows2=[...selNotes].map(ix=>project.melody[ix]).filter(Boolean);
    let nb0=rows2.length?rows2[0][0]:0;for(const n of rows2)if(n[0]<nb0)nb0=n[0];
-   const r0=(activeGridView.el||svg).getBoundingClientRect();
+   const r0=(activeGridView.el||curSvg()).getBoundingClientRect();
    const beat=clipDropBeat(nb0,(e.clientX-r0.left-GUT)-drag.b0raw*PPB,PPB,st,LOOP);
    const span=Math.max(1,Math.min(LOOP-beat,Math.ceil(payload.span-1e-6)));
    const a=withKeyAt(beat,()=>clipAnalyze(payload.notes.map(n=>n[2])));
@@ -18419,7 +18419,7 @@ window.addEventListener('mouseup',e=>{
    const rows=[...selNotes].map(ix=>project.melody[ix]).filter(Boolean);
    if(rows.length){
     let nb0=rows[0][0];for(const n of rows)if(n[0]<nb0)nb0=n[0];
-    const st2=gridStep(),r02=svg.getBoundingClientRect();
+    const st2=gridStep(),r02=curSvg().getBoundingClientRect();
     const beat2=clipDropBeat(nb0,(e.clientX-r02.left-GUT)-drag.b0raw*PPB,PPB,st2,LOOP);
     if(!project.tracks[t2])project.tracks[t2]=materialize(t2);
     const add2=segToGridRows(rows,nb0,1e9,beat2,LOOP);
@@ -18445,10 +18445,25 @@ window.addEventListener('mouseup',e=>{
 });
 /* (native dblclick handler removed — add/delete now runs off the manual double-click
    detector inside mousedown, which survives the grid's innerHTML redraws) */
+/* his 172nd (the object pop-up, zoom .62): an ancestor CSS zoom scales client rects,
+   so a client-px offset and the lattice's own px are DIFFERENT SPACES — the hit-test
+   read a point ~.62x left/above the cursor, a body press landed in an edge zone and a
+   drag stretched the note. Divide by the element's effective zoom (chipDrag's zoom
+   law, generalized to the grid's own geometry). */
+function effZoomOf(el){
+ try{
+  if(el&&typeof el.currentCSSZoom==='number'&&isFinite(el.currentCSSZoom)&&el.currentCSSZoom>0)return el.currentCSSZoom;
+  let z=1,n=el;
+  while(n&&n.nodeType===1){const zv=parseFloat(getComputedStyle(n).zoom);if(isFinite(zv)&&zv>0)z*=zv;n=n.parentElement;}
+  return (isFinite(z)&&z>0)?z:1;
+ }catch(err){return 1;}
+}
 function svgPoint(e,unclamped,v){
  v=v||activeGridView;   /* 2.1b: the hit-tester speaks the gesture's view AND its element */
- const r=(v.el||svg).getBoundingClientRect();
- const x=e.clientX-r.left,y=e.clientY-r.top;
+ const _sv=v.el||curSvg();   /* his 172nd: the boot-captured svg is Grid 1's — a WORLD's gesture must measure ITS OWN lattice */
+ const r=_sv.getBoundingClientRect();
+ const _ez=effZoomOf(_sv);
+ const x=(e.clientX-r.left)/_ez,y=(e.clientY-r.top)/_ez;
  const inLane=(v.top==null)&&y<BARH;   /* strip-grids have no bar lane */
  const inScrub=(v.top==null)&&y>=BARH&&y<hdrH()&&hdrH()>BARH;   /* ⑪d: the scrub strip under the ruler */
  if(!unclamped&&x<GUT&&!inLane&&!inScrub)return null;
@@ -30815,8 +30830,8 @@ function gridWireClone(w){
    const bg=t===wrap||t===strip||(t.classList&&t.classList.contains('parts'));
    if(!bg)return;
    e.preventDefault();
-   const r=w.els.svg.getBoundingClientRect();
-   drag={mode:'zoom',x0:e.clientX-r.left,y0:e.clientY-r.top,p0:PPB,fromStrip:true};
+   const r=w.els.svg.getBoundingClientRect(),ez=effZoomOf(w.els.svg);
+   drag={mode:'zoom',x0:(e.clientX-r.left)/ez,y0:(e.clientY-r.top)/ez,p0:PPB,fromStrip:true};
   });
  }
 }
@@ -31628,8 +31643,9 @@ function fixedChromeInit(){
    const t=e.target;
    if(t!==zs&&!(t.classList&&t.classList.contains('parts')))return;
    e.preventDefault();
-   const r=((typeof curSvg==='function')?curSvg():svg).getBoundingClientRect();
-   drag={mode:'zoom',x0:e.clientX-r.left,y0:e.clientY-r.top,p0:PPB,fromStrip:true};
+   const sv=((typeof curSvg==='function')?curSvg():svg);
+   const r=sv.getBoundingClientRect(),ez=effZoomOf(sv);
+   drag={mode:'zoom',x0:(e.clientX-r.left)/ez,y0:(e.clientY-r.top)/ez,p0:PPB,fromStrip:true};
   });
  }
  /* 78th R3 FIX (his "The 'X' on the window for the transport is not working"): NEVER
