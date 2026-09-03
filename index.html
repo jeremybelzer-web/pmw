@@ -759,7 +759,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02x</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02y</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -30554,6 +30554,39 @@ document.addEventListener('mouseup',e=>{
 document.addEventListener('click',e=>{
  if(dockDragDid){dockDragDid=false;e.stopPropagation();e.preventDefault();}
 },true);
+/* his 108th: THE STALE-TAB TELLTALE — five deploys landed in one evening while an open
+   tab kept running the build it had loaded, and three rounds of reports were judged
+   against old bytes. The page now asks the live origin for a newer tag (every 3 min +
+   on window focus) and says so on its own face — one click reloads. http(s) only; a
+   local file: has no origin to ask. */
+(function(){
+ try{
+  const mine=((document.querySelector('.sub')||{textContent:''}).textContent.match(/build (\d{4}-\d\d-\d\d\w+)/)||[])[1];
+  if(!mine)return;
+  let shown=false;
+  const check=()=>{
+   if(shown||!/^https?:/.test(location.protocol))return;
+   fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'})
+    .then(r=>r.text()).then(t=>{
+     const m=(t.match(/build (\d{4}-\d\d-\d\d\w+)/)||[])[1];
+     if(m&&m!==mine&&!shown){shown=true;freshShow(m);}
+    }).catch(()=>{});
+  };
+  const freshShow=(tag)=>{
+   const d=document.createElement('div');
+   d.id='freshChip';
+   d.textContent='⟳ A newer build ('+tag+') is live — click to load it';
+   d.title='This tab is running build '+mine+'. One click reloads into the newest build.';
+   d.style.cssText='position:fixed;right:14px;bottom:14px;z-index:200;background:var(--accent);color:#1a1408;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:10px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.5);';
+   d.onclick=()=>{try{location.reload();}catch(e){}};
+   document.body.appendChild(d);
+  };
+  window._fresh={mine,check,show:freshShow};   /* the test seam */
+  setInterval(check,180000);
+  window.addEventListener('focus',check);
+  setTimeout(check,15000);
+ }catch(e){}
+})();
 /* ==== /UI SHELL ==== */
 
 /* ==== MULTI-TRACK ==== */
