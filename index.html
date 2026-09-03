@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03f</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03g</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -30066,17 +30066,23 @@ function palTemplateOffer(proceed){
     sounding like keep-the-window. The question has THREE honest answers and each
     button now says exactly what it does; proceed() runs only when the delete should. */
  if(!palWinModified()){proceed();return;}
+ /* his 147th/148th, the ask's true shape: ONE line, TWO buttons left and right, and
+    ESCAPE keeps the palette. (Dormant since R38's silent deletes — it re-enters
+    service with the 145th rework already wearing this shape.) */
  const m=document.createElement('div');
  m.className='palDelAsk';
- m.style.cssText='position:fixed;z-index:220;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:10px;min-width:340px;max-width:460px;';
- m.innerHTML='<div style="font-size:13px;font-weight:600;">You’ve modified this Chord Palette.</div>'
-  +'<div style="font-size:11.5px;color:var(--dim);">Deleting it loses those changes unless you save them as a Chord Palette Template first.</div>';
- const row=document.createElement('div');row.style.cssText='display:flex;gap:8px;flex-wrap:wrap;';
+ m.tabIndex=-1;
+ m.style.cssText='position:fixed;z-index:220;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;min-width:360px;max-width:460px;outline:none;';
+ m.innerHTML='<div style="font-size:13px;font-weight:600;">You have unsaved changes to the Chord Palette.</div>';
+ const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;gap:10px;';
+ const kill=()=>{try{document.removeEventListener('keydown',esc,true);m.remove();}catch(e){}};
+ const esc=e=>{if(e.key==='Escape'){e.stopPropagation();e.preventDefault();kill();}};
+ document.addEventListener('keydown',esc,true);
  const btn=(label,primary,fn)=>{const b=document.createElement('button');b.textContent=label;
-  b.style.cssText='padding:7px 12px;font-size:12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;'
+  b.style.cssText='padding:7px 14px;font-size:12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;'
    +(primary?'background:var(--accent);color:#1a1408;font-weight:700;':'background:#2a2d38;color:#e9eaef;');
-  b.onclick=()=>{try{m.remove();}catch(e){}fn();};row.appendChild(b);return b;};
- btn('Save a Template, then delete',true,()=>{
+  b.onclick=()=>{kill();fn();};row.appendChild(b);return b;};
+ btn('Save as a template',true,()=>{
   const name=prompt('Template name:','My Chord Palette');
   if(name===null)return;   /* backing out of the name keeps the window */
   if(name){palState.templates=(Array.isArray(palState.templates)?palState.templates:[])
@@ -30086,10 +30092,10 @@ function palTemplateOffer(proceed){
      laneTop:!!palState.laneTop,followSel:!!palState.followSel}]);persistPal();}
   proceed();
  });
- btn('Delete without saving',false,proceed);
- btn('Keep the palette',false,()=>{});
+ btn('Delete',false,proceed);
  m.appendChild(row);
  document.body.appendChild(m);
+ try{m.focus();}catch(e){}
 }
 function palGlueAll(){
  /* an instance palette RIDES its grid — after any column reorder, re-glue each one
