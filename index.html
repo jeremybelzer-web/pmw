@@ -794,7 +794,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ae</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03af</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -32857,6 +32857,14 @@ initUiShell();
 buildMelismaPanel();
 buildRagaPanel();   /* 3.5: the Browser builds at boot like Melisma */
 openSharedScale();  /* 0.2 (#13c): a ?scale= link opens the browser pre-selected */
+/* his request (Sept 3, the 88th): EVERY WINDOW HAS A LINK — ?open=<windowId> opens it at
+   boot (comma-separated for several: ?open=harmPanel,orbPanel). The ?scale= precedent
+   generalized; junk ids shrug off; chordPanel and the grids are always-on and need none. */
+try{
+ const _op=new URLSearchParams(location.search).get('open');
+ if(_op)for(const _oid of _op.split(',').map(x=>x.trim()).filter(Boolean))
+  if(WINDOW_DEFS.some(d=>d.id===_oid)&&!uiWinShown(_oid))uiDispatch({type:'toggle',id:_oid});
+}catch(e){}
 buildWanPanel();    /* 4.6: the Chord Wanderer builds at boot too */
 try{buildOrbPanel();}catch(e){console.error('Orbit panel failed to build at boot',e);}    /* 4.7: Interplanetary Orbits builds at boot too — 20i: and a fault in it must never abort the boot (loadSong follows) */
 try{fixedChromeInit();}catch(e){console.error('fixed chrome failed to init at boot',e);}   /* 76th R2 — the 20i defence */
