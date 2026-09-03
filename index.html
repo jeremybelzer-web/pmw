@@ -72,6 +72,10 @@
   #melList .part.essObjCard{padding:3px 5px;}
   .essObjCard .essObjCap{min-height:13px;}
   .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
+  /* his 157th: the WHOLE title bar reads as the drag handle (it already drags — the
+     edge-dock gesture rides any header point); the buttons keep their own cursors */
+  .winHead{cursor:grab;}
+  .winHead .wbtn,.winHead input,.winHead select,.winHead button,.winHead .cpchip{cursor:pointer;}
   /* his 120th: a click on an object must LOOK acknowledged — the press flashes the
      tile's ring (the audition alone reads as a dead click when audio lags) */
   .essClipW:active .essClipT,.essObjCard:active .essClipT{outline:2px solid var(--accent);outline-offset:-2px;}
@@ -770,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03l</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03m</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11448,6 +11452,22 @@ function swLayoutApply(layout){
    plus.onclick=()=>{try{gridUserSpawn();}catch(e){}swLayoutApply(swLayoutState);};
    row.appendChild(plus);
   }
+  if(r.swipe==='h'&&members.length){
+   /* his 156th: the LAST window must reach the left edge too — a measured tail spacer
+      gives the row the room its final cell needs to snap flush */
+   const tail=document.createElement('div');
+   tail.className='swTail';tail.style.cssText='display:inline-block;height:1px;vertical-align:top;';   /* inline-block — a block div wraps below the nowrap line and adds NO reach */
+   row.appendChild(tail);
+   setTimeout(()=>{try{
+    const last=members[members.length-1];
+    tail.style.width='0px';
+    /* the room the LAST window needs to snap flush = its own offset minus the row's
+       tail-less max scroll — measured AFTER the apply settles (the fit pass shifts
+       offsets; an early guess parked the last window 50px short) */
+    const need=Math.max(0,last.offsetLeft-(row.scrollWidth-row.clientWidth));
+    tail.style.width=need+'px';
+   }catch(e){}},180);
+  }
   if(r.swipe==='h'){
    /* his 154th: the neighbor's visible EDGE is a handle — grab it, pull left, it
       slides into view. Only a drag that STARTS on a non-centered cell scrolls the
@@ -11459,18 +11479,45 @@ function swLayoutApply(layout){
     const rc=row.getBoundingClientRect(),cc=cell.getBoundingClientRect();
     const rowMid=rc.left+rc.width/2;
     if(Math.abs((cc.left+cc.right)/2-rowMid)<rc.width*0.25)return;   /* the centered window keeps its gestures */
-    const x0=e0.clientX,y0=e0.clientY,s0=row.scrollLeft;let took=false;
+    const x0=e0.clientX,y0=e0.clientY,s0=row.scrollLeft;let took=false,prevSnap='';
     const mv2=ev2=>{
      const dx=ev2.clientX-x0,dy=ev2.clientY-y0;
-     if(!took&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.4)took=true;
+     if(!took&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.4){took=true;
+      /* his 156th: MANDATORY snap fights scripted scrolling — it SUSPENDS for the
+         drag and returns on release, where the row snaps left on its own */
+      prevSnap=row.style.scrollSnapType;row.style.scrollSnapType='none';}
      if(took){row.scrollLeft=s0-dx;ev2.preventDefault();}
     };
-    const up2=ev2=>{document.removeEventListener('mousemove',mv2);document.removeEventListener('mouseup',up2);
+    const up2=ev2=>{document.removeEventListener('mousemove',mv2,true);document.removeEventListener('mouseup',up2,true);
      if(took){ev2.preventDefault();ev2.stopPropagation();
+      /* his 156th: SETTLE AT RELEASE with fresh numbers — the nearest window's left
+         edge is the target; the tail grows on the spot if the row lacks the reach
+         (apply-time guesses kept parking the last window short); the snap returns
+         after the glide so it cannot fight it */
+      try{
+       const cells2=[...row.querySelectorAll(':scope > .swCell')];
+       /* the DRAG'S DIRECTION picks the window: pulled left = the NEXT one in; pulled
+          right = the previous — a distance tie at the midpoint flip-flopped */
+       let best=null;
+       if(row.scrollLeft>s0+30){
+        for(const c2 of cells2)if(c2.offsetLeft>s0+30&&(!best||c2.offsetLeft<best.offsetLeft))best=c2;
+       }else if(row.scrollLeft<s0-30){
+        for(const c2 of cells2)if(c2.offsetLeft<s0-30&&(!best||c2.offsetLeft>best.offsetLeft))best=c2;
+       }
+       if(!best){let bd=1e9;for(const c2 of cells2){const d3=Math.abs(c2.offsetLeft-row.scrollLeft);if(d3<bd){bd=d3;best=c2;}}}
+       if(best){
+        const target=Math.max(0,best.offsetLeft);   /* the snap's own rest: border at the row edge */
+        const tail2=row.querySelector('.swTail');
+        const max2=row.scrollWidth-row.clientWidth;
+        if(tail2&&target>max2)tail2.style.width=((parseFloat(tail2.style.width)||0)+(target-max2))+'px';
+        row.scrollTo({left:target,behavior:'smooth'});
+       }
+      }catch(e3){}
+      setTimeout(()=>{try{row.style.scrollSnapType=prevSnap;}catch(e3){}},450);
       const eat=ec=>{document.removeEventListener('click',eat,true);ec.stopPropagation();ec.preventDefault();};
       document.addEventListener('click',eat,true);setTimeout(()=>document.removeEventListener('click',eat,true),0);}};
-    document.addEventListener('mousemove',mv2);document.addEventListener('mouseup',up2);
-   });
+    document.addEventListener('mousemove',mv2,true);document.addEventListener('mouseup',up2,true);
+   },true);   /* CAPTURE: the row sees the press before an inner handler can eat it */
   }
   if(grids&&r.swipe==='h'){
    /* swiping to a grid AIMS the app at it — the chrome/transport/keyboard follow via
