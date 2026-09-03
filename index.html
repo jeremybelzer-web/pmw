@@ -209,6 +209,13 @@
   .nboxMicro .tghold{display:none;}   /* micro keeps [on][S][R] — the glance rides the full head */
   body.ghFront .gnGhost{opacity:.88;}
   body.ghFront .cgGhost{opacity:.85;}
+  /* THE POP-UP ROLL SKIN (2.6 Q7 · the 85th R21 look ruling — decision numbers, the §3 name rule):
+     inside an .essObjPop the real grid wears the roll look — light note blocks on the dark
+     ground, the ghosts as HOLLOW OUTLINES ("a bit clearer", his 98th). Fill only — the
+     selection ring, chromatic amber and velocity brightness keep their attribute laws. */
+  .essObjPop svg rect[data-n]{fill:#a9dca4;}
+  .essObjPop svg .cgGhost{fill:none;stroke:#96a0b6;stroke-width:1.2;opacity:.5;}
+  .essObjPop svg .gnGhost{fill:none;stroke:#8b93a8;stroke-width:1.2;opacity:.45;}
   body.ghFront rect[data-n]{opacity:.3;}
   /* 80th (his fourteenth message + RAW [8]): WEBER'S WANDERER wears the OLD MAP — the
      Tolkien / ancient-cartography look his Aug 20 ask named, fully populated as now */
@@ -774,7 +781,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03u</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03v</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6933,6 +6940,10 @@ function drawGridView(v,svgEl){
   if(chromatic)out+=`<rect x="${x+1}" y="${ry+2}" width="${Math.max(w,8)}" height="${CELLH-4}" rx="3" fill="url(#chromStripe)" pointer-events="none"/>`;
   if(pinned)out+=`<circle cx="${x+6}" cy="${ry+7}" r="2.4" fill="#fff" pointer-events="none"/>`;
   if(chromatic)out+=`<text x="${x+4}" y="${ry+16}" font-size="10" fill="#fff" font-weight="700" pointer-events="none">${NK.sharp?'♯':'♭'}</text>`;
+  /* the pop-up roll (2.6 Q7 · the 85th R21 look ruling): notes CARRY THEIR NAMES —
+     only in an essObj pop-up world, only when the block has room */
+  if(typeof CUR_GRID==='string'&&GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].essObj&&w>=34&&!chromatic)
+   out+=`<text x="${x+5}" y="${ry+CELLH-6}" font-size="10" fill="#16241a" font-weight="700" pointer-events="none">${PCN[((nn[2]%12)+12)%12]}${Math.floor(nn[2]/12)-1}</text>`;
   /* Slide Engine marker */
   if(nn[7]&&nn[7].semis)out+=`<text x="${x+Math.max(w,8)/2}" y="${ry+15}" font-size="11" fill="#fff" font-weight="700" text-anchor="middle" pointer-events="none">〜</text>`;
   /* 5.0 Melisma ornament marker (line-flagged slides wear their LINE instead) */
