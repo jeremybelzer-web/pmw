@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03o</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1180,10 +1180,13 @@
          Position/minimize ride cp_pal.win; the dock never leaves #gridWrap, so [77]/[78] lane-top
          alignment survives in BOTH positions by construction. -->
     <div class="winHead" id="palWinHead" title="The Chord Palette — a free-standing window. Drag this bar to move it; it stays linked to its grid (the colored border arrives with groups).">
-      <span class="picon">🎹</span><span class="wtitle">Chord Palette</span>
+      <span class="wtitle">Chord Palette</span>
       <span class="wbtn" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
       <span class="wbtn" id="palCloseChip" title="Delete the Chord Palette window (Delete does it too while it&#8217;s selected) — the 🎹 icon at the grid&#8217;s left brings it back. A modified palette offers to save a template first.">✕</span>
     </div>
+    <div id="cpBody2" style="display:flex;align-items:flex-start;gap:10px;min-width:0;">
+    <div id="cpSide" style="flex:0 0 200px;min-width:130px;display:flex;flex-direction:column;gap:8px;">
+    <div class="cpMatHead" id="cpMainHead"></div><!-- his 145th: the song scale rides the LEFT sidebar, under the track names' band -->
     <div id="cpHead">
       <span class="cp-title" style="margin:0;display:none;">Chord palette · <span id="cpKey" style="color:var(--text);"></span></span><!-- 20b: dock title + key readout hidden (client request); #cpKey kept in DOM for the updater -->
       <div id="cpCtl">
@@ -1198,13 +1201,16 @@
     <!-- [M23d] (71st): #cpTools — the Scale menu, the Snap button and the Conform machinery —
          moved OUT of this dock into #snapPanel, directly below the grid. His words: the palette
          "should be separate from the 'Snap to chord tones' button and it's features." -->
+    </div><!-- /cpSide -->
+    <div id="cpMatCol" style="flex:1 1 auto;min-width:0;">
     <div id="cpModes"></div>
-    <div class="cpMatHead" id="cpMainHead"></div><!-- 20n [61] [62]: the song scale's name + its drop-down (Search → the Browser; then its mode family) -->
     <div id="cpMain" class="cpg"></div>
     <div id="cpRel"></div><!-- 20n [63] [64]: the relative matrices — default ONE, a third from the song's scale (major → its relative melodic minor; minor → its relative major a third up); each with its own name + drop-down; the fixed "Parallel" title is gone -->
     <button id="cpAddMat" type="button" title="Add another relative scale and its matrix below this one">+</button>
     <div class="cp-title" id="cpHmTitle" style="display:none;"></div>
     <div id="cpHm" class="cpg cp-par" style="display:none;"></div>
+    </div><!-- /cpMatCol -->
+    </div><!-- /cpBody2 -->
   </div>
 
   <!-- 5.3 → the 73rd (his direction, verbatim in MODULAR_WINDOWS_SPEC Decisions made): the
@@ -9858,13 +9864,17 @@ function buildPaletteGrid(el,scale,tonic){
      border a side) PLUS its grow share of what remains — measured, not assumed. The columns reproduce that. */
   let chrome=4;try{const cb0=document.querySelector('#chordlane .cb');if(cb0){const s=getComputedStyle(cb0);chrome=(parseFloat(s.paddingLeft)||0)+(parseFloat(s.paddingRight)||0)+(parseFloat(s.borderLeftWidth)||0)+(parseFloat(s.borderRightWidth)||0);}}catch(e){}
   const sum=gs.reduce((a,b)=>a+b,0)||1,freePx=LOOP*PPB-(gs.length-1)*2-chrome*gs.length;
-  let inset=13;try{const cs=getComputedStyle(document.getElementById('chordPanel'));inset=(parseFloat(cs.paddingLeft)||12)+(parseFloat(cs.borderLeftWidth)||1);}catch(e){}
+  /* his 145th: the matrix lives in #cpMatCol beside the sidebar now — the measured
+     margin references the MATRIX COLUMN's own origin (the panel reference double-
+     shifted by the sidebar's width) */
+  const _ref=document.getElementById('cpMatCol')||document.getElementById('chordPanel');
+  let inset=0;try{const cs=getComputedStyle(_ref);inset=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.borderLeftWidth)||0);}catch(e){}
   /* Phase 1 (73rd): the panel is a SIBLING of #gridWrap now, not a child — its border box
      no longer starts at the grid's content origin, so the margin absorbs the measured
      difference (gridWrap's border+padding plus any residual x between the two boxes) */
-  let sibOff=0;try{const gw=document.getElementById('gridWrap'),cpEl=document.getElementById('chordPanel');
-   if(gw&&cpEl){const gs=getComputedStyle(gw);
-    sibOff=(gw.clientLeft||0)+(parseFloat(gs.paddingLeft)||0)+Math.round(gw.getBoundingClientRect().left-cpEl.getBoundingClientRect().left);}}catch(e){}
+  let sibOff=0;try{const gw=document.getElementById('gridWrap');
+   if(gw&&_ref){const gs=getComputedStyle(gw);
+    sibOff=(gw.clientLeft||0)+(parseFloat(gs.paddingLeft)||0)+Math.round(gw.getBoundingClientRect().left-_ref.getBoundingClientRect().left);}}catch(e){}
   el.style.gridTemplateColumns=(GUT-2)+'px '+gs.map(g=>(chrome+g/sum*freePx).toFixed(2)+'px').join(' ');
   el.style.gap='3px 2px';                 /* the lane's own 2px column gap; rows keep the palette's 3px */
   el.style.marginLeft=(theadWNow()-inset+sibOff)+'px';
@@ -11607,8 +11617,10 @@ function swLayoutApply(layout){
    uniform cells and the fit-to-width law follow the screen instead of freezing at
    apply-time geometry; the apply's own law keeps every row's scroll. */
 window.addEventListener('resize',(function(){let _t=null;return function(){
- if(!swLayoutState)return;
- clearTimeout(_t);_t=setTimeout(function(){try{swLayoutApply(swLayoutState);}catch(e){}},180);
+ clearTimeout(_t);_t=setTimeout(function(){
+  try{if(swLayoutState)swLayoutApply(swLayoutState);}catch(e){}
+  try{if(typeof palLaneRegister==='function')palLaneRegister();}catch(e){}
+ },180);
 };})());
 /* ==== [T1]/[T2] THE NARROW TRANSPORT'S ON-DEMAND LANES + THE GRID'S CTRL+CLICK MENU
    (79th R9 — his fourth + fifth messages verbatim in the RAW; the reference behavior
@@ -12008,6 +12020,26 @@ function palMatPick(i,id,m){
   palState.mats[i-1]={tonic:m.tonic,id};persistPal();drawChordPanel();
  }
 }
+function palLaneRegister(){
+ /* his 145th: the matrix REGISTERS with the grid's Chord Lane — the sidebar's width
+    is set so column one starts under the lane's first chord, in either lane mode. */
+ try{
+  const side=document.getElementById('cpSide');
+  const mc=document.getElementById('cpMatCol');
+  const cp=document.getElementById('chordPanel');
+  const gsvg=document.querySelector('#gridWrap [id="grid"]');
+  if(!side||!mc||!cp||!gsvg||!gsvg.getClientRects().length||!cp.getClientRects().length)return;
+  if(typeof palState==='object'&&palState&&palState.laneTop){side.style.flex='0 0 136px';return;}   /* lane-top: the measured-margin law owns the columns; the sidebar rests */
+  const sr=gsvg.getBoundingClientRect();
+  const declW=+gsvg.getAttribute('width')||sr.width;
+  const z=(sr.width>0&&declW>0)?sr.width/declW:1;
+  const laneX=sr.left+GUT*z;
+  const cur=mc.getBoundingClientRect().left;
+  const now=parseFloat(side.style.flexBasis||side.style.flex.split(' ').pop())||200;
+  const pad=now+(laneX-cur);
+  if(isFinite(pad)&&pad>80&&pad<900)side.style.flex='0 0 '+Math.round(pad)+'px';
+ }catch(e){}
+}
 function drawChordPanel(){
  const fo=palFollowTarget();
  const cs=fo?fo.scale:curScale(),t=fo?fo.tonic:project.tonic;
@@ -12046,6 +12078,7 @@ function drawChordPanel(){
  /* July 24 r3: number the cells for arrow navigation + restore the ring after redraws */
  palCells().forEach((el,i)=>{el.dataset.pi=i;});
  markPalSel();
+ palLaneRegister();setTimeout(palLaneRegister,60);   /* his 145th: the matrix registers with the lane on every draw — sync first (the suites and the eye read immediately), a settle pass after */
 }
 /* 19y: the extension toggles EDIT whatever is selected — a selected chord rebuilds its
    quality from the toggled degrees (clip/name/color survive, one undo); selected notes
@@ -29450,7 +29483,7 @@ function initUiShell(){
   colGripAdd(head,d.id);   /* Phase 2 R0: every window reorders in the column by its ⠿ grip */
  }
  colGripAdd(document.getElementById('gridWinHead'),'gridRowWrap');
- colGripAdd(document.getElementById('palWinHead'),'chordPanel');
+ /* his 145th: the palette's corner ⠿ retired — the matrix owns the top; the head still docks/drags */
  colGripAdd(document.getElementById('snapWinHead'),'snapPanel');   /* 76th R4 */
  /* 78th R3 (his words): "The App should default to having a multi-track grid + chord
     palette at the top." A fresh board (no saved order) leads with them; a user's saved
