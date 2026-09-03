@@ -67,15 +67,20 @@
   /* his 72nd: an object card IS a grid — the card goes column, caption over the world.
      his 106th: the card HUGS the tile — the 216px .mimCard width lock and the fat
      padding read as "extra grey border"; an object card is its tile plus a slim verb row */
-  #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard,#progCards .mimCard.essObjCard{
+  #przShelf .mimCard.essObjCard,[id^="essWin_"] .essBody .mimCard.essObjCard,#swShelf .essBody .mimCard.essObjCard,#progCards .mimCard.essObjCard,#cadCards .mimCard.essObjCard{
     display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:3px 4px;width:auto;}
   #melList .part.essObjCard{padding:3px 5px;}
   .essObjCard .essObjCap{min-height:13px;}
   .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
+  /* Sept 3: Cadences results fill as ROWS of 1-track objects (wrap), not one tall scroll list */
+  #cadCards .cadFamCap{flex:1 0 100%;}
   /* his 157th: the WHOLE title bar reads as the drag handle (it already drags — the
      edge-dock gesture rides any header point); the buttons keep their own cursors */
   .winHead{cursor:grab;}
   .winHead .wbtn,.winHead input,.winHead select,.winHead button,.winHead .cpchip{cursor:pointer;}
+  /* Sept 3: a collapsed strip is a restore click, not a dock/row drag */
+  .winCollapsed .winHead{cursor:pointer;}
+  .winCollapsed .winLearnLine{display:none!important;}
   /* his 120th: a click on an object must LOOK acknowledged — the press flashes the
      tile's ring (the audition alone reads as a dead click when audio lags) */
   .essClipW:active .essClipT,.essObjCard:active .essClipT{outline:2px solid var(--accent);outline-offset:-2px;}
@@ -91,11 +96,18 @@
   #zimBtn[data-retired]{display:none;}   /* his ninth message: the top button retires — the zim paths stay alive (the Lower Window and the note menus reach it) */
   .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
   .swRow .swCell.winCollapsed{height:auto!important;}
-  /* his 138th: in a layout row the header PROSE hides behind an ⓘ — the interactive
-     surface first ("I can't see the part of the windows I would interact with") */
+  /* his 138th / Sept 3: in a layout row the header PROSE hides behind Learn-i —
+     the interactive surface first. How-to prose lives in .winHowBox. */
   .swCell .winProse{display:none;}
-  .swCell.showProse .winProse{display:block;}
+  .swCell.showProse .winProse,.swCell .winHowBox.on{display:block;}
   .wbtn.winInfoB{margin-left:auto;font-weight:700;}
+  .winLearnLine{font-size:10px;color:var(--dim);margin:0;display:inline-flex;align-items:center;gap:5px;flex-wrap:nowrap;white-space:nowrap;min-width:0;}
+  .winHead .winLearnLine{flex:1 1 auto;justify-content:flex-end;overflow:hidden;}
+  .winHowI{display:inline-block;cursor:pointer;font-weight:800;border:1px solid var(--dim);border-radius:50%;width:14px;height:14px;line-height:13px;text-align:center;color:var(--text);flex:0 0 auto;}
+  .winHowI:hover{border-color:var(--accent);color:var(--accent);}
+  .winHowBox{display:none;}
+  .winHowBox.on{display:block;}
+  #przShelfHead{display:flex;align-items:center;gap:10px;margin:0 0 8px 0;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);user-select:none;}
   .swSplit{flex:0 0 7px;cursor:row-resize;background:var(--line);border-top:1px solid #4a4f61;border-bottom:1px solid #23252e;}
   .swSplit:hover{background:var(--accent);}   /* his 129th: a collapsed window SHRINKS to its title bar — the R31 uniform height held it open as a full-size empty box, which read as "hidden + blank space" */
   .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
@@ -118,7 +130,8 @@
   button:disabled{opacity:.5;cursor:wait;}
   input[type=range]{width:110px;accent-color:var(--accent);}
   .tval{font-size:13px;width:64px;font-variant-numeric:tabular-nums;}
-  .gridwrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;}
+  /* Sept 3 chrome: one upper radius + inset — Melisma · Chords · Orbits · Essence Shelf */
+  .gridwrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px;overflow-x:auto;}
   svg{display:block;user-select:none;cursor:crosshair;}
   /* July 30 client fixes: no text-highlight while dragging selection boxes across the
      timeline — chord labels ("ii", "iii"), clip labels and headers are UI chrome, not
@@ -393,7 +406,7 @@
   #palette input{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;width:256px;outline:none;}
   #palette input:focus{border-color:var(--accent);}
   /* 3.3: the palette dock runs lengthwise below the grid */
-  .palWin{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}   /* 75th r3: the class covers palette INSTANCES too (clones carry it) */
+  .palWin{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px;margin-top:10px;display:flex;flex-direction:column;gap:8px;}   /* 75th r3 · Sept 3: same radius + inset as .gridwrap */
   .palWin .cp-title{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin:2px 0 1px;}
   #cpHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   #cpCtl{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto;}
@@ -680,7 +693,7 @@
 #rail button{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);
  color:var(--text);font-size:16px;cursor:pointer;padding:0;line-height:1;}
 #rail button:hover{border-color:var(--accent);background:var(--panel);}
-.winHead{display:flex;align-items:center;gap:10px;margin:-4px 0 8px 0;cursor:pointer;user-select:none;}
+.winHead{display:flex;align-items:center;gap:10px;margin:0 0 8px 0;cursor:pointer;user-select:none;overflow:hidden;}
 .winHead .wtitle{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);flex:1;}
 .winHead .wbtn{color:var(--dim);font-size:12px;cursor:pointer;padding:2px 6px;}
 .winHead .wbtn:hover{color:var(--text);}
@@ -781,7 +794,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03z</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ac</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -887,13 +900,12 @@
   <!-- July 27a (client): the Melisma window lives at the TOP of the screen — first thing
        under the icon bar when open (the one-window law is unchanged; docks 〜 Slide) -->
   <div class="gridwrap" id="melPanel" style="margin:12px 0;">
-    <div class="winProse" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Variation engine · Melody Melisma Machine</div>
     <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
     <div id="melSongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above. Every track other than Drums, the Polyphonic Instrument and Melody arrives muted and hidden — unhide and unmute them any time.">Load a song into the audition grid</label>
       <select id="melSongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
     </div>
-    <div class="winProse" style="border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 10px 0;font-size:12px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">
+    <div id="melHowTo" class="winProse winHowBox" style="border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 10px 0;font-size:12px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">
       “<b>Techniques, ornaments, articulations, contours, interval patterns, and scales are not copyrightable. Specific melodic expression is.</b>”
       <span style="color:var(--dim);">— the line this engine is built on. Every entry below is generic musical vocabulary, organized by tradition and era, never by artist. Curves are derived approximations until ear-approved.</span>
     </div>
@@ -928,9 +940,9 @@
        planet/wheel, pivot chords are the escape routes. Travels land on the next
        quantize boundary and are RECORDED as real section-key events (6.7 v1). -->
   <div class="gridwrap" id="orbPanel" style="margin:12px 0;">
-    <div class="winProse" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Interplanetary Orbits — the planet is the key you are in; break its gravity and walk on the surface of a new world</div>
+    <div id="orbHowTo" class="winProse winHowBox" style="font-size:11px;line-height:1.5;color:var(--dim);margin-bottom:8px;">The planet is the key you are in — its diatonic chords orbit as moons. Click a moon to hear it · double-click to land it on the next ⏱ boundary · a doorway or far world drifts in to the centre. Ghost Song pivots open dotted roads. The treasure is what the journey sounds like.</div>
     <div id="orbBody"></div>
-    <div id="orbStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Click any chord on the circle while the song plays — the landing waits for the next boundary. Pick a Ghost Song and its pivot chords open dotted roads to new planets. The treasure is what the journey sounds like.</div>
+    <div id="orbStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
   </div>
 
   <!-- WINDOW-SHELL · Upcoming Trips — its own window (RAW [69]–[72] [75] [76]). Opens as a
@@ -978,7 +990,7 @@
     <!-- 80th (his seventeenth message): the shelf wears the −/✕ idiom in its upper
          right — − collapses, ✕ hides with a VISIBLE restore chip (the R8 lesson:
          positive display values, never an inline ''). Session-local. -->
-    <div id="przShelfHead" style="display:flex;align-items:center;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:12px 0 6px;" title="Rows of favorite extracted essences — contour lines, Note DNA, one-tone rhythms. Project data: rides undo, saves and autosave. Identical strands recognize each other by fingerprint (↔). Drag any card onto the grid to apply it to the selected notes there.">★ Essence Shelf
+    <div id="przShelfHead" title="Rows of favorite extracted essences — contour lines, Note DNA, one-tone rhythms. Project data: rides undo, saves and autosave. Identical strands recognize each other by fingerprint (↔). Drag any card onto the grid to apply it to the selected notes there.">★ Essence Shelf
       <span class="wbtn" id="przShelfMin" style="margin-left:auto;cursor:pointer;" title="Collapse the shelf (the cards tuck away; + brings them back)">−</span>
       <span class="wbtn" id="przShelfX" style="cursor:pointer;" title="Hide the Essence Shelf — the 🔷 chip brings it back">✕</span>
     </div>
@@ -1188,9 +1200,11 @@
          alignment survives in BOTH positions by construction. -->
     <div class="winHead" id="palWinHead" title="The Chord Palette — a free-standing window. Drag this bar to move it; it stays linked to its grid (the colored border arrives with groups).">
       <span class="wtitle">Chord Palette</span>
+      <span class="winLearnLine" style="margin:0;flex:1;justify-content:flex-end;">Learn how to play this game — click <span id="palHowI" class="winHowI" title="Show or hide how to play">i</span></span>
       <span class="wbtn" id="palMinChip" title="Minimize the Chord Palette window to its title bar">−</span>
       <span class="wbtn" id="palCloseChip" title="Delete the Chord Palette window (Delete does it too while it&#8217;s selected) — the 🎹 icon at the grid&#8217;s left brings it back. A modified palette offers to save a template first.">✕</span>
     </div>
+    <div id="palHowTo" class="winProse winHowBox" style="font-size:11px;line-height:1.5;color:var(--dim);margin-bottom:6px;">Click a chord block to audition · drag onto the chord lane or the grid · the Make chips rebuild the selected chord · Conform / Snap lives in the panel under the grid.</div>
     <div id="cpBody2" style="display:flex;align-items:flex-start;gap:10px;min-width:0;">
     <div id="cpSide" style="flex:0 0 200px;min-width:130px;display:flex;flex-direction:column;gap:8px;">
     <div class="cpMatHead" id="cpMainHead"></div><!-- his 145th: the song scale rides the LEFT sidebar, under the track names' band -->
@@ -1265,7 +1279,7 @@
          · the info pane upper right (the roadmap 3.3 model). -->
     <div id="cadCols" style="display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;overflow:hidden;min-height:200px;">
       <div id="cadTabs" style="display:flex;flex-direction:column;gap:2px;flex:0 0 156px;padding:8px;border-right:1px solid var(--line);background:rgba(255,255,255,.02);align-content:flex-start;"></div>
-      <div id="cadCards" style="display:flex;flex-direction:column;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:360px;"></div>
+      <div id="cadCards" style="display:flex;flex-direction:row;flex-wrap:wrap;align-content:flex-start;gap:6px;flex:1 1 auto;padding:8px;overflow:auto;max-height:360px;"></div>
       <div id="cadInfo" style="flex:0 0 252px;padding:10px;border-left:1px solid var(--line);background:rgba(255,255,255,.02);font-size:11.5px;color:var(--text);"></div>
     </div>
     <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
@@ -4716,9 +4730,14 @@ class AudioHub{
   src.playbackRate.value=track==='drums'?1:(zRoot!=null?Math.pow(2,(key-zRoot)/12):clipRate(clip,key));
   const g=ctx.createGain();const amp=clipGainFor(clip,vel);
   g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(amp,time+.004);
+  src.connect(g);this.out(g,track);src.start(time);   /* 2.3: out() may route per track (pan buses) */
+  /* 6.0 (his 149th raised it): THE SAMPLER'S SILENT DEATH — src.stop() was scheduled
+     BEFORE src.start() existed, an InvalidStateError on EVERY repitch (pitched) clip:
+     the samples loaded, the trigger threw, the synths answered instead. stop now
+     follows start, where the Web Audio contract puts it. */
   if(dur!=null&&clip.mode==='repitch'){const end=time+dur;
    g.gain.setValueAtTime(amp,end);g.gain.linearRampToValueAtTime(.0001,end+.07);src.stop(end+.09);}
-  src.connect(g);this.out(g,track);src.start(time);return true;}   /* 2.3: out() may route per track (pan buses) */
+  return true;}
 }
 /* ==== /AUDIO HUB ==== */
 
@@ -5679,7 +5698,7 @@ async function makeAudio(){
    if(vel<=0)return;                            /* fader at −Inf */
    const arr=Array.isArray(midis)?midis:[midis];
    midiMirror(track,arr,dur,time,vel);          /* Module 5: grid → DAW VSTs via Web MIDI */
-   if(hubRt){let hit=false;for(const m of arr)if(hubRt.trigger(track,m,time,dur,vel))hit=true;if(hit)return;}
+   if(hubRt){let hit=false;for(const m of arr){try{if(hubRt.trigger(track,m,time,dur,vel))hit=true;}catch(e){}}if(hit)return;}   /* 6.0: a hub fault must never SILENCE the note — the synths answer honestly (the throw that ate every pitched sample hid here) */
    if(patchTrigger(track,arr,dur,time,vel))return;   /* assigned synth patch beats the stock instruments */
    if(track==='bass'){bass.triggerAttackRelease(M(arr[0]),dur,time,vel);return;}
    if(track==='pad'){pad.triggerAttackRelease(arr.map(M),dur,time,vel);return;}
@@ -11362,14 +11381,23 @@ function swRowMembers(cat){
      "populate on the bottom with windows that ship together". A closed engine's
      full-width empty shell was the "blank black space"; a newly-opened one was buried
      fourteen cells right, reading as "no longer populates". */
-  const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin'];
-  const openIds=ids.filter(id=>{
+  /* Sept 3: a just-opened engine lands LEFTMOST and pushes the rest right —
+     openWins is newest-first; members follow that order, then non-openWins riders. */
+  const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
+  const isOpen=id=>{
    if(id==='chordPanel')return !(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
    if(id==='tripsPanel')return !!(typeof uiState==='object'&&uiState&&uiState.trips);
    if(id==='progPanel'){const pp=document.getElementById('progPanel');return !!pp&&pp.style.display!=='none';}
    if(id==='slideWin'){const sw2=document.getElementById('slideWin');return !!sw2&&sw2.style.display!=='none';}
    return (typeof uiWinShown==='function')?uiWinShown(id):true;
-  });
+  };
+  const openIds=[];
+  try{
+   if(typeof uiState==='object'&&uiState&&Array.isArray(uiState.openWins))
+    for(const id of uiState.openWins)
+     if(ids.indexOf(id)>=0&&isOpen(id)&&openIds.indexOf(id)<0)openIds.push(id);
+  }catch(e){}
+  for(const id of ids)if(isOpen(id)&&openIds.indexOf(id)<0)openIds.push(id);
   const out=openIds.map(id=>document.getElementById(id)).filter(Boolean);
   /* his 128th: when the layout carries the middle SHELF band, the per-stack shelf
      windows SKIP the engines row — one shelf serves, no duplicate riding below */
@@ -11524,6 +11552,8 @@ function swLayoutApply(layout){
        keeps its own gestures. Chips/inputs on the bar keep their clicks. */
     const onHead=!!(e0.target.closest&&e0.target.closest('.winHead'))
       &&!(e0.target.closest&&e0.target.closest('.wbtn,input,select,button,.cpchip,.colGrip'));
+    /* Sept 3: a collapsed strip's title click must RESTORE — row-drag stands down */
+    if(onHead&&cell.classList.contains('winCollapsed'))return;
     const rc=row.getBoundingClientRect(),cc=cell.getBoundingClientRect();
     const rowMid=rc.left+rc.width/2;
     if(!onHead&&Math.abs((cc.left+cc.right)/2-rowMid)<rc.width*0.25)return;   /* the centered window's body keeps its gestures */
@@ -12205,8 +12235,10 @@ document.getElementById('palMinChip').onclick=()=>{palState.win=palWinNorm(palSt
 document.getElementById('palWinHead').onclick=e=>{
  if(e.target&&e.target.classList&&e.target.classList.contains('wbtn'))return;   /* − and ✕ own their clicks */
  if(e.target&&e.target.classList&&e.target.classList.contains('colGrip'))return; /* the ⠿ grip drags, never toggles */
+ if(e.target&&e.target.classList&&e.target.classList.contains('winHowI'))return; /* Learn-i owns its click */
  palState.win=palWinNorm(palState.win);palState.win.min=!palState.win.min;persistPal();palWinApply();
 };
+(function(){const pi=document.getElementById('palHowI');if(pi)pi.onclick=e=>{e.stopPropagation();const ht=document.getElementById('palHowTo');if(ht)ht.classList.toggle('on');};})();
 /* Phase 1 (73rd): the Multi-Track Grid window minimizes like the Modulation window */
 function gridCloseApply(){
  const g=document.getElementById('gridRowWrap');if(!g)return;
@@ -14181,12 +14213,40 @@ function buildCadWindow(){
   if(!cadState.curList.length)cards.innerHTML='<span style="font-size:11.5px;color:var(--dim);">No cadences detected in the selected songs — check more songs above.</span>';
   cadState.curList.forEach((h,i)=>{
    const d=document.createElement('div');
-   d.className='mimCard'+(String(cadState.sel)==='cur:'+i?' on':'');
-   d.title='Detected at the 8-beat phrase ends of: '+h.songs.join(' · ')+'. Press = hear it in this phrase’s key (nothing is written) · ✓ writes it.';
-   d.innerHTML='<div class="mimName">'+h.kind+'</div>'
-    +'<div class="mimMeta">in '+h.songs.length+' song'+(h.songs.length>1?'s':'')+' · '+h.count+' phrase end'+(h.count>1?'s':'')+'</div>'
-    +'<div class="mimChain">'+h.steps.map(s=>dispLbl(s.lbl)).join(' → ')+'</div>';
-   d.onclick=()=>{cadState.sel='cur:'+i;buildCadWindow();cadAudition();};
+   d.className='mimCard essObjCard'+(String(cadState.sel)==='cur:'+i?' on':'');
+   d.title='Detected at the 8-beat phrase ends of: '+h.songs.join(' · ')+'. Press = hear it in this phrase’s key (nothing is written) · ✓ writes it · drag = onto the Essence Shelf or a track row · ⤢ opens the pop-up grid.';
+   /* Sept 3 FIX: Load-a-song / ★ Curated must be the SAME 1-track objects as the library
+      (clip tile · ⤢ · drag) — the old mimName/mimMeta list was the wound. */
+   const runv=h.steps.map(s=>({d:s.d,r:((k2.tonic+s.deg)%12+12)%12,iv:s.iv.slice(),lbl:s.lbl}));
+   const po={id:'cur:'+i,name:h.kind,runv,org:'cadPanel'};
+   d.innerHTML='<div class="essObjCap"><div class="mimName">'+h.kind+'</div>'
+    +'<div class="mimChain" style="flex:1;min-width:0;">'+h.steps.map(s=>dispLbl(s.lbl)).join(' → ')+'</div>'
+    +'<span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+   essObjCardMount(d,po,'cadw');
+   d.onclick=e=>{
+    if(d._dragAte){d._dragAte=false;return;}
+    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
+    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(po,po.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
+    cadState.sel='cur:'+i;buildCadWindow();cadAudition();};
+   d.onmousedown=ev=>{
+    if(ev.button!==0||ev.target.classList.contains('essExB'))return;
+    if(ev.target.closest&&ev.target.closest('.essObjCardW'))return;
+    ev.preventDefault();
+    const x0=ev.clientX,y0=ev.clientY;
+    const mm=e2=>{
+     if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+      cleanup();d._dragAte=true;
+      chipDrag(e2,'♪ '+po.name,dv=>{
+       const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);
+       if(shelfEl){essLibShelfMint(po,'cadPanel');return;}
+       if(essDropTryDialog(dv,po))return;
+       if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
+      });
+     }};
+    const mu=()=>cleanup();
+    const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+   };
    cards.appendChild(d);
   });
  }else{
@@ -14201,7 +14261,7 @@ function buildCadWindow(){
   if(cadState.cat==='all'&&_list.length){
    const cap=document.createElement('div');
    cap.className='cadFamCap';
-   cap.style.cssText='font-size:12.5px;color:var(--dim);margin:6px 0 2px 0;letter-spacing:.5px;';
+   cap.style.cssText='flex:1 0 100%;font-size:12.5px;color:var(--dim);margin:6px 0 2px 0;letter-spacing:.5px;';
    cap.textContent=(CAD_CATS.find(x=>x[0]===catId)||['',''])[1];
    cards.appendChild(cap);
   }
@@ -14289,8 +14349,8 @@ function buildCadWindow(){
    }else info.innerHTML=hint;
   }
  }
+ try{essObjCardSweep('cadw');}catch(e){}
 }
-document.getElementById('cadApplyBtn').onclick=e=>{cadApplySel();e.target.blur();};
 /* the 73rd (his P.S., verbatim in the spec): the palette's 𝄂 Cadences link is GONE — the
    Cadence Window is its own window with its own top-rail button now. The SEARCH stub in the
    palette's matrix is its cadence-facing surface (the roadmap's search, when it comes). */
@@ -20566,6 +20626,37 @@ function wanChordFunction(deg,iv,scheme){
  if(n===6)return 'rel';
  return 'dom';
 }
+/* Sept 3 (WEBER-HYPER-FN-RAW): KEY-center function on Weber's map — chromatic hyper layer.
+   His corrections: ♯IV (#4) = Hyper-Dominant (V of vii / V of VII); ♭v = Hyper-Subdominant
+   (iv of vii / VII); ♭VI = half Subdominant + half Relative (`subrel`). Pure. */
+function wanKeyFn(relPc,keyMinor,expand){
+ const iv=(((relPc%12)+12)%12);
+ const min=!!keyMinor;
+ if(iv===0)return 'par';
+ if(iv===5)return 'sub';                         /* IV / iv */
+ if(iv===2&&min)return 'sub';                     /* ii */
+ if(iv===7)return 'dom';                         /* V / v */
+ if(iv===4&&min)return 'dom';                     /* iii */
+ if(iv===9)return 'rel';                         /* vi / VI */
+ if(iv===11&&min)return expand?'hdom':'dom';     /* vii — Expand promotes to Hyper-D */
+ if(!expand)return null;                         /* chromatics silent until Expand */
+ if(iv===2&&!min)return 'hdom';                  /* II = V/V */
+ if(iv===1)return 'hdom';                        /* ♭II / ♭ii — Neapolitan prep */
+ if(iv===11&&!min)return 'hdom';                 /* VII */
+ if(iv===6&&!min)return 'hdom';                  /* ♯IV — his #4 correction (was ♭V) */
+ if(iv===10)return 'hsub';                       /* ♭VII / ♭vii */
+ if(iv===3)return 'hsub';                        /* ♭III / ♭iii */
+ if(iv===6&&min)return 'hsub';                   /* ♭v — iv of vii / VII */
+ if(iv===8&&min)return 'hsub';                   /* ♭vi */
+ if(iv===8&&!min)return 'subrel';                /* ♭VI — half sub + half rel */
+ if(iv===4&&!min)return 'rel';                   /* III chromatic mediant — relative-side */
+ return null;
+}
+const WAN_HYPER_LEGEND={
+ hdom:['II (V/V)','♭II','VII','vii','♯IV'],
+ hsub:['♭VII','♭vii','♭III','♭iii','♭v'],
+ subrel:['♭VI (½ Sub · ½ Rel)']
+};
 function wanFnCol(id){
  /* the user's colour for a function, else the shipped one. His: "the user should be able to take
     the Color Palette and change the color of any and all chord buttons they like". */
@@ -21085,9 +21176,11 @@ function tonnetzPivotTree(homeTonic,homeMinor){
  return {home,coord:c,planes,neighbors,branches,pathsFrom:tonnetzPathsFrom(home.tonic,home.minor)};
 }
 function wanRomanOf(pc,minor,homePc){
- /* the Roman Numerals view: a key labeled by its relation to HOME (lowercase = minor) */
+ /* the Roman Numerals view: a key labeled by its relation to HOME (lowercase = minor).
+    Sept 3: interval 6 majors spell ♯IV (his #4 — V of vii/VII), not ♭V; minors keep ♭v. */
  const iv=(((pc-homePc)%12)+12)%12;
- const base={0:'I',1:'♭II',2:'II',3:'♭III',4:'III',5:'IV',6:'♭V',7:'V',8:'♭VI',9:'VI',10:'♭VII',11:'VII'}[iv];
+ if(iv===6)return minor?'♭v':'♯IV';
+ const base={0:'I',1:'♭II',2:'II',3:'♭III',4:'III',5:'IV',7:'V',8:'♭VI',9:'VI',10:'♭VII',11:'VII'}[iv];
  return minor?base.toLowerCase():base;
 }
 function wanRerootShiftDelta(oldTonic,oldMinor,newPc,newMinor){
@@ -21603,8 +21696,24 @@ function wanWeberDraw(){
       acceptance test, and the suite asserts them by name. */
    const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
    const selKey=st.webSel.has(cell.lof+':'+(cell.minor?1:0));
+   /* Sept 3: paint the KEY chips with the hyper-function scheme (Expand reveals chromatics;
+      ♭VI wears half Subdominant + half Relative). Paint rides wanState.fnOn. */
+   let fnSty='';
+   try{
+    if(wanState.fnOn){
+     const rel=(((wanLofPc(cell.lof)-st.tonic)%12)+12)%12;
+     const kf=wanKeyFn(rel,cell.minor,!!wanState.fnExpand);
+     if(kf==='subrel'){
+      const a=wanFnCol('sub'),b=wanFnCol('rel');
+      fnSty='background:linear-gradient(90deg,'+a+'66 50%,'+b+'66 50%);outline:1px solid '+a+';';
+     }else if(kf){
+      const fc=wanFnCol(kf);
+      fnSty='background:'+fc+'44;outline:1px solid '+fc+';';
+     }
+    }
+   }catch(e){}
    h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'"'
-    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'"'
+    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'"'
     +' title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home · ⌘+click draws a path to it.">'+label+'</span>';
   }
   h+='</div>';
@@ -22421,7 +22530,9 @@ function renderWan(){
  const relNames=wanRelStepName(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom);
  const sameRoot=relNames.dir==='----';
  const nb=weberNeighbors(wanState.tonic,wanScale().pcs.indexOf(3)>=0&&wanScale().pcs.indexOf(4)<0);
- /* his 166th "Expand": the hyper pair joins the neighborhood — two fifths out, same mode */
+ /* his 166th "Expand": Hyper dominant = V/V (two fifths sharp); Hyper subdominant = ♭VII
+    (two fifths flat) — the textbook ends of his Sept 3 lists; Expand also paints the
+    full chromatic scheme on the map via wanKeyFn. */
  if(wanState.fnExpand){
   const _hm=nb[0].minor,_T=t=>((t%12)+12)%12;
   nb.push({tonic:_T(wanState.tonic+2),minor:_hm,tag:'Hyper dominant'},
@@ -22437,6 +22548,13 @@ function renderWan(){
     the roman says what the chord DOES, the letter name says what to play. Every row is listed,
     numbered when there is more than one, since comparing the scales is the point of the colour. */
  const fnGroups=WAN_FN.map(f=>{
+  /* Sept 3: Hyper categories list the KEY-center romans (his scheme), not scale-degree chords */
+  if(f.hyper){
+   const items=(WAN_HYPER_LEGEND[f.id]||[]).map(s=>'<span style="color:#3a2c18;">'+s+'</span>');
+   if(f.id==='hsub'&&wanState.fnExpand)
+    items.push('<span style="background:linear-gradient(90deg,'+wanFnCol('sub')+'88 50%,'+wanFnCol('rel')+'88 50%);padding:0 4px;border-radius:3px;" title="♭VI — half Subdominant, half Relative (his dual reading).">♭VI (½+½)</span>');
+   return {f,items};
+  }
   const items=[];
   rows.forEach((R,ri2)=>{
    for(let d=0;d<R.pcs.length;d++){
@@ -22590,8 +22708,8 @@ function renderWan(){
     +'<span class="wanAllTog'+(wanState.fnScheme==='majdom'?' on':'')+'" data-fnscheme="majdom" title="His second scheme: every MAJOR chord except the 1 and the 4 is a Dominant — so a major II or a major VI reads as the secondary dominant it is behaving as. Everything else keeps its degree colour.">Majors are dominants</span>'
     +'<span class="wanAllTog'+(wanState.fnOn?' on':'')+'" id="wanFnOnTog" title="Paint the chord buttons with these colours.">'+(wanState.fnOn?'☑':'☐')+' paint the chords</span>'
     /* his 166th: the Expand word grows the 5th and 6th categories */
-    +'<span class="wanAllTog'+(wanState.fnExpand?' on':'')+'" id="wanFnExpand" title="Two more categories, two fifths out both ways: Hyper dominant and Hyper subdominant — they join the neighborhood chips and the legend, each with its own colour.">'+(wanState.fnExpand?'Collapse ▴':'Expand ▾')+'</span></div>'
-    +'<div style="font-size:9.5px;color:#6b4f28;">Colour any category with the swatch beside its name below, or in the Color Palette Window — press 🎨 above. One colour table serves every view.</div>'
+    +'<span class="wanAllTog'+(wanState.fnExpand?' on':'')+'" id="wanFnExpand" title="Reveal Hyper dominant and Hyper subdominant — chromatic keys that lean toward V or IV (II=V/V, ♭II, VII, ♯IV · ♭VII, ♭III, ♭v…). ♭VI paints half Subdominant + half Relative. The map paints with them when colour is on.">'+(wanState.fnExpand?'Collapse ▴':'Expand ▾')+'</span></div>'
+    +'<div style="font-size:9.5px;color:#6b4f28;">Colour any category with the swatch beside its name below, or in the Color Palette Window — press 🎨 above. One colour table serves every view. With Expand + paint on, Weber’s map keys wear the same colours.</div>'
     +'</div>')
   +'<div style="display:flex;flex-direction:column;gap:2px;">'
   /* his 166th FIX ("I still see no option to color the Weber Neighbors"): the swatch
@@ -22904,7 +23022,7 @@ var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
  fit:true,cam:{x:0,y:0,s:1},
  moonLay:'ring',keepAll:false,   /* R7 [45] (20k): the moon layout — ring · rings · free · 20l [60]: keep every far world framed */
  lim:{open:false,on:{},scale:{home:1,rel:1}},   /* R6 (20j): LIMITATION = CREATIVITY — which scale degrees grow a moon (7 booleans per scale, all on) and a MASTER switch per scale (client, Aug 21: "default to both scales having an ON toggle switch to the right of the scale name. If it is turned off then that scale no longer generates moons") */
- speed:'normal',farOrbit:true,farDeg:0,varHover:null};   /* ORBIT FEEDBACK R5 (20g): speed = the 🔄 pace (slow · normal · fast, orbRotSpeed) · farOrbit = the far worlds orbit the planet too (client, Aug 20, twelfth sitting — reversible, his call) · farDeg their angle · varHover the 🧬 moon whose satellites are up */   /* ORBIT FEEDBACK R4 (20f): "Transform multi-tracks to fit chords" — default ON · cam = the pan/zoom camera (client, Aug 20, ninth and eleventh messages) */   /* ORBIT FEEDBACK R1 (20d): the 🎨 Chromatic ring (default OFF) · per-destination bridge choice (V / ii–V / IV–V, session) · the far world a hover is showing */   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round). R2 adds varMoons (⑦, default OFF) + ecoSrc (the 🌌 relative pairing, mirrored here so a re-render stops resetting the select — and so the twin planets survive one). R3 adds djMute (⑧, default OFF — the audience hears everything until the DJ says otherwise) */
+ speed:'normal',farOrbit:true,farDeg:0,varHover:null,showHow:false};   /* ORBIT FEEDBACK R5 (20g): speed = the 🔄 pace (slow · normal · fast, orbRotSpeed) · farOrbit = the far worlds orbit the planet too (client, Aug 20, twelfth sitting — reversible, his call) · farDeg their angle · varHover the 🧬 moon whose satellites are up */   /* ORBIT FEEDBACK R4 (20f): "Transform multi-tracks to fit chords" — default ON · cam = the pan/zoom camera (client, Aug 20, ninth and eleventh messages) */   /* ORBIT FEEDBACK R1 (20d): the 🎨 Chromatic ring (default OFF) · per-destination bridge choice (V / ii–V / IV–V, session) · the far world a hover is showing */   /* GEMS R1 — view state, session-only (device data; cp_ keys ride a later round). R2 adds varMoons (⑦, default OFF) + ecoSrc (the 🌌 relative pairing, mirrored here so a re-render stops resetting the select — and so the twin planets survive one). R3 adds djMute (⑧, default OFF — the audience hears everything until the DJ says otherwise) */
 var orbJourney={active:false,log:[]};
 var orbBot={next:0};
 var orbNav={stack:[{kind:'key'}],pos:0};   /* GEMS R2 — the fractal history. Frame 0 is the KEY level (always derived live from the song); a chord frame pins {kind:'chord',r,iv,lbl,deg}. Back/Forward walk pos; a new zoom truncates the forward tail (the browser law, pure in orbNavAdvance). Session-only device data, like the rest of the view state. */
@@ -24055,8 +24173,8 @@ function orbRotTick(){
  if(typeof uiState!=='object'||!uiState||!uiWinShown('orbPanel'))return;
  if(!orbRotActive())return;
  const st=orbRotTickStep();
- orbState.rotDeg=((orbState.rotDeg||0)+st)%360;
- if(orbState.farOrbit)orbState.farDeg=((orbState.farDeg||0)+st*ORB_FAR_RATE)%360;
+ orbState.rotDeg=(orbState.rotDeg||0)+st;   /* continuous — never %360: SVG rotate() jumps left on wrap */
+ if(orbState.farOrbit)orbState.farDeg=(orbState.farDeg||0)+st*ORB_FAR_RATE;
  orbApplyRot();
 }
 function orbRotActive(){
@@ -24084,8 +24202,8 @@ function orbRotFrame(ts){
  if(orbRotActive()&&dt>0){
   const extra=Math.max(0,orbRotSpeed()-orbRotTickStep()/0.15)*dt/1000;
   if(extra>0){
-   orbState.rotDeg=((orbState.rotDeg||0)+extra)%360;
-   if(orbState.farOrbit)orbState.farDeg=((orbState.farDeg||0)+extra*ORB_FAR_RATE)%360;
+   orbState.rotDeg=(orbState.rotDeg||0)+extra;   /* continuous — same law as orbRotTick */
+   if(orbState.farOrbit)orbState.farDeg=(orbState.farDeg||0)+extra*ORB_FAR_RATE;
    orbApplyRot();
   }
  }
@@ -25179,7 +25297,7 @@ function renderOrb(){
   +'<span class="cpchip'+(orbState.djMute?' on':'')+'" id="orbDjMute" title="Mute DJ&#8217;s actions from listener (GEMS ⑧) — ON, your auditions (tone moons, 🌌 ▶ Hear it) make no sound; real travels still play through the band. Honest note: until the multi-output substrate lands the whole room shares one stereo pair, so a muted audition is silent for you too. Pairs with 6.7.">🔇 Mute DJ</span>'
   +'<span style="font-size:10.5px;color:var(--dim);">Written route: <span style="color:var(--text);">'+route+'</span></span>'
   +'</div>'
-  +'<div style="order:4;font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
+  +'<div id="orbHowBody" class="winProse winHowBox'+(orbState.showHow?' on':'')+'" style="order:4;font-size:10.5px;color:var(--dim);margin-bottom:6px;">'+(solar
    ?(zoomed
     ?'Zoomed in (the fractal law: every level is a solar system) — the planet is now the <b style="color:var(--text);">'+(frame.lbl||'chord')+'</b> chord: its TONES are the moons, dashed moons are the key&#8217;s colors, and dotted roads reach the worlds that share its tones. ⬅ Back returns; double-click any world to travel deeper.'
     :twin
@@ -25467,6 +25585,7 @@ function renderOrb(){
   });
  });
  if(solar){orbMoonLayout();orbApplyRot();}   /* R7 [45]: stamp the moon layout once per rebuild, then place */
+ const _oht=document.getElementById('orbHowTo');if(_oht)_oht.classList.toggle('on',!!orbState.showHow);
  const shp=document.getElementById('orbShip');if(shp){shp.style.transition='none';try{orbShipTick();}catch(e){}requestAnimationFrame(()=>{if(shp.isConnected)shp.style.transition='left .35s,top .35s';});}   /* R8 [46] (20l): the ship spawns ON its moon — the unscaled default spot + the .35s slide read as a flight in from the edge after an arrival */
  /* GEMS R2 controls */
  const bB=document.getElementById('orbBack');if(bB)bB.onclick=()=>{if(!orbNavGo(-1))setOrbStatus('⬅ Nothing further back — this is the key level, where the fractal starts.');};
@@ -29583,7 +29702,7 @@ function uiReduce(state,action,defs){
    s.openWins.splice(at,1);
    if(s.open===action.id)s.open=s.openWins[s.openWins.length-1]||null;
   }else{
-   s.openWins.push(action.id);
+   s.openWins.unshift(action.id);   /* Sept 3: newest LEFT — populate from the left, push others right */
    s.open=action.id;
    delete s.collapsed[action.id];                    /* opening un-collapses */
    /* [75] opening Wanderer or Orbits auto-launches Trips under them — ⭐ FULL now, his
@@ -29664,7 +29783,11 @@ function uiDispatch(action){
   try{
    swLayoutApply(swLayoutState);
    if(justOpened){const el2=document.getElementById(action.id);
-    if(el2&&el2.closest('#swRows'))el2.scrollIntoView({inline:'center',block:'nearest'});}
+    if(el2&&el2.closest('#swRows')){
+     const row2=el2.closest('.swRow');
+     if(row2)row2.scrollLeft=0;   /* Sept 3: left edge, not center — the new window is the first cell */
+     el2.scrollIntoView({inline:'start',block:'nearest'});
+    }}
   }catch(e){}
  }
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
@@ -29804,19 +29927,32 @@ function initUiShell(){
   const wrap=document.createElement('div');wrap.className='winBodyWrap';
   while(p.firstChild)wrap.appendChild(p.firstChild);
   const head=document.createElement('div');head.className='winHead';
-  head.innerHTML=`<span class="wtitle">${d.icon} ${d.title||d.name}</span><span class="wbtn" data-w="collapse" style="margin-left:auto;" title="Collapse to a slim strip (click the strip to reopen)">▂</span><span class="wbtn" data-w="close" title="Close (reopen from the icon bar)">✕</span>`;   /* his 137th: the chips hugged the title and "clicking the window" hit the ✕ — the corner law, everywhere */
+  head.innerHTML=`<span class="wtitle">${d.icon} ${d.title||d.name}</span><span class="wbtn" data-w="collapse" style="margin-left:auto;" title="Collapse to a slim strip — click the strip (or this) again to reopen">▂</span><span class="wbtn" data-w="close" title="Close (reopen from the icon bar)">✕</span>`;   /* his 137th: the chips hugged the title and "clicking the window" hit the ✕ — the corner law, everywhere */
+  head.title='Click the bar to minimize or restore.';
   head.onclick=e=>{
    const w=e.target&&e.target.dataset&&e.target.dataset.w;
+   if(e.target&&e.target.classList&&e.target.classList.contains('winHowI')){
+    e.stopPropagation();
+    if(d.id==='orbPanel'){
+     orbState.showHow=!orbState.showHow;
+     document.querySelectorAll('#orbHowTo,#orbHowBody').forEach(el=>{if(el)el.classList.toggle('on',!!orbState.showHow);});
+    }else{
+     p.querySelectorAll('.winHowBox').forEach(el=>el.classList.toggle('on'));
+     p.classList.toggle('showProse');
+    }
+    return;
+   }
    if(e.target&&e.target.classList&&e.target.classList.contains('winInfoB')){e.stopPropagation();p.classList.toggle('showProse');return;}
    if(w==='close')uiDispatch({type:'toggle',id:d.id});
    else uiDispatch({type:'collapse',id:d.id});};
-  /* his 138th: the ⓘ opens the hidden prose (it only shows meaning inside a layout row) */
-  if(p.querySelector('.winProse')){
-   const inf=document.createElement('span');
-   inf.className='wbtn winInfoB';inf.textContent='ⓘ';
-   inf.title='About this window — the introduction text lives behind this button in the split layouts.';
+  /* Sept 3: Learn how to play + i rides the winHead (outside the body wrap — never steals
+     Orbits map height). ⛔ Query WRAP — children already moved out of p. */
+  if(wrap.querySelector('.winProse')){
+   const learn=document.createElement('span');
+   learn.className='winLearnLine';
+   learn.innerHTML='Learn how to play this game — click <span class="winHowI" data-w="how" title="Show or hide how to play">i</span>';
    const col=head.querySelector('[data-w="collapse"]');
-   head.insertBefore(inf,col);col.style.marginLeft='';
+   head.insertBefore(learn,col);col.style.marginLeft='';
   }
   const rez=document.createElement('div');rez.className='winResize';rez.title='Drag to set this window’s height';
   rez.onmousedown=e0=>{
@@ -31348,6 +31484,7 @@ function wireDockDrag(){
   head.addEventListener('mousedown',e=>{
    if(e.button!==0)return;
    if(e.target&&e.target.dataset&&e.target.dataset.w)return;   /* the ▂/✕ buttons keep their clicks */
+   if(p.classList.contains('winCollapsed'))return;   /* Sept 3: collapsed strip = restore click, not dock */
    dockPend={id:d.id,name:(d.title||d.name),icon:d.icon,x:e.clientX,y:e.clientY,live:false};
   });
  }
