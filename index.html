@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03m</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03n</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11476,16 +11476,23 @@ function swLayoutApply(layout){
     if(e0.button!==0)return;
     const cell=e0.target.closest?e0.target.closest('.swCell'):null;
     if(!cell)return;
+    /* his 158th: a press on ANY title bar is a row-drag handle — both directions,
+       centered window included (with full-width left-snapped cells the previous
+       window leaves no sliver, so going BACK needs the title). The centered BODY
+       keeps its own gestures. Chips/inputs on the bar keep their clicks. */
+    const onHead=!!(e0.target.closest&&e0.target.closest('.winHead'))
+      &&!(e0.target.closest&&e0.target.closest('.wbtn,input,select,button,.cpchip,.colGrip'));
     const rc=row.getBoundingClientRect(),cc=cell.getBoundingClientRect();
     const rowMid=rc.left+rc.width/2;
-    if(Math.abs((cc.left+cc.right)/2-rowMid)<rc.width*0.25)return;   /* the centered window keeps its gestures */
+    if(!onHead&&Math.abs((cc.left+cc.right)/2-rowMid)<rc.width*0.25)return;   /* the centered window's body keeps its gestures */
     const x0=e0.clientX,y0=e0.clientY,s0=row.scrollLeft;let took=false,prevSnap='';
     const mv2=ev2=>{
      const dx=ev2.clientX-x0,dy=ev2.clientY-y0;
      if(!took&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.4){took=true;
       /* his 156th: MANDATORY snap fights scripted scrolling — it SUSPENDS for the
          drag and returns on release, where the row snaps left on its own */
-      prevSnap=row.style.scrollSnapType;row.style.scrollSnapType='none';}
+      prevSnap=row.style.scrollSnapType;row.style.scrollSnapType='none';
+      try{dockPend=null;}catch(e4){}   /* his 158th: a row drag outranks the dock gesture sharing this press */}
      if(took){row.scrollLeft=s0-dx;ev2.preventDefault();}
     };
     const up2=ev2=>{document.removeEventListener('mousemove',mv2,true);document.removeEventListener('mouseup',up2,true);
