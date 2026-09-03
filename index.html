@@ -755,7 +755,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02u</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02v</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15254,27 +15254,35 @@ function essObjCardSig(o){
  try{return JSON.stringify([o.id,o.paste||null,o.org||null,o.strand,o.data]);}catch(e){return String(o&&o.id);}
 }
 function essClipTile(o){
- /* his 93rd-95th (the reference tile, described in RHYTHM-ENGINE-RAW): the un-opened
-    object is a CLIP TILE — kind-colored ground, the TITLE in dark text across the top,
-    the notes as DARK MARKS on a faint beat grid below. It REPRESENTS what's in it;
-    opening (double-press) and dragging live on the card's own handlers. */
+ /* his 103rd/104th (the folder's FL-style pair chosen; the 93rd's yellow-clip ground
+    retires): the un-opened object is the DARK MINI-ROLL — dark ground · a piano-keys
+    SLIVER on the left · the notes as light blocks in their KIND's ink [labeled: the
+    reference's green reads as "the notes"; the kind ink keeps the app's own color
+    language] · the chord-lane ghosts as light HOLLOW outlines ("a bit clearer", his
+    98th) · the title small on the dark ground (his 94th's contract). It REPRESENTS
+    what's in it; opening (double-press) and dragging live on the card's own handlers. */
  const st=essObjRows(o);
  if(!st||!st.rows||!st.rows.length)return null;
  const KIND_COL={melody:'#edc948',drums:'#e8a33d',chords:'#93c47d'};
- const bg=KIND_COL[st.kind]||'#edc948';
+ const ink=KIND_COL[st.kind]||'#edc948';
  let span=0,lo=127,hi=0;
  for(const r of st.rows){if(r[0]+r[1]>span)span=r[0]+r[1];if(r[2]<lo)lo=r[2];if(r[2]>hi)hi=r[2];}
  span=Math.max(1,Math.ceil(span));
  const minW=Math.min(200,Math.max(96,Math.round(String(o&&o.name||'').length*6.2)));   /* the title fits */
  const W=Math.max(minW,Math.min(260,Math.round(span*30)));
- const H=36,pad=3;
+ const H=32,pad=2,KW=7;   /* "even smaller still" — a slimmer body than the 02t tile */
  const band=Math.max(1,hi-lo+1);
- const rh=Math.max(2,Math.min(6,Math.floor((H-2*pad)/band)));
- let marks='';
- for(let b2=1;b2<span;b2++)marks+='<line x1="'+(b2/span*W).toFixed(1)+'" y1="0" x2="'+(b2/span*W).toFixed(1)+'" y2="'+H+'" stroke="rgba(0,0,0,.14)"/>';
- /* his 98th/99th: the CLOSED tile carries the chord-lane GHOST NOTES — dark outlines
-    behind the object's own marks, "a bit clearer" than the reference's faint ghosts.
-    Melody-kind tiles only: a chords-kind object's content IS the chords [labeled]. */
+ const rh=Math.max(2,Math.min(5,Math.floor((H-2*pad)/band)));
+ const gx=t=>KW+1+(t/span)*(W-KW-1);
+ const yOf=m=>Math.max(0,Math.min(H-rh,pad+(hi-m)/band*(H-2*pad-rh)*(band>1?band/(band-1):0)));
+ /* the keys sliver: ivory ground, the black-key rows notched dark — the roll's own left edge */
+ let marks='<rect x="0" y="0" width="'+KW+'" height="'+H+'" fill="#d8dae0" class="essClipKeys"/>';
+ for(let m2=lo;m2<=hi;m2++)if([1,3,6,8,10].indexOf(((m2%12)+12)%12)>=0)
+  marks+='<rect x="0" y="'+yOf(m2).toFixed(1)+'" width="'+(KW*0.68).toFixed(1)+'" height="'+rh+'" fill="#23252c"/>';
+ for(let b2=1;b2<span;b2++)marks+='<line x1="'+gx(b2).toFixed(1)+'" y1="0" x2="'+gx(b2).toFixed(1)+'" y2="'+H+'" stroke="rgba(255,255,255,.08)"/>';
+ /* his 98th/99th: the chord-lane GHOST NOTES — hollow light outlines behind the marks,
+    "a bit clearer" than the reference's. Melody-kind tiles only: a chords-kind
+    object's content IS the chords [labeled]. */
  if(st.kind==='melody')try{
   const chs=project.chords||[];
   const vt=laneVoicingsTop(chs,[]);
@@ -15285,18 +15293,16 @@ function essClipTile(o){
    if(b1<=b0||!vt[i])return;
    for(const m of vt[i]){
     if(m<lo||m>hi)continue;
-    const gy=pad+(hi-m)/band*(H-2*pad-rh)*(band>1?band/(band-1):0);
-    marks+='<rect x="'+(b0/span*W).toFixed(1)+'" y="'+Math.max(0,Math.min(H-rh,gy)).toFixed(1)+'" width="'+Math.max(2,(b1-b0)/span*W-1).toFixed(1)+'" height="'+rh+'" rx="1" fill="none" stroke="#141414" stroke-opacity=".4" class="essClipGh"/>';
+    marks+='<rect x="'+gx(b0).toFixed(1)+'" y="'+yOf(m).toFixed(1)+'" width="'+Math.max(2,(b1-b0)/span*(W-KW-1)-1).toFixed(1)+'" height="'+rh+'" rx="1" fill="none" stroke="rgba(255,255,255,.38)" class="essClipGh"/>';
    }
   });
  }catch(e){}
  for(const r of st.rows){
-  const x=r[0]/span*W,w2=Math.max(2,r[1]/span*W-1);
-  const y=pad+(hi-r[2])/band*(H-2*pad-rh)*(band>1?band/(band-1):0);
-  marks+='<rect x="'+x.toFixed(1)+'" y="'+Math.max(0,Math.min(H-rh,y)).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+rh+'" rx="1" fill="#141414" opacity=".9"/>';
+  const x=gx(r[0]),w2=Math.max(2,r[1]/span*(W-KW-1)-1);
+  marks+='<rect x="'+x.toFixed(1)+'" y="'+yOf(r[2]).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+rh+'" rx="1" fill="'+ink+'" opacity=".95" class="essClipN"/>';
  }
- return '<div class="essClipT" style="background:'+bg+';border-radius:5px;overflow:hidden;width:'+W+'px;flex:0 0 auto;">'
-  +'<div class="essClipName" style="color:#1b1204;font-size:10px;font-weight:700;padding:1px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+String(o&&o.name||'object')+'</div>'
+ return '<div class="essClipT" style="background:#1c1f27;border:1px solid #343845;border-radius:4px;overflow:hidden;width:'+W+'px;flex:0 0 auto;">'
+  +'<div class="essClipName" style="color:#cfd4e2;font-size:9.5px;font-weight:600;padding:1px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+String(o&&o.name||'object')+'</div>'
   +'<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;">'+marks+'</svg></div>';
 }
 function essObjCardMount(host,o,surface){
