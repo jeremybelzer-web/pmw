@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03j</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4581,7 +4581,7 @@ function validClipMeta(m){
  if(typeof m.id!=='string'||!m.id||typeof m.name!=='string'||!m.name)return false;
  if(HUB_SOURCE_IDS.indexOf(m.source)<0)return false;
  if(HUB_MODES.indexOf(m.mode)<0)return false;
- if(m.source!=='local'&&(typeof m.url!=='string'||!m.url))return false;
+ if(m.source!=='local'&&!Array.isArray(m.zones)&&(typeof m.url!=='string'||!m.url))return false;   /* his 153rd: a ZONED clip carries its urls per-zone — the top-level url rule exempted it (this line silently killed every curated piano/cello/bass for weeks) */
  if(m.mode==='repitch'&&!(typeof m.root==='number'&&m.root>=0&&m.root<=127))return false;
  if(!(typeof m.gain==='number'&&m.gain>0&&m.gain<=4))return false;
  if(m.zones!==undefined&&(!Array.isArray(m.zones)||!m.zones.length
@@ -7948,8 +7948,10 @@ function applyCuratedDefaults(){
     }
     if(!ok)throw new Error('no zone loaded');
    }else await loadClipWithFallback(clip,curatedUrls(p.entry));
-   if(!hub.tracks[p.track]){hubAssign(hub,p.track,clip);persistHub();drawHub();
-    hubStatus('curated default “'+clip.name+'” → '+p.track+(clip.zones?' ('+clip.zones.length+' zones)':'')+' — drop your own file any time to replace.');}
+   if(!hub.tracks[p.track]){
+    if(hubAssign(hub,p.track,clip)){persistHub();drawHub();
+     hubStatus('curated default “'+clip.name+'” → '+p.track+(clip.zones?' ('+clip.zones.length+' zones)':'')+' — drop your own file any time to replace.');}
+    else hubStatus('curated default for '+p.track+' FAILED its meta check ('+clip.name+') — a bug worth reporting.',false);}
   }catch(e){hubStatus('curated default for '+p.track+' unreachable on every mirror ('+clip.name+') — using built-in instrument.',false);}
  });
 }
@@ -11429,6 +11431,30 @@ function swLayoutApply(layout){
    plus.title='Create a new Multi-Track Grid here.';
    plus.onclick=()=>{try{gridUserSpawn();}catch(e){}swLayoutApply(swLayoutState);};
    row.appendChild(plus);
+  }
+  if(r.swipe==='h'){
+   /* his 154th: the neighbor's visible EDGE is a handle — grab it, pull left, it
+      slides into view. Only a drag that STARTS on a non-centered cell scrolls the
+      row, so the centered window's own gestures are untouched. */
+   row.addEventListener('mousedown',e0=>{
+    if(e0.button!==0)return;
+    const cell=e0.target.closest?e0.target.closest('.swCell'):null;
+    if(!cell)return;
+    const rc=row.getBoundingClientRect(),cc=cell.getBoundingClientRect();
+    const rowMid=rc.left+rc.width/2;
+    if(Math.abs((cc.left+cc.right)/2-rowMid)<rc.width*0.25)return;   /* the centered window keeps its gestures */
+    const x0=e0.clientX,y0=e0.clientY,s0=row.scrollLeft;let took=false;
+    const mv2=ev2=>{
+     const dx=ev2.clientX-x0,dy=ev2.clientY-y0;
+     if(!took&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.4)took=true;
+     if(took){row.scrollLeft=s0-dx;ev2.preventDefault();}
+    };
+    const up2=ev2=>{document.removeEventListener('mousemove',mv2);document.removeEventListener('mouseup',up2);
+     if(took){ev2.preventDefault();ev2.stopPropagation();
+      const eat=ec=>{document.removeEventListener('click',eat,true);ec.stopPropagation();ec.preventDefault();};
+      document.addEventListener('click',eat,true);setTimeout(()=>document.removeEventListener('click',eat,true),0);}};
+    document.addEventListener('mousemove',mv2);document.addEventListener('mouseup',up2);
+   });
   }
   if(grids&&r.swipe==='h'){
    /* swiping to a grid AIMS the app at it — the chrome/transport/keyboard follow via
