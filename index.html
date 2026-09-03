@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -917,7 +917,7 @@
        planet/wheel, pivot chords are the escape routes. Travels land on the next
        quantize boundary and are RECORDED as real section-key events (6.7 v1). -->
   <div class="gridwrap" id="orbPanel" style="margin:12px 0;">
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Interplanetary Orbits — the planet is the key you are in; break its gravity and walk on the surface of a new world</div>
+    <div class="winProse" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Harmony game · Interplanetary Orbits — the planet is the key you are in; break its gravity and walk on the surface of a new world</div>
     <div id="orbBody"></div>
     <div id="orbStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;">Click any chord on the circle while the song plays — the landing waits for the next boundary. Pick a Ghost Song and its pivot chords open dotted roads to new planets. The treasure is what the journey sounds like.</div>
   </div>
@@ -20787,13 +20787,16 @@ function wanRerootStable(newPc,newMinor,at,label){
  audLedReset();
  wanAudition();renderWan();
 }
-function wanKeyAudition(pc,minor){
+function wanKeyAudition(pc,minor,dur){
  try{
   /* 84th R3 (his FIFTY-THIRD message): voice-led now — the old call planed every key
      as its own first-inversion I in parallel, which is exactly the "only ascend in
      root position" shape he reported. Consecutive plays (map keys, chain chips, the
-     path stops) voice-lead through the 'wan' memory; a re-seat starts fresh. */
-  const go=()=>{try{audLedPlay('wan',{r:pc,iv:(minor?MIN:MAJ).slice()},1.2,Tone.now(),.6);}catch(e){}};
+     path stops) voice-lead through the 'wan' memory; a re-seat starts fresh.
+     his 140th: a SEQUENCE passes a short dur so the tails never bleed into the next
+     chord — a lone click keeps the full 1.2s ring. */
+  const _d=(typeof dur==='number'&&isFinite(dur)&&dur>0)?dur:1.2;
+  const go=()=>{try{audLedPlay('wan',{r:pc,iv:(minor?MIN:MAJ).slice()},_d,Tone.now(),.6);}catch(e){}};
   if(typeof audioReady!=='undefined'&&audioReady)go();
   else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
  }catch(e){}
@@ -21122,8 +21125,13 @@ function wanWeberDraw(){
     and 1821, not to 1824. (IMSLP's first-publication line reads "1817–21"; the volume-by-volume
     years agree.) ⚠ 1824 is not nothing — it is the SECOND edition — but the first edition is
     when the table was created, which is what the title claims. ➡ 1817–1821. */
- let h='<div style="font-size:15px;font-weight:800;letter-spacing:.6px;color:#5a4426;margin-bottom:2px;font-family:Georgia,serif;">Created 1817–1821 by Jacob Gottfried Weber</div>'
-  +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:3px;">The table of the relationships of keys — drag to travel the map · click hears a key · double-click makes it home · ⌘+click draws the modulation paths · ctrl+click for the map menu. The full story is in ℹ About.</div>'
+ /* his 140th: the header is ONE dark line — the title with its credit beside it —
+    and "Learn how to play, click ⓘ"; the how-to prose lives behind the ⓘ. */
+ let h='<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:2px;">'
+  +'<span style="font-size:16px;font-weight:800;letter-spacing:.6px;color:#241a0c;font-family:Georgia,serif;">Weber’s Wanderer</span>'
+  +'<span style="font-size:11px;color:#5a4426;font-family:Georgia,serif;">created 1817–1821 by Jacob Gottfried Weber</span>'
+  +'<span style="font-size:10px;color:#6b4f28;">Learn how to play — click <span id="wanHowI" style="display:inline-block;cursor:pointer;font-weight:800;border:1px solid #6b4f28;border-radius:50%;width:14px;height:14px;line-height:13px;text-align:center;">i</span></span></div>'
+  +'<div id="wanHowTo" style="display:none;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:3px;">The table of the relationships of keys — drag to travel the map · click hears a key · double-click makes it home · ⌘+click draws the modulation paths · ctrl+click for the map menu. The full story is in ℹ About.</div>'
   +(st.webPaths.length?'<div id="wanPathsBanner">Common routes, but the number of paths is endless.</div>':'')
   +'<div style="margin-bottom:5px;display:flex;gap:8px;align-items:center;"><span class="wanAllTog'+(st.webAll?' on':'')+'" id="wanAllTog" title="Draw the primary and secondary boxes at EVERY instance of the home key on the map — not just the center.">'+(st.webAll?'☑':'☐')+' All Boxes</span>'
   +'<span class="wanAllTog" id="wanPathsBtn" title="The kinds of road a modulation can take — each with its own line on the map and its own harmony defaults. ON by default: a ⌘-selected destination shows every filled-out road’s pathway.">Pathways</span>'
@@ -21304,7 +21312,9 @@ function wanWeberDraw(){
  const litOn=road=>{if(!svg)return;svg.querySelectorAll('path[data-road="'+road+'"]:not(.wanHitPath)').forEach(v3=>{
   v3.style.strokeWidth=(parseFloat(v3.getAttribute('stroke-width'))+1.6)+'px';v3.style.opacity='1';});};
  const playStops=chips2=>{chips2.forEach((el3,i3)=>{setTimeout(()=>{
-  try{wanKeyAudition(wanLofPc(+el3.getAttribute('data-lof')),el3.getAttribute('data-minor')==='1');}catch(e3){}},i3*480);});};
+  try{wanKeyAudition(wanLofPc(+el3.getAttribute('data-lof')),el3.getAttribute('data-minor')==='1',.55);}catch(e3){}
+  try{el3.classList.add('wanRouteLit');setTimeout(()=>{try{el3.classList.remove('wanRouteLit');}catch(e4){}},500);}catch(e3){}
+ },i3*560);});};   /* his 140th: 560ms spacing + .55s tails — clean changes; the chips flash in time (the audition SHOWS itself) */
  if(svg&&st.webPaths.length&&centers.length){
   svg.setAttribute('width',wrap.scrollWidth);svg.setAttribute('height',wrap.scrollHeight);
   /* 80th (his twenty-first message): THE ROUTED PATHS — never over a selectable
@@ -21458,7 +21468,8 @@ function wanWeberDraw(){
       (plain-clicked) into a PATH on the ACTIVE road. Two recorders, two destinations. */
    leg.innerHTML='<div style="display:flex;align-items:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:2px;">Path Trips'
     +'<span id="wanPathRec"'+(st.webPathRecSeq?' class="on"':'')+' role="button" title="'+(st.webPathRecSeq?'Recording — every key you play (a plain click) joins the path. Click again to seal it onto the active road.':'Rec — press, then play keys on the map (plain clicks); press again and what you played becomes the active road’s path, its last key the destination.')+'">'+(st.webPathRecSeq?'⏺ REC':'REC')+'</span></div>'
-    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · click a chord selects it (Delete removes it) · double-click a chord edits it · double-click a name to populate it and open the road’s own dialogue · ctrl+click here for the menu</div>';
+    +'<div style="font-size:9.5px;color:#6b4f28;margin-bottom:5px;">Learn the roads — <span id="wanLegI" style="display:inline-block;cursor:pointer;font-weight:800;border:1px solid #6b4f28;border-radius:50%;width:13px;height:13px;line-height:12px;text-align:center;">i</span> · (⌘+click a chord draws its paths)</div>'
+    +'<div id="wanLegHow" style="display:none;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · click a chord selects it (Delete removes it) · double-click a chord edits it · double-click a name to populate it and open the road’s own dialogue · ctrl+click here for the menu</div>';
    /* 80th R23 (his thirty-first message): the three ruled roads lead; expand… below
       them reveals the other roads so the user can populate more paths */
    const ruled=['way','greenway','passageway'];
@@ -21479,7 +21490,8 @@ function wanWeberDraw(){
     row.innerHTML='<span class="wanLegTog" data-road="'+rid+'" role="checkbox" aria-checked="'+(isOff?'false':'true')+'" style="color:'+rd2.style.col+';cursor:pointer;font-size:12px;margin-right:5px;user-select:none;'+(isOff?'opacity:.5;':'')+'" title="'+(isOff?'Off — this road’s path is not on the map. Click to put it back.':'On — this road’s path is drawn on the map. Click to take it off.')+'">'+(isOff?'☐':'☑')+'</span>'
      +'<span class="wanLegTitle" data-road="'+rid+'" style="color:'+rd2.style.col+';border-bottom:2.5px '+deco+' '+rd2.style.col+';'+(isOff?'opacity:.35;':'')+'" title="'+(isOff?'Dulled — its path is off the map. Click to relight it.':'Click dulls this road (its path leaves the map) · hover lights its route · double-click opens its dialogue.')+'">'+rd2.name+'</span>'
      +(info?'<div class="wanLegChain" draggable="false" data-road="'+rid+'" style="'+(isOff?'opacity:.4;':'')+'" title="The chord changes this road makes — drag them onto the chord lane (they fill BACKWARDS ending at the drop chord, the lane’s own rate kept). Click a chord selects it and hears it · Delete removes the selected · double-click one edits it.">'
-      +info.keys.map((k3,i4)=>'<span class="wanLegKey'+(st.webChainSel.has(rid+':'+i4)?' wanLegKeySel':'')+'" data-road="'+rid+'" data-i="'+i4+'" data-pc="'+k3.pc+'" data-minor="'+(k3.minor?1:0)+'">'+k3.lbl+'</span>').join(' → ')+'</div>'
+      +info.keys.map((k3,i4)=>'<span class="wanLegKey'+(st.webChainSel.has(rid+':'+i4)?' wanLegKeySel':'')+'" data-road="'+rid+'" data-i="'+i4+'" data-pc="'+k3.pc+'" data-minor="'+(k3.minor?1:0)+'">'+k3.lbl+'</span>').join(' → ')
+     +' <span class="cpchip wanTripKeep" data-road="'+rid+'" title="★ Keep this road’s trip on the Essence Shelf — the chord changes become an object (⌘Z undoes).">★</span></div>'
       :'<div style="font-size:10px;color:#8a6f4d;font-style:italic;margin-top:2px;">unpopulated — double-click the name to populate it</div>');
     leg.appendChild(row);
    }
@@ -21508,6 +21520,17 @@ function wanWeberDraw(){
     tt.ondblclick=e3=>{e3.stopPropagation();wanRoadDialog(rid);};
    });
    /* 81st R1: the ☑/☐ chip runs the SAME toggle the name runs — one law, two targets */
+   const _li=leg.querySelector('#wanLegI');
+   if(_li)_li.onclick=e3=>{e3.stopPropagation();const hw=leg.querySelector('#wanLegHow');if(hw)hw.style.display=hw.style.display==='none'?'block':'none';};
+   leg.querySelectorAll('.wanTripKeep').forEach(kb=>{
+    kb.onclick=e3=>{e3.stopPropagation();
+     const rid5=kb.getAttribute('data-road');
+     const info5=routeInfo[rid5];const rd5=WAN_PATH_TYPES.find(x5=>x5.id===rid5);
+     if(info5&&rd5&&info5.keys&&info5.keys.length){
+      const run5=info5.keys.map(k5=>({r:k5.pc,iv:(k5.minor?MIN:MAJ).slice(),lbl:k5.lbl,d:1}));
+      essLibShelfMint({id:'wanTrip:'+rid5+':'+Date.now(),name:rd5.name+' path trip',runv:run5,org:'wanPanel'},'wanPanel');
+     }};
+   });
    leg.querySelectorAll('.wanLegTog').forEach(tg=>{
     const rid=tg.getAttribute('data-road');
     tg.onclick=e3=>{e3.stopPropagation();
@@ -21741,6 +21764,8 @@ function wanWeberDraw(){
  /* ---- the toggle ---- */
  const tog=W.querySelector('#wanAllTog');
  if(tog)tog.onclick=e=>{e.stopPropagation();st.webAll=!st.webAll;wanWeberDraw();};
+ const hi=W.querySelector('#wanHowI');
+ if(hi)hi.onclick=e=>{e.stopPropagation();const ht=W.querySelector('#wanHowTo');if(ht)ht.style.display=ht.style.display==='none'?'block':'none';};
  const red=W.querySelector('#wanRedTog');
  if(red)red.onclick=e=>{e.stopPropagation();st.webReduce=!st.webReduce;wanWeberDraw();};
  /* 81st R3: arming ⏺ SHIPS THE PAIR — 🧳 Upcoming Trips comes up beside the map, because
