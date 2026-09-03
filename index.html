@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03p</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03q</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14175,8 +14175,8 @@ function buildCadWindow(){
   }
   for(const t of _list){
    const d=document.createElement('div');
-   d.className='mimCard'+(cadState.sel===t.id?' on':'');
-   d.title=t.desc+' Press = hear it in this phrase’s key (nothing is written) · ✓ writes it at the phrase end.';
+   d.className='mimCard essObjCard'+(cadState.sel===t.id?' on':'');
+   d.title=t.desc+' Press = hear it in this phrase’s key (nothing is written) · ✓ writes it at the phrase end · drag = onto the Essence Shelf or a track row · ⤢ opens the pop-up grid.';
    let extra='';
    if(t.cat==='mod'){
     const dest=cadenceDest(t,k2);
@@ -14185,12 +14185,38 @@ function buildCadWindow(){
    }
    if(t.elide)extra+=' <span class="mimIv">𝄐 elides</span>';
    const rr=cadenceRun(t,k2);   /* resolved for the phrase's key — labels wear the right case */
-   d.innerHTML='<div class="mimName">'+t.name+'</div>'
-    +'<div class="mimChain">'+rr.map(c=>dispLbl(c.lbl)).join(' → ')+extra+'</div>';
-   d.onclick=()=>{
+   /* his 142nd ("the essence shelf objects" gone with the skipped essWins): the library
+      tile rides the SEARCH card now — the Progressions pattern (his 85th), verbatim. */
+   d.innerHTML='<div class="essObjCap"><div class="mimName">'+t.name+'</div>'
+    +'<div class="mimChain" style="flex:1;min-width:0;">'+rr.map(c=>dispLbl(c.lbl)).join(' → ')+extra+'</div>'
+    +'<span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+   essObjCardMount(d,t,'cadw');
+   d.onclick=e=>{
+    if(d._dragAte){d._dragAte=false;return;}
+    if(e.target.closest&&e.target.closest('.essObjCardW'))return;
+    if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(t,t.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
     cadState.sel=t.id;
     if(t.elide)cadState.elide=true;
     buildCadWindow();cadAudition();};
+   d.onmousedown=ev=>{
+    if(ev.button!==0||ev.target.classList.contains('essExB'))return;
+    if(ev.target.closest&&ev.target.closest('.essObjCardW'))return;
+    ev.preventDefault();
+    const x0=ev.clientX,y0=ev.clientY;
+    const mm=e2=>{
+     if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+      cleanup();d._dragAte=true;
+      chipDrag(e2,'♪ '+t.name,dv=>{
+       const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
+       if(shelfEl){essLibShelfMint(t,'cadPanel');return;}
+       if(essDropTryDialog(dv,t))return;
+       if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
+      });
+     }};
+    const mu=()=>cleanup();
+    const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+   };
    cards.appendChild(d);
   }
   }
@@ -15412,6 +15438,17 @@ function essObjRows(o){
    const cs=o.runv.map(c=>({r:c.r,iv:Array.isArray(c.iv)?c.iv.slice():[],lbl:c.lbl,
     d:(typeof c.d==='number'&&c.d>0)?Math.min(c.d,2):1}));
    return strandTrackRows('chords',{chords:cs},{});
+  }catch(e){return null;}
+ }
+ if(o&&o.sid&&Array.isArray(o.pcs)){
+  /* his 142nd ("Neither does Scales"): a SCALES/RAGAS entry is an object too — the
+     [▸ Scale] walk itself (ragaAudSeq, THE SAME LAW THE EAR HEARS), up & down at
+     eighth-note rungs, rooted on the song's tonic nearest middle C (ragaRootMidi). */
+  try{
+   const seq=ragaAudSeq(o);
+   const steps=seq.up.concat(seq.down);
+   const root=ragaRootMidi();
+   return {kind:'melody',rows:steps.map((pc,i)=>[i*.5,.5,root+pc])};
   }catch(e){return null;}
  }
  if(o&&Array.isArray(o.shape)){
@@ -20242,6 +20279,10 @@ function renderRagaInfo(){
   h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">'
    +melismaCatalog(MELISMA_LIB,{tier:1}).slice(0,8).map(o=>'<span class="ragaRiffBtn" data-orn="'+o.id+'" title="'+melTradName(o.trads&&o.trads[0]||'')+' · '+melEraLabel(o.era)+'" style="cursor:pointer;padding:2px 7px;border-radius:5px;background:#3a3e4d;color:#e9eaef;font-size:11px;">'+o.name+'</span>').join('')+'</div>';
  }
+ /* his 142nd ("Neither does Scales"): the selected scale IS a single-track object — the
+    [▸ Scale] walk realized as the clip tile (essObjRows' sid branch), draggable to the
+    Essence Shelf or a track row, ⤢ / double-press = the pop-up grid. */
+ h+='<div id="ragaObjHost" style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:grab;" title="The scale as an object — its up-and-down walk in this song&#8217;s key. Drag it onto the Essence Shelf or a track row · double-press opens the pop-up grid."><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
   +'<button id="ragaApplyBtn" style="padding:5px 12px;font-size:12px;">Use for this section</button>'
   +'<button id="ragaFavBtn" style="padding:5px 10px;font-size:12px;background:#3a3e4d;color:#e9eaef;">'+(isFav?'★ In Favorites':'⭐ Save to Favorites')+'</button>'
@@ -20250,6 +20291,33 @@ function renderRagaInfo(){
   +'</div>';
  h+='<div id="ragaMatchOut" style="display:none;font-size:11.5px;line-height:1.55;color:var(--text);margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--panel);"></div>';
  I.innerHTML=h;
+ const oh=document.getElementById('ragaObjHost');
+ if(oh){
+  essObjCardMount(oh,e,'ragaw');
+  oh.ondblclick=ev=>{ev.stopPropagation();essObjWorldOpen(e,e.name,{x:ev.clientX-40,y:ev.clientY-30});};
+  oh.onclick=ev=>{
+   if(oh._dragAte){oh._dragAte=false;return;}
+   if(ev.target.classList.contains('essExB')){ev.stopPropagation();essObjWorldOpen(e,e.name,{x:ev.clientX-60,y:ev.clientY-40});essObjWorldExpand(true);}
+  };
+  oh.onmousedown=ev=>{
+   if(ev.button!==0||ev.target.classList.contains('essExB'))return;
+   ev.preventDefault();
+   const x0=ev.clientX,y0=ev.clientY;
+   const mm=e2=>{
+    if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+     cleanup();oh._dragAte=true;
+     chipDrag(e2,'♪ '+e.name,dv=>{
+      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
+      if(shelfEl){essLibShelfMint(e,'ragaPanel');return;}
+      if(essDropTryDialog(dv,e))return;
+      if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
+     });
+    }};
+   const mu=()=>cleanup();
+   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
+ }
  const ab=document.getElementById('ragaApplyBtn');if(ab)ab.onclick=()=>ragaApply(e.sid);
  const shb=document.getElementById('ragaShareBtn');if(shb)shb.onclick=()=>shareScaleLink(e.sid);
  const fb=document.getElementById('ragaFavBtn');if(fb)fb.onclick=()=>ragaToggleFav(e.sid);
