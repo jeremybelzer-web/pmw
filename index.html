@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03k</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03l</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11437,7 +11437,7 @@ function swLayoutApply(layout){
    /* his 128th: the SLEEK default — every lower-band window the SAME SIZE (uniform
       cells, their content scrolling inside); the grids row keeps its own law */
    if(!grids&&r.swipe==='h'){m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';}
-   m.style.scrollSnapAlign=r.swipe==='h'?'center':'';   /* full-width cells snap centered on both rows */
+   m.style.scrollSnapAlign=r.swipe==='h'?'start':'';   /* his 155th: the snap aligns LEFT — a swiped-in window lands flush under the upper window's left edge (both rows, one registration) */
   }
   if(grids&&!members.length){
    /* his dotted-＋ (the first message): nothing here yet — one click mints a grid */
