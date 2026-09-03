@@ -781,7 +781,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03x</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03y</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15644,8 +15644,12 @@ function essClipTile(o){
    const b0=Math.max(a2,0),b1=Math.min(tb,span);
    if(b1<=b0||!vt[i])return;
    for(const m of vt[i]){
-    if(m<lo||m>hi)continue;
-    marks+='<rect x="'+gx(b0).toFixed(1)+'" y="'+yOf(m).toFixed(1)+'" width="'+Math.max(2,(b1-b0)/span*(W-KW-1)-1).toFixed(1)+'" height="'+rh+'" rx="1" fill="none" stroke="rgba(255,255,255,.38)" class="essClipGh"/>';
+    /* his 168th: a high-band object (the Scales rows' walk) still shows its
+       accompaniment — the ghost FOLDS by octave into the tile's band; a pitch that
+       cannot fold in (band narrower than an octave) is dropped as before */
+    let mg=m;while(mg<lo)mg+=12;while(mg>hi)mg-=12;
+    if(mg<lo||mg>hi)continue;
+    marks+='<rect x="'+gx(b0).toFixed(1)+'" y="'+yOf(mg).toFixed(1)+'" width="'+Math.max(2,(b1-b0)/span*(W-KW-1)-1).toFixed(1)+'" height="'+rh+'" rx="1" fill="none" stroke="rgba(255,255,255,.38)" class="essClipGh"/>';
    }
   });
  }catch(e){}
@@ -20255,7 +20259,17 @@ function renderRagaResults(){
   h+='<div style="font-size:13px;color:var(--dim);margin:8px 0 3px 0;letter-spacing:.4px;">'+f[1]+'</div>';
   for(const e of list){
    const on=ragaState.sel===e.sid;
+   /* his 168th: each scale carries the 1-TRACK OBJECT at its smallest size — the clip
+      tile (the R49 sid branch realizes the ▸ Scale walk) with the chord-lane ghosts
+      behind the marks (the tile's own law); zoomed small, the NAME stays readable
+      beside it (the tile's inner title is too small at this zoom to serve alone). */
+   let _tl='';try{
+    /* the open path can render while CUR_GRID is the audition rig (no chords in its
+       project) — the tile reads MAIN's song so the ghosts are the song's own */
+    const _t=(typeof withGridWorld==='function'&&typeof CUR_GRID==='string'&&CUR_GRID!=='main')?withGridWorld('main',()=>essClipTile(e)):essClipTile(e);
+    if(_t)_tl='<span class="essClipW" style="zoom:.55;flex:0 0 auto;display:inline-block;">'+_t+'</span>';}catch(err){}
    h+='<div class="ragaRow" data-sid="'+e.sid+'" style="display:flex;gap:6px;align-items:center;padding:2.5px 7px;border-radius:5px;cursor:pointer;'+(on?'background:rgba(232,163,61,.16);outline:1px solid var(--accent);':'')+'">'
+    +_tl
     +'<span style="flex:1;font-size:12px;color:var(--text);">'+e.name+(scaleFavs.has(e.sid)?' <span style="color:var(--accent);">⭐</span>':'')+'</span>'
     +'<span style="font-size:10px;color:var(--dim);">'+e.pcs.length+'</span>'
     +'<button data-a="scale" title="Play the scale up and down in the key of this song" style="padding:1px 7px;font-size:11px;background:#3a3e4d;color:#e9eaef;">▸ Scale</button>'
@@ -20406,20 +20420,21 @@ function buildRagaPanel(){
  const B=document.getElementById('ragaBody');
  if(!B||B.dataset.built)return;
  B.dataset.built='1';
+ B.style.display='flex';B.style.flexDirection='column';   /* his 168th: the scales fill the TOP, the controls ride the BOTTOM */
  B.innerHTML=
-  '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+  '<div style="order:2;display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:8px 0 0 0;">'
   +'<label style="display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--text);cursor:pointer;" title="① Auto-play any selected scale in the key of this song"><input type="checkbox" id="ragaTogAuto" checked style="accent-color:var(--accent);">① Auto-play on select</label>'
   +'<label style="display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--text);cursor:pointer;" title="② Play it yourself — letter keys (a s d f … = the scale degrees, q w e r … = the octave above) or a MIDI keyboard (default ON — changeable in ⚙ Settings)"><input type="checkbox" id="ragaTogSelf" checked style="accent-color:var(--accent);">② Play it yourself (keys / MIDI)</label>'
   +'<label style="display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--text);cursor:pointer;" title="③ Micro Melismas — the moment you hit a note that carries a gamaka it plays the bending note live, including where the bend lands: back on the same note (shaking back and forth) or on a new note above or below. Turn this off to try and re-create the Micro-Melismas called Gamakas with your note-bend wheel or other MIDI device (or draw it in later in the Slide Window)."><input type="checkbox" id="ragaTogMicro" checked style="accent-color:var(--accent);">③ Micro Melismas</label>'
   +'<label style="display:flex;gap:4px;align-items:center;font-size:11.5px;color:var(--text);cursor:pointer;" title="④ Play A Chord With Each Note — the scale’s own chord on that degree sounds underneath, the note louder than the chord: mixed like a melody over its accompaniment"><input type="checkbox" id="ragaTogChords" checked style="accent-color:var(--accent);">④ A chord with each note</label>'
   +'<button id="ragaMatchBtn" title="What scale is this? Runs the pitch-set matcher on your selected notes (or the whole active track) — exact, alias, nearest, and every melakarta that contains the set" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;">🔎 Scale Match</button>'
   +'</div>'
-  +'<div id="ragaMelStrip" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:8px;background:var(--panel);">'
+  +'<div id="ragaMelStrip" style="order:3;display:flex;gap:6px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-top:8px;background:var(--panel);">'
   +'<span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);" title="The Melisma preview home (Q4): press an ornament to hear it ON the selected scale — nothing is written. The full transformer lives in the ➿ window.">➿ Melisma preview</span>'
   +'<span id="ragaMelChips" style="display:flex;gap:4px;flex-wrap:wrap;"></span>'
   +'<a id="ragaMelOpen" style="font-size:11px;color:var(--accent);cursor:pointer;margin-left:auto;">Open the full Melisma / Slide window →</a>'
   +'</div>'
-  +'<div style="display:flex;gap:14px;align-items:flex-start;">'
+  +'<div style="order:1;display:flex;gap:14px;align-items:flex-start;">'
   +'<div id="ragaFilters" style="flex:0 0 185px;"></div>'
   +'<div style="flex:1 1 380px;min-width:300px;">'
   +'<input id="ragaSearch" placeholder="SEARCH" style="width:100%;box-sizing:border-box;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12.5px;letter-spacing:.5px;margin-bottom:6px;">'
@@ -29467,7 +29482,7 @@ const WINDOW_DEFS=[
  {id:'hubPanel',   name:'Samples', icon:'≈', tip:'Sample hub — route tracks to real audio · synth patches · Freesound & open libraries'},
  {id:'importPanel',name:'Import',  icon:'⇪', tip:'Import & cross-pollination sources — import music so we can take it apart into bite-sized building blocks: unlimited source songs, every track auditionable and draggable (4.4) · full-song split, drum-kit zips, voice memos (local backend)'},
  {id:'melPanel',   name:'Melisma', icon:'➿', tip:'Melody Melisma Machine — the universal vocal-ornament engine: runs, turns, scoops, gamakas — organized by tradition and era, never by artist'},
- {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'CHOOSE YOUR OWN ADVENTURE',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
+ {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'Choose Your Own Sound-Adventure',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
  {id:'wanPanel',   name:'Weber’s Wanderer',icon:'🧭',tip:'Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers on Weber\'s table (4.6), drawn as the old aged map: arrow keys walk the chords of your scale and its parallel relative, every landing plays, ✓ writes it to the lane'},
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
  {id:'tripsPanel', name:'Trips',   icon:'🧳',tip:'Upcoming Trips — the itinerary of chord and key changes waiting to enter the song. Opens as a bridge between the window above and the one below. ▶ Start next trip in: the musical time until insert. Small = a chord lane of the trips · expanded = a full editable track.'},
@@ -29658,6 +29673,7 @@ function uiDispatch(action){
   const p=(_ag&&_ag.els&&_ag.els.root)||document.getElementById(uiState.open);
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
+  if(uiState.open==='ragaPanel'&&typeof renderRagaResults==='function'){try{renderRagaResults();renderRagaInfo();}catch(e){}}   /* his 168th: the row tiles re-realize at open — the boot render predates the song's chords, so the ghosts were empty */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
