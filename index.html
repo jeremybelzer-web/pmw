@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03q</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03r</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -19070,6 +19070,27 @@ function melismaRealize(orn,midi,key,durBeats,opts){
   curve=orn.curve.map(p=>[p[0],+(p[1]*intensity*(mirror?-1:1)).toFixed(1)]);
  return {notes,curve};
 }
+function melismaRunInto(rows,fromMidi,toMidi,pcsAbs){
+ /* his 121st, THE RUN-INTO LAW ("if I place a run on the 2nd to last note of the melody,
+    then it will do a run from the first note, ending up on the 2nd note (not replacing
+    the 2nd note)"): a RUN placed on a note that has a NEXT note keeps its rhythm but
+    re-aims its PITCHES to walk the scale ladder from the note TO the neighbor — the
+    run's last row ARRIVES on the neighbor's pitch exactly as it begins (the landing
+    row extends to the neighbor's onset, the realize law), and the neighbor survives
+    whole. Pure: same pitch, one row, or a broken ladder → as written. */
+ if(!rows||rows.length<2||!isFinite(fromMidi)||!isFinite(toMidi)||toMidi===fromMidi)return rows;
+ const dir=toMidi>fromMidi?1:-1;
+ const L=[fromMidi];
+ for(let m=fromMidi+dir;dir>0?m<toMidi:m>toMidi;m+=dir)
+  if(pcsAbs.indexOf(((m%12)+12)%12)>=0)L.push(m);
+ L.push(toMidi);
+ return rows.map((r,i)=>{
+  const t=i/(rows.length-1);
+  const nn=r.slice();
+  nn[2]=L[Math.min(L.length-1,Math.round(t*(L.length-1)))];
+  return nn;
+ });
+}
 function melismaApply(melody,idxs,orn,params,keyAt){
  /* pure: melody array + selected indices → {melody,added}. Fresh rows and fresh bend
     objects throughout — the input is never touched (undo snapshots stay honest).
@@ -19086,6 +19107,16 @@ function melismaApply(melody,idxs,orn,params,keyAt){
   if(!sel.has(i)){out.push(cp(n));continue;}
   const key=keyAt?keyAt(n[0]):{tonic:0,pcs:[0,2,4,5,7,9,11]};
   const r=melismaRealize(orn,n[2],key,n[1],params);
+  if(orn&&orn.fam==='run'&&params.runInto!==false){
+   /* his 121st: the run leads INTO the next note in time (selected or not — a selected
+      neighbor becomes its own run FROM that pitch, so the target holds either way) */
+   let nb=null;
+   for(let j=0;j<melody.length;j++){
+    const c=melody[j];if(!c||j===i)continue;
+    if(c[0]>n[0]+1e-6&&(!nb||c[0]<nb[0]))nb=c;
+   }
+   if(nb)r.notes=melismaRunInto(r.notes,n[2],nb[2],melismaPcs(key));
+  }
   const span=Math.max.apply(null,r.notes.map(row=>row[0]+row[1]));
   const baseVel=(typeof n[8]==='number')?n[8]:.79;
   for(const row of r.notes){
