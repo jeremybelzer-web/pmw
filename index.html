@@ -781,7 +781,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03w</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03x</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -21421,7 +21421,9 @@ function wanWeb2State(){
     scale); view picks what the side shows; shift is its own pan; tonic/minor hold an
     UNLINKED side's independent home. Session state, like the rest of the view. */
  const st=wanState;
- return st.web2||(st.web2={linked:true,view:'weber',shift:0,tonic:null,minor:null});
+ const w2=st.web2||(st.web2={linked:true,view:'weber',shift:0,tonic:null,minor:null});
+ if(typeof w2.split!=='number'||!isFinite(w2.split))w2.split=.5;   /* his 167th: the divider's portion — side 1's share of the row */
+ return w2;
 }
 function wanFloatMenu(e,rows){
  /* the map-menu shell (same id — #wanWebMenu's styles serve): rows = [{label,fn,cur,dis}] */
@@ -21560,7 +21562,7 @@ function wanWeberDraw(){
   /* his 166th: a View/Skin button ABOVE the left side (the right side wears its own) */
   +(_w2on?'<span class="wanAllTog" id="wanView1Btn" title="View / Skin — what the LEFT side shows. More views join as they are built.">View: Weber&#8217;s Matrix ▾</span>':'')
   +'</div>'
-  +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="flex:1 1 auto;min-width:0;">';
+  +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="'+(_w2on?'flex:'+wanWeb2State().split.toFixed(3)+' 1 0;min-width:180px;overflow-x:auto;':'flex:1 1 auto;min-width:0;')+'">';
  for(let r=0;r<WEB_ROWS;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
   for(let c=0;c<WEB_COLS;c++){
@@ -21591,8 +21593,11 @@ function wanWeberDraw(){
   /* his 165th/166th: THE 2ND WANDERER fills the empty middle IN THE 3-SPLIT VIEW —
      the link icon between the maps (small triangles pointing at both), a View/Skin
      button above the side, the second lattice under it. */
-  +(_w2on?'<div style="align-self:center;flex:0 0 auto;"><span id="wanLinkBtn" class="cpchip" style="font-size:12px;letter-spacing:-1px;" title="'+(wanWeb2State().linked?'Linked — the left side is linked with the right side. They both are in the same key, with the same scale. Click for options.':'Unlinked — each side is independent of the other. Click for options.')+'">'+(wanWeb2State().linked?'◅━▻':'━')+'</span></div>'
-   +'<div style="flex:1 1 auto;min-width:280px;display:flex;flex-direction:column;gap:4px;">'
+  +(_w2on?'<div id="wanSplit" style="align-self:stretch;flex:0 0 16px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:col-resize;" title="Drag ⟷ to resize the two boards — one bigger, the other smaller (his 167th). The chip clicks for the link options.">'
+    +'<div style="flex:1;width:3px;border-radius:2px;background:#a8895f;opacity:.6;"></div>'
+    +'<span id="wanLinkBtn" class="cpchip" style="font-size:12px;letter-spacing:-1px;cursor:pointer;" title="'+(wanWeb2State().linked?'Linked — the left side is linked with the right side. They both are in the same key, with the same scale. Click for options.':'Unlinked — each side is independent of the other. Click for options.')+'">'+(wanWeb2State().linked?'◅━▻':'━')+'</span>'
+    +'<div style="flex:1;width:3px;border-radius:2px;background:#a8895f;opacity:.6;"></div></div>'
+   +'<div id="wanSide2Col" style="flex:'+(1-wanWeb2State().split).toFixed(3)+' 1 0;min-width:200px;display:flex;flex-direction:column;gap:4px;">'
    +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='3d'?'3D Matrix':'Decision Trees')+' ▾</span>'
    +(wanWeb2State().linked?'':'<span style="font-size:9.5px;color:#6b4f28;">independent — double-click a key to set THIS side&#8217;s home</span>')+'</div>'
    +'<div id="wanSide2" style="overflow-x:auto;"></div></div>':'')
@@ -22305,6 +22310,28 @@ function wanWeberDraw(){
  const _v1b=W.querySelector('#wanView1Btn');if(_v1b)_v1b.onclick=e=>{e.stopPropagation();wanViewMenu(e,1);};
  const _v2b=W.querySelector('#wanView2Btn');if(_v2b)_v2b.onclick=e=>{e.stopPropagation();wanViewMenu(e,2);};
  const _lb=W.querySelector('#wanLinkBtn');if(_lb)_lb.onclick=e=>{e.stopPropagation();wanLinkMenu(e);};
+ /* his 167th: the middle line is a SPLITTER — drag ⟷ re-portions the two boards live;
+    the chip keeps its click (its own mousedown stops the drag from arming there) */
+ const _sp=W.querySelector('#wanSplit');
+ if(_sp){
+  if(_lb)_lb.onmousedown=e=>e.stopPropagation();
+  _sp.onmousedown=e=>{
+   if(e.button!==0)return;
+   e.preventDefault();
+   const w2=wanWeb2State();
+   const wrapEl=W.querySelector('#wanWebWrap'),colEl=W.querySelector('#wanSide2Col');
+   const row=_sp.parentElement,rw=row.getBoundingClientRect().width;
+   const s0=w2.split,x0=e.clientX;
+   const mv=ev=>{
+    const spl=Math.max(.15,Math.min(.85,s0+(ev.clientX-x0)/Math.max(200,rw)));
+    w2.split=spl;
+    if(wrapEl)wrapEl.style.flexGrow=spl.toFixed(3);
+    if(colEl)colEl.style.flexGrow=(1-spl).toFixed(3);
+   };
+   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  };
+ }
  try{wanSide2Draw();}catch(e){}
 }
 function renderWan(){
