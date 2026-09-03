@@ -794,7 +794,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ad</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ae</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1264,6 +1264,9 @@
           <div id="confDet" style="display:flex;gap:4px;font-size:11px;align-items:center;"></div>
         </div>
   </div>
+    <div class="gridwrap" id="harmPanel" style="margin:12px 0;">
+      <div id="harmBody"></div>
+    </div>
     <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadence SEARCH — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><input id="cadSearchInp" spellcheck="false" placeholder="🔎 SEARCH" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the cadence list by name, label or description." style="margin-left:auto;font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:150px;"></div>
     <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
@@ -11383,7 +11386,7 @@ function swRowMembers(cat){
      fourteen cells right, reading as "no longer populates". */
   /* Sept 3: a just-opened engine lands LEFTMOST and pushes the rest right —
      openWins is newest-first; members follow that order, then non-openWins riders. */
-  const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
+  const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','harmPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
   const isOpen=id=>{
    if(id==='chordPanel')return !(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
    if(id==='tripsPanel')return !!(typeof uiState==='object'&&uiState&&uiState.trips);
@@ -19169,6 +19172,276 @@ function melismaRealize(orn,midi,key,durBeats,opts){
   curve=orn.curve.map(p=>[p[0],+(p[1]*intensity*(mirror?-1:1)).toFixed(1)]);
  return {notes,curve};
 }
+/* ==== 5.5 THE HARMONIZER + COUNTER-MELODIES — the pure core (the roadmap's F4 entry,
+   filed unchanged; P2's voice-leading item lands here). Deterministic throughout:
+   same melody, same chords, same options → the same lines, so the units can pin it. ==== */
+function harmChordPcs(c,ext){
+ /* the chord's pitch classes + the ALLOWED EXTENSIONS (the spec's chord-extension
+    allowances: 9 · 11 · 13 over the root) — a Set of absolute pcs */
+ const out=new Set((c&&Array.isArray(c.iv)&&c.iv.length?c.iv:[0,4,7]).map(v=>(((c&&c.r||0)+v)%12+12)%12));
+ const r=((c&&c.r||0)%12+12)%12;
+ if(ext&&ext[9])out.add((r+2)%12);
+ if(ext&&ext[11])out.add((r+5)%12);
+ if(ext&&ext[13])out.add((r+9)%12);
+ return out;
+}
+function harmWeight(rows,i,beatsPerBar){
+ /* the spec's TARGET SPOTS — "consonant-interval targeting weighted at melodic
+    peaks/valleys/starts/ends/long notes and strong beats". A heavy note DEMANDS a
+    sweet consonance; a light one may pass through. Pure. */
+ const n=rows[i];let w=0;
+ const prev=rows[i-1],next=rows[i+1];
+ if(!prev||!next)w+=2;
+ if(prev&&next&&((n[2]>prev[2]&&n[2]>next[2])||(n[2]<prev[2]&&n[2]<next[2])))w+=2;
+ if(n[1]>=1)w+=1;
+ const bb=beatsPerBar||4,ph=((n[0]%bb)+bb)%bb;
+ if(ph<1e-3||Math.abs(ph-bb/2)<1e-3)w+=1;
+ return w;
+}
+const HARM_SWEET=[3,4,8,9];        /* 3rds & 6ths — the harmony singer's home */
+const HARM_OK=[0,3,4,5,7,8,9];     /* + unison/4th/5th (the pass-through set) */
+function harmonizeLine(rows,chords,opts){
+ /* rows [[beat,dur,midi,…]] → {voices:[line,…]} — each line [[beat,dur,midi]…], one per
+    harmony voice (opts.voices counts the MELODY: 2 voices = melody + 1 line).
+    opts: type 'topline'|'counter' · voices 2–5 · noCross (default ON — trumped ONLY by
+    the range floor) · classical (true = no parallel perfect 5ths/8ves vs the anchor;
+    false = modern parallel-OK) · ext {9,11,13} · start 'auto'|'3rd'|'5th'|'8ve' ·
+    speed 0–100 (counter only: slower ↔ faster) · rangeSpan (semitones below the
+    melody a voice may reach; default 24). */
+ opts=opts||{};
+ const V=Math.max(2,Math.min(5,(opts.voices|0)||2));
+ const noCross=opts.noCross!==false;
+ const classical=opts.classical!==false;
+ const ext=opts.ext||{};
+ const span=(typeof opts.rangeSpan==='number'&&opts.rangeSpan>0)?opts.rangeSpan:24;
+ const mel=(rows||[]).filter(n=>Array.isArray(n)&&n.length>=3).slice().sort((a,b)=>a[0]-b[0]);
+ if(!mel.length)return {voices:[]};
+ const chAt=b=>{try{return chordAt(chords,b).c;}catch(e){return null;}};
+ const voices=[];
+ if((opts.type||'topline')==='counter'){
+  /* THE BACKGROUND COUNTER-MELODY: its own slower/faster walk (speed 0–100 → step
+     2 … ½ beats), chord tones throughout, moving CONTRARY to the melody's local
+     direction when it can, an octave under the melody's opening. Extra voices
+     harmonize the counter line itself by the topline rule. */
+  const sp=Math.max(0,Math.min(100,(typeof opts.speed==='number')?opts.speed:50));
+  const step=Math.max(.5,2-1.5*(sp/100));
+  const t0=mel[0][0],tEnd=mel[mel.length-1][0]+mel[mel.length-1][1];
+  const line=[];
+  let cur=mel[0][2]-12;
+  for(let t=t0;t<tEnd-1e-6;t+=step){
+   const c=chAt(t);if(!c){continue;}
+   const pcs=[...harmChordPcs(c,ext)];
+   const mi=mel.findIndex(n=>n[0]>t+1e-6);
+   const mNow=mi>0?mel[mi-1]:mel[0],mPrev=mi>1?mel[mi-2]:null;
+   const dir=(mPrev&&mNow[2]!==mPrev[2])?(mNow[2]>mPrev[2]?-1:1):0;   /* contrary */
+   let best=null,bs=-1e9;
+   for(let m=cur-7;m<=cur+7;m++){
+    if(pcs.indexOf(((m%12)+12)%12)<0)continue;
+    if(m>=mNow[2])continue;                       /* the background stays under the topline */
+    let s=-Math.abs(m-cur);
+    if(dir&&Math.sign(m-cur)===dir)s+=2.5;        /* contrary motion pays */
+    if(m===cur)s+=(sp<40?.5:-1);                  /* slow counters sustain; fast ones ARPEGGIATE (the 0–100 law is density, and merged holds would eat it) */
+    if(s>bs||(s===bs&&m>(best==null?-1e9:best))){bs=s;best=m;}
+   }
+   if(best==null)continue;
+   const d=Math.min(step,tEnd-t);
+   /* the 0–100 law is DENSITY: a slow counter SUSTAINS a repeated tone into one long
+      note; a fast one RE-ARTICULATES it (the pulsing background line) */
+   if(sp<40&&line.length&&line[line.length-1][2]===best)line[line.length-1][1]=+(line[line.length-1][1]+d).toFixed(4);
+   else line.push([+t.toFixed(4),+d.toFixed(4),best]);
+   cur=best;
+  }
+  voices.push(line);
+  if(V>2){
+   const sub=harmonizeLine(line,chords,{type:'topline',voices:V-1,noCross,classical,ext,rangeSpan:span,start:opts.start});
+   for(const l of sub.voices)voices.push(l);
+  }
+  return {voices};
+ }
+ /* FOLLOW-THE-TOPLINE: V−1 lines under the melody. Voice v anchors on voice v−1
+    (the melody is voice 0) — candidates are the chord's pcs in the octave under the
+    anchor; a HEAVY note (harmWeight ≥2) must land a SWEET consonance vs the MELODY,
+    a light one may take the pass-through set; the voice walks by nearest motion;
+    classical mode refuses parallel perfect 5ths/8ves against its anchor; noCross
+    keeps it strictly under its anchor and ONLY the range floor may break that. */
+ let anchor=mel;
+ for(let v=1;v<V;v++){
+  const line=[];let prevPick=null,prevAnch=null;
+  for(let i=0;i<anchor.length;i++){
+   const n=anchor[i],c=chAt(n[0]);if(!c){continue;}
+   const pcs=harmChordPcs(c,ext);
+   const w=harmWeight(anchor,i);
+   const floor=mel[Math.min(i,mel.length-1)][2]-span;
+   const cands=[];
+   for(let m=n[2]-1;m>=n[2]-12;m--)if(pcs.has(((m%12)+12)%12))cands.push(m);
+   if(!cands.length)for(let m=n[2]-13;m>=n[2]-24;m--)if(pcs.has(((m%12)+12)%12)){cands.push(m);break;}
+   let best=null,bs=-1e9;
+   for(const m of cands){
+    if(noCross&&m>=n[2]&&m>floor)continue;
+    if(m<floor)continue;
+    const iv=((n[2]-m)%12+12)%12;
+    const melIv=((mel[Math.min(i,mel.length-1)][2]-m)%12+12)%12;
+    let s=0;
+    if(HARM_SWEET.indexOf(melIv)>=0)s+=3;
+    else if(HARM_OK.indexOf(melIv)>=0)s+=1;
+    else if(w>=2)continue;                        /* a heavy note refuses the rub */
+    else s-=1;
+    if(i===0&&opts.start&&opts.start!=='auto'){
+     const want=opts.start==='3rd'?[3,4]:opts.start==='5th'?[7]:[0];
+     if(want.indexOf(melIv)>=0)s+=4;
+    }
+    if(prevPick!=null)s-=Math.abs(m-prevPick)*.6;
+    if(classical&&prevPick!=null&&prevAnch!=null){
+     const pIv=((prevAnch-prevPick)%12+12)%12;
+     if((iv===7||iv===0)&&pIv===iv&&Math.sign(m-prevPick)===Math.sign(n[2]-prevAnch)&&m!==prevPick)s-=6;
+    }
+    if(s>bs||(s===bs&&m>(best==null?-1e9:best))){bs=s;best=m;}
+   }
+   if(best==null)continue;
+   line.push([n[0],n[1],best]);
+   prevPick=best;prevAnch=n[2];
+  }
+  voices.push(line);
+  anchor=line.length?line:anchor;
+ }
+ return {voices};
+}
+/* ==== /5.5 pure core ==== */
+/* ==== 5.5 THE HARMONIZER WINDOW — the singer-lips window over the pure core ==== */
+var harmState={type:'topline',voices:2,noCross:true,classical:true,ext:{9:false,11:false,13:false},start:'auto',speed:50,last:null};
+function harmSelRows(){
+ /* the material: the SELECTED melody notes when a selection stands, else the whole line */
+ const mel=project.melody||[];
+ if(typeof selNotes==='object'&&selNotes&&selNotes.size){
+  const rows=[...selNotes].map(i=>mel[i]).filter(Boolean);
+  if(rows.length)return rows.slice().sort((a,b)=>a[0]-b[0]);
+ }
+ return mel.slice().sort((a,b)=>a[0]-b[0]);
+}
+function harmRun(){
+ const rows=harmSelRows();
+ if(!rows.length)return null;
+ const res=harmonizeLine(rows,project.chords||[],{type:harmState.type,voices:harmState.voices,
+  noCross:harmState.noCross,classical:harmState.classical,ext:harmState.ext,
+  start:harmState.start,speed:harmState.speed});
+ harmState.last={rows,res};
+ return harmState.last;
+}
+function harmAudition(){
+ /* melody + every harmony line together, playback-only through the band's own doors */
+ const r=harmRun();if(!r)return;
+ try{
+  const t0=Tone.now()+.06;
+  const bpm=+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96);
+  const spb=60/Math.max(40,Math.min(220,bpm));
+  const b0=r.rows[0][0];
+  for(const n of r.rows)inst.note('melody',[n[2]],Math.max(.06,n[1]*spb*.95),t0+(n[0]-b0)*spb,.72);
+  for(const line of r.res.voices)
+   for(const h of line)inst.note('comping',[h[2]],Math.max(.06,h[1]*spb*.95),t0+(h[0]-b0)*spb,.5);
+  harmStatus((r.res.voices.length)+' harmony line'+(r.res.voices.length>1?'s':'')+' under '+r.rows.length+' melody note'+(r.rows.length>1?'s':'')+' — nothing written. ✓ writes them.');
+ }catch(e){}
+}
+function harmApply(split){
+ const r=harmState.last||harmRun();if(!r||!r.res.voices.length)return;
+ snapshot();
+ if(split){
+  /* the spec's split-to-tracks option: each voice its own custom track, labeled */
+  for(let k=0;k<r.res.voices.length;k++){
+   const id=nextCustomId(project.tracks);
+   project.tracks[id]=r.res.voices[k].map(h=>{const nn=[h[0],h[1],h[2]];nn[8]=.6;return nn;});
+   mutes[id]=false;
+   trackLabels[id]='Harmony '+(k+2);
+  }
+  persistTrackLabels();
+ }else{
+  /* the spec's default: the same track — the harmony joins the melody's own lane */
+  const mel=project.melody;
+  for(const line of r.res.voices)for(const h of line){const nn=[h[0],h[1],h[2]];nn[8]=.6;mel.push(nn);}
+  project.melody=mel;
+ }
+ noteEngine&&noteEngine('harmonizer',{type:harmState.type,voices:harmState.voices});
+ refresh(true);drawTrackSel();
+ harmStatus('Written — '+r.res.voices.length+' voice'+(r.res.voices.length>1?'s':'')+(split?' onto their own tracks':' into the melody track')+'. One undo (⌘Z) takes it all back.');
+}
+function harmStatus(m){const e=document.getElementById('harmStatus');if(e)e.textContent=m;}
+function buildHarmWindow(){
+ const B=document.getElementById('harmBody');if(!B)return;
+ const st=harmState;
+ B.innerHTML=
+  '<div class="winProse" style="font-size:10.5px;color:var(--dim);margin-bottom:8px;">The singer at your shoulder — pick notes in the grid (or none for the whole melody), choose the harmony, ▶ hear it, ✓ write it. The no-crossing rule holds unless the range floor forces a fold.</div>'
+  +'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+  +'<span class="cpchip'+(st.type==='topline'?' on':'')+'" id="harmTypeTop" title="Follow-the-topline — a harmony voice shadows every melody note at consonant intervals below.">🎤 Follow the topline</span>'
+  +'<span class="cpchip'+(st.type==='counter'?' on':'')+'" id="harmTypeCtr" title="Background counter-melody — its own slower or faster line under the melody, contrary motion when it can.">🌊 Counter-melody</span>'
+  +'<label style="font-size:11px;color:var(--text);" title="2–5 voices — the melody counts as one; the rest stack below, each under the last.">Voices <select id="harmVoices">'+[2,3,4,5].map(v=>'<option value="'+v+'"'+(st.voices===v?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'
+  +'<label style="font-size:11px;color:var(--text);" title="The first harmony note’s interval under the melody.">Starting note <select id="harmStart">'+[['auto','Auto'],['3rd','A 3rd below'],['5th','A 5th below'],['8ve','The octave']].map(o=>'<option value="'+o[0]+'"'+(st.start===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>'
+  +'<label id="harmSpeedWrap" style="display:'+(st.type==='counter'?'flex':'none')+';gap:5px;align-items:center;font-size:11px;color:var(--text);" title="Slower ↔ faster (0–100): a slow counter sustains long tones; a fast one pulses.">Slower ⟷ faster <input id="harmSpeed" type="range" min="0" max="100" value="'+st.speed+'" style="width:110px;accent-color:var(--accent);"></label>'
+  +'</div>'
+  +'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The no-crossing rule (its own toggle, default ON): a voice never rises above the one it follows — trumped ONLY by the range limit."><input type="checkbox" id="harmNoCross"'+(st.noCross?' checked':'')+' style="accent-color:var(--accent);">No crossing</label>'
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Classical counterpoint refuses parallel perfect 5ths and octaves; untick for the modern parallel-OK sound."><input type="checkbox" id="harmClassical"'+(st.classical?' checked':'')+' style="accent-color:var(--accent);">Classical voice-leading</label>'
+  +'<span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="Chord-extension allowances — which colors a harmony voice may borrow beyond the triad.">Extensions</span>'
+  +[9,11,13].map(x=>'<label style="display:flex;gap:3px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;"><input type="checkbox" data-harmext="'+x+'"'+(st.ext[x]?' checked':'')+' style="accent-color:var(--accent);">'+x+'</label>').join('')
+  +'</div>'
+  +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<button id="harmHear" style="padding:5px 14px;font-size:12px;">▶ Hear it</button>'
+  +'<button id="harmApplyBtn" style="padding:5px 14px;font-size:12px;">✓ Write (same track)</button>'
+  +'<button id="harmSplitBtn" style="padding:5px 12px;font-size:12px;background:#3a3e4d;color:#e9eaef;" title="The split-to-tracks option — each voice lands on its own new track, labeled Harmony 2, 3…">⇉ Split to tracks</button>'
+  +'<span id="harmStatus" style="font-size:10.5px;color:var(--dim);"></span>'
+  +'</div>'
+  +'<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;margin-top:8px;"></div>';
+ const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
+ on('harmTypeTop',()=>{harmState.type='topline';buildHarmWindow();});
+ on('harmTypeCtr',()=>{harmState.type='counter';buildHarmWindow();});
+ document.getElementById('harmVoices').onchange=e=>{harmState.voices=+e.target.value;};
+ document.getElementById('harmStart').onchange=e=>{harmState.start=e.target.value;};
+ const sp=document.getElementById('harmSpeed');if(sp)sp.oninput=e=>{harmState.speed=+e.target.value;};
+ document.getElementById('harmNoCross').onchange=e=>{harmState.noCross=!!e.target.checked;};
+ document.getElementById('harmClassical').onchange=e=>{harmState.classical=!!e.target.checked;};
+ B.querySelectorAll('[data-harmext]').forEach(cb=>{cb.onchange=()=>{harmState.ext[+cb.getAttribute('data-harmext')]=!!cb.checked;};});
+ on('harmHear',()=>harmAudition());
+ on('harmApplyBtn',()=>harmApply(false));
+ on('harmSplitBtn',()=>harmApply(true));
+ harmObjMount();
+}
+function harmObjMount(){
+ /* the UNIVERSAL OBJECT law (his 138th): the harmonizer's result is the same 1-track
+    object as every engine's — the tile represents it, drags to the Shelf or a track,
+    ⤢/double-press opens the pop-up grid */
+ const host=document.getElementById('harmObjRow');if(!host)return;
+ host.innerHTML='';
+ const r=harmState.last||harmRun();if(!r||!r.res.voices.length)return;
+ const rows=[];for(const line of r.res.voices)for(const h of line)rows.push([h[0],h[1],h[2]]);
+ rows.sort((a,b)=>a[0]-b[0]);
+ const o={id:'harm:'+Date.now(),name:(harmState.type==='counter'?'Counter-melody':'Harmony')+' × '+r.res.voices.length,strand:'melody',data:{rows},org:'harmPanel'};
+ const cap=document.createElement('span');
+ cap.style.cssText='font-size:10.5px;color:var(--dim);';
+ cap.textContent='The result as an object — drag it to the Essence Shelf or a track:';
+ host.appendChild(cap);
+ const d=document.createElement('div');
+ d.className='essObjCard';d.style.cssText='display:flex;align-items:center;gap:6px;cursor:grab;';
+ essObjCardMount(d,o,'harmw');
+ d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
+ d.onmousedown=ev=>{
+  if(ev.button!==0)return;
+  ev.preventDefault();
+  const x0=ev.clientX,y0=ev.clientY;
+  const mm=e2=>{
+   if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+    cleanup();
+    chipDrag(e2,'👄 '+o.name,dv=>{
+     const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);
+     if(shelfEl){essLibShelfMint(o,'harmPanel');return;}
+     if(essDropTryDialog(dv,o))return;
+     if(typeof flashHint==='function')flashHint('Drop it on a track row or the Essence Shelf.');
+    });
+   }};
+  const mu=()=>cleanup();
+  const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+ };
+ host.appendChild(d);
+}
+/* ==== /5.5 window ==== */
 function melismaRunInto(rows,fromMidi,toMidi,pcsAbs){
  /* his 121st, THE RUN-INTO LAW ("if I place a run on the 2nd to last note of the melody,
     then it will do a run from the first note, ending up on the 2nd note (not replacing
@@ -29618,6 +29891,7 @@ const WINDOW_DEFS=[
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
  {id:'tripsPanel', name:'Trips',   icon:'🧳',tip:'Upcoming Trips — the itinerary of chord and key changes waiting to enter the song. Opens as a bridge between the window above and the one below. ▶ Start next trip in: the musical time until insert. Small = a chord lane of the trips · expanded = a full editable track.'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
+ {id:'harmPanel',  name:'Harmonizer',icon:'👄',title:'The Harmonizer',tip:'5.5 THE HARMONIZER + counter-melodies — the singer at your shoulder: follow-the-topline harmony or a background counter-melody · 2–5 voices · no-crossing (its own toggle, default ON) · consonance targeted at peaks, valleys, starts, ends, long notes and strong beats · chord-extension allowances · classical counterpoint or modern parallel-OK.'},
  {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Its own window in the column — the SEARCH button is the coming Cadence Search Window\u2019s home.'},
  {id:'rhyPanel',   name:'Rhythm',  icon:'\u266c', tip:'THE RHYTHM ENGINE \u2014 the Rhythm Search Window: search the Curiosities of your curated song list for the rhythm selected in the grid above. Chord Strikes \u00b7 the rhythm of a melody or a polyphonic instrument \u00b7 Rate of Chord Change \u00b7 Rhythmic Form \u00b7 the song as a Compound Rhythm.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & count-in · Web MIDI (device inputs · outputs · connection status) · audio device (output choice · sample rate · latency) · tempo & time signature (the sample-directory and DAW-routing guides live behind the ⇪ Import window)'}];
@@ -29634,6 +29908,7 @@ const RAIL_DEFS=[
  {icon:'🧳', win:'tripsPanel',tip:'Open Upcoming Trips — the itinerary that feeds the song · a bridge between the window above and the one below'},
  {icon:'🪐', win:'orbPanel',tip:'Open Interplanetary Orbits — the planet is the key you are in, pivot chords open roads to new worlds (4.7 rework)'},
  {icon:'△', win:'prismPanel',tip:'Open THE SONG PRISM — split any track into contour · Note DNA · rhythm, letter the phrases, keep essences on the Shelf (5.1)'},
+ {icon:'👄', win:'harmPanel',tip:'Open the Harmonizer — follow-the-topline harmonies and background counter-melodies, 2–5 voices (5.5)'},
  {icon:'𝄂', win:'cadPanel',tip:'Open the Cadence Window — the chords at the end of a musical phrase. Nothing more or less. (5.3)'},
  {icon:'⤢', ui:'expandAll',tip:'Expand every collapsed window (v3 §3 — collapsed windows rest as quiet grey strips)'}];
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
@@ -29796,7 +30071,7 @@ function uiDispatch(action){
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
- if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel')){
+ if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel'||uiState.open==='harmPanel')){   /* 5.5: the Harmonizer joins the greeter list */
   /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation, Melisma and — 75th round four,
      his words — SCALES windows arrive with a linked audition grid directly ABOVE them —
      no Chord Palette, spawn-linked through the ONE graph. (The palette's 3.3 search
@@ -29809,6 +30084,7 @@ function uiDispatch(action){
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='ragaPanel'&&typeof renderRagaResults==='function'){try{renderRagaResults();renderRagaInfo();}catch(e){}}   /* his 168th: the row tiles re-realize at open — the boot render predates the song's chords, so the ghosts were empty */
+  if(uiState.open==='harmPanel'&&typeof buildHarmWindow==='function'){try{buildHarmWindow();}catch(e){}}   /* 5.5: the Harmonizer greets its selection */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
@@ -31237,7 +31513,7 @@ let _gridEvtEntered=false;
    along); tripsPanel is EXCLUDED — it keeps its [72] auto-stacking under the focused
    window. Drag the ⠿ grip vertically; the gold line (the §3 motion law) shows the
    deposit; the order persists in uiState.colOrder. */
-const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','snapPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];   /* 76th R4: the Snap window joins the column */
+const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','snapPanel','harmPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];   /* 76th R4: the Snap window joins the column */
 function colMemberOk(id){
  /* Phase 2 R2: grid INSTANCES (gridRowWrap_g2…) are column members too — "the multi-track
     grid… is itself just another window" extends to every instance of it. They are
