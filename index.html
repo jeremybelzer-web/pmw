@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03t</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03u</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -25022,6 +25022,28 @@ function renderOrb(){
   +'<span id="orbEcoSel" style="font-size:10.5px;color:var(--dim);"></span></div>'
   +'</details></div>'
   +'</div>';
+ /* his 165th (Sept 3): IN THE 3-SPLIT VIEW (swLayoutState on) the planets ride the LEFT
+    and the controls the RIGHT — his 141st column (planets top, words bottom) stands
+    everywhere else. A DOM move after assembly: the same blocks, two real columns. */
+ if(typeof swLayoutState!=='undefined'&&swLayoutState){try{
+  const _col=B.firstElementChild;
+  const _map=_col&&_col.querySelector('#orbMapWrap');
+  if(_col&&_map){
+   const _blocks=[];
+   const _collect=host=>{for(const ch of [...host.children]){if(ch===_map)continue;if(ch.style&&ch.style.display==='contents'){_collect(ch);continue;}_blocks.push(ch);}};
+   _collect(_col);
+   _blocks.sort((a,b)=>((+a.style.order||0)-(+b.style.order||0)));   /* the R48 visual order, kept */
+   const _row=document.createElement('div');
+   _row.style.cssText='display:flex;gap:14px;align-items:flex-start;';
+   const _right=document.createElement('div');
+   _right.style.cssText='flex:1 1 320px;min-width:300px;max-width:560px;display:flex;flex-direction:column;gap:10px;';
+   _map.style.order='';_map.style.flex='1 1 620px';_map.style.minWidth='420px';
+   for(const _bl of _blocks){_bl.style.order='';_right.appendChild(_bl);}
+   _row.appendChild(_map);_row.appendChild(_right);
+   while(_col.firstChild)_col.removeChild(_col.firstChild);
+   _col.appendChild(_row);
+  }
+ }catch(e){}}
  /* R6 — LIMITATION = CREATIVITY: the triangle opens/closes the lane; a toggle re-grows the moons */
  const lh=document.getElementById('orbLimHead');if(lh)lh.onclick=()=>{orbState.lim.open=!orbState.lim.open;renderOrb();};
  B.querySelectorAll('.orbLimScale').forEach(l=>{l.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();const id=l.getAttribute('data-sc');orbState.lim.scale[id]=orbState.lim.scale[id]?0:1;orbState.sel=0;renderOrb();
