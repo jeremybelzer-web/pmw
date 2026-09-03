@@ -762,7 +762,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ac</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ad</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15627,9 +15627,37 @@ function chipDrag(e0,label,onDrop){
  const g=document.createElement('div');g.className='dragGhost';g.textContent=label;
  g.style.left=(e0.clientX/_bz+10)+'px';g.style.top=(e0.clientY/_bz-10)+'px';
  document.body.appendChild(g);
- const mv=e=>{g.style.left=(e.clientX/_bz+10)+'px';g.style.top=(e.clientY/_bz-10)+'px';};
+ /* his 125th — THE REACH: dragging from a lower window up to the far-away grid needs
+    the page to COME ALONG. Holding the drag near the viewport's top or bottom edge
+    scrolls the column (the skin's fixed rows are their own geometry — scrollBy no-ops
+    there, harmlessly). */
+ let _asY=null,_asRAF=null,_asArm=0;
+ const _asBand=44;
+ const _asTick=()=>{
+  _asRAF=null;
+  if(_asY==null)return;
+  const vh=window.innerHeight;
+  let dy=0;
+  if(_asY<_asBand)dy=-Math.ceil((_asBand-_asY)/2);
+  else if(_asY>vh-_asBand)dy=Math.ceil((_asY-(vh-_asBand))/2);
+  if(dy){window.scrollBy(0,dy);_asRAF=requestAnimationFrame(_asTick);}
+ };
+ let _asTO=null;
+ const mv=e=>{g.style.left=(e.clientX/_bz+10)+'px';g.style.top=(e.clientY/_bz-10)+'px';
+  _asY=e.clientY;
+  const vh=window.innerHeight;
+  const inBand=_asY<_asBand||_asY>vh-_asBand;
+  /* a quarter-second HOLD at the edge arms the scroll (timer-armed — a parked pointer
+     fires no more moves) — a drop AIMED near the edge (the keys lane lives high) must
+     not shove the page out from under it */
+  if(!inBand){_asArm=0;if(_asTO){clearTimeout(_asTO);_asTO=null;}}
+  else if(!_asArm){_asArm=performance.now();
+   _asTO=setTimeout(()=>{_asTO=null;if(_asY!=null&&!_asRAF)_asTick();},260);}
+ };
  const up=e=>{
   document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  _asY=null;if(_asRAF){cancelAnimationFrame(_asRAF);_asRAF=null;}
+  if(_asTO){clearTimeout(_asTO);_asTO=null;}
   try{g.remove();}catch(err){}
   onDrop(e);
  };
