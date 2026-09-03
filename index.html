@@ -86,7 +86,14 @@
   #csCards .csCard .essObjCardW{margin-top:3px;}
   #zimBtn[data-retired]{display:none;}   /* his ninth message: the top button retires — the zim paths stay alive (the Lower Window and the note menus reach it) */
   .swRow .swCell{display:inline-block;white-space:normal;vertical-align:top;margin:8px;}   /* 79th R8: the layout rows' members */
-  .swRow .swCell.winCollapsed{height:auto!important;}   /* his 129th: a collapsed window SHRINKS to its title bar — the R31 uniform height held it open as a full-size empty box, which read as "hidden + blank space" */
+  .swRow .swCell.winCollapsed{height:auto!important;}
+  /* his 138th: in a layout row the header PROSE hides behind an ⓘ — the interactive
+     surface first ("I can't see the part of the windows I would interact with") */
+  .swCell .winProse{display:none;}
+  .swCell.showProse .winProse{display:block;}
+  .wbtn.winInfoB{margin-left:auto;font-weight:700;}
+  .swSplit{flex:0 0 7px;cursor:row-resize;background:var(--line);border-top:1px solid #4a4f61;border-bottom:1px solid #23252e;}
+  .swSplit:hover{background:var(--accent);}   /* his 129th: a collapsed window SHRINKS to its title bar — the R31 uniform height held it open as a full-size empty box, which read as "hidden + blank space" */
   .swRow #chordPanel.swCell,.swRow #swShelf.swCell,.swRow #gridRowWrap.swCell,.swRow [data-gridworld].swCell{display:inline-flex;}   /* flex-native members keep their inner layout — clearing their inline display must not flatten the rail/grid pair */
   body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
   body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
@@ -763,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ag</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -869,13 +876,13 @@
   <!-- July 27a (client): the Melisma window lives at the TOP of the screen — first thing
        under the icon bar when open (the one-window law is unchanged; docks 〜 Slide) -->
   <div class="gridwrap" id="melPanel" style="margin:12px 0;">
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Variation engine · Melody Melisma Machine</div>
+    <div class="winProse" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Variation engine · Melody Melisma Machine</div>
     <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
     <div id="melSongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above. Every track other than Drums, the Polyphonic Instrument and Melody arrives muted and hidden — unhide and unmute them any time.">Load a song into the audition grid</label>
       <select id="melSongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
     </div>
-    <div style="border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 10px 0;font-size:12px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">
+    <div class="winProse" style="border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 10px 0;font-size:12px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">
       “<b>Techniques, ornaments, articulations, contours, interval patterns, and scales are not copyrightable. Specific melodic expression is.</b>”
       <span style="color:var(--dim);">— the line this engine is built on. Every entry below is generic musical vocabulary, organized by tradition and era, never by artist. Curves are derived approximations until ear-approved.</span>
     </div>
@@ -896,7 +903,7 @@
        window: wander related key centers on Weber's table, arrow keys walk the chords.
        Lives at the top of the screen with the other CHOOSE YOUR OWN ADVENTURE windows. -->
   <div class="gridwrap" id="wanPanel" style="margin:12px 0;">
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Harmony game · Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers (Weber's table, 1817–1821)</div>
+    <div id="wanIntroLine" class="winProse" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Harmony game · Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers (Weber's table, 1817–1821)</div>
     <!-- 80th R9 (his ninth message + the table image): THE WEBER MATRIX as the window's
          DEFAULT view — 10 letters across × 13 down, the song's key seated where C sits
          in the printed table (row 7, column 5); spelled keys, double-sharps and
@@ -11314,7 +11321,15 @@ function swShelfBlock(){
  hd2.appendChild(mn2);hd2.appendChild(x2);
  const body2=()=>d.querySelector('.essBody');
  mn2.onclick=e=>{e.stopPropagation();const b3=body2();
-  b3.style.display=b3.style.display==='none'?'flex':'none';mn2.textContent=b3.style.display==='none'?'+':'−';};
+  const collapsing=b3.style.display!=='none';
+  b3.style.display=collapsing?'none':'flex';mn2.textContent=collapsing?'+':'−';
+  /* his 133rd: the − must DO something — the shelf's whole ROW shrinks to the head
+     and gives its share back to the neighbours (restored on +) */
+  const row2=d.closest('.swRow');
+  if(row2){
+   if(collapsing){row2.dataset.flexSaved=row2.style.flex;row2.style.flex='0 0 auto';}
+   else if(row2.dataset.flexSaved){row2.style.flex=row2.dataset.flexSaved;delete row2.dataset.flexSaved;}
+  }};
  x2.onclick=e=>{e.stopPropagation();body2().style.display='none';mn2.style.display='none';x2.style.display='none';
   d.dataset.shelfHidden='1';hd2.style.cursor='pointer';
   hd2.title='The shelf is hidden — click to bring it back';};
@@ -11381,11 +11396,11 @@ function swLayoutApply(layout){
    row.appendChild(m);
    m.style.display='';
    m.classList.add('swCell');
-   m.style.width=r.swipe==='h'?(grids?'96%':'46%'):'';
+   m.style.width=r.swipe==='h'?'96%':'';   /* his 136th: every lower window fills its row like the grid — one window per view, the swipe keeps the rest reachable */
    /* his 128th: the SLEEK default — every lower-band window the SAME SIZE (uniform
       cells, their content scrolling inside); the grids row keeps its own law */
    if(!grids&&r.swipe==='h'){m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';}
-   m.style.scrollSnapAlign=grids?'center':'';
+   m.style.scrollSnapAlign=r.swipe==='h'?'center':'';   /* full-width cells snap centered on both rows */
   }
   if(grids&&!members.length){
    /* his dotted-＋ (the first message): nothing here yet — one click mints a grid */
@@ -11418,6 +11433,38 @@ function swLayoutApply(layout){
    try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
   }
  });
+ /* his 132nd/139th — THE SPLITTER LAW: the rows wear visible borders and the borders
+    DRAG (the reference behavior is recorded in the RAW; the code cites the decision).
+    A drag re-shares the two neighbouring rows and persists into the layout of record. */
+ const _rws=[...layer.querySelectorAll(':scope > .swRow')];
+ for(let _i=0;_i<_rws.length-1;_i++){
+  const above=_rws[_i],below=_rws[_i+1];
+  const sp=document.createElement('div');
+  sp.className='swSplit';
+  sp.title='Drag ↕ to resize the two windows this border separates.';
+  layer.insertBefore(sp,below);
+  sp.onmousedown=e0=>{
+   e0.preventDefault();
+   const H=Math.max(1,layer.getBoundingClientRect().height);
+   const fa=parseFloat(above.style.flex)||1,fb=parseFloat(below.style.flex)||1;
+   const y0=e0.clientY;
+   const mv=e=>{
+    const dPct=(e.clientY-y0)/H*100;
+    above.style.flex=Math.max(5,fa+dPct)+' 1 0%';
+    below.style.flex=Math.max(5,fb-dPct)+' 1 0%';
+   };
+   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+    try{
+     const shares=[...layer.querySelectorAll(':scope > .swRow')].map(r2=>parseFloat(r2.style.flex)||10);
+     if(swLayoutState&&swLayoutState.rows.length===shares.length){
+      swLayoutState.rows.forEach((r2,i2)=>{r2.pct=Math.round(shares[i2]*10)/10;});
+      if(typeof canvasState==='object'&&canvasState){canvasState.layout=JSON.parse(JSON.stringify(swLayoutState));persistCanvas();}
+     }
+    }catch(err){}
+   };
+   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  };
+ }
  const chk=document.querySelector('#swShelfMove input');
  if(chk)chk.checked=_swShelfWithLower;
 }
@@ -21722,10 +21769,19 @@ function wanWeberDraw(){
    if(!pan.moved&&Math.hypot(dx,dy)<7)return;
    pan.moved=true;window._wanPanned=true;
    const rowH=25,pairW=94;   /* a row down = −1 fifth · a column pair right = +3 fifths */
-   const shift=pan.shift0+Math.round(dy/rowH)*1-Math.round(dx/pairW)*3;
+   const stepY=Math.round(dy/rowH),stepX=Math.round(dx/pairW);
+   const shift=pan.shift0+stepY*1-stepX*3;
    if(shift!==st.webShift){st.webShift=shift;wanWeberDraw();}
+   /* his 135th: the map RIDES THE POINTER — the un-committed remainder glides as a
+      transform on the drawn web, BOTH axes at once (diagonals included); the lattice
+      still commits in its own legal units underneath, and the redraw's shift cancels
+      against the remainder so the motion never jumps. */
+   const rx=dx-stepX*pairW,ry=dy-stepY*rowH;
+   const kid=wrap.firstElementChild;
+   if(kid)kid.style.transform='translate('+rx+'px,'+ry+'px)';
   };
   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);pan=null;
+   const kid=wrap.firstElementChild;if(kid)kid.style.transform='';
    setTimeout(()=>{window._wanPanned=false;},0);};
   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
  };
@@ -29188,11 +29244,20 @@ function initUiShell(){
   const wrap=document.createElement('div');wrap.className='winBodyWrap';
   while(p.firstChild)wrap.appendChild(p.firstChild);
   const head=document.createElement('div');head.className='winHead';
-  head.innerHTML=`<span class="wtitle">${d.icon} ${d.title||d.name}</span><span class="wbtn" data-w="collapse" title="Collapse to a slim strip (click the strip to reopen)">▂</span><span class="wbtn" data-w="close" title="Close (reopen from the icon bar)">✕</span>`;
+  head.innerHTML=`<span class="wtitle">${d.icon} ${d.title||d.name}</span><span class="wbtn" data-w="collapse" style="margin-left:auto;" title="Collapse to a slim strip (click the strip to reopen)">▂</span><span class="wbtn" data-w="close" title="Close (reopen from the icon bar)">✕</span>`;   /* his 137th: the chips hugged the title and "clicking the window" hit the ✕ — the corner law, everywhere */
   head.onclick=e=>{
    const w=e.target&&e.target.dataset&&e.target.dataset.w;
+   if(e.target&&e.target.classList&&e.target.classList.contains('winInfoB')){e.stopPropagation();p.classList.toggle('showProse');return;}
    if(w==='close')uiDispatch({type:'toggle',id:d.id});
    else uiDispatch({type:'collapse',id:d.id});};
+  /* his 138th: the ⓘ opens the hidden prose (it only shows meaning inside a layout row) */
+  if(p.querySelector('.winProse')){
+   const inf=document.createElement('span');
+   inf.className='wbtn winInfoB';inf.textContent='ⓘ';
+   inf.title='About this window — the introduction text lives behind this button in the split layouts.';
+   const col=head.querySelector('[data-w="collapse"]');
+   head.insertBefore(inf,col);col.style.marginLeft='';
+  }
   const rez=document.createElement('div');rez.className='winResize';rez.title='Drag to set this window’s height';
   rez.onmousedown=e0=>{
    e0.preventDefault();
