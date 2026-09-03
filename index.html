@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ak</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03al</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11493,7 +11493,7 @@ function swLayoutApply(layout){
  const remember=el=>{_swSaved.push({el,next:el.nextSibling});};
  const rows=swLayoutState.rows;
  const shelfRides=_swShelfWithLower&&rows.some(r=>r.cat==='shelf');
- try{magClose('shelf');magClose('engines');}catch(e){}   /* his 179th: standing magnifiers close before the re-apply re-mounts them */
+ try{for(const k of Object.keys(_magPolls))magClose(k);}catch(e){}   /* his 179th/181st: every standing magnifier pane closes before the re-apply re-mounts them */
  rows.forEach((r,ri)=>{
   if(r.cat==='shelf'&&shelfRides)return;   /* his toggle ON — the shelf joins the lower row instead */
   const row=document.createElement('div');
@@ -11504,11 +11504,8 @@ function swLayoutApply(layout){
   layer.appendChild(row);
   if(r.cat==='shelf'){
    if(swMagState.shelf){
-    /* his 179th Way 1: the middle band IS the Track MIDI Magnifier */
-    const host=document.createElement('div');
-    host.style.cssText='height:100%;overflow:hidden;';
-    row.appendChild(host);
-    try{magMount(host,'shelf');}catch(e){}
+    /* his 179th Way 1: the middle band IS the Track MIDI Magnifier (panes: his 181st) */
+    try{magBandMount(row,'shelf');}catch(e){}
    }else{
     const d=swShelfBlock();remember(d);row.appendChild(d);d.style.height='100%';
     if(swShelfDup)d.style.cssText+=';display:inline-block;width:49%;vertical-align:top;overflow:auto;';
@@ -11537,11 +11534,8 @@ function swLayoutApply(layout){
    return;
   }
   if(r.cat==='engines'&&swMagState.engines){
-   /* his 179th: the LOWER band as the magnifier, the same toggle law */
-   const host=document.createElement('div');
-   host.style.cssText='height:100%;overflow:hidden;white-space:normal;';
-   row.appendChild(host);
-   try{magMount(host,'engines');}catch(e){}
+   /* his 179th: the LOWER band as the magnifier, the same toggle law (panes: his 181st) */
+   try{magBandMount(row,'engines');}catch(e){}
    swMagTgAdd(row,'engines');
    return;
   }
@@ -14858,6 +14852,7 @@ function buildPrism(reanalyze){
   const twin=project.shelf.find(x=>x!==o&&x.strand===o.strand&&x.fp===o.fp);
   d.title='Press = audition · drag onto the GRID = apply to the selected notes there · drag onto a TRACK row below the grid = the app asks: expand into multiple tracks, collapse into 1, or just apply · ✓ applies to the grid selection · double-click the name to rename · ✕ removes.'+(twin?' ↔ An identical '+o.strand+' also lives on the shelf: '+twin.name:'');
   d.onmousedown=e=>{
+   try{magObjSel=o.id;}catch(err){}   /* his 181st: a pressed shelf object becomes the magnifier's target */
    /* r2: shelf objects are grid-DRAG objects — >4px promotes to the chipDrag ghost */
    if(e.button!==0||e.target.classList.contains('przApplyB')||e.target.classList.contains('przDelB')||e.target.classList.contains('przShName')||e.target.classList.contains('essExB'))return;
    if(e.target.closest&&e.target.closest('.essObjCardW'))return;   /* inside the world = the grid's own gestures */
@@ -19510,12 +19505,73 @@ function magMainGridEl(){return [...document.querySelectorAll('[id="gridWrap"]')
 var swMagState={shelf:false,engines:false};   /* his 179th: which bands ride as magnifiers */
 var swShelfDup=false;                          /* his 179th Way 2: the duplicated shelf */
 var _magPolls={};
-function magMount(host,tag){
- /* a band-sized, beat-locked magnified view of the MAIN grid's active pitched track —
-    edits flow BOTH WAYS (an 800ms mirror; a write-back lands as ONE undo step). */
- const tr=withGridWorld('main',()=>((typeof activeTrack==='string'&&activeTrack!=='drums')?activeTrack:'melody'));
- const rows=withGridWorld('main',()=>(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]]));
- const o={id:'mag:'+tag,name:'Track MIDI Magnifier — '+(typeof trackLabel==='function'?trackLabel(tr):tr),strand:'melody',data:{rows:rows.length?rows:[[0,1,60]]},org:'magnifier'};
+var magObjSel=null;   /* his 181st: the last PRESSED single-track object (the main shelf sets it) */
+function magTarget(){
+ /* his 181st, THE SELECTION RESOLVER — what the magnifier edits, in his order:
+    ① a selected single-track OBJECT (the shelf press) → that object;
+    ② a selected track NAME BOX (selHead) → the whole track;
+    ③ a NOTE SELECTION on a track → that region only (the midi-clip case at v1 —
+      the clip-entity hook joins when the clip lanes grow a sticky selection, recorded);
+    ④ else — the active pitched track whole. */
+ try{
+  if(magObjSel&&Array.isArray(project.shelf)&&project.shelf.some(x=>x.id===magObjSel))
+   return {kind:'object',objId:magObjSel};
+  if(typeof selHead==='string'&&selHead&&selHead!=='drums')
+   return {kind:'track',tr:selHead};
+  if(typeof selNotes==='object'&&selNotes&&selNotes.size&&typeof selOwner==='string'&&selOwner==='main'){
+   const tr=(typeof activeTrack==='string'&&activeTrack!=='drums')?activeTrack:'melody';
+   const rows=withGridWorld('main',()=>[...selNotes].map(i=>project.melody[i]).filter(Boolean));
+   if(rows.length){
+    let a=1e9,b2=0;for(const n of rows){if(n[0]<a)a=n[0];if(n[0]+n[1]>b2)b2=n[0]+n[1];}
+    return {kind:'region',tr,a:Math.floor(a),b:Math.ceil(b2)};
+   }
+  }
+ }catch(e){}
+ return {kind:'track',tr:withGridWorld('main',()=>((typeof activeTrack==='string'&&activeTrack!=='drums')?activeTrack:'melody'))};
+}
+function magTargetSig(t){return t.kind+':'+(t.tr||'')+':'+(t.objId||'')+':'+(t.a!=null?t.a+'-'+t.b:'');}
+function magTargetRows(t){
+ try{
+  if(t.kind==='object'){
+   const o=project.shelf.find(x=>x.id===t.objId);
+   return o&&o.data&&Array.isArray(o.data.rows)?o.data.rows.map(n=>[n[0],n[1],n[2]]):[];
+  }
+  if(t.kind==='region')
+   return withGridWorld('main',()=>(project.tracks[t.tr]||[]).filter(n=>n[0]>=t.a-1e-6&&n[0]<t.b-1e-6).map(n=>[n[0],n[1],n[2]]));
+  return withGridWorld('main',()=>(project.tracks[t.tr]||[]).map(n=>[n[0],n[1],n[2]]));
+ }catch(e){return [];}
+}
+function magWriteBack(t,rows){
+ /* the magnifier EDITS the thing itself — one undo per write-back */
+ try{
+  if(t.kind==='object'){
+   const o=project.shelf.find(x=>x.id===t.objId);if(!o)return;
+   withGridWorld('main',()=>{snapshot();o.data.rows=rows.map(n=>[n[0],n[1],n[2]]);refresh(true);});
+   return;
+  }
+  withGridWorld('main',()=>{
+   snapshot();
+   if(t.kind==='region'){
+    const keep=(project.tracks[t.tr]||[]).filter(n=>!(n[0]>=t.a-1e-6&&n[0]<t.b-1e-6));
+    project.tracks[t.tr]=keep.concat(rows.map(n=>[n[0],n[1],n[2]]));
+   }else{
+    project.tracks[t.tr]=rows.map(n=>[n[0],n[1],n[2]]);
+   }
+   refresh(true);
+  });
+ }catch(e){}
+}
+function magMount(host,tag,pinTarget){
+ /* a band-sized, beat-locked magnified EDITOR of whatever is selected (his 181st) —
+    edits flow BOTH WAYS (an 800ms mirror; one undo per write-back). A PINNED pane
+    keeps its target; a following pane re-aims when the selection changes. */
+ const t=pinTarget||magTarget();
+ const sig=magTargetSig(t);
+ const rows=magTargetRows(t);
+ const label=t.kind==='object'?(project.shelf.find(x=>x.id===t.objId)||{}).name
+  :t.kind==='region'?('bars '+(Math.floor(t.a/4)+1)+'–'+Math.ceil(t.b/4)+' of '+(typeof trackLabel==='function'?trackLabel(t.tr):t.tr))
+  :(typeof trackLabel==='function'?trackLabel(t.tr):t.tr);
+ const o={id:'mag:'+tag,name:'Magnifier — '+(label||'track'),strand:'melody',data:{rows:rows.length?rows:[[0,1,60]]},org:'magnifier'};
  const m=essObjWorldMint(o);
  if(!m)return null;
  withGridWorld(m.w.id,()=>{
@@ -19527,15 +19583,19 @@ function magMount(host,tag){
  host.appendChild(m.w.els.root);
  m.w.els.root.style.marginTop='0';
  const scrollEl=m.w.els.root.querySelector('[id="gridWrap"]')||m.w.els.root;
- const link=magLinkScroll(scrollEl,m.w.id,magMainGridEl());
+ const link=(t.kind!=='object')?magLinkScroll(scrollEl,m.w.id,magMainGridEl()):null;   /* an object floats free of the timeline */
  let lastMain=JSON.stringify(rows),lastWorld=lastMain;
  const iv=setInterval(()=>{
   if(!GRID_WORLDS[m.w.id]||!host.isConnected){magClose(tag);return;}
   try{
-   const mainNow=JSON.stringify(withGridWorld('main',()=>(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]])));
+   if(!pinTarget&&magTargetSig(magTarget())!==sig){
+    /* the selection MOVED — the following pane re-aims (his 181st) */
+    magClose(tag);host.innerHTML='';magMount(host,tag,null);return;
+   }
+   const mainNow=JSON.stringify(magTargetRows(t));
    const worldNow=JSON.stringify(withGridWorld(m.w.id,()=>(project.tracks[m.face.track]||[]).map(n=>[n[0],n[1],n[2]])));
    if(worldNow!==lastWorld&&worldNow!==mainNow){
-    withGridWorld('main',()=>{snapshot();project.tracks[tr]=JSON.parse(worldNow);refresh(true);});
+    magWriteBack(t,JSON.parse(worldNow));
     lastMain=worldNow;lastWorld=worldNow;
    }else if(mainNow!==lastMain){
     withGridWorld(m.w.id,()=>{project.tracks[m.face.track]=JSON.parse(mainNow);refresh(true);});
@@ -19552,6 +19612,34 @@ function magClose(tag){
  if(p.link)try{p.link.unhook();}catch(e){}
  try{if(GRID_WORLDS[p.wid])gridWorldClose(p.wid);}catch(e){}
  delete _magPolls[tag];
+}
+var _magPanes={shelf:{dir:null,n:1},engines:{dir:null,n:1}};
+function magBandMount(row,cat){
+ /* his 181st: the band hosts 1..N PANES — a border click splits (left/right edge =
+    horizontal, top/bottom = vertical). Pane 0 FOLLOWS the selection; a split PINS the
+    new pane to what was showing (labeled inference, pending his word). */
+ const st=_magPanes[cat];
+ const box=document.createElement('div');
+ box.style.cssText='height:100%;display:flex;'+(st.dir==='v'?'flex-direction:column;':'flex-direction:row;')+'gap:2px;overflow:hidden;position:relative;padding:6px;';
+ row.appendChild(box);
+ for(let i=0;i<Math.max(1,st.n);i++){
+  const pane=document.createElement('div');
+  pane.className='magPane';
+  pane.style.cssText='flex:1 1 0;min-width:0;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;';
+  box.appendChild(pane);
+  try{magMount(pane,cat+i,i===0?null:magTarget());}catch(e){}
+ }
+ box.addEventListener('mousedown',e=>{
+  const r2=box.getBoundingClientRect();
+  const x=e.clientX-r2.left,y=e.clientY-r2.top,EDGE=7;
+  const hEdge=x<=EDGE||x>=r2.width-EDGE, vEdge=y<=EDGE||y>=r2.height-EDGE;
+  if(!hEdge&&!vEdge)return;
+  e.preventDefault();e.stopPropagation();
+  st.dir=hEdge?'h':'v';
+  st.n=Math.min(4,Math.max(1,st.n)+1);
+  swLayoutApply(swLayoutState);
+ },true);
+ box.title='Click the border to SPLIT the magnifier — the left/right edge splits horizontally, the top/bottom vertically (up to 4 panes; the first pane follows your selection).';
 }
 function swMagTgAdd(row,tag){
  /* his 179th Way 1: the toggle is PART OF THE BORDER, upper right of the band — it
