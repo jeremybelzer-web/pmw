@@ -774,7 +774,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03r</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03s</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6704,13 +6704,34 @@ function snapshot(){
  const s=captureState();
  undoStack.push(s);if(undoStack.length>50)undoStack.shift();
  _lastSnap=s;_redoStash=redoStack.length?redoStack:null;redoStack=[];
+ lastActionWasWinClose=false;   /* his 118th: a project edit outranks a standing window-close undo */
 }
 function dropNoopSnapshot(){
  const top=undoStack[undoStack.length-1];
  undoStack.pop();
  if(top&&top===_lastSnap&&_redoStash){redoStack=_redoStash;_redoStash=null;}
 }
-function undo(){const s=undoStack.pop();if(!s)return;if(typeof snv==='object'&&snv)snv.active=false;if(typeof xselClear==='function')xselClear();redoStack.push(captureState());applyState(s);}   /* MG: indices shift — the capture lets go */
+/* his 118th ("Undo should even undo deleting a window"): window closes ride a LIGHT
+   parallel stack — ⌘Z restores the just-closed window while no project edit has landed
+   since (snapshot() clears the flag). Payloads are shape-specific restorers, never
+   applyState: the arrangement lives OUTSIDE the project snapshots by design (cp_ui /
+   cp_grids), and folding it into captureState is landmine country. Redo of a window
+   close is out of scope, recorded. */
+const winCloseUndo=[];
+let lastActionWasWinClose=false;
+function winCloseNote(entry){
+ if(!entry||typeof entry.restore!=='function')return;
+ winCloseUndo.push(entry);if(winCloseUndo.length>12)winCloseUndo.shift();
+ lastActionWasWinClose=true;
+}
+function undo(){
+ if(lastActionWasWinClose&&winCloseUndo.length){
+  const e=winCloseUndo.pop();
+  if(!winCloseUndo.length)lastActionWasWinClose=false;
+  try{e.restore();}catch(err){}
+  return;
+ }
+ const s=undoStack.pop();if(!s)return;if(typeof snv==='object'&&snv)snv.active=false;if(typeof xselClear==='function')xselClear();redoStack.push(captureState());applyState(s);}   /* MG: indices shift — the capture lets go */
 function redo(){const s=redoStack.pop();if(!s)return;if(typeof snv==='object'&&snv)snv.active=false;if(typeof xselClear==='function')xselClear();undoStack.push(captureState());applyState(s);}
 function drawGrid(){
  /* 2.1b: every registered grid view redraws — main plus any expanded strip-grids.
@@ -29390,6 +29411,14 @@ function uiDispatch(action){
  const justOpened=!!(action&&action.type==='toggle'&&typeof action.id==='string'
   &&Array.isArray(uiState.openWins)&&uiState.openWins.indexOf(action.id)>=0&&prevWins.indexOf(action.id)<0)
   ||!!(action&&action.nav==='voice');
+ /* his 118th: a toggle that CLOSED a window is undoable until the next project edit —
+    ⌘Z reopens it (the reopen path re-spawns any paired rig on its own) */
+ if(action&&action.type==='toggle'&&typeof action.id==='string'
+  &&prevWins.indexOf(action.id)>=0&&(!Array.isArray(uiState.openWins)||uiState.openWins.indexOf(action.id)<0)
+  &&typeof winCloseNote==='function'){
+  const _cid=action.id;
+  winCloseNote({kind:'win',id:_cid,restore:()=>{if(typeof uiWinShown==='function'&&!uiWinShown(_cid))uiDispatch({type:'toggle',id:_cid});}});
+ }
  /* Phase 2 R2: the auto-spawn PAIR leaves together — closing the window closes its linked
     audition grid (it arrived with it; a lone audition grid over a closed window is clutter) */
  if(action&&action.type==='toggle'&&typeof action.id==='string'
@@ -29868,7 +29897,7 @@ function gridWorldSpawn(opts){
   }
   const x=document.createElement('span');
   x.className='wbtn';x.textContent='✕';x.title='Close this grid';
-  x.onclick=()=>gridWorldClose(id);
+  x.onclick=()=>{if(typeof winCloseNote==='function'&&typeof gridCloseRestorer==='function')winCloseNote(gridCloseRestorer(id));gridWorldClose(id);};   /* his 118th: ⌘Z brings the grid back */
   head.appendChild(x);
   const _og=head.querySelector('.colGrip');if(_og)_og.remove();   /* 78th R3: the CLONED grip is a corpse (cloneNode drops handlers) and it fooled colGripAdd's dedup guard — instance grips were dead */
   if(typeof colGripAdd==='function')colGripAdd(head,root.id);
@@ -29895,6 +29924,27 @@ function gridChromeSync(w){
  const lk=head.querySelector('.gwLink'),bp=head.querySelector('.gwBpm');
  if(lk)lk.textContent=w.linked?'⛓ Linked':'⛓ Unlinked';
  if(bp){bp.style.display=w.linked?'none':'';if(!w.linked)bp.value=w.bpm||Math.round(+tempo.value)||96;}
+}
+function gridCloseRestorer(id){
+ /* his 118th: capture enough of a grid world BEFORE its close to bring it back whole.
+    A pairFor RIG re-spawns through gridAuditionSpawn (its defaults are its identity —
+    exactly what he deleted: "the multi track grid for auditioning above the melisma
+    window"); a USER grid re-spawns through gridUserSpawn carrying its own project
+    record (the cp_grids persistence shape, captured live at the close). */
+ const w=GRID_WORLDS[id];
+ if(!w||id==='main')return null;
+ if(w.user){
+  let rec=null;
+  try{rec=withGridWorld(id,()=>currentProjectRecord());}catch(e){rec=null;}
+  return {kind:'ugrid',restore:()=>{gridUserSpawn({rec});if(typeof swLayoutRepack==='function')swLayoutRepack();}};
+ }
+ const pf=w.pairFor;
+ return {kind:'rig',restore:()=>{
+  if(!pf)return;
+  if(typeof uiWinShown==='function'&&uiWinShown(pf))gridAuditionSpawn(pf);
+  else uiDispatch({type:'toggle',id:pf});   /* window gone too — the reopen re-spawns the rig itself */
+  if(typeof swLayoutRepack==='function')swLayoutRepack();   /* the band laws re-seat the returned stack */
+ }};
 }
 function gridWorldClose(id){
  const w=GRID_WORLDS[id];
