@@ -762,7 +762,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ae</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02af</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11284,7 +11284,10 @@ function swRowMembers(cat){
  if(cat==='engines'){
   const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin'];
   const out=ids.map(id=>document.getElementById(id)).filter(Boolean);
-  document.querySelectorAll('[id^="essWin_"]').forEach(e=>out.push(e));   /* the stacks' shelf windows ride with their engines */
+  /* his 128th: when the layout carries the middle SHELF band, the per-stack shelf
+     windows SKIP the engines row — one shelf serves, no duplicate riding below */
+  if(!(swLayoutState&&swLayoutState.rows.some(r=>r.cat==='shelf')))
+   document.querySelectorAll('[id^="essWin_"]').forEach(e=>out.push(e));   /* the stacks' shelf windows ride with their engines */
   return out;
  }
  return [];
@@ -11374,6 +11377,9 @@ function swLayoutApply(layout){
    m.style.display='';
    m.classList.add('swCell');
    m.style.width=r.swipe==='h'?(grids?'96%':'46%'):'';
+   /* his 128th: the SLEEK default — every lower-band window the SAME SIZE (uniform
+      cells, their content scrolling inside); the grids row keeps its own law */
+   if(!grids&&r.swipe==='h'){m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';}
    m.style.scrollSnapAlign=grids?'center':'';
   }
   if(grids&&!members.length){
@@ -29721,7 +29727,7 @@ function essShelfWinMint(w,panel){
  d.className='gridwrap pairMid';
  d.setAttribute('data-gridworld',w.id);
  d.innerHTML='<div class="winHead"><span class="wtitle">🔷 Essence Shelf</span>'
-  +'<span class="wbtn" data-w="collapse">−</span><span class="wbtn" data-w="close" title="Hide the shelf (it returns when the window reopens)">✕</span></div>'
+  +'<span class="wbtn" data-w="collapse" style="margin-left:auto;">−</span><span class="wbtn" data-w="close" title="Hide the shelf (it returns when the window reopens)">✕</span></div>'
   +'<div class="essBody" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;"></div>';
  panel.parentNode.insertBefore(d,panel);
  const head=d.querySelector('.winHead');
