@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11481,9 +11481,31 @@ function swLayoutApply(layout){
   };
  }
  try{[...layer.querySelectorAll(':scope > .swRow')].forEach(r0=>{const sv=_oldScroll[r0.dataset.cat];if(sv){r0.scrollLeft=sv.l;r0.scrollTop=sv.t;}});}catch(e){}
+ /* his 143rd: FIT-TO-WIDTH — under a layout the main grid's lattice GROWS to fill its
+    row (grow-only, so a user's deeper zoom stands; zoom-ratio-aware so the Canvas
+    grid zoom cannot skew the math). */
+ try{
+  const gsvg=document.querySelector('#gridWrap [id="grid"]');
+  const gcell=document.getElementById('gridRowWrap');
+  if(gsvg&&gcell&&gcell.closest('#swRows')&&typeof LOOP==='number'&&LOOP>0){
+   const cr=gcell.getBoundingClientRect(),sr=gsvg.getBoundingClientRect();
+   const declW=+gsvg.getAttribute('width')||sr.width;
+   const z=(sr.width>0&&declW>0)?sr.width/declW:1;
+   const avail=Math.floor((cr.right-sr.left)/z)-GUT-14;
+   const fit=Math.floor(avail/LOOP);
+   if(isFinite(fit)&&fit>PPB){PPB=Math.min(96,fit);refresh(true);drawTrackSel();}
+  }
+ }catch(e){}
  const chk=document.querySelector('#swShelfMove input');
  if(chk)chk.checked=_swShelfWithLower;
 }
+/* his 144th: a browser-window RESIZE re-applies the live layout (debounced) — the
+   uniform cells and the fit-to-width law follow the screen instead of freezing at
+   apply-time geometry; the apply's own law keeps every row's scroll. */
+window.addEventListener('resize',(function(){let _t=null;return function(){
+ if(!swLayoutState)return;
+ clearTimeout(_t);_t=setTimeout(function(){try{swLayoutApply(swLayoutState);}catch(e){}},180);
+};})());
 /* ==== [T1]/[T2] THE NARROW TRANSPORT'S ON-DEMAND LANES + THE GRID'S CTRL+CLICK MENU
    (79th R9 — his fourth + fifth messages verbatim in the RAW; the reference behavior
    VERIFIED online this session: the tempo lane appears only on a right-click of the
