@@ -222,9 +222,9 @@
   #wanPanel{background:#e9dcbe;border-color:#8a6f4d;color:#3a2c18;box-shadow:inset 0 0 60px rgba(122,90,48,.35),0 4px 14px rgba(0,0,0,.35);}
   #wanPanel, #wanPanel select, #wanPanel input, #wanPanel button{font-family:'Iowan Old Style','Palatino','Georgia',serif;}
   #wanPanel > div:first-child{color:#5a4426;letter-spacing:1.2px;}
-  #wanWeber .wanWebKey{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;box-shadow:0 1px 0 rgba(90,68,38,.25);}
-  #wanWeber .wanWebKey:hover{background:#fff3d8;}
-  #wanWeber .wanWebKey.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;font-weight:800;}
+  #wanWeber .wanWebKey,#wanWeber .wan2Key{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;box-shadow:0 1px 0 rgba(90,68,38,.25);}
+  #wanWeber .wanWebKey:hover,#wanWeber .wan2Key:hover{background:#fff3d8;}
+  #wanWeber .wanWebKey.on,#wanWeber .wan2Key.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;font-weight:800;}
   #wanPanel #wanBody .cpchip{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;}
   #wanPanel #wanBody .cpchip.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   #wanPanel #wanStatus{color:#6b4f28;}
@@ -781,7 +781,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03y</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03z</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -21508,7 +21508,9 @@ function wanSide2Draw(){
    const nm=wanLofName(cell.lof);
    const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
    const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
-   h+='<span class="cpchip wanWebKey wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+letter+'</span>';
+   /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
+      alone, so every probe and handler that predates the dual board keeps its meaning */
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+letter+'</span>';
   }
   h+='</div>';
  }
@@ -21540,7 +21542,10 @@ function wanWeberDraw(){
  const tonicLof=wanPcLof(st.tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+st.webShift;
  const grid=weberGrid(anchor);
- const _w2on=typeof swLayoutState!=='undefined'&&!!swLayoutState;   /* his 165th: the 2nd Wanderer rides the 3-split view */
+ /* his 169th ("There doesn't seem to be a 2nd Wanderer yet"): the 165th's layout-state
+    gate hid the dual board from his live session — the gate is WIDTH now: a board wide
+    enough hosts the 2nd Wanderer, whatever the layout flag says. */
+ const _w2on=(function(){try{return !!W&&W.clientWidth>=980;}catch(e){return false;}})();
  /* 82nd R4 (his FORTY-SIXTH message: "lets change the title of Weber's Matrix to say created
     between 1817-1824 - or whatever is true"). ⛔ "OR WHATEVER IS TRUE" WAS AN INSTRUCTION TO GO
     AND CHECK, AND CHECKING CHANGED THE ANSWER: the treatise the table lives in — Versuch einer
@@ -21904,10 +21909,14 @@ function wanWeberDraw(){
       docs, §3's caution class). ⚠ A DIFFERENT RECORDER from ⏺ Record your trips: that
       one records keys LANDED ON into 🧳 Upcoming Trips; this one records keys PLAYED
       (plain-clicked) into a PATH on the ACTIVE road. Two recorders, two destinations. */
-   leg.innerHTML='<div style="display:flex;align-items:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:2px;">Path Trips'
-    +'<span id="wanPathRec"'+(st.webPathRecSeq?' class="on"':'')+' role="button" title="'+(st.webPathRecSeq?'Recording — every key you play (a plain click) joins the path. Click again to seal it onto the active road.':'Rec — press, then play keys on the map (plain clicks); press again and what you played becomes the active road’s path, its last key the destination.')+'">'+(st.webPathRecSeq?'⏺ REC':'REC')+'</span></div>'
-    +'<div style="font-size:9.5px;color:#6b4f28;margin-bottom:5px;">Learn the roads — <span id="wanLegI" style="display:inline-block;cursor:pointer;font-weight:800;border:1px solid #6b4f28;border-radius:50%;width:13px;height:13px;line-height:12px;text-align:center;">i</span> · (⌘+click a chord draws its paths)</div>'
-    +'<div id="wanLegHow" style="display:none;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · click a chord selects it (Delete removes it) · double-click a chord edits it · double-click a name to populate it and open the road’s own dialogue · ctrl+click here for the menu</div>';
+   /* his 169th: the legend's face is ONE LINE — "Learn the Paths ⓘ" and that's it; the
+      instructions (and the ⌘ hint) live behind the ⓘ; the REC chip keeps its function,
+      riding the right of the same line. The block pins to the TOP of its column. */
+   leg.style.alignSelf='flex-start';leg.style.marginTop='0';
+   leg.innerHTML='<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:#5a4426;margin-bottom:4px;">Learn the Paths'
+    +'<span id="wanLegI" style="display:inline-block;cursor:pointer;font-weight:800;border:1px solid #6b4f28;border-radius:50%;width:13px;height:13px;line-height:12px;text-align:center;font-size:9.5px;text-transform:none;">i</span>'
+    +'<span id="wanPathRec"'+(st.webPathRecSeq?' class="on"':'')+' role="button" style="margin-left:auto;" title="'+(st.webPathRecSeq?'Recording — every key you play (a plain click) joins the path. Click again to seal it onto the active road.':'Rec — press, then play keys on the map (plain clicks); press again and what you played becomes the active road’s path, its last key the destination.')+'">'+(st.webPathRecSeq?'⏺ REC':'REC')+'</span></div>'
+    +'<div id="wanLegHow" style="display:none;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#6b4f28;margin-bottom:5px;">☑ turns a road on and off (so does clicking its name) · hover lights the route · drag the chords to the chord lane · click a chord selects it (Delete removes it) · double-click a chord edits it · double-click a name to populate it and open the road’s own dialogue · ⌘+click a chord on the map draws its paths · ctrl+click here for the menu</div>';
    /* 80th R23 (his thirty-first message): the three ruled roads lead; expand… below
       them reveals the other roads so the user can populate more paths */
    const ruled=['way','greenway','passageway'];
@@ -31386,6 +31395,26 @@ document.addEventListener('mouseup',e=>{
 document.addEventListener('click',e=>{
  if(dockDragDid){dockDragDid=false;e.stopPropagation();e.preventDefault();}
 },true);
+/* his 169th, THE ESCAPE LAW: any pop-up closes on Escape, not just its ✕ — ONE
+   dispatcher, topmost-first, one close per press. A surface with its own Escape (the
+   palette's template ask, capture-phase) runs before this and stops propagation.
+   The registry grows as pop-ups are born. */
+document.addEventListener('keydown',e=>{
+ if(e.key!=='Escape')return;
+ const acts=[
+  ['#wanWebMenu',el=>el.remove()],
+  ['#gridAddMenu',el=>{el.style.display='none';}],
+  ['#cnvTplPick',el=>el.remove()],
+  ['.essObjPop',()=>{try{essObjWinClose();}catch(err){}}],
+  ['.wanPopup [data-w="popclose"]',el=>el.click()]
+ ];
+ for(const [sel,fn] of acts){
+  const el=document.querySelector(sel);
+  if(!el)continue;
+  if(el.offsetParent===null&&getComputedStyle(el).position!=='fixed')continue;   /* hidden = not open */
+  fn(el);e.preventDefault();e.stopPropagation();return;
+ }
+});
 /* his 112th/114th: THE ERROR TELLTALE — his session and the test harness disagreed on
    the SAME bytes, and the difference lives in HIS boot state, where an exception is
    invisible to him and unreachable to the record. Any uncaught error or rejection now
