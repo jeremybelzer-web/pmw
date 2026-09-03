@@ -759,7 +759,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02w</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02x</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15111,7 +15111,11 @@ function essObjRows(o){
     a MELISMA_LIB card through melismaRealize, THE SAME LAW THE EAR HEARS at audition. */
  if(o&&Array.isArray(o.pat)){
   try{
-   const r=melismaRealize(o,69,melismaKeyAt(0),(o.pat.length>6)?2:1.5,{});
+   /* his 107th: the ▲▼ direction reaches the OBJECT's rows — the selected card's tile
+      INVERTS on ▼ (and its mint/drop write the mirrored rows), the same variant law
+      the audition and the write already honor. An unselected card stays as written. */
+   const dir=(typeof melState==='object'&&melState&&melState.sel===o.id)?melState.dir:'up';
+   const r=melismaRealize(o,69,melismaKeyAt(0),(o.pat.length>6)?2:1.5,{variant:melDirVariant(0,dir)});
    return {kind:'melody',rows:r.notes.map(n=>[n[0],n[1],n[2]])};
   }catch(e){return null;}
  }
@@ -19207,9 +19211,13 @@ function renderMelismaList(){
     return;
    }
    /* the double-press pop-up (the re-render on select replaces the node, so native
-      dblclick can never fire — a 400ms same-card second press opens the grid) */
+      dblclick can never fire — a 400ms same-card second press opens the grid).
+      ⛔ his 107th: the second press must NOT steal a DRAG — it stole every quick
+      press-then-drag and the shelf drop silently never happened. The pop-up decision
+      moves to the mouseUP: a second press that ENDS still opens the grid; a second
+      press that MOVES drags like any press. */
    const now=Date.now();
-   if(_melResDbl.id===o.id&&now-_melResDbl.t<400){_melResDbl={id:null,t:0};essObjWorldOpen(o,o.name,{x:ev.clientX-40,y:ev.clientY-30});return;}
+   const _isSecond=(_melResDbl.id===o.id&&now-_melResDbl.t<400);
    _melResDbl={id:o.id,t:now};
    /* a moving press DRAGS the object (his 90th) — Shelf = Keep-mint · a note = the
       melisma write · a bare track row = the [E4]⑤ dialog */
@@ -19238,12 +19246,18 @@ function renderMelismaList(){
       if(typeof flashHint==='function')flashHint('Drop it on a grid, a track row, or the Essence Shelf.');
      });
     }};
-   const mu=()=>cleanup();
+   const mu=()=>{cleanup();
+    /* a second press that ENDED without moving = the pop-up; a drag already removed
+       this listener through chipDrag's own takeover */
+    if(_isSecond){_melResDbl={id:null,t:0};essObjWorldOpen(o,o.name,{x:x0-40,y:y0-30});}
+   };
    const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
-   melState.sel=o.id;
-   renderMelismaList();renderMelismaInfo(o);
-   melismaAudition(o);   /* the psych-out audition — nothing written */
+   if(!_isSecond){
+    melState.sel=o.id;
+    renderMelismaList();renderMelismaInfo(o);
+    melismaAudition(o);   /* the psych-out audition — nothing written */
+   }
   };
   L.appendChild(d);
  }
