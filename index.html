@@ -759,7 +759,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02y</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02z</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11629,7 +11629,7 @@ function progBuild(){
      cleanup();d._dragAte=true;
      chipDrag(e2,'𝄋 '+po.name,dv=>{
       const el=document.elementFromPoint(dv.clientX,dv.clientY);
-      const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
       if(shelfEl){essLibShelfMint(po,'progPanel');return;}
       if(essDropTryDialog(dv,po))return;
       if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands), the Essence Shelf — or press ✓ to write it across the phrase.');
@@ -15352,8 +15352,13 @@ function essLibShelfMint(o,org){
     through essObjRows (the one law), the melody kind carries them (the essObjWinClose
     precedent: pat AND run objects both land as melody rows). Main's shelf — essences
     ride the MAIN project file. One snapshot = one undo. */
- const st=essObjRows(o);
- if(!st||!st.rows||!st.rows.length)return false;
+ /* his 112th/113th: every outcome SPEAKS — a silent false here cost the evening */
+ let st=null;
+ try{st=essObjRows(o);}catch(e){}
+ if(!st||!st.rows||!st.rows.length){
+  try{if(typeof flashHint==='function')flashHint('⚠ The Keep failed — '+String(o&&o.name||'the object')+' would not realize into notes. This is a bug: tell the session.');}catch(e){}
+  return false;
+ }
  const run=()=>{
   snapshot();
   const rows=st.rows.map(r=>[r[0],r[1],r[2]]);
@@ -15365,6 +15370,7 @@ function essLibShelfMint(o,org){
  try{buildPrism();}catch(e){}
  try{essShelfWinDrawAll();}catch(e){}
  setPrzStatus(String(o.name||'The object')+' landed on the Essence Shelf — it rides the project file · ⌘Z undoes.');
+ try{if(typeof flashHint==='function')flashHint('✓ '+String(o.name||'The object')+' landed on the Essence Shelf · ⌘Z undoes.');}catch(e){}
  return true;
 }
 let essObjWin=null;
@@ -15562,11 +15568,32 @@ function essDropTryDialog(dv,o){
  essDropDialog(hit,o);
  return true;
 }
+function essShelfHitAt(x,y){
+ /* his 112th: the shelf drop is OVERLAY-PROOF now — an element floating above the
+    shelf must not eat the release. The element chain is asked first; when it misses,
+    the visible shelf surfaces' own RECTS decide. */
+ try{
+  const el=document.elementFromPoint(x,y);
+  const c=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+  if(c)return c;
+  const cands=[document.getElementById('przShelf'),document.getElementById('swShelf')]
+   .concat([...document.querySelectorAll('[id^="essWin_"]')]);
+  for(const t of cands){
+   if(!t)continue;
+   const r=t.getBoundingClientRect();
+   if(r.width>2&&r.height>2&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)return t;
+  }
+ }catch(e){}
+ return null;
+}
 function chipDrag(e0,label,onDrop){
  /* his 102nd (Sept 2): under the Canvas "Everything" zoom the fixed ghost's px are
     SCALED by the body zoom, so it rendered at clientX·z — far left and above the
     cursor, and drops aimed by the ghost missed. The zoom² family: divide by the
-    body's effective zoom so the ghost rides the cursor at every zoom. */
+    body's effective zoom so the ghost rides the cursor at every zoom.
+    his 113th: the drag SPEAKS — one line at pickup, and every release path answers
+    (the callbacks message their outcome), so a dead gesture names itself. */
+ try{if(typeof flashHint==='function')flashHint('Dragging '+label+' — release over an Essence Shelf (it Keeps) or a track row (it writes).');}catch(e){}
  const _bz=(()=>{try{const z=parseFloat(getComputedStyle(document.body).zoom);return (isFinite(z)&&z>0)?z:1;}catch(e){return 1;}})();
  const g=document.createElement('div');g.className='dragGhost';g.textContent=label;
  g.style.left=(e0.clientX/_bz+10)+'px';g.style.top=(e0.clientY/_bz-10)+'px';
@@ -18209,6 +18236,28 @@ function renderContourCards(){
   const _cs=contourCardSamples(s);
   const _co={id:'cs:'+s.id,name:s.name,shape:_cs,data:{sh:_cs}};
   essObjCardLazy(card,_co,'cs');
+  /* his 112th: the LAST unwired surface — the contour object drags too (its realized
+     melody rows Keep onto the Shelf, org the Slide window; a track drop rides the
+     lib-object law). The tile is the handle; the line face keeps its warp/audition. */
+  const _tb=card.querySelector('.essClipW');
+  if(_tb)_tb.onmousedown=ev=>{
+   if(ev.button!==0)return;
+   ev.preventDefault();ev.stopPropagation();
+   const x0=ev.clientX,y0=ev.clientY;
+   const mm=e2=>{
+    if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+     cleanup();
+     chipDrag(e2,'〰 '+s.name,dv=>{
+      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);
+      if(shelfEl){essLibShelfMint(_co,'slideWin');return;}
+      if(essDropTryDialog(dv,_co))return;
+      if(typeof flashHint==='function')flashHint('Drop it on a track row (it writes) or an Essence Shelf (it Keeps).');
+     });
+    }};
+   const mu=()=>cleanup();
+   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
   card.querySelector('[data-a=face]').onclick=()=>{if(!csDragDid)contourAudition(s);};
   card.querySelector('[data-a=flip]').onclick=ev=>{ev.stopPropagation();csState.flip[s.id]=!csState.flip[s.id];renderContourCards();};
   card.querySelector('[data-a=draw]').onclick=ev=>{ev.stopPropagation();openContourDraw(ev,contourCardSamples(s));};
@@ -19227,7 +19276,7 @@ function renderMelismaList(){
      cleanup();
      chipDrag(e2,'➿ '+o.name,dv=>{
       const el=document.elementFromPoint(dv.clientX,dv.clientY);
-      const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
       if(shelfEl){essLibShelfMint(o,'melPanel');return;}
       const rootEl=el&&el.closest?el.closest('[data-gridworld],#gridRowWrap'):null;
       if(rootEl){
@@ -29442,7 +29491,7 @@ function essShelfWinDraw(w){
        const el=document.elementFromPoint(dv.clientX,dv.clientY);
        /* his 90th: the object DRAGS onto the Essence Shelf — the Keep-mint (checked
           FIRST: the shelf windows carry data-gridworld too) */
-       const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+       const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
        if(shelfEl){essLibShelfMint(o,'melPanel');return;}
        const rootEl=el&&el.closest?el.closest('[data-gridworld],#gridRowWrap'):null;
        if(rootEl){
@@ -29498,7 +29547,7 @@ function essShelfWinDraw(w){
       cleanup();d._dragAte=true;
       chipDrag(ev,'♪ '+o.name,dv=>{
        const el=document.elementFromPoint(dv.clientX,dv.clientY);
-       const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+       const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
        if(shelfEl){essLibShelfMint(o,'cadPanel');return;}
        if(essDropTryDialog(dv,o))return;
        if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
@@ -29545,7 +29594,7 @@ function essShelfWinDraw(w){
      cleanup();d._dragAte=true;
      chipDrag(ev,'◆ '+o.name,dv=>{
       const el=document.elementFromPoint(dv.clientX,dv.clientY);
-      const shelfEl=el&&el.closest?el.closest('#przShelf,#swShelf,[id^="essWin_"]'):null;
+      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
       if(shelfEl){if(typeof flashHint==='function')flashHint(o.name+' already lives on the Essence Shelf.');return;}
       if(essDropTryDialog(dv,o))return;
       if(typeof flashHint==='function')flashHint('Drop it on a track row — the dialog asks how it lands.');
@@ -30554,6 +30603,32 @@ document.addEventListener('mouseup',e=>{
 document.addEventListener('click',e=>{
  if(dockDragDid){dockDragDid=false;e.stopPropagation();e.preventDefault();}
 },true);
+/* his 112th/114th: THE ERROR TELLTALE — his session and the test harness disagreed on
+   the SAME bytes, and the difference lives in HIS boot state, where an exception is
+   invisible to him and unreachable to the record. Any uncaught error or rejection now
+   shows a red chip naming itself (click = dismiss) — the app has a face for its own
+   failures. */
+(function(){
+ try{
+  let chip=null,n=0;
+  const tell=msg=>{
+   try{
+    n++;
+    if(!chip){
+     chip=document.createElement('div');
+     chip.id='errChip';
+     chip.title='An error the app caught — click to dismiss. Tell the build session what this says.';
+     chip.style.cssText='position:fixed;left:14px;bottom:14px;z-index:201;max-width:46vw;background:#5c1f1f;color:#ffd9d2;border:1px solid #e07a66;font-size:11.5px;padding:7px 12px;border-radius:9px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+     chip.onclick=()=>{try{chip.remove();}catch(e){}chip=null;n=0;};
+     document.body.appendChild(chip);
+    }
+    chip.textContent='⚠ '+(n>1?n+'× ':'')+'error: '+String(msg).slice(0,180);
+   }catch(e){}
+  };
+  window.addEventListener('error',e=>tell(e.message||e.error||'unknown'));
+  window.addEventListener('unhandledrejection',e=>tell((e.reason&&e.reason.message)||e.reason||'unhandled rejection'));
+ }catch(e){}
+})();
 /* his 108th: THE STALE-TAB TELLTALE — five deploys landed in one evening while an open
    tab kept running the build it had loaded, and three rounds of reports were judged
    against old bytes. The page now asks the live origin for a newer tag (every 3 min +
