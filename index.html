@@ -794,7 +794,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ag</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ah</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -19367,9 +19367,13 @@ function harmStatus(m){const e=document.getElementById('harmStatus');if(e)e.text
 function buildHarmWindow(){
  const B=document.getElementById('harmBody');if(!B)return;
  const st=harmState;
- B.innerHTML=
-  '<div class="winProse" style="font-size:10.5px;color:var(--dim);margin-bottom:8px;">The singer at your shoulder — pick notes in the grid (or none for the whole melody), choose the harmony, ▶ hear it, ✓ write it. The no-crossing rule holds unless the range floor forces a fold.</div>'
-  +'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
+ /* his 171st, THE SPLIT-VIEW CONTROLS LAW: in the 3-split view the CONTROLS ride the
+    RIGHT and the content (the result object) the LEFT — nothing needs scrolling. The
+    plain column keeps the top-flow. One builder, two assemblies. */
+ const _split=typeof swLayoutState!=='undefined'&&!!swLayoutState;
+ const _prose='<div class="winProse" style="font-size:10.5px;color:var(--dim);">The singer at your shoulder — pick notes in the grid (or none for the whole melody), choose the harmony, ▶ hear it, ✓ write it. The no-crossing rule holds unless the range floor forces a fold.</div>';
+ const _rows=
+  '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
   +'<span class="cpchip'+(st.type==='topline'?' on':'')+'" id="harmTypeTop" title="Follow-the-topline — a harmony voice shadows every melody note at consonant intervals below.">🎤 Follow the topline</span>'
   +'<span class="cpchip'+(st.type==='counter'?' on':'')+'" id="harmTypeCtr" title="Background counter-melody — its own slower or faster line under the melody, contrary motion when it can.">🌊 Counter-melody</span>'
   +'<label style="font-size:11px;color:var(--text);" title="2–5 voices — the melody counts as one; the rest stack below, each under the last.">Voices <select id="harmVoices">'+[2,3,4,5].map(v=>'<option value="'+v+'"'+(st.voices===v?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'
@@ -19387,8 +19391,14 @@ function buildHarmWindow(){
   +'<button id="harmApplyBtn" style="padding:5px 14px;font-size:12px;">✓ Write (same track)</button>'
   +'<button id="harmSplitBtn" style="padding:5px 12px;font-size:12px;background:#3a3e4d;color:#e9eaef;" title="The split-to-tracks option — each voice lands on its own new track, labeled Harmony 2, 3…">⇉ Split to tracks</button>'
   +'<span id="harmStatus" style="font-size:10.5px;color:var(--dim);"></span>'
-  +'</div>'
-  +'<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;margin-top:8px;"></div>';
+  +'</div>';
+ const _obj='<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;'+(_split?'flex-direction:column;align-items:flex-start;flex:1;justify-content:center;':'margin-top:8px;')+'"></div>';
+ B.innerHTML=_split
+  ?('<div style="display:flex;gap:14px;align-items:stretch;">'
+    +'<div id="harmMain" style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:8px;">'+_prose+_obj+'</div>'
+    +'<div id="harmCtl" style="flex:0 0 320px;display:flex;flex-direction:column;gap:6px;border-left:1px solid var(--line);padding-left:14px;">'+_rows+'</div>'
+    +'</div>')
+  :(_prose+'<div style="height:8px;"></div>'+_rows+_obj);
  const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
  on('harmTypeTop',()=>{harmState.type='topline';buildHarmWindow();});
  on('harmTypeCtr',()=>{harmState.type='counter';buildHarmWindow();});
@@ -19419,6 +19429,7 @@ function harmObjMount(){
  host.appendChild(cap);
  const d=document.createElement('div');
  d.className='essObjCard';d.style.cssText='display:flex;align-items:center;gap:6px;cursor:grab;';
+ if(typeof swLayoutState!=='undefined'&&swLayoutState)d.style.zoom='1.7';   /* his 171st: the split view's left side SHOWS the result large — the svg tile scales crisp */
  essObjCardMount(d,o,'harmw');
  d.ondblclick=e=>{e.stopPropagation();essObjWorldOpen(o,o.name,{x:e.clientX-40,y:e.clientY-30});};
  d.onmousedown=ev=>{
