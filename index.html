@@ -762,7 +762,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ab</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ac</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14945,7 +14945,9 @@ function essDropRowAt(x,y){
     let b=W2.b0+(px-GUT)/PPB;
     if(!isFinite(b))return null;
     const st2=gridStep();
-    b=Math.max(0,Math.min(LOOP,Math.round(b/st2)*st2));
+    /* his 123rd refines his 56th forward: the empty-lattice drop lands at the BEGINNING
+       of the step under the pointer — floor, not nearest */
+    b=Math.max(0,Math.min(LOOP,Math.floor(b/st2+1e-9)*st2));
     return {t:activeTrack,at:b};
    }catch(e){return null;}
   }
@@ -29442,7 +29444,13 @@ function gridWorldSpawn(opts){
   const _og=head.querySelector('.colGrip');if(_og)_og.remove();   /* 78th R3: the CLONED grip is a corpse (cloneNode drops handlers) and it fooled colGripAdd's dedup guard — instance grips were dead */
   if(typeof colGripAdd==='function')colGripAdd(head,root.id);
  }
- const before=(opts&&opts.before&&opts.before.parentNode===document.body)?opts.before:me.root.nextSibling;
+ let before=(opts&&opts.before&&opts.before.parentNode===document.body)?opts.before:me.root.nextSibling;
+ /* his 122nd — THE SKIN BUG, the whole evening's root cause: under a swipe LAYOUT the
+    main grid lives inside a .swRow, so its nextSibling is NOT a body child and this
+    insertBefore threw — killing EVERY world mint (the pop-up, the stacks) in any
+    session wearing the two-window skin, while every clean-boot harness ran green.
+    A non-body anchor falls to null = append; the layout's own collectors adopt. */
+ if(!before||before.parentNode!==document.body)before=null;
  document.body.insertBefore(root,before);
  GRID_WORLDS[id]=w;
  gridWireClone(w);
@@ -29657,6 +29665,13 @@ function essShelfWinDraw(w){
 function essShelfWinDrawAll(){
  if(typeof GRID_WORLDS!=='object')return;
  for(const gid in GRID_WORLDS){const w=GRID_WORLDS[gid];if(gid!=='main'&&w&&w.els&&w.els.essWin&&w.els.essWin.isConnected)essShelfWinDraw(w);}
+ /* his 124th (the d3 skin): the middle 10% SHELF BAND drew only at layout-apply time —
+    a Keep landed in the project and the band he watched never showed it ("does not
+    populate the essence shelf", explained at last). Every shelf redraw reaches it now. */
+ try{
+  const sw=document.getElementById('swShelf');
+  if(sw&&sw.isConnected&&sw.querySelector('.essBody'))essShelfWinDraw({id:'main',pairFor:null,els:{essWin:sw}});
+ }catch(e){}
 }
 function essShelfWinMint(w,panel){
  /* 78th R2b, his words verbatim in the spec's Decisions made: "Above it should be an
