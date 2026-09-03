@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03k</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4783,16 +4783,22 @@ AudioHub.prototype.loadClipStreaming=async function(clip,urlOrResp,onProgress){
 const CURATED_DEFAULTS={
  version:1,
  melody:[
-  {name:'Upright Piano · VCSL (CC0)',zones:[
-   {root:48,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C2_vl1_rr1.wav'},
-   {root:72,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C4_vl1_rr1.wav'},
-   {root:84,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C5_vl1_rr1.wav'}]},
+  /* his 153rd: the FM E-Piano LEADS — the Upright's comma path ('Upright Piano, Yamaha')
+     fails browser fetch (curl serves it; a CDN edge) — kept second for the day it heals */
   {name:'FM E-Piano · VCSL TX81Z (CC0)',zones:[
    {root:48,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C2_vl1.wav'},
    {root:72,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C4_vl1.wav'},
-   {root:96,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C6_vl1.wav'}]}
+   {root:96,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C6_vl1.wav'}]},
+  {name:'Upright Piano · VCSL (CC0)',zones:[
+   {root:48,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C2_vl1_rr1.wav'},
+   {root:72,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C4_vl1_rr1.wav'},
+   {root:84,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C5_vl1_rr1.wav'}]}
  ],
  comping:[
+  {name:'FM E-Piano · VCSL TX81Z (CC0)',zones:[
+   {root:48,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C2_vl1.wav'},
+   {root:72,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C4_vl1.wav'},
+   {root:96,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Electrophones/TX81Z/FM%20Piano/FMPiano_C6_vl1.wav'}]},
   {name:'Upright Piano · VCSL (CC0)',zones:[
    {root:48,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C2_vl1_rr1.wav'},
    {root:72,url:'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Yamaha/Sustains/Upright1_Sus_C4_vl1_rr1.wav'},
@@ -7935,7 +7941,14 @@ function applyCuratedDefaults(){
  const plan=curatedPlan(hub,CURATED_DEFAULTS);
  if(!plan.length)return;
  plan.forEach(async p=>{
-  const clip=curatedClip(p.track,p.entry,p.idx);
+  /* his 153rd: walk the track's WHOLE curated list until one loads — a single dead
+     entry (the Upright's comma path) must never silence a track that has a healthy
+     second choice */
+  const list2=(CURATED_DEFAULTS[p.track]||[]);
+  for(let idx2=(p.idx||0);idx2<Math.max(list2.length,(p.idx||0)+1);idx2++){
+  const entry2=list2[idx2]||p.entry;
+  if(!validCuratedEntry(entry2))continue;
+  const clip=curatedClip(p.track,entry2,idx2);
   try{
    if(clip.zones){ /* zoned default: load every zone (each with its own fallback chain) */
     let ok=0;
@@ -7952,7 +7965,10 @@ function applyCuratedDefaults(){
     if(hubAssign(hub,p.track,clip)){persistHub();drawHub();
      hubStatus('curated default “'+clip.name+'” → '+p.track+(clip.zones?' ('+clip.zones.length+' zones)':'')+' — drop your own file any time to replace.');}
     else hubStatus('curated default for '+p.track+' FAILED its meta check ('+clip.name+') — a bug worth reporting.',false);}
-  }catch(e){hubStatus('curated default for '+p.track+' unreachable on every mirror ('+clip.name+') — using built-in instrument.',false);}
+   return;   /* this track is served */
+  }catch(e){/* fall to the track's next curated entry */}
+  }
+  hubStatus('curated defaults for '+p.track+' unreachable on every source — using built-in instrument.',false);
  });
 }
 function hubStatus(msg,ok){const el=document.getElementById('hubStatus');el.style.color=ok===false?'#e07a66':'var(--accent)';el.textContent=msg||'';}
