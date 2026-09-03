@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11290,8 +11290,19 @@ function swRowMembers(cat){
   return out;
  }
  if(cat==='engines'){
+  /* his 142nd (sharpening his 128th): the band holds ONLY the windows that are OPEN —
+     "populate on the bottom with windows that ship together". A closed engine's
+     full-width empty shell was the "blank black space"; a newly-opened one was buried
+     fourteen cells right, reading as "no longer populates". */
   const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin'];
-  const out=ids.map(id=>document.getElementById(id)).filter(Boolean);
+  const openIds=ids.filter(id=>{
+   if(id==='chordPanel')return !(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
+   if(id==='tripsPanel')return !!(typeof uiState==='object'&&uiState&&uiState.trips);
+   if(id==='progPanel'){const pp=document.getElementById('progPanel');return !!pp&&pp.style.display!=='none';}
+   if(id==='slideWin'){const sw2=document.getElementById('slideWin');return !!sw2&&sw2.style.display!=='none';}
+   return (typeof uiWinShown==='function')?uiWinShown(id):true;
+  });
+  const out=openIds.map(id=>document.getElementById(id)).filter(Boolean);
   /* his 128th: when the layout carries the middle SHELF band, the per-stack shelf
      windows SKIP the engines row — one shelf serves, no duplicate riding below */
   if(!(swLayoutState&&swLayoutState.rows.some(r=>r.cat==='shelf')))
@@ -11363,6 +11374,10 @@ function swLayoutApply(layout){
  if(!swLayoutState)return;   /* default 1 — today's column, no engine */
  const padT=parseFloat(document.body.style.paddingTop)||0;
  const padB=parseFloat(document.body.style.paddingBottom)||0;
+ /* his 142nd: a re-apply must not throw the user back to the left edge — each row's
+    scroll survives by its category (the Cadence song-select "scrolled me back") */
+ const _oldScroll={};
+ try{document.querySelectorAll('#swRows .swRow').forEach(r0=>{_oldScroll[r0.dataset.cat]={l:r0.scrollLeft,t:r0.scrollTop};});}catch(e){}
  const layer=document.createElement('div');
  layer.id='swRows';
  /* his 130th: the left icon rail must never overlap the rows — the layer starts right of it */
@@ -11465,6 +11480,7 @@ function swLayoutApply(layout){
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   };
  }
+ try{[...layer.querySelectorAll(':scope > .swRow')].forEach(r0=>{const sv=_oldScroll[r0.dataset.cat];if(sv){r0.scrollLeft=sv.l;r0.scrollTop=sv.t;}});}catch(e){}
  const chk=document.querySelector('#swShelfMove input');
  if(chk)chk.checked=_swShelfWithLower;
 }
@@ -29133,6 +29149,16 @@ function uiDispatch(action){
   if(un&&typeof persistDocks==='function'){persistDocks();buildDocks();}
  }
  applyUiState();
+ /* his 142nd: under a LAYOUT, a window toggle re-shapes its row (the band holds only
+    the open windows now) — scroll preserved by the apply, and a just-opened window
+    glides into view so "populate" is something you can SEE. */
+ if(swLayoutState&&action&&action.type==='toggle'&&typeof action.id==='string'){
+  try{
+   swLayoutApply(swLayoutState);
+   if(justOpened){const el2=document.getElementById(action.id);
+    if(el2&&el2.closest('#swRows'))el2.scrollIntoView({inline:'center',block:'nearest'});}
+  }catch(e){}
+ }
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
