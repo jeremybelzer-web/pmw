@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -9516,7 +9516,11 @@ function chromaStripeCSS(ch){
 }
 function auditionChord(ch){
  if(!audioReady)return;
- inst.note('comping',voice({r:ch.r,iv:ch.iv},null),.6,Tone.now(),.5);
+ /* his 149th: the palette's plain presses join the ONE playback chain — voice-led
+    within the 9th through the 'pal' memory (the 84th R3 law), never the old parallel
+    voice() planing. */
+ try{audLedPlay('pal',{r:ch.r,iv:(ch.iv||[]).slice()},.6,Tone.now(),.5);}
+ catch(e){try{inst.note('comping',voice({r:ch.r,iv:ch.iv},null),.6,Tone.now(),.5);}catch(e2){}}
 }
 /* 3.3: what a LANE block actually sounds like — its chain voicing (or override). Pure
    math lives in laneVoicingsTop; this is just the live-project accessor. */
