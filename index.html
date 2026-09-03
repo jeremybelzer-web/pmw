@@ -72,6 +72,9 @@
   #melList .part.essObjCard{padding:3px 5px;}
   .essObjCard .essObjCap{min-height:13px;}
   .essObjCap{display:flex;gap:6px;align-items:center;cursor:grab;}
+  /* his 120th: a click on an object must LOOK acknowledged — the press flashes the
+     tile's ring (the audition alone reads as a dead click when audio lags) */
+  .essClipW:active .essClipT,.essObjCard:active .essClipT{outline:2px solid var(--accent);outline-offset:-2px;}
   /* his 102nd: with the title living on the tile, the caption's chips pin RIGHT so the
      row's left side is clean grab space — a press there drags, never hits a chip */
   .essObjCard .essObjCap{justify-content:flex-end;}
@@ -759,7 +762,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02z</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-02ab</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11903,13 +11906,14 @@ function palWinClose(){
     untouched one deletes silently. (Template LOADING is the 3.3 GEMS save-as round —
     the saved shapes wait for it in cp_pal.templates.) 75th r3: the offer is factored
     (palTemplateOffer) — instance palettes run the same law through their own ✕. */
- if(!palTemplateOffer())return;   /* cancel = keep the window */
- const w=palState.win=palWinNorm(palState.win);
- w.closed=true;palWinSel=false;persistPal();
- /* the graph mirrors reality: a deleted window's links go with it */
- for(const n of linkedTo(uiState.links,'win:chordPalette'))uiState.links=linkRemove(uiState.links,'win:chordPalette',n);
- try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
- palWinApply();
+ palTemplateOffer(()=>{   /* his 119th: three honest buttons; only a real delete proceeds */
+  const w=palState.win=palWinNorm(palState.win);
+  w.closed=true;palWinSel=false;persistPal();
+  /* the graph mirrors reality: a deleted window's links go with it */
+  for(const n of linkedTo(uiState.links,'win:chordPalette'))uiState.links=linkRemove(uiState.links,'win:chordPalette',n);
+  try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
+  palWinApply();
+ });
 }
 function palWinReopen(){
  const w=palState.win=palWinNorm(palState.win);
@@ -14923,7 +14927,30 @@ function essDropRowAt(x,y){
  const el=document.elementFromPoint(x,y);
  if(!el||!el.closest)return null;
  const row=el.closest('.trow[data-stack-id]');
- if(!row)return null;
+ if(!row){
+  /* his 120th: the ACTIVE track's BIG LATTICE joins the drop surfaces — a drop on the
+     open grid lands on the active track at the pointer's beat, quantized by the grid's
+     own step (the landing law ①). Width-relative through the svg's declared width, so
+     canvas zoom cannot skew the beat. Instance worlds keep their shipped law. */
+  const gsvg=el.closest('[id="grid"]');
+  if(gsvg&&/svg/i.test(gsvg.tagName||'')){
+   const wrapW=el.closest('[data-gridworld]');
+   if(wrapW&&/^gridRowWrap_g/.test(wrapW.id||''))return null;
+   try{
+    const r2=gsvg.getBoundingClientRect();
+    const declW=+gsvg.getAttribute('width')||r2.width;
+    const z=(r2.width>0&&declW>0)?r2.width/declW:1;
+    const px=(x-r2.left)/z;
+    const W2=viewBeatWindow(GRID_VIEWS.main,LOOP);
+    let b=W2.b0+(px-GUT)/PPB;
+    if(!isFinite(b))return null;
+    const st2=gridStep();
+    b=Math.max(0,Math.min(LOOP,Math.round(b/st2)*st2));
+    return {t:activeTrack,at:b};
+   }catch(e){return null;}
+  }
+  return null;
+ }
  if(row.closest('[id^="gridRowWrap_g"]'))return null;   /* instance worlds keep their shipped law */
  const t=row.dataset.stackId;
  if(!t||t==='__grid')return null;
@@ -19284,9 +19311,19 @@ function renderMelismaList(){
        const nEl=el.closest?el.closest('[data-n]'):null;
        const run=()=>{
         melState.sel=o.id;
-        if(!selNotes.size&&nEl)selNotes.add(+nEl.getAttribute('data-n'));
+        /* his 121st: THE DROP POINT RULES. A drop ON a note names its target (joining
+           a standing group only when it lands ON one of the selected notes — the R5
+           group write survives); a drop OFF the notes goes POSITIONAL (the dialog at
+           the pointer's beat), never onto a stale selection. */
+        const ni=nEl?+nEl.getAttribute('data-n'):null;
+        /* a NEW target ENDS the standing run — melismaRunGo re-rolls melRun.idxs while
+           active, which is exactly the stickiness he reported; fresh target, fresh run */
+        if(ni!=null&&typeof melRun==='object'&&melRun.active&&!selNotes.has(ni))melRun.active=false;
+        if(ni!=null&&!selNotes.has(ni)){selNotes.clear();selNotes.add(ni);}
+        if(ni!=null&&typeof melismaRunGo==='function'){melismaRunGo(0);return;}
+        if(essDropTryDialog(dv,o))return;
         if(selNotes.size&&typeof melismaRunGo==='function'){melismaRunGo(0);return;}
-        if(!essDropTryDialog(dv,o)&&typeof flashHint==='function')flashHint('Drop it on a note (the melisma writes onto it), a track row, or the Essence Shelf.');
+        if(typeof flashHint==='function')flashHint('Drop it on a note (the melisma writes onto it), a track row, or the Essence Shelf.');
        };
        (gid&&gid!=='main'&&typeof withGridWorld==='function'&&GRID_WORLDS[gid])?withGridWorld(gid,run):run();
        return;
@@ -29499,11 +29536,18 @@ function essShelfWinDraw(w){
         const nEl=el.closest?el.closest('[data-n]'):null;
         const run=()=>{
          melState.sel=o.id;
-         if(!selNotes.size&&nEl)selNotes.add(+nEl.getAttribute('data-n'));
+         /* his 121st: THE DROP POINT RULES — a drop ON a note names its target (a
+            standing group survives only when the drop lands ON it); off the notes the
+            drop goes POSITIONAL (the [E4]⑤ dialog at the pointer's beat), never onto
+            a stale selection. */
+         const ni=nEl?+nEl.getAttribute('data-n'):null;
+         /* a NEW target ENDS the standing run — fresh target, fresh run (his 121st) */
+         if(ni!=null&&typeof melRun==='object'&&melRun.active&&!selNotes.has(ni))melRun.active=false;
+         if(ni!=null&&!selNotes.has(ni)){selNotes.clear();selNotes.add(ni);}
+         if(ni!=null&&typeof melismaRunGo==='function'){melismaRunGo(0);return;}
+         if(essDropTryDialog(dv,o))return;
          if(selNotes.size&&typeof melismaRunGo==='function'){melismaRunGo(0);return;}
-         /* no note under the drop — the [E4]⑤ dialog takes it (his 90th: the object
-            drops onto tracks like any object) */
-         if(!essDropTryDialog(dv,o)&&typeof flashHint==='function')flashHint('Drop it on a note (the melisma writes onto it), a track row, or the Essence Shelf.');
+         if(typeof flashHint==='function')flashHint('Drop it on a note (the melisma writes onto it), a track row, or the Essence Shelf.');
         };
         (gid&&gid!=='main'&&typeof withGridWorld==='function'&&GRID_WORLDS[gid])?withGridWorld(gid,run):run();
         return;
@@ -29796,13 +29840,13 @@ function palWireClone(w){
   w.palWin.min=!w.palWin.min;apply();gridsPersistSoon();};
  const x=q('palCloseChip');
  if(x)x.onclick=e=>{e.stopPropagation();
-  if(!palTemplateOffer())return;   /* cancel = keep the window */
-  w.palWin.closed=true;apply();
-  if(typeof uiState==='object'&&uiState){
-   uiState.links=linkRemove(uiState.links,'pal:'+w.id,'grid:'+w.id);
-   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
-  }
-  gridsPersistSoon();};
+  palTemplateOffer(()=>{   /* his 119th: three honest buttons */
+   w.palWin.closed=true;apply();
+   if(typeof uiState==='object'&&uiState){
+    uiState.links=linkRemove(uiState.links,'pal:'+w.id,'grid:'+w.id);
+    try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
+   }
+   gridsPersistSoon();});};
  const ic=w.els.root.querySelector('[id="palIcon"]');
  if(ic)ic.onclick=()=>{w.palWin.closed=false;
   if(typeof uiState==='object'&&uiState){
@@ -29811,19 +29855,36 @@ function palWireClone(w){
   }
   withGridWorld(w.id,()=>{palWinApply();drawChordPanel();});gridsPersistSoon();};
 }
-function palTemplateOffer(){
- /* the deletion law, factored (main + instances): a MODIFIED palette offers a Chord
-    Palette Template first. Returns false when the user cancels the whole close. */
- if(palWinModified()&&confirm('You’ve modified this Chord Palette. Save it as a Chord Palette Template before deleting?')){
+function palTemplateOffer(proceed){
+ /* the deletion law, factored (main + instances). his 119th: the native confirm's two
+    buttons wore the wrong meanings — "Cancel" was playing delete-without-saving while
+    sounding like keep-the-window. The question has THREE honest answers and each
+    button now says exactly what it does; proceed() runs only when the delete should. */
+ if(!palWinModified()){proceed();return;}
+ const m=document.createElement('div');
+ m.className='palDelAsk';
+ m.style.cssText='position:fixed;z-index:220;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:10px;min-width:340px;max-width:460px;';
+ m.innerHTML='<div style="font-size:13px;font-weight:600;">You’ve modified this Chord Palette.</div>'
+  +'<div style="font-size:11.5px;color:var(--dim);">Deleting it loses those changes unless you save them as a Chord Palette Template first.</div>';
+ const row=document.createElement('div');row.style.cssText='display:flex;gap:8px;flex-wrap:wrap;';
+ const btn=(label,primary,fn)=>{const b=document.createElement('button');b.textContent=label;
+  b.style.cssText='padding:7px 12px;font-size:12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;'
+   +(primary?'background:var(--accent);color:#1a1408;font-weight:700;':'background:#2a2d38;color:#e9eaef;');
+  b.onclick=()=>{try{m.remove();}catch(e){}fn();};row.appendChild(b);return b;};
+ btn('Save a Template, then delete',true,()=>{
   const name=prompt('Template name:','My Chord Palette');
-  if(name===null)return false;
+  if(name===null)return;   /* backing out of the name keeps the window */
   if(name){palState.templates=(Array.isArray(palState.templates)?palState.templates:[])
    .concat([{name:String(name).slice(0,60),ts:Date.now(),
      mats:JSON.parse(JSON.stringify(Array.isArray(palState.mats)?palState.mats:[null])),
      dims:!!palState.dims,jimi:!!palState.jimi,hm:!!palState.hm,
      laneTop:!!palState.laneTop,followSel:!!palState.followSel}]);persistPal();}
- }
- return true;
+  proceed();
+ });
+ btn('Delete without saving',false,proceed);
+ btn('Keep the palette',false,()=>{});
+ m.appendChild(row);
+ document.body.appendChild(m);
 }
 function palGlueAll(){
  /* an instance palette RIDES its grid — after any column reorder, re-glue each one
@@ -30636,14 +30697,14 @@ document.addEventListener('click',e=>{
    local file: has no origin to ask. */
 (function(){
  try{
-  const mine=((document.querySelector('.sub')||{textContent:''}).textContent.match(/build (\d{4}-\d\d-\d\d\w+)/)||[])[1];
+  const mine=((document.querySelector('.sub')||{textContent:''}).textContent.match(/\u00b7 build (\d{4}-\d\d-\d\d\w+)/)||[])[1];
   if(!mine)return;
   let shown=false;
   const check=()=>{
    if(shown||!/^https?:/.test(location.protocol))return;
    fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'})
     .then(r=>r.text()).then(t=>{
-     const m=(t.match(/build (\d{4}-\d\d-\d\d\w+)/)||[])[1];
+     const m=(t.match(/\u00b7 build (\d{4}-\d\d-\d\d\w+)/)||[])[1];   /* his tab's false chip: the raw HTML holds many tag-like strings — only the .sub's own line counts */
      if(m&&m!==mine&&!shown){shown=true;freshShow(m);}
     }).catch(()=>{});
   };
