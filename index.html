@@ -770,7 +770,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03f</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -12002,14 +12002,18 @@ function palWinClose(){
     untouched one deletes silently. (Template LOADING is the 3.3 GEMS save-as round —
     the saved shapes wait for it in cp_pal.templates.) 75th r3: the offer is factored
     (palTemplateOffer) — instance palettes run the same law through their own ✕. */
- palTemplateOffer(()=>{   /* his 119th: three honest buttons; only a real delete proceeds */
+ /* his 146th: the ask was THEATER — closing loses nothing (palState persists and a
+    reopen restores it whole), yet any long-ago setting made every delete warn
+    "you've modified…". Deletes are SILENT now; the Save-as-Template entry moves into
+    the 145th's palette rework (palTemplateOffer stands for that round and its suite). */
+ (()=>{
   const w=palState.win=palWinNorm(palState.win);
   w.closed=true;palWinSel=false;persistPal();
   /* the graph mirrors reality: a deleted window's links go with it */
   for(const n of linkedTo(uiState.links,'win:chordPalette'))uiState.links=linkRemove(uiState.links,'win:chordPalette',n);
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
   palWinApply();
- });
+ })();
 }
 function palWinReopen(){
  const w=palState.win=palWinNorm(palState.win);
@@ -30041,13 +30045,13 @@ function palWireClone(w){
   w.palWin.min=!w.palWin.min;apply();gridsPersistSoon();};
  const x=q('palCloseChip');
  if(x)x.onclick=e=>{e.stopPropagation();
-  palTemplateOffer(()=>{   /* his 119th: three honest buttons */
-   w.palWin.closed=true;apply();
-   if(typeof uiState==='object'&&uiState){
-    uiState.links=linkRemove(uiState.links,'pal:'+w.id,'grid:'+w.id);
-    try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
-   }
-   gridsPersistSoon();});};
+  /* his 146th: silent — nothing is lost on close */
+  w.palWin.closed=true;apply();
+  if(typeof uiState==='object'&&uiState){
+   uiState.links=linkRemove(uiState.links,'pal:'+w.id,'grid:'+w.id);
+   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(err){}
+  }
+  gridsPersistSoon();};
  const ic=w.els.root.querySelector('[id="palIcon"]');
  if(ic)ic.onclick=()=>{w.palWin.closed=false;
   if(typeof uiState==='object'&&uiState){
