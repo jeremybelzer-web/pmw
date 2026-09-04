@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ap</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03aq</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1302,7 +1302,7 @@
        / [Essence Shelf] / [this window]. Matching lands with the extractor round — the
        columns and the info-pane law ship first, states honest. -->
   <div class="gridwrap" id="rhyPanel" style="margin:12px 0;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyRmodBtn" title="THE RHYTHM REFINERY — Rhythmic Modulation (the textbook name is metric modulation): a pivot duration keeps its wall-clock length and is re-labeled as a new metrical role — the new tempo is forced by that. Writes one tempo change at the cut; never an arbitrary tempo fader." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">𝄐 RHYTHMIC MODULATION</button><button id="rhyCrpBtn" title="THE RHYTHM REFINERY — Continue an existing rhythmic pattern: yellow boxes show the repeating patterns (largest first, with their repeat counts, or Select My Own from a grid selection); blue boxes offer to extend the pattern where it is missing, walking the melody contour on scale passing tones." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">↬ CONTINUE A PATTERN</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyPolyBtn" title="THE POLYRHYTHM DATASET — traditional Ghana interlocking drum parts (a growing seed corpus). Hear a cycle, or load an ensemble's parts into the audition grid as their own tracks. Named scaffolds carry ZERO invented pulses — a cleared source fills them." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">🥁 POLYRHYTHMS</button><button id="rhyRmodBtn" title="THE RHYTHM REFINERY — Rhythmic Modulation (the textbook name is metric modulation): a pivot duration keeps its wall-clock length and is re-labeled as a new metrical role — the new tempo is forced by that. Writes one tempo change at the cut; never an arbitrary tempo fader." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">𝄐 RHYTHMIC MODULATION</button><button id="rhyCrpBtn" title="THE RHYTHM REFINERY — Continue an existing rhythmic pattern: yellow boxes show the repeating patterns (largest first, with their repeat counts, or Select My Own from a grid selection); blue boxes offer to extend the pattern where it is missing, walking the melody contour on scale passing tones." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">↬ CONTINUE A PATTERN</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
     <div id="rhySongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above — Percussion on top, the Polyphonic Instrument under it, the chord lane below. The other tracks arrive hidden but audible.">Load a song into the audition grid</label>
       <select id="rhySongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
@@ -3251,6 +3251,25 @@ function rmodApply(map,base,cutBeat,pOld,pNew,loop){
  if(Math.abs(nb-cur)<1e-9)return null;
  if(nb<30-1e-9||nb>300+1e-9)return null;
  return {map:tempoMapAddPoint(map||[],cutBeat,nb,loop),bpm:+nb.toFixed(3),from:cur};
+}
+/* POLY_DB:BEGIN (generated by gen-poly-embed.py — edit the JSON, not this) */
+/* F3 THE POLYRHYTHM DATASET — traditional Ghana interlocking parts, the
+   90th's corpus seed. Statuses are the corpus's own honesty: complete =
+   pulse-complete support cycle · ear = derived, awaiting his sign-off ·
+   scaffold = a NAMED shape with zero invented pulses. */
+const POLY_DB={"built":"2026-09-03","entries":[{"id":"gahu-kopeyia-free-movement","name":"Gahu","people":"Ewe","cycleBeats":4.0,"status":"complete","parts":[{"name":"Gankogui (gakogui)","role":"timeline","rows":[[0.0,0.225,54],[0.75,0.225,56],[1.5,0.225,56],[2.0,0.225,56],[2.75,0.225,56],[3.5,0.225,56]]},{"name":"Axatse","role":"timeline","rows":[[0.0,0.225,82],[0.75,0.225,82],[1.0,0.225,83],[1.5,0.225,82],[2.0,0.225,82],[2.75,0.225,82],[3.0,0.225,83],[3.5,0.225,82]]},{"name":"Kagan","role":"support","rows":[[0.5,0.225,71],[0.75,0.225,71],[1.5,0.225,71],[1.75,0.225,71],[2.5,0.225,71],[2.75,0.225,71],[3.5,0.225,71],[3.75,0.225,71]]},{"name":"Kidi","role":"response","rows":[[0.0,0.225,63],[0.25,0.225,63],[0.75,0.225,64],[1.0,0.225,64],[1.5,0.225,63],[2.0,0.225,63],[2.25,0.225,63],[2.75,0.225,64],[3.0,0.225,64],[3.5,0.225,63]]},{"name":"Sogo","role":"response","rows":[[0.0,0.225,56],[1.0,0.225,55],[1.5,0.225,56],[2.0,0.225,56],[3.0,0.225,55],[3.5,0.225,56]]}]},{"id":"ewe-standard-timeline-12-support","name":"Ewe standard timeline (12-pulse) — support scaffold","people":"Ewe","cycleBeats":4.0,"status":"complete","parts":[{"name":"Gankogui","role":"timeline","rows":[[0.0,0.3,54],[0.6667,0.3,56],[1.3333,0.3,56],[1.6667,0.3,56],[2.3333,0.3,56],[3.0,0.3,56],[3.6667,0.3,56]]},{"name":"Axatse","role":"timeline","rows":[[0.0,0.3,82],[0.6667,0.3,82],[1.0,0.3,83],[1.3333,0.3,82],[1.6667,0.3,82],[2.0,0.3,83],[2.3333,0.3,82],[2.6667,0.3,83],[3.0,0.3,82],[3.3333,0.3,83],[3.6667,0.3,82]]},{"name":"Kagan","role":"support","rows":[[0.3333,0.3,71],[0.6667,0.3,71],[1.3333,0.3,71],[1.6667,0.3,71],[2.3333,0.3,71],[2.6667,0.3,71],[3.3333,0.3,71],[3.6667,0.3,71]]},{"name":"Asikpekpe (handclap) — four-feel","role":"support","rows":[[0.0,0.3,59],[1.0,0.3,59],[2.0,0.3,59],[3.0,0.3,59]]}]},{"id":"agbekor-support-extended","name":"Agbekor (Atsiagbekor) — extended support","people":"Ewe","cycleBeats":4.0,"status":"ear","parts":[{"name":"Gankogui","role":"timeline","rows":[[0.0,0.3,54],[0.6667,0.3,56],[1.3333,0.3,56],[1.6667,0.3,56],[2.3333,0.3,56],[3.0,0.3,56],[3.6667,0.3,56]]},{"name":"Axatse","role":"timeline","rows":[[0.0,0.3,82],[0.6667,0.3,82],[1.0,0.3,83],[1.3333,0.3,82],[1.6667,0.3,82],[2.0,0.3,83],[2.3333,0.3,82],[2.6667,0.3,83],[3.0,0.3,82],[3.3333,0.3,83],[3.6667,0.3,82]]},{"name":"Kagan","role":"support","rows":[[0.3333,0.3,71],[0.6667,0.3,71],[1.3333,0.3,71],[1.6667,0.3,71],[2.3333,0.3,71],[2.6667,0.3,71],[3.3333,0.3,71],[3.6667,0.3,71]]},{"name":"Totodzi","role":"support","rows":[[0.0,0.3,61],[0.6667,0.3,62],[1.3333,0.3,61],[2.0,0.3,62],[3.0,0.3,61]]},{"name":"Kloboto (kroboto)","role":"support","rows":[[0.0,0.3,66],[1.0,0.3,65],[1.3333,0.3,65],[2.0,0.3,66],[2.3333,0.3,65],[3.0,0.3,65],[3.3333,0.3,66]]},{"name":"Kidi","role":"response","rows":[[0.0,0.3,64],[0.3333,0.3,63],[0.6667,0.3,63],[1.0,0.3,64],[1.3333,0.3,63],[1.6667,0.3,63],[2.0,0.3,64],[2.3333,0.3,63],[2.6667,0.3,63],[3.0,0.3,64],[3.3333,0.3,63],[3.6667,0.3,63]]}]},{"id":"tokoe-kopeyia-scaffold","name":"Tokoe","people":"Ewe","cycleBeats":4.0,"status":"scaffold","parts":[{"name":"Gankogui","role":"timeline","rows":[]},{"name":"Axatse","role":"timeline","rows":[]},{"name":"Kagan","role":"support","rows":[]},{"name":"Kidi","role":"response","rows":[]},{"name":"Sogo","role":"response","rows":[]}]},{"id":"kpanlogo-ga-scaffold","name":"Kpanlogo","people":"Ga","cycleBeats":4.0,"status":"scaffold","parts":[{"name":"Ngongo (Ga gankogui)","role":"timeline","rows":[]},{"name":"Ashakashaka","role":"timeline","rows":[]},{"name":"Tamalin (high)","role":"support","rows":[]},{"name":"Tamalin (low)","role":"support","rows":[]},{"name":"Kpanlogo support 2","role":"support","rows":[]},{"name":"Kpanlogo support 1","role":"support","rows":[]},{"name":"Kpanlogo lead","role":"lead","rows":[]}]},{"id":"adowa-akan-scaffold","name":"Adowa","people":"Akan / Ashanti","cycleBeats":4.0,"status":"scaffold","parts":[]},{"id":"kinka-ewe-scaffold","name":"Kinka","people":"Ewe","cycleBeats":4.0,"status":"scaffold","parts":[]}]};
+/* POLY_DB:END */
+/* F3 polyrhythm: tile a cycle's rows across a loop — an ostinato repeats by
+   definition, so the materialization is the cycle times N, nothing invented. Pure. */
+function polyTileRows(rows,cycleBeats,loop){
+ if(!rows||!rows.length||!(cycleBeats>0)||!(loop>0))return [];
+ const out=[];
+ for(let b=0;b+1e-6<loop;b+=cycleBeats)
+  for(const r of rows){
+   if(b+r[0]>=loop-1e-6)continue;
+   out.push([+(b+r[0]).toFixed(6),+Math.min(r[1],loop-b-r[0]).toFixed(6),r[2]]);
+  }
+ return out;
 }
 /* ==== /F3 pure layers ==== */
 function simpleVary(rows,amount,opts){
@@ -14274,6 +14293,8 @@ function rhyInfoDraw(){
  if(cb)cb.onclick=()=>{try{crpFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='Continue-a-Pattern could not open: '+err.message;}};
  const rb=document.getElementById('rhyRmodBtn');
  if(rb)rb.onclick=()=>{try{rmodFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='Rhythmic Modulation could not open: '+err.message;}};
+ const pb=document.getElementById('rhyPolyBtn');
+ if(pb)pb.onclick=()=>{try{polyFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='The Polyrhythms browser could not open: '+err.message;}};
 })();
 /* ==== F3 THE RHYTHM REFINERY — THE EMBELLISHER / MINIMIZER GUIDED FLOW (UI) ====
    His July 25 flow, verbatim in the RAW: the guide asks where the first embellishment
@@ -14631,6 +14652,71 @@ function rmodFlowOpen(){
  };
 }
 /* ==== /F3 THE RHYTHMIC MODULATION APPLIER ==== */
+/* ==== F3 — THE POLYRHYTHM DATASET BROWSER (UI) ====
+   The 90th's Ghana seed reaches the app: POLY_DB (generated from the JSON of record
+   by gen-poly-embed.py) lists the corpus with ITS OWN honesty — complete support
+   cycles load and play, derived ones wear the awaiting-his-ear tag, scaffolds are
+   named shapes with zero invented pulses. Load = each part its own labeled custom
+   track in the Rhythm rig's world (main when no rig stands), tiled across the loop,
+   one undo. The nearest-polyrhythm search stays honest-pending until the corpus
+   grows past one tradition. */
+function polyFlowClose(){const p=document.getElementById('polyFlowPop');if(p){try{p.remove();}catch(e){}}}
+function polyAudition(entry){
+ if(!audioReady||typeof inst!=='object')return;
+ try{
+  const t0=Tone.now()+.05,spb=60/Math.max(40,+((document.getElementById('tempo')||{}).value)||110);
+  for(const part of entry.parts)for(const r of part.rows)
+   inst.note('melody',r[2],Math.max(.08,r[1]*spb*.9),t0+r[0]*spb,.5);
+ }catch(e){}
+}
+function polyLoad(entry){
+ let gid='main';
+ if(typeof GRID_WORLDS==='object')for(const g in GRID_WORLDS)if(g!=='main'&&GRID_WORLDS[g]&&GRID_WORLDS[g].pairFor==='rhyPanel')gid=g;
+ let n=0;
+ withGridWorld(gid,()=>{
+  snapshot();
+  for(const part of entry.parts){
+   if(!part.rows.length)continue;
+   const id=nextCustomId(project.tracks);
+   project.tracks[id]=polyTileRows(part.rows,entry.cycleBeats,LOOP).map(r=>{const nn=[r[0],r[1],r[2]];nn[8]=.6;return nn;});
+   mutes[id]=false;
+   trackLabels[id]=part.name;
+   n++;
+  }
+  persistTrackLabels();
+  refresh(true);
+ });
+ if(typeof flashHint==='function')flashHint(entry.name+' — '+n+' part'+(n===1?'':'s')+' landed as their own tracks'+(gid==='main'?' on the main grid':' in the audition grid')+', the cycle tiled across the loop. ⌘Z takes it all back.');
+ if(typeof noteEngine==='function')try{noteEngine('poly-load',{id:entry.id,parts:n});}catch(e){}
+ polyFlowClose();
+}
+function polyFlowOpen(){
+ polyFlowClose();
+ const pop=document.createElement('div');
+ pop.id='polyFlowPop';
+ pop.style.cssText='position:fixed;z-index:150;right:24px;top:90px;width:400px;max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:12px;box-shadow:0 10px 32px rgba(0,0,0,.6);font-size:12px;color:var(--text);';
+ pop.onmousedown=e=>e.stopPropagation();
+ const rowsHtml=POLY_DB.entries.map((e,i)=>{
+  const meta=e.parts.filter(p=>p.rows.length).length+' part'+(e.parts.filter(p=>p.rows.length).length===1?'':'s')+' · '+e.cycleBeats+'-beat cycle'+(e.people?' · '+e.people:'');
+  if(e.status==='scaffold')
+   return '<div style="padding:6px 8px;border:1px dashed var(--line);border-radius:6px;color:var(--dim);">'+e.name+' — <i>named scaffold, no pulses yet (zero invented — a cleared source fills it)</i></div>';
+  const tag=e.status==='ear'?' <span style="font-size:10px;color:#e0a34d;">derived — awaiting your ear</span>':'';
+  return '<div style="padding:6px 8px;border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;gap:8px;">'
+   +'<span style="flex:1;"><b>'+e.name+'</b>'+tag+'<br><span style="font-size:10.5px;color:var(--dim);">'+meta+'</span></span>'
+   +'<button data-polyplay="'+i+'" title="Hear one cycle at the transport tempo." style="padding:3px 9px;">▶</button>'
+   +'<button data-polyload="'+i+'" title="Each part lands as its own labeled track, the cycle tiled across the loop — one undo." style="padding:3px 9px;">⇊ Load</button>'
+   +'</div>';
+ }).join('');
+ pop.innerHTML='<div style="display:flex;align-items:center;margin-bottom:8px;"><b style="font-size:12.5px;">🥁 The Polyrhythm Dataset</b><span id="polyFlowX" title="Close" style="margin-left:auto;cursor:pointer;color:var(--dim);font-size:14px;">✕</span></div>'
+  +'<div style="margin-bottom:8px;color:var(--dim);font-size:11px;">A growing seed corpus of traditional interlocking drum ensembles — not a complete corpus, and every encoded cycle is derived until it passes your ear. ALL SONGS ARE POLYRHYTHMS.</div>'
+  +'<div style="display:flex;flex-direction:column;gap:6px;">'+rowsHtml+'</div>';
+ document.body.appendChild(pop);
+ pop.querySelector('#polyFlowX').onclick=polyFlowClose;
+ pop.querySelectorAll('[data-polyplay]').forEach(b=>{b.onclick=()=>polyAudition(POLY_DB.entries[+b.dataset.polyplay]);});
+ pop.querySelectorAll('[data-polyload]').forEach(b=>{b.onclick=()=>polyLoad(POLY_DB.entries[+b.dataset.polyload]);});
+}
+/* ==== /F3 THE POLYRHYTHM DATASET BROWSER ==== */
+
 
 
 /* 80th (his seventeenth message): the main Essence Shelf's −/✕ — session-local, the
@@ -29498,7 +29584,7 @@ function buildStripContent(strip,t){
   const tint=document.createElement('div');tint.className='stint';
   /* [M15b]: the drum lane reads DARK under its colored lines and dots — the chord
      tints belong to the melodic lanes (the cells and their gestures are untouched) */
-  tint.style.background=isGap?'#07080b':t==='drums'?'#101218':chordFillCSS(chordAt(project.chords,sp.a).c,sp.a);
+  tint.style.background=isGap?'#07080b':t==='drums'?'#101218':(project.chords&&project.chords.length?chordFillCSS(chordAt(project.chords,sp.a).c,sp.a):'#101218');   /* 89th R5: an EMPTY chord lane (a blank rig world gaining a custom track) has no chord to tint — chordAt on [] threw and took the whole strip render down */
   cell.appendChild(tint);
   if(acting){
    cell.onmousedown=ev=>{
@@ -32781,6 +32867,7 @@ document.addEventListener('keydown',e=>{
   ['#gridAddMenu',el=>{el.style.display='none';}],
   ['#cnvTplPick',el=>el.remove()],
   ['.essObjPop',()=>{try{essObjWinClose();}catch(err){}}],
+  ['#polyFlowPop',()=>{try{polyFlowClose();}catch(err){}}],
   ['#rmodFlowPop',()=>{try{rmodFlowClose();}catch(err){}}],
   ['#crpFlowPop',()=>{try{crpFlowClose();}catch(err){}}],
   ['#embFlowPop',()=>{try{embFlowClose();}catch(err){}}],
