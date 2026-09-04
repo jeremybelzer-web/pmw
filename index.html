@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ao</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ap</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1302,7 +1302,7 @@
        / [Essence Shelf] / [this window]. Matching lands with the extractor round — the
        columns and the info-pane law ship first, states honest. -->
   <div class="gridwrap" id="rhyPanel" style="margin:12px 0;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyCrpBtn" title="THE RHYTHM REFINERY — Continue an existing rhythmic pattern: yellow boxes show the repeating patterns (largest first, with their repeat counts, or Select My Own from a grid selection); blue boxes offer to extend the pattern where it is missing, walking the melody contour on scale passing tones." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">↬ CONTINUE A PATTERN</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyRmodBtn" title="THE RHYTHM REFINERY — Rhythmic Modulation (the textbook name is metric modulation): a pivot duration keeps its wall-clock length and is re-labeled as a new metrical role — the new tempo is forced by that. Writes one tempo change at the cut; never an arbitrary tempo fader." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">𝄐 RHYTHMIC MODULATION</button><button id="rhyCrpBtn" title="THE RHYTHM REFINERY — Continue an existing rhythmic pattern: yellow boxes show the repeating patterns (largest first, with their repeat counts, or Select My Own from a grid selection); blue boxes offer to extend the pattern where it is missing, walking the melody contour on scale passing tones." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">↬ CONTINUE A PATTERN</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
     <div id="rhySongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above — Percussion on top, the Polyphonic Instrument under it, the chord lane below. The other tracks arrive hidden but audible.">Load a song into the audition grid</label>
       <select id="rhySongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
@@ -3228,6 +3228,29 @@ function crpExtend(rows,iois,at,ctx,unit){
   if(i<iois.length){cur=dir===0?cur:stepUp();b+=iois[i]*u;}
  }
  return out.sort((x,y)=>x[0]-y[0]);
+}
+/* ==== F3 — THE RHYTHMIC MODULATION APPLIER (pure layer) ====
+   His 182nd is the definition (metric modulation, the textbook name): a pivot
+   duration that exists in the old tempo keeps its WALL-CLOCK length and is
+   re-labeled as a new metrical role — the new BPM is forced by that. The sharpened
+   example is the authority: the quarter-note triplet (2/3 of an old beat) becoming
+   the new quarter = x3/2. NOT an arbitrary tempo fader: no pivot, no modulation. */
+function rmodNewBpm(bpm,pivotOldBeats,pivotNewBeats){
+ if(!(typeof bpm==='number'&&isFinite(bpm)&&bpm>0))return null;
+ if(!(typeof pivotOldBeats==='number'&&pivotOldBeats>0&&typeof pivotNewBeats==='number'&&pivotNewBeats>0))return null;
+ return bpm*pivotNewBeats/pivotOldBeats;
+}
+function rmodApply(map,base,cutBeat,pOld,pNew,loop){
+ /* reads the tempo STANDING at the cut (map point else the base), writes the
+    pivot-forced BPM there. Refusals are the spec: the x1 identity is "just a tempo
+    change", and a result outside the app's 30-300 band cannot land. Pure. */
+ if(!(typeof cutBeat==='number'&&isFinite(cutBeat)&&cutBeat>=0))return null;
+ const cur=tempoAtBeat(map||[],base,cutBeat);
+ const nb=rmodNewBpm(cur,pOld,pNew);
+ if(nb==null)return null;
+ if(Math.abs(nb-cur)<1e-9)return null;
+ if(nb<30-1e-9||nb>300+1e-9)return null;
+ return {map:tempoMapAddPoint(map||[],cutBeat,nb,loop),bpm:+nb.toFixed(3),from:cur};
 }
 /* ==== /F3 pure layers ==== */
 function simpleVary(rows,amount,opts){
@@ -14249,6 +14272,8 @@ function rhyInfoDraw(){
  if(eb)eb.onclick=()=>{try{embFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='The Embellisher could not open: '+err.message;}};
  const cb=document.getElementById('rhyCrpBtn');
  if(cb)cb.onclick=()=>{try{crpFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='Continue-a-Pattern could not open: '+err.message;}};
+ const rb=document.getElementById('rhyRmodBtn');
+ if(rb)rb.onclick=()=>{try{rmodFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='Rhythmic Modulation could not open: '+err.message;}};
 })();
 /* ==== F3 THE RHYTHM REFINERY — THE EMBELLISHER / MINIMIZER GUIDED FLOW (UI) ====
    His July 25 flow, verbatim in the RAW: the guide asks where the first embellishment
@@ -14543,6 +14568,70 @@ function crpFlowStage(stage){
  const x=pop.querySelector('#crpFlowX');if(x)x.onclick=crpFlowClose;
 }
 /* ==== /F3 CONTINUE-A-RHYTHMIC-PATTERN flow ==== */
+/* ==== F3 — THE RHYTHMIC MODULATION APPLIER (UI) ====
+   His 182nd: pick the pivot that already exists in the old tempo, name its new role,
+   and the new BPM is whatever makes the pivot land on that role — the wall-clock
+   length never moves. One tempo change at the cut, one undo. The identify/distill
+   half stays Prism territory (the F3 family entry's own split). */
+const RMOD_PIVOTS=[
+ ['Quarter-note triplet',2/3],['Eighth note',1/2],['Eighth-note triplet',1/3],
+ ['Dotted eighth',3/4],['Sixteenth',1/4],['Dotted quarter',3/2],['Quarter',1]
+];
+const RMOD_ROLES=[
+ ['the new QUARTER (the new 1-2-3-4)',1],['the new EIGHTH',1/2],
+ ['the new DOTTED QUARTER',3/2],['the new HALF',2]
+];
+function rmodFlowClose(){const p=document.getElementById('rmodFlowPop');if(p){try{p.remove();}catch(e){}}}
+function rmodFlowOpen(){
+ rmodFlowClose();
+ let cut=0,curBase=120;
+ withGridWorld('main',()=>{cut=Math.max(0,Math.round(playheadBeat||0));curBase=+((document.getElementById('tempo')||{}).value)||120;});
+ const pop=document.createElement('div');
+ pop.id='rmodFlowPop';
+ pop.style.cssText='position:fixed;z-index:150;right:24px;top:90px;width:380px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:12px;box-shadow:0 10px 32px rgba(0,0,0,.6);font-size:12px;color:var(--text);';
+ pop.onmousedown=e=>e.stopPropagation();
+ pop.innerHTML='<div style="display:flex;align-items:center;margin-bottom:8px;"><b style="font-size:12.5px;">𝄐 Rhythmic Modulation</b><span style="font-size:10px;color:var(--dim);margin-left:8px;">the pivot keeps its length; its NAME changes</span><span id="rmodX" title="Close" style="margin-left:auto;cursor:pointer;color:var(--dim);font-size:14px;">✕</span></div>'
+  +'<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">At beat <input id="rmodCut" type="number" min="0" step="1" value="'+cut+'" style="width:64px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:2px 5px;"> (the cut — defaults to the playhead)</label>'
+  +'<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">The pivot <select id="rmodPivot" style="flex:1;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:2px 5px;">'
+  +RMOD_PIVOTS.map((o,i)=>'<option value="'+i+'"'+(i===0?' selected':'')+'>'+o[0]+'</option>').join('')+'</select></label>'
+  +'<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">becomes <select id="rmodRole" style="flex:1;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:2px 5px;">'
+  +RMOD_ROLES.map((o,i)=>'<option value="'+i+'"'+(i===0?' selected':'')+'>'+o[0]+'</option>').join('')+'</select></label>'
+  +'<div id="rmodOut" style="margin:8px 0;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.03);"></div>'
+  +'<div style="display:flex;gap:8px;"><button id="rmodGo" style="padding:5px 16px;">✓ Write the modulation</button></div>'
+  +'<div style="margin-top:6px;font-size:10.5px;color:var(--dim);">A rit/accel or “set BPM to 137” is just a tempo change — this engine only writes a pivot’s forced tempo. The ⏱ tempo lane (Settings) shows the point it writes.</div>';
+ document.body.appendChild(pop);
+ const upd=()=>{
+  const pv=RMOD_PIVOTS[+pop.querySelector('#rmodPivot').value][1];
+  const rl=RMOD_ROLES[+pop.querySelector('#rmodRole').value][1];
+  const b=Math.max(0,+pop.querySelector('#rmodCut').value||0);
+  let cur=curBase;withGridWorld('main',()=>{cur=tempoAtBeat(project.tempoMap||[],curBase,b);});
+  const nb=rmodNewBpm(cur,pv,rl);
+  const out=pop.querySelector('#rmodOut');
+  if(nb==null){out.textContent='Pick a pivot and a role.';return;}
+  if(Math.abs(nb-cur)<1e-9){out.innerHTML='✕ That pivot already IS that role — ×1 is no modulation (an honest refusal).';return;}
+  if(nb<30||nb>300){out.innerHTML='✕ ♩='+Math.round(nb)+' lands outside the app’s 30–300 band — pick another pairing.';return;}
+  out.innerHTML='♩='+(+cur.toFixed(1))+' → <b>♩='+(+nb.toFixed(1))+'</b> at beat '+b+' — ×'+(+(rl/pv).toFixed(3))+', the pivot’s wall-clock length unchanged.';
+ };
+ ['rmodPivot','rmodRole','rmodCut'].forEach(id=>{pop.querySelector('#'+id).oninput=upd;pop.querySelector('#'+id).onchange=upd;});
+ upd();
+ pop.querySelector('#rmodX').onclick=rmodFlowClose;
+ pop.querySelector('#rmodGo').onclick=()=>{
+  const pv=RMOD_PIVOTS[+pop.querySelector('#rmodPivot').value][1];
+  const rl=RMOD_ROLES[+pop.querySelector('#rmodRole').value][1];
+  const b=Math.max(0,+pop.querySelector('#rmodCut').value||0);
+  let res=null;
+  withGridWorld('main',()=>{
+   res=rmodApply(project.tempoMap||[],curBase,b,pv,rl,LOOP);
+   if(res){snapshot();project.tempoMap=res.map;refresh(true);}
+  });
+  if(!res){upd();return;}
+  if(typeof flashHint==='function')flashHint('Rhythmic modulation written: ♩='+(+res.from.toFixed(1))+' → ♩='+(+res.bpm.toFixed(1))+' at beat '+b+' — ⌘Z undoes.');
+  if(typeof noteEngine==='function')try{noteEngine('rmod',{b,bpm:res.bpm});}catch(e){}
+  rmodFlowClose();
+ };
+}
+/* ==== /F3 THE RHYTHMIC MODULATION APPLIER ==== */
+
 
 /* 80th (his seventeenth message): the main Essence Shelf's −/✕ — session-local, the
    restore chip always computed-visible when hidden (the R8 wound class) */
@@ -32692,6 +32781,7 @@ document.addEventListener('keydown',e=>{
   ['#gridAddMenu',el=>{el.style.display='none';}],
   ['#cnvTplPick',el=>el.remove()],
   ['.essObjPop',()=>{try{essObjWinClose();}catch(err){}}],
+  ['#rmodFlowPop',()=>{try{rmodFlowClose();}catch(err){}}],
   ['#crpFlowPop',()=>{try{crpFlowClose();}catch(err){}}],
   ['#embFlowPop',()=>{try{embFlowClose();}catch(err){}}],
   ['.wanPopup [data-w="popclose"]',el=>el.click()]
