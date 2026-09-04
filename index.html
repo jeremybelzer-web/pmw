@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03aq</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ar</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11775,10 +11775,10 @@ function swLayoutApply(layout){
    row.appendChild(m);
    m.style.display='';
    m.classList.add('swCell');
-   m.style.width=r.swipe==='h'?'96%':'';   /* his 136th: every lower window fills its row like the grid — one window per view, the swipe keeps the rest reachable */
+   m.style.width='96%';   /* his 136th: every lower window fills its row like the grid — one window per view; his 185th: in BOTH swipe directions — the window opens AT ITS PANE'S SIZE, never partially */
    /* his 128th: the SLEEK default — every lower-band window the SAME SIZE (uniform
       cells, their content scrolling inside); the grids row keeps its own law */
-   if(!grids&&r.swipe==='h'){m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';}
+   if(!grids){m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';}   /* his 185th: the pane-size law holds under the vertical pattern too */
    m.style.scrollSnapAlign=r.swipe==='h'?'start':'';   /* his 155th: the snap aligns LEFT — a swiped-in window lands flush under the upper window's left edge (both rows, one registration) */
   }
   if(grids&&!members.length){
@@ -33925,6 +33925,7 @@ buildWanPanel();    /* 4.6: the Chord Wanderer builds at boot too */
 try{buildOrbPanel();}catch(e){console.error('Orbit panel failed to build at boot',e);}    /* 4.7: Interplanetary Orbits builds at boot too — 20i: and a fault in it must never abort the boot (loadSong follows) */
 try{fixedChromeInit();}catch(e){console.error('fixed chrome failed to init at boot',e);}   /* 76th R2 — the 20i defence */
 loadSong('bj');drawParts();drawVars();drawPatchRow();
+try{if(uiWinShown('harmPanel'))buildHarmWindow();}catch(e){}   /* his 184th: the pre-load harm builds run with NO SONG (this line's ancestors sit above loadSong), so the inline object row rendered 0px and the window's lower half sat blank — the song exists NOW, rebuild */
 document.getElementById('patchKit').onclick=e=>{
  patchSel=Object.assign(defaultPatchSel(),PATCH_KIT);
  persistPatches();drawPatchRow();patchAudition('comping');
