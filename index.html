@@ -114,7 +114,7 @@
   body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
   body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
   body.swipeH #gridRowWrap~#chordPanel{display:inline-flex;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}   /* the palette IS a flex container — inline-flex keeps its inner layout (a blanket inline-block broke it; scoped to the real column members so hidden menus stay hidden) */
-  :root{--bg:#17181d;--panel:#20222a;--panel2:#2a2d38;--line:#3a3e4d;--text:#e9eaef;--dim:#98a0b2;--accent:#e8a33d;--cage-f1:#e8c547;--cage-f2:#7b6cf0;--cage-f3:#3d9be9;--cage-f4:#3ecf8e;--cage-f0:#e8a33d;}
+  :root{--bg:#17181d;--panel:#20222a;--panel2:#2a2d38;--line:#3a3e4d;--text:#e9eaef;--dim:#98a0b2;--accent:#e8a33d;--cage-f1:#e8c547;--cage-f2:#7b6cf0;--cage-f3:#3d9be9;--cage-f4:#3ecf8e;--cage-f0:#e8a33d;--cage-wood:#1e1a14;--cage-wood2:#2a241c;--cage-fret:#c8b48c;--cage-string:#d7cbb0;--cage-ink:#1a1208;--cage-ring:#ffffff;--cage-ball:#ffffff;--cage-nut:#c4b89a;--cage-root:#e8c547;--cage-chord:#c23b2a;--cage-tone:#2f8f5b;--cage-scale:#8a9bb0;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;padding:22px 26px;}
   h1{font-size:20px;font-weight:600;} h1 span{color:var(--accent);}
@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-04g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-04i</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4318,13 +4318,28 @@ function cagedDegLabel(rootPc,pc){
  const M={0:'1',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'b5',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
  return M[((pc-rootPc)%12+12)%12];
 }
+function cagedBridgeChordText(c){
+ if(!c||c.off)return '';
+ const rootPc=(c.r|0)%12;
+ return c.name?String(c.name):(typeof PCN!=='undefined'?PCN[rootPc]:'?')+(typeof ivName==='function'?ivName(c.iv):'');
+}
 function cagedBridgePayload(chords,beat,tonic){
  if(!Array.isArray(chords)||!chords.length)return null;
  const hit=chordAt(chords,Math.max(0,+beat||0));
  const c=hit&&hit.c; if(!c||c.off)return null;
  const rootPc=(c.r|0)%12;
- const text=c.name?String(c.name):(typeof PCN!=='undefined'?PCN[rootPc]:'?')+(typeof ivName==='function'?ivName(c.iv):'');
- return {text:text,rootPc:rootPc,scaleRootPc:((tonic|0)%12+12)%12,beat:+beat||0,t:Date.now()};
+ const text=cagedBridgeChordText(c);
+ const q=typeof cageParseChord==='function'?cageParseChord(text):{quality:'maj'};
+ let next=null;
+ if(hit&&hit.i!=null&&hit.i+1<chords.length){
+  const nc=chords[hit.i+1];
+  if(nc&&!nc.off){
+   const ntext=cagedBridgeChordText(nc);
+   const nq=typeof cageParseChord==='function'?cageParseChord(ntext):{quality:'maj'};
+   next={text:ntext,rootPc:(nc.r|0)%12,quality:nq.quality||'maj'};
+  }
+ }
+ return {text:text,rootPc:rootPc,quality:q.quality||'maj',scaleRootPc:((tonic|0)%12+12)%12,beat:+beat||0,t:Date.now(),next:next};
 }
 function cagedBridgePush(){
  try{
@@ -4334,7 +4349,9 @@ function cagedBridgePush(){
   const payload=cagedBridgePayload(chords,beat,project&&project.tonic);
   if(!payload)return;
   const prev=cagedBridgePush._last;
-  if(prev&&prev.text===payload.text&&prev.rootPc===payload.rootPc&&prev.scaleRootPc===payload.scaleRootPc)return;
+  const pn=prev&&prev.next, nn=payload.next;
+  if(prev&&prev.text===payload.text&&prev.rootPc===payload.rootPc&&prev.scaleRootPc===payload.scaleRootPc
+   &&((!pn&&!nn)||(pn&&nn&&pn.text===nn.text&&pn.rootPc===nn.rootPc)))return;
   cagedBridgePush._last=payload;
   localStorage.setItem('cp_caged_chord',JSON.stringify(payload));
   if(typeof uiWinShown==='function'&&uiWinShown('cagePanel')&&typeof cageApplyPayload==='function')
@@ -4357,7 +4374,8 @@ const CAGED_STR=['E','A','D','G','B','e'];
 let cageState={
  mode:'setup', numberView:'absolute',
  scaleRootPc:0, chordText:'C', chordRootPc:0, quality:'maj',
- layer:'arp', shapePref:'auto', window:5, startFret:0,
+ layer:'scale', soloView:'scale', splitNeck:false, shapePref:'auto', window:5, startFret:0,
+ upcoming:{text:'',rootPc:0,quality:'maj'},
  selected:new Set(), flash:new Map(),
  capturing:false, captureBuf:[], triggers:[], playSeq:[],
  _shapeFrets:[], _shapeColor:'#2f8f5b', _built:false, _painting:false, _paintAdd:true, _last:null
@@ -4365,6 +4383,34 @@ let cageState={
 function cageDegFrom(rootPc,pc){return CAGED_DEG[((pc-rootPc)%12+12)%12];}
 function cageLabelPc(pc){
  return cageDegFrom(cageState.numberView==='absolute'?cageState.scaleRootPc:cageState.chordRootPc, pc);
+}
+/* RAW [18]–[22]: solo-help views · Blues dual-neck · split CURRENT/UPCOMING */
+function cageBluesNeckCount(quality){
+ return (quality==='min'||quality==='min7'||quality==='dim')?1:2;
+}
+function cageSoloToLayer(solo){
+ const s=String(solo||'scale');
+ if(s==='penta')return 'penta';
+ if(s==='chord'||s==='shape')return 'shape';
+ if(s==='fullArp'||s==='arp')return 'fullArp';
+ if(s==='seventh')return 'seventh';
+ if(s==='blues')return 'blues';
+ if(s==='bluesMaj')return 'bluesMaj';
+ if(s==='bluesMin')return 'bluesMin';
+ return 'scale';
+}
+function cageIsMajorish(quality){
+ return !(quality==='min'||quality==='min7'||quality==='dim');
+}
+function cageShapeChainFollow(iShape,romanDeg){
+ /* I in D ⇒ IV in G ⇒ V in A (his [18] walkthrough); romanDeg 1/4/5 */
+ const order=['D','C','A','G','E'];
+ const i=order.indexOf(iShape); if(i<0)return null;
+ const d=+romanDeg||1;
+ if(d===1)return order[i];
+ if(d===4)return order[(i+3)%5]; /* D→G, C→E, A→D, G→C, E→A */
+ if(d===5)return order[(i+2)%5]; /* D→A, C→G, A→E, G→D, E→C */
+ return null;
 }
 function cageParseChord(str){
  str=String(str||'C').trim();
@@ -4388,8 +4434,22 @@ function cageParseChord(str){
 function cageDegreeSet(quality,layer){
  const Q={maj:[0,4,7],min:[0,3,7],dim:[0,3,6],aug:[0,4,8],sus2:[0,2,7],sus4:[0,5,7],dom7:[0,4,7,10],maj7:[0,4,7,11],min7:[0,3,7,10]};
  const triad=Q[quality]||Q.maj;
- if(layer==='arp'||layer==='shape')return new Set(triad);
- if(layer==='penta')return new Set((quality==='min'||quality==='min7'||quality==='dim')?[0,3,5,7,10]:[0,2,4,7,9]);
+ const L=cageSoloToLayer(layer);
+ if(L==='blues'||L==='bluesMin')return new Set([0,3,5,6,7,10]); /* minor blues SCALE_DB */
+ if(L==='bluesMaj')return new Set([0,2,3,4,7,9]); /* major blues */
+ if(L==='seventh'){
+  if(quality==='min'||quality==='min7')return new Set(Q.min7);
+  if(quality==='maj7')return new Set(Q.maj7);
+  return new Set(Q.dom7);
+ }
+ if(L==='fullArp'){
+  /* full arpeggio = all chord tones (incl. 7 when quality carries one) across the neck */
+  if(quality==='dom7'||quality==='maj7'||quality==='min7')return new Set(Q[quality]||triad);
+  if(cageIsMajorish(quality))return new Set(Q.dom7); /* prefer 7ths when soloing arps */
+  return new Set(Q.min7);
+ }
+ if(L==='arp'||L==='shape'||L==='chord')return new Set(triad);
+ if(L==='penta')return new Set((quality==='min'||quality==='min7'||quality==='dim')?[0,3,5,7,10]:[0,2,4,7,9]);
  if(quality==='min'||quality==='min7')return new Set([0,2,3,5,7,8,10]);
  if(quality==='dom7')return new Set([0,2,4,5,7,9,10]);
  return new Set([0,2,4,5,7,9,11]);
@@ -4454,6 +4514,89 @@ function cageFingerColor(finger){
  }catch(e){}
  const def={0:'#e8a33d',1:'#e8c547',2:'#7b6cf0',3:'#3d9be9',4:'#3ecf8e'};
  return def[f===0?0:Math.max(1,Math.min(4,f))]||'#e8a33d';
+}
+
+function cageCss(key, fallback){
+ try{const live=getComputedStyle(document.documentElement).getPropertyValue(key).trim(); if(live)return live;}catch(e){}
+ return fallback||'#888';
+}
+/* P4 [17] — CAGED box order ascending the neck (chart rows E→D→C→A→G). Shift only when the current 5-fret window cannot host the pitch. */
+const CAGED_NECK_ORDER=['E','D','C','A','G'];
+function cageBoxForRoot(shapeName, rootPc){
+ const x=cageTransposeForm(shapeName, rootPc==null?0:+rootPc);
+ const {lo,hi}=cageShapeSpan(x.frets);
+ const start=Math.max(0, Math.min(lo, Math.max(0, hi-4)));
+ return {shape:shapeName, startFret:start, window:5, frets:x.frets, color:x.color, lo, hi};
+}
+function cagePosInBox(midi, box){
+ if(!box)return null;
+ const lo=+box.startFret, hi=lo+(+box.window||5)-1;
+ const opts=cagePositionsForMidi(midi);
+ const inWin=opts.filter(p=>p.f>=lo&&p.f<=hi);
+ if(inWin.length)return inWin.slice().sort((a,b)=>Math.abs(a.f-(lo+hi)/2)-Math.abs(b.f-(lo+hi)/2)||a.s-b.s)[0];
+ return null;
+}
+function cagePassageLayout(rows, rootPc){
+ const root=(rootPc==null&&typeof cageState==='object'&&cageState)?(+cageState.chordRootPc||0):(+rootPc||0);
+ let box=cageBoxForRoot(CAGED_NECK_ORDER[0], root);
+ const out=(rows||[]).map(()=>null);
+ const order=(rows||[]).map((n,i)=>({n,i,t:n&&isFinite(+n[0])?+n[0]:1e15})).filter(x=>x.n).sort((a,b)=>a.t-b.t||a.i-b.i);
+ for(const {n,i} of order){
+  let g=cageNoteGtr(n);
+  if(g&&g.s!=null&&g.f!=null&&g.locked){out[i]={s:g.s,f:g.f,shape:box.shape,startFret:box.startFret}; continue;}
+  let pos=cagePosInBox(n[2], box);
+  if(!pos){
+   /* shift only when absolutely necessary — try adjacent boxes on the neck */
+   let found=null;
+   const ix=CAGED_NECK_ORDER.indexOf(box.shape);
+   for(const step of [1,-1,2,-2,3,-3,4]){
+    const j=(ix+step+CAGED_NECK_ORDER.length*4)%CAGED_NECK_ORDER.length;
+    const cand=cageBoxForRoot(CAGED_NECK_ORDER[j], root);
+    const p=cagePosInBox(n[2], cand);
+    if(p){found={box:cand,pos:p}; break;}
+   }
+   if(found){box=found.box; pos=found.pos;}
+   else{pos=cageDefaultPos(n[2], box.startFret, box.window);}
+  }
+  if(!pos)continue;
+  out[i]={s:pos.s,f:pos.f,shape:box.shape,startFret:box.startFret};
+ }
+ return {box, placements:out};
+}
+/* P5 [17] — alternate picking for single notes; strum grids for 8ths / 16ths */
+function cageAlternatePick(i){return ((+i)||0)%2===0?'down':'up';}
+function cageStrumStroke(beatInBar, subdiv){
+ const b=((+beatInBar)%4+4)%4;
+ const sd=(+subdiv===16)?16:8;
+ if(sd===16){
+  const slot=Math.round(b*4)%4; /* 0=1, 1=e, 2=&, 3=a */
+  return (slot===0||slot===2)?'down':'up';
+ }
+ const slot=Math.round(b*2)%2; /* 0=beat, 1=& */
+ return slot===0?'down':'up';
+}
+function cageStrumPattern(hits, subdiv, bars){
+ /* hits = sorted beat times (absolute or within loop); returns [{t,stroke}] for each hit; misses are absent */
+ const sd=(+subdiv===16)?16:8;
+ const out=[];
+ for(const t of (hits||[])){
+  const barBeat=((+t)%4+4)%4;
+  out.push({t:+t, stroke:cageStrumStroke(barBeat, sd)});
+ }
+ return out;
+}
+function cageApplyPassageToRows(rows, rootPc){
+ const plan=cagePassageLayout(rows, rootPc);
+ const fingers=cagePassageFingers(rows, plan.box.startFret);
+ for(let i=0;i<(rows||[]).length;i++){
+  const pl=plan.placements[i]; if(!pl||!rows[i])continue;
+  const g0=cageNoteGtr(rows[i])||{};
+  if(g0.locked)continue;
+  const finger=fingers[i]!=null?fingers[i]:cageFingerForFret(pl.f, plan.box.startFret);
+  const pick=g0.pick||cageAlternatePick(i);
+  cageSetNoteGtr(rows[i], {s:pl.s,f:pl.f,finger,pick,pima:g0.pima||null});
+ }
+ return plan;
 }
 function cageFingerForFret(fret,startFret){
  const rel=(+fret)-(startFret==null?0:+startFret);
@@ -4559,18 +4702,29 @@ function cageLinkNeckDraw(rows){
  const c=document.getElementById('cageLinkBoard'); if(!c)return;
  const ctx=c.getContext('2d'); const W=c.width,H=c.height;
  ctx.clearRect(0,0,W,H);
- ctx.fillStyle='#1e1a14'; ctx.fillRect(0,0,W,H);
+ ctx.fillStyle=cageCss('--cage-wood','#1e1a14'); ctx.fillRect(0,0,W,H);
  const padL=28,padR=12,padT=18,padB=20, frets=12, strings=6;
  const x0=padL,x1=W-padR,y0=padT,y1=H-padB;
  const fretW=(x1-x0)/frets, strGap=(y1-y0)/(strings-1);
- ctx.strokeStyle='rgba(200,180,140,.55)'; ctx.lineWidth=1;
+ ctx.strokeStyle=cageCss('--cage-fret','#c8b48c'); ctx.globalAlpha=0.55; ctx.lineWidth=1;
  for(let i=0;i<=frets;i++){const x=x0+i*fretW; ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();}
+ ctx.strokeStyle=cageCss('--cage-string','#d7cbb0');
  for(let s=0;s<strings;s++){const y=y0+s*strGap; ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();}
- ctx.fillStyle='rgba(200,180,140,.7)'; ctx.font='10px system-ui,sans-serif';
+ ctx.globalAlpha=1; ctx.fillStyle=cageCss('--cage-fret','#c8b48c'); ctx.globalAlpha=0.7; ctx.font='10px system-ui,sans-serif';
  for(let i=1;i<=frets;i++)ctx.fillText(String(i),x0+i*fretW-fretW/2-3,y1+14);
+ ctx.globalAlpha=1;
  const beat=cageBeatNow();
- const startF=(typeof cageState==='object'&&cageState)?(+cageState.startFret||0):0;
+ const rootPc=(typeof cageState==='object'&&cageState)?(+cageState.chordRootPc||0):0;
+ const plan=cagePassageLayout(rows, rootPc);
+ const startF=plan.box?plan.box.startFret:((typeof cageState==='object'&&cageState)?(+cageState.startFret||0):0);
  const fingers=cagePassageFingers(rows,startF);
+ for(let i=0;i<(rows||[]).length;i++){
+  const pl=plan.placements[i]; if(!pl||!rows[i])continue;
+  let g=cageNoteGtr(rows[i]);
+  if(!g){g={s:pl.s,f:pl.f,finger:fingers[i]!=null?fingers[i]:cageFingerForFret(pl.f,startF)}; cageSetNoteGtr(rows[i],g);}
+  else if(g.finger==null||g.finger===''){g=Object.assign({},g,{finger:fingers[i]!=null?fingers[i]:cageFingerForFret(g.f,startF)}); cageSetNoteGtr(rows[i],g);}
+ }
+ if(typeof cageState==='object'&&cageState&&plan.box){cageState._cageBox=plan.box.shape;}
  const pts=[];
  for(let i=0;i<(rows||[]).length;i++){
   const n=rows[i]; if(!n)continue;
@@ -4587,10 +4741,10 @@ function cageLinkNeckDraw(rows){
   const rad=st==='current'?12:st==='approaching'?10:8;
   const alpha=st==='played'?0.28:st==='upcoming'?0.55:1;
   ctx.globalAlpha=alpha;
-  if(st==='current'){ctx.beginPath();ctx.arc(cx,cy,rad+4,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+  if(st==='current'){ctx.beginPath();ctx.arc(cx,cy,rad+4,0,Math.PI*2);ctx.strokeStyle=cageCss('--cage-ring','#fff');ctx.lineWidth=2;ctx.stroke();}
   ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2);
   ctx.fillStyle=cageFingerColor(g.finger); ctx.fill();
-  ctx.fillStyle='#1a1208'; ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=cageCss('--cage-ink','#1a1208'); ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(String(g.finger),cx,cy+0.5);
   if(g.pick||g.pima){ctx.fillStyle='rgba(233,234,239,.9)';ctx.font='9px system-ui,sans-serif';
    ctx.fillText(g.pick==='down'?'↓':g.pick==='up'?'↑':(g.pima||'').toUpperCase(),cx,cy-rad-4);}
@@ -4610,10 +4764,10 @@ function cageLinkNeckDraw(rows){
   }
   u=Math.max(0,Math.min(1,u));
   const mx=ax+(bx-ax)*u, my=ay+(by-ay)*u-Math.sin(u*Math.PI)*18;
-  ctx.setLineDash([3,4]); ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1.2;
+  ctx.setLineDash([3,4]); ctx.strokeStyle=cageCss('--cage-ball','#fff'); ctx.globalAlpha=0.55; ctx.lineWidth=1.2;
   ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo((ax+bx)/2,Math.min(ay,by)-22,bx,by); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.beginPath(); ctx.arc(mx,my,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.shadowColor='rgba(255,255,255,.8)'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
+  ctx.globalAlpha=1; ctx.beginPath(); ctx.arc(mx,my,6,0,Math.PI*2); ctx.fillStyle=cageCss('--cage-ball','#fff'); ctx.shadowColor=cageCss('--cage-ball','#fff'); ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
  }
  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
  cageHandLegendDraw();
@@ -4774,7 +4928,7 @@ function cageRhDraw(){
  const ctx=c.getContext('2d'); const W=c.width,H=c.height;
  ctx.clearRect(0,0,W,H);
  const view=(document.getElementById('cageRhView')||{}).value||'electric';
- ctx.fillStyle=view==='acoustic'?'#3a2e22':'#2a3038'; ctx.fillRect(0,0,W,H);
+ ctx.fillStyle=view==='acoustic'?cageCss('--cage-wood2','#3a2e22'):cageCss('--cage-wood','#2a3038'); ctx.fillRect(0,0,W,H);
  if(view==='acoustic'){ctx.beginPath();ctx.arc(W*0.55,H*0.5,H*0.28,0,Math.PI*2);ctx.strokeStyle='rgba(200,180,140,.5)';ctx.lineWidth=3;ctx.stroke();
   ctx.beginPath();ctx.arc(W*0.55,H*0.5,H*0.1,0,Math.PI*2);ctx.fillStyle='#1a1208';ctx.fill();}
  else{for(let i=0;i<3;i++){const x=W*0.35+i*18;ctx.fillStyle='rgba(180,190,200,.35)';ctx.fillRect(x,H*0.22,10,H*0.56);}}
@@ -4806,6 +4960,69 @@ function cageRhApplyPima(p){
  _cageLink.lastWorld=''; cageLinkTick();
 }
 
+function cageRhApplyAuto(){
+ if(!_cageLink.wid)return;
+ withGridWorld(_cageLink.wid,()=>{
+  const face=cageSelTarget().face; const rows=project.tracks[face]||[];
+  cageApplyPassageToRows(rows, cageState.chordRootPc);
+  if(typeof refresh==='function')refresh(true);
+ });
+ _cageLink.lastWorld=''; cageLinkTick();
+}
+function cageRhApplyStrum(subdiv){
+ if(!_cageLink.wid)return;
+ withGridWorld(_cageLink.wid,()=>{
+  const face=cageSelTarget().face; const rows=project.tracks[face]||[];
+  const hits=rows.map(n=>+n[0]).filter(t=>isFinite(t));
+  const pat=cageStrumPattern(hits, subdiv);
+  const byT={}; for(const p of pat)byT[p.t]=p.stroke;
+  rows.forEach((n,i)=>{
+   const g=cageNoteGtr(n)||cageDefaultPos(n[2],cageState.startFret,5)||{s:0,f:0};
+   const stroke=byT[+n[0]]||cageStrumStroke(((+n[0])%4+4)%4, subdiv);
+   cageSetNoteGtr(n,{s:g.s,f:g.f,finger:g.finger,pick:stroke,pima:null});
+  });
+  if(typeof refresh==='function')refresh(true);
+ });
+ _cageLink.lastWorld=''; cageLinkTick();
+}
+var _cageTap={on:false,hits:[],t0:0,subdiv:8};
+function cageRhTapArm(){
+ _cageTap={on:true,hits:[],t0:performance.now(),subdiv:8};
+ const btn=document.getElementById('cageRhTap'); if(btn)btn.textContent='Tapping… (click)';
+ const board=document.getElementById('cageLinkBoard');
+ const onTap=e=>{
+  if(!_cageTap.on)return;
+  const elapsed=(performance.now()-_cageTap.t0)/1000;
+  /* map ~2 sec of tapping onto one 4-beat bar at 120bpm ≈ 2s */
+  const beat=(elapsed/2)*4;
+  if(beat>4){cageRhTapFinish(); return;}
+  _cageTap.hits.push(beat);
+ };
+ if(board){board._cageTapHandler=onTap; board.addEventListener('click', onTap);}
+ setTimeout(()=>{if(_cageTap.on)cageRhTapFinish();}, 2200);
+}
+function cageRhTapFinish(){
+ if(!_cageTap.on)return;
+ _cageTap.on=false;
+ const board=document.getElementById('cageLinkBoard');
+ if(board&&board._cageTapHandler){board.removeEventListener('click',board._cageTapHandler); board._cageTapHandler=null;}
+ const btn=document.getElementById('cageRhTap'); if(btn)btn.textContent='Tap pattern';
+ const hits=_cageTap.hits.slice();
+ const pat=cageStrumPattern(hits, _cageTap.subdiv);
+ if(!_cageLink.wid)return;
+ withGridWorld(_cageLink.wid,()=>{
+  if(typeof snapshot==='function')snapshot();
+  const face=cageSelTarget().face;
+  const rows=pat.map((p,i)=>{
+   const midi=60; const n=[p.t, 0.4, midi];
+   cageSetNoteGtr(n,{s:1,f:3,finger:1,pick:p.stroke});
+   return n;
+  });
+  project.tracks[face]=rows;
+  if(typeof refresh==='function')refresh(true);
+ });
+ _cageLink.lastWorld=''; cageLinkTick();
+}
 function cageLinkAttach(w){
  if(!w||!w.id)return;
  cageLinkDetach();
@@ -4813,7 +5030,7 @@ function cageLinkAttach(w){
  const strip=document.createElement('div');
  strip.id='cageNeckStrip';
  strip.className='pairMid';
- strip.style.cssText='margin:0;padding:8px 10px 6px;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-top:none;';
+ strip.style.cssText='margin:0;padding:8px 10px 6px;background:linear-gradient(180deg,var(--cage-wood2),var(--cage-wood));border:1px solid var(--line);border-top:none;';
  strip.innerHTML='<div style="display:flex;gap:10px;align-items:stretch;">'
   +'<div style="flex:1;min-width:0;">'
   +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
@@ -4834,6 +5051,12 @@ function cageLinkAttach(w){
   +'<button type="button" data-pima="i" class="cageRhPima" style="padding:3px 7px;font-size:11px;">I</button>'
   +'<button type="button" data-pima="m" class="cageRhPima" style="padding:3px 7px;font-size:11px;">M</button>'
   +'<button type="button" data-pima="a" class="cageRhPima" style="padding:3px 7px;font-size:11px;">A</button>'
+  +'</div>'
+  +'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">'
+  +'<button type="button" id="cageRhAuto" style="padding:3px 7px;font-size:10px;" title="Apply alternate picking + CAGED layout">Auto D/U</button>'
+  +'<button type="button" id="cageRhStrum8" style="padding:3px 7px;font-size:10px;" title="Assign 8th-note strum strokes to selected/all notes">Strum 8ths</button>'
+  +'<button type="button" id="cageRhStrum16" style="padding:3px 7px;font-size:10px;" title="Assign 16th-note strum strokes">Strum 16ths</button>'
+  +'<button type="button" id="cageRhTap" style="padding:3px 7px;font-size:10px;" title="Tap a strum pattern (clicks → hits; misses are empty slots)">Tap pattern</button>'
   +'</div></div></div>';
  const gridRoot=w.els&&w.els.root;
  const panel=document.getElementById('cagePanel');
@@ -4858,6 +5081,10 @@ function cageLinkAttach(w){
  if(rhView)rhView.onchange=()=>cageRhDraw();
  const rd=document.getElementById('cageRhDown'); if(rd)rd.onclick=()=>cageRhApplyPick('down');
  const ru=document.getElementById('cageRhUp'); if(ru)ru.onclick=()=>cageRhApplyPick('up');
+ const ra=document.getElementById('cageRhAuto'); if(ra)ra.onclick=()=>cageRhApplyAuto();
+ const r8=document.getElementById('cageRhStrum8'); if(r8)r8.onclick=()=>cageRhApplyStrum(8);
+ const r16=document.getElementById('cageRhStrum16'); if(r16)r16.onclick=()=>cageRhApplyStrum(16);
+ const rt=document.getElementById('cageRhTap'); if(rt)rt.onclick=()=>cageRhTapArm();
  strip.querySelectorAll('.cageRhPima').forEach(b=>{b.onclick=()=>cageRhApplyPima(b.dataset.pima);});
  _cageLink._onNote=e=>{
   if(!_cageLink.wid||!GRID_WORLDS[_cageLink.wid])return;
@@ -4898,11 +5125,17 @@ function cageApplyPayload(payload){
  if(payload.scaleRootPc!=null)cageState.scaleRootPc=((+payload.scaleRootPc)%12+12)%12;
  if(payload.rootPc!=null)cageState.chordRootPc=((+payload.rootPc)%12+12)%12;
  if(payload.text){cageState.chordText=String(payload.text);
-  const q=cageParseChord(payload.text); cageState.quality=q.quality;}
+  const q=cageParseChord(payload.text); cageState.quality=payload.quality||q.quality;}
+ else if(payload.quality)cageState.quality=payload.quality;
+ if(payload.next&&payload.next.text){
+  cageState.upcoming={text:String(payload.next.text),rootPc:((+payload.next.rootPc)%12+12)%12,
+   quality:payload.next.quality||cageParseChord(payload.next.text).quality};
+ }else cageState.upcoming={text:'',rootPc:cageState.chordRootPc,quality:cageState.quality};
  const sr=document.getElementById('cageScaleRoot'); if(sr)sr.value=String(cageState.scaleRootPc);
  const ci=document.getElementById('cageChordIn'); if(ci)ci.value=cageState.chordText;
  cagePickShape(); cageDraw();
- cageSetStatus('Following grid · '+cageState.chordText+' · '+(cageState.numberView==='absolute'?'Absolute':'Relative'));
+ cageSetStatus('Following grid · '+cageState.chordText+' · '+(cageState.numberView==='absolute'?'Absolute':'Relative')
+  +(cageState.upcoming.text?' → '+cageState.upcoming.text:''));
 }
 function cagePickShape(){
  const x=cageState.shapePref==='auto'
@@ -4920,7 +5153,8 @@ function cagePickShape(){
 function cageSeed(){
  cageState.selected.clear();
  const q=(cageState.quality==='min'||cageState.quality==='min7')?'min':'maj';
- const degs=cageDegreeSet(q,cageState.layer==='penta'?'penta':'scale');
+ const L=cageSoloToLayer(cageState.soloView||cageState.layer);
+ const degs=cageDegreeSet(q,L==='penta'?'penta':(L==='blues'||L==='bluesMaj'||L==='bluesMin')?L:'scale');
  for(let s=0;s<6;s++)for(let f=cageState.startFret;f<cageState.startFret+cageState.window;f++){
   if(degs.has((cageMidi(s,f)-cageState.scaleRootPc+120)%12))cageState.selected.add(cageKey(s,f));
  }
@@ -4941,9 +5175,17 @@ function buildCageWindow(){
    +'<button type="button" id="cageNumRel" style="padding:5px 10px;" title="Each chord’s own 1·3·5">Relative</button></span></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Scale root<select id="cageScaleRoot" style="padding:5px 8px;"></select></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Chord<input id="cageChordIn" type="text" value="C" style="width:4.8rem;padding:5px 8px;"/></label>'
-   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Layer<select id="cageLayer" style="padding:5px 8px;">'
-   +'<option value="arp" selected>Chord tones</option><option value="penta">Pentatonic</option>'
-   +'<option value="scale">Scale</option><option value="shape">CAGED shape only</option><option value="sel">Selected only</option></select></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Solo view<select id="cageSoloView" style="padding:5px 8px;">'
+   +'<option value="scale" selected>Complete scale</option>'
+   +'<option value="penta">Pentatonic</option>'
+   +'<option value="chord">Chord (one shape)</option>'
+   +'<option value="fullArp">Full arpeggio (CAGED)</option>'
+   +'<option value="seventh">7th chord</option>'
+   +'<option value="blues">Blues scales</option>'
+   +'<option value="sel">Selected only</option></select></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Neck layout<select id="cageSplitNeck" style="padding:5px 8px;">'
+   +'<option value="single" selected>Single neck</option>'
+   +'<option value="split">CURRENT / UPCOMING</option></select></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Shape<select id="cageShape" style="padding:5px 8px;">'
    +'<option value="auto">Auto</option><option value="C">C</option><option value="A">A</option><option value="G">G</option><option value="E">E</option><option value="D">D</option></select></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Frets'
@@ -4961,8 +5203,23 @@ function buildCageWindow(){
    +'<span id="cageChordBig">C</span><span id="cageShapeBig" style="font-size:1rem;color:var(--accent);">E shape</span>'
    +'<span id="cageNumMeta" style="font-size:.78rem;color:var(--dim);font-family:system-ui,sans-serif;"></span>'
    +'<span id="cageKeyMeta" style="font-size:.78rem;color:var(--dim);font-family:system-ui,sans-serif;"></span></div>'
+   +'<div id="cageBoardHosts" style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;">'
+   +'<div id="cageNeckCurWrap" style="flex:1 1 280px;min-width:0;">'
+   +'<div id="cageCurLbl" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:0 0 4px;">CURRENT CHORD</div>'
    +'<div id="cageBoardWrap" style="touch-action:none;user-select:none;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-radius:10px;padding:10px 8px;overflow:auto;">'
-   +'<canvas id="cageBoard" width="900" height="300" style="display:block;width:100%;height:auto;max-height:48vh;cursor:pointer;"></canvas></div>'
+   +'<canvas id="cageBoard" width="900" height="300" style="display:block;width:100%;height:auto;max-height:42vh;cursor:pointer;"></canvas></div>'
+   +'<div id="cageBlues2Wrap" style="display:none;margin-top:8px;">'
+   +'<div style="font-size:10px;color:var(--dim);margin-bottom:4px;">Minor Blues</div>'
+   +'<div style="touch-action:none;user-select:none;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-radius:10px;padding:10px 8px;overflow:auto;">'
+   +'<canvas id="cageBoardBlues2" width="900" height="220" style="display:block;width:100%;height:auto;max-height:32vh;"></canvas></div></div></div>'
+   +'<div id="cageNeckUpWrap" style="flex:1 1 280px;min-width:0;display:none;">'
+   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:0 0 4px;">UPCOMING CHORD</div>'
+   +'<div style="touch-action:none;user-select:none;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-radius:10px;padding:10px 8px;overflow:auto;">'
+   +'<canvas id="cageBoardUp" width="900" height="300" style="display:block;width:100%;height:auto;max-height:42vh;"></canvas></div>'
+   +'<div id="cageBluesUp2Wrap" style="display:none;margin-top:8px;">'
+   +'<div style="font-size:10px;color:var(--dim);margin-bottom:4px;">Minor Blues</div>'
+   +'<div style="touch-action:none;user-select:none;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-radius:10px;padding:10px 8px;overflow:auto;">'
+   +'<canvas id="cageBoardUpBlues2" width="900" height="220" style="display:block;width:100%;height:auto;max-height:32vh;"></canvas></div></div></div></div>'
    +'<div style="display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:8px;font-size:11px;color:var(--dim);">'
    +'<span>□ Scale root</span><span>◇ Chord root</span><span>● Chord / scale tone</span><span>○ Selected</span></div>'
    +'<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">'
@@ -4987,7 +5244,13 @@ function buildCageWindow(){
   on('cageScaleRoot').onchange=e=>{cageState.scaleRootPc=+e.target.value;cageDraw();};
   on('cageChordIn').onchange=e=>{const q=cageParseChord(e.target.value);cageState.chordText=q.text;cageState.chordRootPc=q.rootPc;cageState.quality=q.quality;cageDraw();};
   on('cageChordIn').onkeydown=e=>{if(e.key==='Enter')on('cageChordIn').onchange({target:on('cageChordIn')});};
-  on('cageLayer').onchange=e=>{cageState.layer=e.target.value;cageDraw();};
+  on('cageSoloView').onchange=e=>{
+   cageState.soloView=e.target.value; cageState.layer=cageSoloToLayer(e.target.value);
+   const cl=document.getElementById('cageCurLbl');
+   if(cl)cl.textContent=cageState.soloView==='blues'&&cageBluesNeckCount(cageState.quality)>1?'CURRENT CHORD · Major Blues':'CURRENT CHORD';
+   cageDraw();
+  };
+  on('cageSplitNeck').onchange=e=>{cageState.splitNeck=e.target.value==='split';cageDraw();};
   on('cageShape').onchange=e=>{cageState.shapePref=e.target.value;cageDraw();};
   on('cageStartFret').oninput=e=>{cageState.startFret=+e.target.value;on('cageStartLbl').textContent=cageState.startFret;cageDraw();};
   document.querySelectorAll('#cageFretChips button').forEach(btn=>{
@@ -5106,17 +5369,17 @@ function cageEventCell(ev){
  else{const i=Math.max(0,Math.min(g.frets-1,Math.floor((x-g.x0)/g.fretW))); fret=cageState.startFret+i;}
  return {s,f:fret};
 }
-function cageDraw(){
- const canvas=document.getElementById('cageBoard'); if(!canvas)return;
- cagePickShape();
- const wrap=document.getElementById('cageBoardWrap');
- const cssW=Math.max(320,(wrap?wrap.clientWidth:900)-16);
- const cssH=Math.min(Math.max(200,cssW*0.34),420);
+function cageBoardPaint(canvas, opts){
+ if(!canvas||!opts)return;
+ const wrap=canvas.parentElement;
+ const cssW=Math.max(280,(wrap?wrap.clientWidth:900)-16);
+ const cssH=Math.min(Math.max(160,cssW*0.34), opts.compact?280:420);
  const dpr=Math.min(2,window.devicePixelRatio||1);
  canvas.width=Math.floor(cssW*dpr); canvas.height=Math.floor(cssH*dpr);
  canvas.style.width=cssW+'px'; canvas.style.height=cssH+'px';
  const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
- const padL=36,padR=16,padT=24,padB=26,frets=cageState.window;
+ const padL=36,padR=16,padT=24,padB=26,frets=opts.window|0||5;
+ const startFret=opts.startFret|0;
  const g={frets,x0:padL,y0:padT,x1:cssW-padR,y1:cssH-padB,fretW:(cssW-padL-padR)/frets,strH:(cssH-padT-padB)/5};
  ctx.clearRect(0,0,cssW,cssH);
  const grd=ctx.createLinearGradient(0,g.y0,0,g.y1); grd.addColorStop(0,'#3a3024'); grd.addColorStop(1,'#2a2218');
@@ -5125,25 +5388,52 @@ function cageDraw(){
   const x=g.x0+i*g.fretW; ctx.beginPath(); ctx.moveTo(x,g.y0); ctx.lineTo(x,g.y1);
   ctx.lineWidth=i===0?5:1.5; ctx.strokeStyle=i===0?'#c4b89a':'#7a6e58'; ctx.stroke();
   ctx.fillStyle='#9a8f7a'; ctx.font='11px system-ui,sans-serif'; ctx.textAlign='center';
-  if(i===0&&cageState.startFret===0)ctx.fillText('nut',x,g.y1+16);
-  else if(i>0)ctx.fillText(String(cageState.startFret+i),x,g.y1+16);
+  if(i===0&&startFret===0)ctx.fillText('nut',x,g.y1+16);
+  else if(i>0)ctx.fillText(String(startFret+i),x,g.y1+16);
  }
- ctx.fillText(String(cageState.startFret+g.frets),g.x1,g.y1+16);
+ ctx.fillText(String(startFret+g.frets),g.x1,g.y1+16);
  for(let s=0;s<6;s++){
   const y=g.y1-s*g.strH; ctx.beginPath(); ctx.moveTo(g.x0,y); ctx.lineTo(g.x1,y);
   ctx.lineWidth=1+(5-s)*0.35; ctx.strokeStyle='#d7cbb0'; ctx.stroke();
   ctx.fillStyle='#9a8f7a'; ctx.font='12px system-ui,sans-serif'; ctx.textAlign='right';
   ctx.fillText(CAGED_STR[s],g.x0-8,y+4);
  }
- const chordDegs=cageDegreeSet(cageState.quality,'arp');
- const layerDegs=cageDegreeSet(cageState.quality,cageState.layer==='sel'?'scale':cageState.layer);
- const shapeSet=new Set(); (cageState._shapeFrets||[]).forEach((f,s)=>{if(f>=0)shapeSet.add(cageKey(s,f));});
- const xy=(s,f)=>{const i=f-cageState.startFret; return {x:(f===0&&cageState.startFret===0)?g.x0-2:g.x0+(i+0.5)*g.fretW, y:g.y1-s*g.strH};};
- ctx.strokeStyle=cageState._shapeColor; ctx.lineWidth=2; ctx.globalAlpha=0.5; ctx.beginPath(); let started=false;
- for(let s=0;s<6;s++){const f=cageState._shapeFrets[s]; if(f==null||f<0)continue;
-  if(f<cageState.startFret||f>cageState.startFret+g.frets)continue; const p=xy(s,f);
+ const chordRoot=opts.chordRootPc|0, scaleRoot=opts.scaleRootPc|0, quality=opts.quality||'maj';
+ const layer=opts.layer||'scale', numberView=opts.numberView||'absolute';
+ const shapeFrets=opts.shapeFrets||[];
+ const shapeColor=opts.shapeColor||'#2f8f5b';
+ const chordDegs=cageDegreeSet(quality,'arp');
+ const layerDegs=cageDegreeSet(quality,layer==='sel'?'scale':layer);
+ const shapeOnly=(layer==='shape'||layer==='chord');
+ const fullArp=(layer==='fullArp');
+ const shapeSet=new Set(); shapeFrets.forEach((f,s)=>{if(f>=0)shapeSet.add(cageKey(s,f));});
+ /* Full arpeggio: union frets from every CAGED shape for this root (his [20]) */
+ const fullSet=new Set();
+ if(fullArp){
+  for(const name of CAGED_SHAPE_ORDER){
+   const x=cageTransposeForm(name,chordRoot);
+   (x.frets||[]).forEach((f,s)=>{if(f>=0)fullSet.add(cageKey(s,f));});
+  }
+ }
+ const xy=(s,f)=>{const i=f-startFret; return {x:(f===0&&startFret===0)?g.x0-2:g.x0+(i+0.5)*g.fretW, y:g.y1-s*g.strH};};
+ const labelOf=(pc)=>cageDegFrom(numberView==='absolute'?scaleRoot:chordRoot, pc);
+ ctx.strokeStyle=shapeColor; ctx.lineWidth=2; ctx.globalAlpha=0.5; ctx.beginPath(); let started=false;
+ for(let s=0;s<6;s++){const f=shapeFrets[s]; if(f==null||f<0)continue;
+  if(f<startFret||f>startFret+g.frets)continue; const p=xy(s,f);
   if(!started){ctx.moveTo(p.x,p.y);started=true;}else ctx.lineTo(p.x,p.y);}
  ctx.stroke(); ctx.globalAlpha=1;
+ if(fullArp){
+  ctx.globalAlpha=0.25;
+  for(const name of CAGED_SHAPE_ORDER){
+   const x=cageTransposeForm(name,chordRoot);
+   ctx.strokeStyle=x.color||'#888'; ctx.lineWidth=1.5; ctx.beginPath(); let st2=false;
+   for(let s=0;s<6;s++){const f=x.frets[s]; if(f==null||f<0)continue;
+    if(f<startFret||f>startFret+g.frets)continue; const p=xy(s,f);
+    if(!st2){ctx.moveTo(p.x,p.y);st2=true;}else ctx.lineTo(p.x,p.y);}
+   ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+ }
  const mark=(x,y,kind,lab,color,a)=>{
   ctx.globalAlpha=a==null?1:a; ctx.fillStyle=color; ctx.beginPath();
   if(kind==='sq'){const r=11; ctx.rect(x-r,y-r,r*2,r*2);}
@@ -5152,40 +5442,111 @@ function cageDraw(){
   ctx.fill(); ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui,sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lab,x,y+0.5);
  };
+ const selected=opts.selected||new Set();
  for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){
-  const f=cageState.startFret+i, pc=cageMidi(s,f)%12;
-  const degC=(pc-cageState.chordRootPc+12)%12, degS=(pc-cageState.scaleRootPc+12)%12, k=cageKey(s,f);
-  const inLayer=cageState.layer==='shape'?shapeSet.has(k):cageState.layer==='sel'?cageState.selected.has(k):layerDegs.has(degC);
+  const f=startFret+i, pc=cageMidi(s,f)%12;
+  const degC=(pc-chordRoot+12)%12, degS=(pc-scaleRoot+12)%12, k=cageKey(s,f);
+  let inLayer;
+  if(layer==='sel')inLayer=selected.has(k);
+  else if(shapeOnly)inLayer=shapeSet.has(k);
+  else if(fullArp)inLayer=fullSet.has(k)||layerDegs.has(degC);
+  else inLayer=layerDegs.has(degC);
   const isSR=degS===0, isCR=degC===0;
-  if(!inLayer&&!isSR&&!cageState.selected.has(k))continue;
-  const p=xy(s,f), lab=cageLabelPc(pc), inShape=shapeSet.has(k);
-  const alpha=(cageState.layer==='scale'||cageState.layer==='penta')&&!inShape&&!isSR&&!isCR?0.4:1;
+  if(!inLayer&&!isSR&&!selected.has(k))continue;
+  const p=xy(s,f), lab=labelOf(pc), inShape=shapeSet.has(k);
+  const alpha=(layer==='scale'||layer==='penta'||layer==='blues'||layer==='bluesMaj'||layer==='bluesMin')&&!inShape&&!isSR&&!isCR?0.4:1;
   if(isSR&&isCR){mark(p.x,p.y,'sq',lab,'#e8c547',1);
    ctx.beginPath(); const r=12; ctx.moveTo(p.x,p.y-r);ctx.lineTo(p.x+r,p.y);ctx.lineTo(p.x,p.y+r);ctx.lineTo(p.x-r,p.y);ctx.closePath();
    ctx.strokeStyle='#c23b2a'; ctx.lineWidth=2.5; ctx.stroke();}
   else if(isSR)mark(p.x,p.y,'sq',lab,'#e8c547',1);
   else if(isCR)mark(p.x,p.y,'dia',lab,'#c23b2a',1);
   else if(inLayer)mark(p.x,p.y,'cir',lab,chordDegs.has(degC)?'#2f8f5b':'#8a9bb0',alpha);
-  if(cageState.selected.has(k)){ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.strokeStyle='#4a8fd4';ctx.lineWidth=2.5;ctx.stroke();}
+  if(selected.has(k)){ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.strokeStyle='#4a8fd4';ctx.lineWidth=2.5;ctx.stroke();}
  }
- if(cageState.mode==='setup'){
+ if(opts.mode==='setup'&&opts.interactive){
   for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){
-   const f=cageState.startFret+i,k=cageKey(s,f); if(cageState.selected.has(k))continue;
-   const pc=cageMidi(s,f)%12; const degC=(pc-cageState.chordRootPc+12)%12, degS=(pc-cageState.scaleRootPc+12)%12;
+   const f=startFret+i,k=cageKey(s,f); if(selected.has(k))continue;
+   const pc=cageMidi(s,f)%12; const degC=(pc-chordRoot+12)%12, degS=(pc-scaleRoot+12)%12;
    if(degS===0||degC===0)continue;
-   if(cageState.layer!=='sel'&&layerDegs.has(degC))continue;
+   if(layer!=='sel'&&layerDegs.has(degC))continue;
    const p=xy(s,f); ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fill();
   }
  }
- const now=performance.now();
- for(const [key,until] of [...cageState.flash]){
-  if(until<now){cageState.flash.delete(key);continue;}
-  const [ss,ff]=key.split(':').map(Number);
-  if(ff<cageState.startFret||ff>cageState.startFret+g.frets)continue;
-  const p=xy(ss,ff); ctx.beginPath(); ctx.arc(p.x,p.y,15,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.3)'; ctx.fill();
- }
- cageState._geom=g;
+ return g;
 }
+function cageDraw(){
+ const canvas=document.getElementById('cageBoard'); if(!canvas)return;
+ cagePickShape();
+ const solo=cageState.soloView||'scale';
+ const layer=cageSoloToLayer(solo==='blues'?'bluesMaj':solo);
+ const upWrap=document.getElementById('cageNeckUpWrap');
+ const b2=document.getElementById('cageBlues2Wrap');
+ const b2u=document.getElementById('cageBluesUp2Wrap');
+ const split=!!cageState.splitNeck;
+ if(upWrap)upWrap.style.display=split?'block':'none';
+ const bluesDual=solo==='blues'&&cageBluesNeckCount(cageState.quality)>1;
+ if(b2)b2.style.display=bluesDual?'block':'none';
+ const cl=document.getElementById('cageCurLbl');
+ if(cl)cl.textContent=bluesDual?'CURRENT CHORD · Major Blues':'CURRENT CHORD';
+ const base={
+  window:cageState.window, startFret:cageState.startFret,
+  scaleRootPc:cageState.scaleRootPc, numberView:cageState.numberView,
+  shapeFrets:cageState._shapeFrets, shapeColor:cageState._shapeColor,
+  selected:cageState.selected, mode:cageState.mode, interactive:true
+ };
+ cageState._geom=cageBoardPaint(canvas, Object.assign({}, base, {
+  chordRootPc:cageState.chordRootPc, quality:cageState.quality,
+  layer:solo==='blues'?'bluesMaj':layer
+ }));
+ if(bluesDual){
+  const c2=document.getElementById('cageBoardBlues2');
+  if(c2)cageBoardPaint(c2, Object.assign({}, base, {
+   chordRootPc:cageState.chordRootPc, quality:cageState.quality,
+   layer:'bluesMin', compact:true, interactive:false, selected:new Set()
+  }));
+ }
+ if(split){
+  const up=cageState.upcoming||{};
+  const upRoot=up.rootPc!=null?up.rootPc:cageState.chordRootPc;
+  const upQ=up.quality||cageState.quality;
+  const upShape=cageState.shapePref==='auto'
+   ?cageBestShape(upRoot,cageState.startFret,cageState.window)
+   :cageTransposeForm(cageState.shapePref,upRoot);
+  const cu=document.getElementById('cageBoardUp');
+  const upBluesDual=solo==='blues'&&cageBluesNeckCount(upQ)>1;
+  if(b2u)b2u.style.display=upBluesDual?'block':'none';
+  if(cu)cageBoardPaint(cu, Object.assign({}, base, {
+   chordRootPc:upRoot, quality:upQ,
+   shapeFrets:upShape.frets, shapeColor:upShape.color,
+   layer:solo==='blues'?(upBluesDual?'bluesMaj':'bluesMin'):layer,
+   interactive:false, selected:new Set(), compact:false
+  }));
+  if(upBluesDual){
+   const c3=document.getElementById('cageBoardUpBlues2');
+   if(c3)cageBoardPaint(c3, Object.assign({}, base, {
+    chordRootPc:upRoot, quality:upQ, shapeFrets:upShape.frets, shapeColor:upShape.color,
+    layer:'bluesMin', compact:true, interactive:false, selected:new Set()
+   }));
+  }
+ }
+ const now=performance.now();
+ const g=cageState._geom;
+ if(g){
+  const ctx=canvas.getContext('2d');
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  /* flash only on primary interactive board — coords already in css space after setTransform in paint */
+  for(const [key,until] of [...cageState.flash]){
+   if(until<now){cageState.flash.delete(key);continue;}
+   const [ss,ff]=key.split(':').map(Number);
+   if(ff<cageState.startFret||ff>cageState.startFret+g.frets)continue;
+   const i=ff-cageState.startFret;
+   const x=(ff===0&&cageState.startFret===0)?g.x0-2:g.x0+(i+0.5)*g.fretW;
+   const y=g.y1-ss*g.strH;
+   ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.3)'; ctx.fill();
+  }
+ }
+}
+
 
 function tokenSemis(t,c){switch(t){case 'R':return 0;case '3':return thirdOf(c);case '4':return 5;case '5':return c.iv.includes(6)&&!c.iv.includes(7)?6:7;case '6':return 9;case 'b7':return c.iv.includes(11)?11:10;case '8':return 12;default:return 0;}}
 function bassRootMidi(pc){let m=24+pc;while(m<31)m+=12;return m>43?m-12:m;}
@@ -11570,7 +11931,7 @@ function canvasRecParse(raw){
  /* the cp_canvas guard — pure: junk in, the defaults out. zoom values clamp to 0–200,
     the swipe choice to the four splits, colors to #rrggbb only, templates normalized
     {name,zoom,swipe,colors}. */
- const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null,palId:null,alpha:{}};
+ const def={suite:'standard',zoom:{},swipe:'v',colors:{},layout:null,templates:[],x:null,y:null,palId:null,alpha:{},tier2:false};
  let o=raw;
  if(typeof raw==='string'){try{o=JSON.parse(raw);}catch(e){return def;}}
  if(!o||typeof o!=='object'||Array.isArray(o))return def;
@@ -11601,7 +11962,9 @@ function canvasRecParse(raw){
    if(a&&typeof a==='object'&&!Array.isArray(a))for(const k of Object.keys(a)){
     const v=a[k];
     if(typeof k==='string'&&k.length<=40&&typeof v==='number'&&isFinite(v)&&v>=0&&v<=100)out[k]=Math.round(v);}
-   return out;})(o.alpha)};
+   return out;})(o.alpha),
+  /* [16] Color Palette Tier 2 · Everything — persisted flag; Tier 1 Guitar slots always listed */
+  tier2:!!o.tier2};
 }
 const CNV_SUITES=[
  ['standard','Standard',{all:100}],
@@ -11686,7 +12049,7 @@ function cnvTplApply(i){
    recorded for their own cut (the spec notes). ==== */
 const CNV_COLORS=[['--bg','Background'],['--panel','Panels'],['--panel2','Controls & cells'],
  ['--line','Borders & lines'],['--text','Text'],['--dim','Secondary text'],['--accent','Accent / highlights'],
- ['--cage-f1','Guitar fretting · 1 index'],['--cage-f2','Guitar fretting · 2 middle'],['--cage-f3','Guitar fretting · 3 ring'],['--cage-f4','Guitar fretting · 4 pinky'],['--cage-f0','Guitar fretting · 0 thumb']];
+ ['--cage-f1','Guitar fretting · 1 index'],['--cage-f2','Guitar fretting · 2 middle'],['--cage-f3','Guitar fretting · 3 ring'],['--cage-f4','Guitar fretting · 4 pinky'],['--cage-f0','Guitar fretting · 0 thumb'], ['--cage-wood','Guitar · neck wood'],['--cage-wood2','Guitar · neck wood 2'],['--cage-fret','Guitar · frets'],['--cage-string','Guitar · strings'], ['--cage-ink','Guitar · note ink'],['--cage-ring','Guitar · current ring'],['--cage-ball','Guitar · bouncing ball'],['--cage-nut','Guitar · nut'], ['--cage-root','Guitar · scale root'],['--cage-chord','Guitar · chord root'],['--cage-tone','Guitar · chord tone'],['--cage-scale','Guitar · scale tone']];
 /* ==== [CP2] ROADMAP 6.4 — THE COLORLISA PALETTE BROWSER (client, August 28: "The Color Palette
    should be on the Road Map scheduled to be built.  But it would be great if it got built
    soonish.") ====
@@ -12009,6 +12372,8 @@ function cnvColBuild(){
   /* ⛔ 82nd R6 (his forty-ninth): TWO clears, because they are two layers. The first deletes the
      by-hand colours and LEAVES the swatch standing — his "in case I later want to delete the
      temporary colors (Non-swatch colors)". The second clears everything. */
+  +'<label style="font-size:10.5px;color:var(--dim);display:inline-flex;gap:5px;align-items:center;margin-right:8px;cursor:pointer;" title="Tier 1 = Guitar slots (always). Tier 2 = Everything: all app CSS-variable paints (his [16]).">'
+  +'<input type="checkbox" id="cnvTier2"'+(canvasState.tier2?' checked':'')+'/> Color Tier 2 · Everything</label>'
   +'<button id="cnvHandClear"'+(Object.keys(canvasState.colors).length?'':' disabled')+' style="font-size:10.5px;padding:4px 9px;" title="Delete only the colours you set by hand. An applied swatch palette stays.">✕ Delete the by-hand colours'+(Object.keys(canvasState.colors).length?' ('+Object.keys(canvasState.colors).length+')':'')+'</button>'
   +'<button id="cnvPalClear" style="font-size:10.5px;padding:4px 9px;" title="Clear both layers — the swatch palette and every by-hand colour.">↺ Everything back to the app’s own colours</button></div>'
   +'<div style="font-size:9.5px;color:var(--dim);margin-top:3px;">'+hits.length+' of '+CL_PALETTES.length+' · '
@@ -12036,6 +12401,11 @@ function cnvColBuild(){
  const hc=brow.querySelector('#cnvHandClear');
  if(hc)hc.onclick=()=>wipe(true,false);   /* his forty-ninth: the temporary colours only */
  brow.querySelector('#cnvPalClear').onclick=()=>wipe(true,true);
+ const t2=brow.querySelector('#cnvTier2');
+ if(t2)t2.onchange=()=>{canvasState.tier2=!!t2.checked; persistCanvas();
+  /* Tier 2 is the Everything mode flag — CSS-variable slots already paint the app; remaining
+     hard-coded SVG paints are the unfinished half of Tier 2 (his [16]). */
+  try{if(typeof cageLinkRedraw==='function')cageLinkRedraw();}catch(e){};};
  const slots=document.createElement('div');
  slots.innerHTML='<div class="cp-title">Every colour, by hand · and its opacity</div>';
  rows.appendChild(slots);
