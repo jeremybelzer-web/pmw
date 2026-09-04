@@ -114,7 +114,7 @@
   body.swipeH{overflow-x:auto;white-space:nowrap;}   /* 79th R4: Swipe Pattern 2 — the rest of the windows ride one horizontal row below the pinned grid */
   body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
   body.swipeH #gridRowWrap~#chordPanel{display:inline-flex;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}   /* the palette IS a flex container — inline-flex keeps its inner layout (a blanket inline-block broke it; scoped to the real column members so hidden menus stay hidden) */
-  :root{--bg:#17181d;--panel:#20222a;--panel2:#2a2d38;--line:#3a3e4d;--text:#e9eaef;--dim:#98a0b2;--accent:#e8a33d;}
+  :root{--bg:#17181d;--panel:#20222a;--panel2:#2a2d38;--line:#3a3e4d;--text:#e9eaef;--dim:#98a0b2;--accent:#e8a33d;--cage-f1:#e8c547;--cage-f2:#7b6cf0;--cage-f3:#3d9be9;--cage-f4:#3ecf8e;--cage-f0:#e8a33d;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;padding:22px 26px;}
   h1{font-size:20px;font-weight:600;} h1 span{color:var(--accent);}
@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03as</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-04g</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -919,6 +919,18 @@
   <!-- 3.5: the Scale/Raga Browser — an ENVIRONMENT, not a dropdown (the Omnisphere model).
        Opens from the Scale menu's ⌕ Browse entry, the ⌕ rail icon, or its icon-bar chip;
        lives at the top of the screen like Melisma. The window title is the client's slogan. -->
+
+  <!-- Guitar Engine / CAGED (2026-09-04d) — Engine Window; peer to Melisma, not derived from it.
+       Absolute numbers default (IV → 4·6·1); Relative → 1·3·5. Square = scale root · diamond = chord root. -->
+  <div class="gridwrap" id="cagePanel" style="margin:12px 0;">
+    <div id="cageHowTo" class="winProse winHowBox" style="border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 10px 0;font-size:12px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">
+      <b>CAGED</b> — five movable chord/scale shapes across the neck. <b>Square</b> = the song’s scale root · <b>diamond</b> = the passing chord’s root.
+      <span style="color:var(--dim);"> Absolute numbers (default) keep scale degrees fixed — a IV chord reads 4·6·1. Relative numbers re-label each chord as its own 1·3·5. Opens with a linked 1-track MIDI grid (Engine Window audition pair) that mirrors the selected multi-track lane(s) — edits write back. The large neck above that grid shows the MIDI as dots (layout + left-hand fingering 1–4 / 0 thumb). Song chords still drive Absolute/Relative on the shape board below.</span>
+    </div>
+    <div id="cageBody"></div>
+    <div id="cageStatus" style="font-size:11px;color:var(--accent);margin-top:6px;min-height:14px;"></div>
+  </div>
+
   <div class="gridwrap" id="ragaPanel" style="margin:12px 0;">
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:8px;">Library surface · Scale/Raga Browser — 72 melakartas · 107 janyas · the Western modes</div>
     <div id="ragaBody"></div>
@@ -4300,6 +4312,881 @@ let playing=false,scheduled=[],audioReady=false,useSynth=false;
 
 /* ================= engine (per PRD §7/§8) ================= */
 function chordAt(chords,beat){let t=0;for(let i=0;i<chords.length;i++){if(beat<t+chords[i].d-1e-6)return{c:chords[i],i,start:t};t+=chords[i].d;}return{c:chords[chords.length-1],i:chords.length-1,start:t-chords[chords.length-1].d};}
+/* CAGED instrument bridge (2026-09-04a): publish the playhead chord + song tonic so the
+   standalone CAGED board can follow Absolute/Relative roots. localStorage key cp_caged_chord. */
+function cagedDegLabel(rootPc,pc){
+ const M={0:'1',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'b5',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
+ return M[((pc-rootPc)%12+12)%12];
+}
+function cagedBridgePayload(chords,beat,tonic){
+ if(!Array.isArray(chords)||!chords.length)return null;
+ const hit=chordAt(chords,Math.max(0,+beat||0));
+ const c=hit&&hit.c; if(!c||c.off)return null;
+ const rootPc=(c.r|0)%12;
+ const text=c.name?String(c.name):(typeof PCN!=='undefined'?PCN[rootPc]:'?')+(typeof ivName==='function'?ivName(c.iv):'');
+ return {text:text,rootPc:rootPc,scaleRootPc:((tonic|0)%12+12)%12,beat:+beat||0,t:Date.now()};
+}
+function cagedBridgePush(){
+ try{
+  const beat=(typeof playing!=='undefined'&&playing&&typeof transportBeat==='function')
+   ?transportBeat():(typeof playheadBeat==='number'?playheadBeat:0);
+  const chords=(typeof effectiveChords==='function')?effectiveChords():(project&&project.chords);
+  const payload=cagedBridgePayload(chords,beat,project&&project.tonic);
+  if(!payload)return;
+  const prev=cagedBridgePush._last;
+  if(prev&&prev.text===payload.text&&prev.rootPc===payload.rootPc&&prev.scaleRootPc===payload.scaleRootPc)return;
+  cagedBridgePush._last=payload;
+  localStorage.setItem('cp_caged_chord',JSON.stringify(payload));
+  if(typeof uiWinShown==='function'&&uiWinShown('cagePanel')&&typeof cageApplyPayload==='function')
+   try{cageApplyPayload(payload);}catch(e2){}
+ }catch(e){}
+}
+
+/* ==== CAGED Guitar Engine (cagePanel) — Absolute/Relative degrees · dual roots · Setup ==== */
+const CAGED_OPEN={
+ C:{rootPc:0,frets:[-1,3,2,0,1,0],color:'#c23b2a'},
+ A:{rootPc:9,frets:[-1,0,2,2,2,0],color:'#5b9bd5'},
+ G:{rootPc:7,frets:[3,2,0,0,0,3],color:'#d4a017'},
+ E:{rootPc:4,frets:[0,2,2,1,0,0],color:'#2f8f5b'},
+ D:{rootPc:2,frets:[-1,-1,0,2,3,2],color:'#2aa4a4'}
+};
+const CAGED_SHAPE_ORDER=['C','A','G','E','D'];
+const CAGED_DEG={0:'1',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'b5',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
+const CAGED_TUNING=[40,45,50,55,59,64];
+const CAGED_STR=['E','A','D','G','B','e'];
+let cageState={
+ mode:'setup', numberView:'absolute',
+ scaleRootPc:0, chordText:'C', chordRootPc:0, quality:'maj',
+ layer:'arp', shapePref:'auto', window:5, startFret:0,
+ selected:new Set(), flash:new Map(),
+ capturing:false, captureBuf:[], triggers:[], playSeq:[],
+ _shapeFrets:[], _shapeColor:'#2f8f5b', _built:false, _painting:false, _paintAdd:true, _last:null
+};
+function cageDegFrom(rootPc,pc){return CAGED_DEG[((pc-rootPc)%12+12)%12];}
+function cageLabelPc(pc){
+ return cageDegFrom(cageState.numberView==='absolute'?cageState.scaleRootPc:cageState.chordRootPc, pc);
+}
+function cageParseChord(str){
+ str=String(str||'C').trim();
+ const m=str.match(/^([A-G])([#b]?)(.*)$/i);
+ if(!m)return {rootPc:0,quality:'maj',text:'C'};
+ const letter=m[1].toUpperCase();
+ const acc=m[2]==='b'?-1:m[2]==='#'?1:0;
+ const base={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[letter];
+ const rootPc=(base+acc+120)%12;
+ let rest=(m[3]||'').toLowerCase(), quality='maj';
+ if(/^m(?!aj)/.test(rest)||rest.startsWith('min')||rest.startsWith('-'))quality='min';
+ else if(rest.startsWith('dim')||rest.startsWith('\u00b0'))quality='dim';
+ else if(rest.startsWith('aug')||rest.startsWith('+'))quality='aug';
+ else if(rest.startsWith('sus2'))quality='sus2';
+ else if(rest.startsWith('sus'))quality='sus4';
+ if(/7|9|11|13/.test(rest)&&quality==='maj'&&!rest.includes('maj'))quality='dom7';
+ if(rest.includes('maj7')||rest.includes('\u0394'))quality='maj7';
+ if((rest.startsWith('m')||quality==='min')&&/7/.test(rest))quality='min7';
+ return {rootPc,quality,text:str};
+}
+function cageDegreeSet(quality,layer){
+ const Q={maj:[0,4,7],min:[0,3,7],dim:[0,3,6],aug:[0,4,8],sus2:[0,2,7],sus4:[0,5,7],dom7:[0,4,7,10],maj7:[0,4,7,11],min7:[0,3,7,10]};
+ const triad=Q[quality]||Q.maj;
+ if(layer==='arp'||layer==='shape')return new Set(triad);
+ if(layer==='penta')return new Set((quality==='min'||quality==='min7'||quality==='dim')?[0,3,5,7,10]:[0,2,4,7,9]);
+ if(quality==='min'||quality==='min7')return new Set([0,2,3,5,7,8,10]);
+ if(quality==='dom7')return new Set([0,2,4,5,7,9,10]);
+ return new Set([0,2,4,5,7,9,11]);
+}
+function cageTransposeForm(shapeName,rootPc){
+ const open=CAGED_OPEN[shapeName];
+ let shift=(rootPc-open.rootPc+12)%12;
+ let frets=open.frets.map(f=>f<0?-1:f+shift);
+ while(Math.max(...frets.filter(f=>f>=0),0)>19){shift+=12;frets=open.frets.map(f=>f<0?-1:f+shift);}
+ return {shape:shapeName,frets,color:open.color};
+}
+function cageShapeSpan(frets){
+ const all=frets.filter(f=>f>=0); if(!all.length)return {lo:0,hi:0};
+ return {lo:Math.min(...all),hi:Math.max(...all)};
+}
+function cageBestShape(rootPc,startFret,window){
+ const end=startFret+window-1; let best=null;
+ for(const name of CAGED_SHAPE_ORDER){
+  const x=cageTransposeForm(name,rootPc); const {lo,hi}=cageShapeSpan(x.frets);
+  const fits=lo>=startFret&&hi<=end; const score=(fits?0:1000)+Math.abs((lo+hi)/2-(startFret+(window-1)/2))+(hi-lo);
+  if(!best||score<best.score)best={...x,score,fits};
+ }
+ return best;
+}
+function cageMidi(s,f){return CAGED_TUNING[s]+f;}
+function cageKey(s,f){return s+':'+f;}
+/* R0 [7][8] — layout options for a MIDI pitch on standard tuning, and default pick inside the fret window */
+function cagePositionsForMidi(midi,maxFret){
+ maxFret=(maxFret==null?19:+maxFret); const out=[];
+ for(let s=0;s<6;s++){const f=(+midi)-CAGED_TUNING[s]; if(f>=0&&f<=maxFret)out.push({s,f});}
+ return out;
+}
+function cageDefaultPos(midi,startFret,window){
+ const opts=cagePositionsForMidi(midi); if(!opts.length)return null;
+ const lo=(startFret==null?0:+startFret), hi=lo+Math.max(1,+(window||5))-1;
+ const inWin=opts.filter(p=>p.f>=lo&&p.f<=hi);
+ const pool=inWin.length?inWin:opts;
+ return pool.slice().sort((a,b)=>a.f-b.f||a.s-b.s)[0];
+}
+function cageNoteGtr(n){return (n&&n[7]&&typeof n[7]==='object'&&n[7].gtr)?n[7].gtr:null;}
+function cageSetNoteGtr(n,gtr){
+ if(!n)return;
+ const base=(n[7]&&typeof n[7]==='object')?Object.assign({},n[7]):{};
+ if(gtr&&gtr.s!=null&&gtr.f!=null){
+  const g={s:+gtr.s,f:+gtr.f};
+  if(gtr.finger!=null&&gtr.finger!=='')g.finger=+gtr.finger;
+  if(gtr.pick==='down'||gtr.pick==='up')g.pick=gtr.pick;
+  else if(gtr.pick===null){} else if(base.gtr&&base.gtr.pick)g.pick=base.gtr.pick;
+  const pm=gtr.pima!=null?String(gtr.pima).toLowerCase():'';
+  if(pm==='p'||pm==='i'||pm==='m'||pm==='a')g.pima=pm;
+  else if(gtr.pima===null){} else if(base.gtr&&base.gtr.pima)g.pima=base.gtr.pima;
+  base.gtr=g;
+ }else delete base.gtr;
+ n[7]=Object.keys(base).length?base:null;
+}
+function cageFingerColor(finger){
+ const f=(finger==null||finger==='')?1:+finger;
+ const key=(f===0)?'--cage-f0':'--cage-f'+Math.max(1,Math.min(4,f));
+ try{
+  const live=getComputedStyle(document.documentElement).getPropertyValue(key).trim();
+  if(live)return live;
+ }catch(e){}
+ const def={0:'#e8a33d',1:'#e8c547',2:'#7b6cf0',3:'#3d9be9',4:'#3ecf8e'};
+ return def[f===0?0:Math.max(1,Math.min(4,f))]||'#e8a33d';
+}
+function cageFingerForFret(fret,startFret){
+ const rel=(+fret)-(startFret==null?0:+startFret);
+ if(rel<=0)return 1;
+ return Math.max(1,Math.min(4,rel+1));
+}
+function cageBeatNow(){
+ try{if(typeof playing!=='undefined'&&playing&&typeof transportBeat==='function')return transportBeat();}catch(e){}
+ return (typeof playheadBeat==='number')?playheadBeat:0;
+}
+function cageNotePlayState(n,beat){
+ if(!n||!isFinite(+n[0]))return 'upcoming';
+ const a=+n[0], d=Math.max(0,+n[1]||0), b=a+d, tt=(beat==null)?0:+beat;
+ if(tt>=b-1e-6)return 'played';
+ if(tt>=a-1e-6&&tt<b)return 'current';
+ if(tt>=a-1&&tt<a)return 'approaching';
+ return 'upcoming';
+}
+function cagePassageFingers(rows,startFret){
+ const lo=startFret==null?0:+startFret;
+ const out=(rows||[]).map(()=>null);
+ const order=(rows||[]).map((n,i)=>({n,i,t:n&&isFinite(+n[0])?+n[0]:1e15}))
+  .filter(x=>x.n).sort((a,b)=>a.t-b.t||a.i-b.i);
+ let lastF=null, lastFinger=1;
+ for(const {n,i} of order){
+  let g=cageNoteGtr(n);
+  if(!g){g=cageDefaultPos(n[2],lo,5); if(!g)continue;}
+  let finger;
+  if(g.finger!=null&&g.finger!=='')finger=+g.finger;
+  else if(lastF==null)finger=cageFingerForFret(g.f,lo);
+  else{
+   const d=(+g.f)-lastF;
+   if(d===0)finger=lastFinger;
+   else if(d>0)finger=Math.min(4,lastFinger+d);
+   else finger=Math.max(1,lastFinger+d);
+  }
+  out[i]=finger; lastF=+g.f; lastFinger=finger;
+ }
+ return out;
+}
+function cageCloneNotes(rows){
+ return (rows||[]).map(n=>{const nn=n.slice(); if(n[7]&&typeof n[7]==='object')try{nn[7]=JSON.parse(JSON.stringify(n[7]));}catch(e){nn[7]=Object.assign({},n[7]);} return nn;});
+}
+function cageSelTarget(){
+ /* selected name-box(es) on MAIN, else the active pitched track — his [7] */
+ return withGridWorld('main',()=>{
+  if(typeof selHeads!=='undefined'&&selHeads&&selHeads.size){
+   const arr=[...selHeads].filter(t=>t&&t!=='drums'&&project.tracks[t]!==undefined);
+   if(arr.length)return {face:arr[0],ghosts:arr.slice(1)};
+  }
+  if(typeof selHead==='string'&&selHead&&selHead!=='drums'&&project.tracks[selHead]!==undefined)
+   return {face:selHead,ghosts:[]};
+  const t=(typeof activeTrack==='string'&&activeTrack&&activeTrack!=='drums'&&project.tracks[activeTrack]!==undefined)?activeTrack:'melody';
+  return {face:t,ghosts:[]};
+ });
+}
+var _cageLink={wid:null,iv:null,sig:'',lastMain:'',lastWorld:'',strip:null};
+function cageLinkSig(tgt){return tgt.face+'|'+(tgt.ghosts||[]).join(',');}
+function cageLinkDetach(){
+ if(_cageLink.iv){clearInterval(_cageLink.iv);_cageLink.iv=null;}
+ if(_cageLink._onNote){try{document.removeEventListener('click',_cageLink._onNote,true);}catch(e){}_cageLink._onNote=null;}
+ if(_cageLink._onKey){try{document.removeEventListener('keydown',_cageLink._onKey,true);}catch(e){}_cageLink._onKey=null;}
+ cagePickOverlayClose();
+ if(_cageLink.strip&&_cageLink.strip.parentNode)try{_cageLink.strip.parentNode.removeChild(_cageLink.strip);}catch(e){}
+ _cageLink={wid:null,iv:null,sig:'',lastMain:'',lastWorld:'',strip:null,rhOpen:true};
+}
+function cageLinkRowsJson(tgt){
+ return withGridWorld('main',()=>{
+  const face=cageCloneNotes(project.tracks[tgt.face]||[]);
+  const ghosts={}; for(const g of (tgt.ghosts||[]))ghosts[g]=cageCloneNotes(project.tracks[g]||[]);
+  return JSON.stringify({face,ghosts,sig:cageLinkSig(tgt)});
+ });
+}
+function cageLinkPushToWorld(wid,tgt,bundle){
+ withGridWorld(wid,()=>{
+  const data=(typeof bundle==='string')?JSON.parse(bundle):bundle;
+  if(!project.tracks[tgt.face])project.tracks[tgt.face]=[];
+  project.tracks[tgt.face]=cageCloneNotes(data.face);
+  for(const g of (tgt.ghosts||[])){
+   if(!project.tracks[g])project.tracks[g]=[];
+   project.tracks[g]=cageCloneNotes((data.ghosts&&data.ghosts[g])||[]);
+  }
+  /* 1 visible face track — extras stay as multi-select ghosts (pair worlds sit out global ghostScope) */
+  hiddenTracks=new Set(Object.keys(project.tracks).concat(['drums']).filter(t=>t!==tgt.face));
+  chordLaneHidden=true; chordGhosts=true;
+  activeTrack=tgt.face; if(typeof switchTrack==='function')switchTrack(tgt.face);
+  selHead=tgt.face;
+  selHeads=new Set([tgt.face].concat(tgt.ghosts||[]));
+  if(typeof refresh==='function')refresh(true);
+ });
+}
+function cageLinkWriteBack(tgt,rows){
+ withGridWorld('main',()=>{
+  if(typeof snapshot==='function')snapshot();
+  project.tracks[tgt.face]=cageCloneNotes(rows);
+  if(typeof refresh==='function')refresh(true);
+ });
+}
+function cageLinkWorldRows(wid,face){
+ return withGridWorld(wid,()=>cageCloneNotes(project.tracks[face]||[]));
+}
+function cageLinkNeckDraw(rows){
+ const c=document.getElementById('cageLinkBoard'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#1e1a14'; ctx.fillRect(0,0,W,H);
+ const padL=28,padR=12,padT=18,padB=20, frets=12, strings=6;
+ const x0=padL,x1=W-padR,y0=padT,y1=H-padB;
+ const fretW=(x1-x0)/frets, strGap=(y1-y0)/(strings-1);
+ ctx.strokeStyle='rgba(200,180,140,.55)'; ctx.lineWidth=1;
+ for(let i=0;i<=frets;i++){const x=x0+i*fretW; ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();}
+ for(let s=0;s<strings;s++){const y=y0+s*strGap; ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();}
+ ctx.fillStyle='rgba(200,180,140,.7)'; ctx.font='10px system-ui,sans-serif';
+ for(let i=1;i<=frets;i++)ctx.fillText(String(i),x0+i*fretW-fretW/2-3,y1+14);
+ const beat=cageBeatNow();
+ const startF=(typeof cageState==='object'&&cageState)?(+cageState.startFret||0):0;
+ const fingers=cagePassageFingers(rows,startF);
+ const pts=[];
+ for(let i=0;i<(rows||[]).length;i++){
+  const n=rows[i]; if(!n)continue;
+  let g=cageNoteGtr(n);
+  if(!g){g=cageDefaultPos(n[2],startF,12); if(g)cageSetNoteGtr(n,g);}
+  if(!g)continue;
+  if(g.finger==null||g.finger===''){
+   const ff=fingers[i]!=null?fingers[i]:cageFingerForFret(g.f,startF);
+   g=Object.assign({},g,{finger:ff}); cageSetNoteGtr(n,g);
+  }
+  const st=cageNotePlayState(n,beat);
+  const cx=x0+(g.f===0?0:g.f-0.5)*fretW, cy=y0+g.s*strGap;
+  pts.push({g,st,cx,cy,t:+n[0],d:+n[1]||0});
+  const rad=st==='current'?12:st==='approaching'?10:8;
+  const alpha=st==='played'?0.28:st==='upcoming'?0.55:1;
+  ctx.globalAlpha=alpha;
+  if(st==='current'){ctx.beginPath();ctx.arc(cx,cy,rad+4,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+  ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2);
+  ctx.fillStyle=cageFingerColor(g.finger); ctx.fill();
+  ctx.fillStyle='#1a1208'; ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(String(g.finger),cx,cy+0.5);
+  if(g.pick||g.pima){ctx.fillStyle='rgba(233,234,239,.9)';ctx.font='9px system-ui,sans-serif';
+   ctx.fillText(g.pick==='down'?'↓':g.pick==='up'?'↑':(g.pima||'').toUpperCase(),cx,cy-rad-4);}
+  ctx.globalAlpha=1;
+ }
+ const ballOn=document.getElementById('cageBallOn');
+ if(ballOn&&ballOn.checked&&pts.length){
+  const sorted=pts.slice().sort((a,b)=>a.t-b.t);
+  let ax=sorted[0].cx,ay=sorted[0].cy, bx=ax,by=ay, u=0;
+  for(let k=0;k<sorted.length;k++){
+   const a=sorted[k], b=sorted[k+1];
+   const aEnd=a.t+Math.max(a.d,0.01);
+   if(beat<a.t){ax=a.cx;ay=a.cy;bx=a.cx;by=a.cy;u=0;break;}
+   if(!b||beat<aEnd){ax=a.cx;ay=a.cy;bx=a.cx;by=a.cy;u=0;break;}
+   if(beat<b.t){ax=a.cx;ay=a.cy;bx=b.cx;by=b.cy;u=(beat-aEnd)/Math.max(1e-6,b.t-aEnd);break;}
+   if(k===sorted.length-2){ax=b.cx;ay=b.cy;bx=b.cx;by=b.cy;u=0;}
+  }
+  u=Math.max(0,Math.min(1,u));
+  const mx=ax+(bx-ax)*u, my=ay+(by-ay)*u-Math.sin(u*Math.PI)*18;
+  ctx.setLineDash([3,4]); ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo((ax+bx)/2,Math.min(ay,by)-22,bx,by); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(mx,my,6,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.shadowColor='rgba(255,255,255,.8)'; ctx.shadowBlur=8; ctx.fill(); ctx.shadowBlur=0;
+ }
+ ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+ cageHandLegendDraw();
+}
+function cageHandLegendDraw(){
+ const host=document.getElementById('cageFingerLegend'); if(!host)return;
+ if(!host.dataset.built){
+  host.innerHTML='<span style="color:var(--dim);margin-right:6px;">Fretting hand</span>'
+   +'<svg id="cageHandSvg" width="72" height="56" viewBox="0 0 72 56" aria-label="Fretting hand legend" style="vertical-align:middle;">'
+   +'<path d="M28 54 C18 48 14 36 16 28 C18 22 24 20 28 24 L28 12 C28 8 32 6 34 10 L36 24 L38 8 C38 4 42 4 43 9 L44 26 L47 10 C48 5 52 6 52 12 L50 28 L54 16 C56 11 60 14 58 20 L52 34 C58 36 62 42 60 48 C56 54 40 56 28 54Z" fill="rgba(233,234,239,.12)" stroke="rgba(233,234,239,.35)" stroke-width="1"/>'
+   +'<circle data-f="1" cx="34" cy="10" r="4"/><circle data-f="2" cx="43" cy="9" r="4"/><circle data-f="3" cx="52" cy="12" r="4"/><circle data-f="4" cx="58" cy="20" r="4"/><circle data-f="0" cx="22" cy="30" r="4"/>'
+   +'</svg>'
+   +'<label style="margin-left:10px;font-size:10px;color:var(--dim);display:inline-flex;gap:4px;align-items:center;cursor:pointer;">'
+   +'<input type="checkbox" id="cageBallOn" checked/> Bouncing ball</label>';
+  host.dataset.built='1';
+  const ball=document.getElementById('cageBallOn');
+  if(ball)ball.onchange=()=>{try{cageLinkRedraw();}catch(e){};};
+ }
+ const svg=document.getElementById('cageHandSvg'); if(!svg)return;
+ svg.querySelectorAll('circle[data-f]').forEach(cir=>{
+  cir.setAttribute('fill',cageFingerColor(+cir.getAttribute('data-f')));
+ });
+}
+function cageLinkRedraw(){
+ if(!_cageLink||!_cageLink.wid)return;
+ try{cageLinkNeckDraw(cageLinkWorldRows(_cageLink.wid,cageSelTarget().face));}catch(e){}
+}
+function cageLinkTick(){
+ if(!_cageLink.wid||!GRID_WORLDS[_cageLink.wid]){cageLinkDetach();return;}
+ if(typeof uiWinShown==='function'&&!uiWinShown('cagePanel')){cageLinkDetach();return;}
+ try{
+  const tgt=cageSelTarget();
+  const sig=cageLinkSig(tgt);
+  const mainPack=cageLinkRowsJson(tgt);
+  const worldRows=cageLinkWorldRows(_cageLink.wid,tgt.face);
+  const worldNow=JSON.stringify(worldRows);
+  if(sig!==_cageLink.sig){
+   _cageLink.sig=sig;
+   cageLinkPushToWorld(_cageLink.wid,tgt,mainPack);
+   _cageLink.lastMain=mainPack; _cageLink.lastWorld=JSON.stringify(cageLinkWorldRows(_cageLink.wid,tgt.face));
+   cageLinkNeckDraw(cageLinkWorldRows(_cageLink.wid,tgt.face));
+   const st=document.getElementById('cageLinkMeta');
+   if(st)st.textContent='Linked · '+(typeof trackLabel==='function'?trackLabel(tgt.face):tgt.face)+(tgt.ghosts.length?' +'+tgt.ghosts.length+' ghost':'');
+   return;
+  }
+  const mainFace=JSON.stringify(JSON.parse(mainPack).face);
+  if(worldNow!==_cageLink.lastWorld&&worldNow!==mainFace){
+   /* audition edited — write face back to MAIN */
+   const rows=JSON.parse(worldNow);
+   cageLinkWriteBack(tgt,rows);
+   _cageLink.lastMain=cageLinkRowsJson(tgt);
+   _cageLink.lastWorld=worldNow;
+   cageLinkNeckDraw(rows);
+  }else if(mainPack!==_cageLink.lastMain){
+   cageLinkPushToWorld(_cageLink.wid,tgt,mainPack);
+   _cageLink.lastMain=mainPack;
+   _cageLink.lastWorld=JSON.stringify(cageLinkWorldRows(_cageLink.wid,tgt.face));
+   cageLinkNeckDraw(cageLinkWorldRows(_cageLink.wid,tgt.face));
+  }else{
+   cageLinkNeckDraw(worldRows);
+   _cageLink.lastWorld=worldNow;
+  }
+ }catch(e){}
+}
+var _cagePick={el:null,noteIx:null,armed:false,startFret:0};
+function cagePickOverlayClose(){
+ if(_cagePick.el&&_cagePick.el.parentNode)try{_cagePick.el.parentNode.removeChild(_cagePick.el);}catch(e){}
+ _cagePick={el:null,noteIx:null,armed:false,startFret:0};
+}
+function cagePickOverlayDraw(){
+ const host=_cagePick.el; if(!host)return;
+ const c=host.querySelector('canvas'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+ ctx.clearRect(0,0,W,H);
+ const alpha=_cagePick.armed?1:0.3;
+ ctx.fillStyle='rgba(30,26,20,.92)'; ctx.fillRect(0,0,W,H);
+ const padL=16,padR=10,padT=14,padB=16, frets=5, strings=6;
+ const x0=padL,x1=W-padR,y0=padT,y1=H-padB;
+ const fretW=(x1-x0)/frets, strGap=(y1-y0)/(strings-1);
+ ctx.strokeStyle='rgba(200,180,140,'+alpha+')'; ctx.lineWidth=_cagePick.armed?2.2:1;
+ for(let i=0;i<=frets;i++){const x=x0+i*fretW; ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();}
+ for(let s=0;s<strings;s++){const y=y0+s*strGap; ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();}
+ /* top-string arm zone (just above string 0) */
+ ctx.fillStyle=_cagePick.armed?'rgba(232,163,61,.25)':'rgba(232,163,61,.08)';
+ ctx.fillRect(x0,0,x1-x0,y0);
+ const rows=_cageLink.wid?cageLinkWorldRows(_cageLink.wid,cageSelTarget().face):[];
+ const n=rows[_cagePick.noteIx]; if(!n)return;
+ const opts=cagePositionsForMidi(n[2]);
+ const lo=_cagePick.startFret, hi=lo+4;
+ const inWin=opts.filter(p=>p.f>=lo&&p.f<=hi);
+ const pool=inWin.length?inWin:opts;
+ for(const pos of pool){
+  const finger=cageFingerForFret(pos.f,lo);
+  const cx=x0+(pos.f===lo&&lo===0?0:(pos.f-lo+0.5))*fretW;
+  const cy=y0+pos.s*strGap;
+  ctx.beginPath(); ctx.arc(cx,cy,8,0,Math.PI*2);
+  ctx.fillStyle=cageFingerColor(finger); ctx.globalAlpha=_cagePick.armed?1:0.55; ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle='#1a1208'; ctx.font='bold 10px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(String(finger),cx,cy+0.5);
+ }
+ host.dataset.geom=JSON.stringify({x0,y0,x1,y1,fretW,strGap,lo,padT:y0});
+}
+function cagePickOverlayOpen(noteIx,anchorEl){
+ cagePickOverlayClose();
+ if(!_cageLink.wid)return;
+ _cagePick.noteIx=noteIx;
+ _cagePick.startFret=(typeof cageState==='object'&&cageState)?(+cageState.startFret||0):0;
+ const el=document.createElement('div');
+ el.id='cagePickOverlay';
+ el.style.cssText='position:fixed;z-index:110;width:220px;padding:6px;border-radius:10px;border:1px solid var(--line);background:rgba(20,18,14,.96);box-shadow:0 8px 28px rgba(0,0,0,.45);';
+ el.innerHTML='<div style="font-size:10px;color:var(--dim);margin-bottom:4px;">Place on neck · hover top string to arm · Esc to close</div>'
+  +'<canvas width="208" height="120" style="display:block;width:100%;cursor:crosshair;"></canvas>';
+ const r=(anchorEl&&anchorEl.getBoundingClientRect)?anchorEl.getBoundingClientRect():{left:80,top:120,width:40,height:20};
+ el.style.left=Math.max(8,Math.min(window.innerWidth-240,r.left+r.width/2-110))+'px';
+ el.style.top=Math.max(8,r.top-140)+'px';
+ document.body.appendChild(el);
+ _cagePick.el=el;
+ const c=el.querySelector('canvas');
+ const armFrom=(ev)=>{
+  const g=JSON.parse(el.dataset.geom||'{}');
+  const rect=c.getBoundingClientRect();
+  const y=(ev.clientY-rect.top)*(c.height/Math.max(1,rect.height));
+  _cagePick.armed=y<=(g.padT||14);
+  cagePickOverlayDraw();
+ };
+ c.addEventListener('mousemove',armFrom);
+ c.addEventListener('mouseleave',()=>{_cagePick.armed=false;cagePickOverlayDraw();});
+ c.addEventListener('click',ev=>{
+  if(!_cagePick.armed)return;
+  const g=JSON.parse(el.dataset.geom||'{}');
+  const rect=c.getBoundingClientRect();
+  const x=(ev.clientX-rect.left)*(c.width/Math.max(1,rect.width));
+  const y=(ev.clientY-rect.top)*(c.height/Math.max(1,rect.height));
+  if(y<(g.y0||0)||y>(g.y1||999))return;
+  const s=Math.max(0,Math.min(5,Math.round((y-g.y0)/g.strGap)));
+  const fi=Math.max(0,Math.min(4,Math.floor((x-g.x0)/g.fretW)));
+  const fret=g.lo+fi;
+  const rows=cageLinkWorldRows(_cageLink.wid,cageSelTarget().face);
+  const n=rows[_cagePick.noteIx]; if(!n)return;
+  const finger=cageFingerForFret(fret,g.lo);
+  const prev=cageNoteGtr(n)||{};
+  cageSetNoteGtr(n,{s,f:fret,finger,pick:prev.pick||null,pima:prev.pima||null});
+  withGridWorld(_cageLink.wid,()=>{
+   const face=cageSelTarget().face;
+   const arr=project.tracks[face];
+   if(arr&&arr[_cagePick.noteIx])cageSetNoteGtr(arr[_cagePick.noteIx],{s,f:fret,finger,pick:prev.pick||undefined,pima:prev.pima||undefined});
+   refresh(true);
+  });
+  _cageLink.lastWorld='';
+  cageLinkTick();
+  cagePickOverlayClose();
+ });
+ el.addEventListener('mouseleave',()=>{cagePickOverlayClose();});
+ cagePickOverlayDraw();
+}
+function cageRhDraw(){
+ const c=document.getElementById('cageRhBoard'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+ ctx.clearRect(0,0,W,H);
+ const view=(document.getElementById('cageRhView')||{}).value||'electric';
+ ctx.fillStyle=view==='acoustic'?'#3a2e22':'#2a3038'; ctx.fillRect(0,0,W,H);
+ if(view==='acoustic'){ctx.beginPath();ctx.arc(W*0.55,H*0.5,H*0.28,0,Math.PI*2);ctx.strokeStyle='rgba(200,180,140,.5)';ctx.lineWidth=3;ctx.stroke();
+  ctx.beginPath();ctx.arc(W*0.55,H*0.5,H*0.1,0,Math.PI*2);ctx.fillStyle='#1a1208';ctx.fill();}
+ else{for(let i=0;i<3;i++){const x=W*0.35+i*18;ctx.fillStyle='rgba(180,190,200,.35)';ctx.fillRect(x,H*0.22,10,H*0.56);}}
+ const y0=H*0.18,y1=H*0.82,gap=(y1-y0)/5;
+ ctx.strokeStyle='rgba(220,210,190,.75)'; ctx.lineWidth=1.4;
+ for(let s=0;s<6;s++){const y=y0+s*gap;ctx.beginPath();ctx.moveTo(W*0.08,y);ctx.lineTo(W*0.92,y);ctx.stroke();}
+ ctx.fillStyle='rgba(233,234,239,.7)';ctx.font='10px system-ui';ctx.fillText('RH · pick / PIMA',8,12);
+}
+function cageRhApplyPick(dir){
+ if(!_cageLink.wid)return;
+ withGridWorld(_cageLink.wid,()=>{
+  const face=cageSelTarget().face; const arr=project.tracks[face]||[];
+  const ixs=(selNotes&&selNotes.size)?[...selNotes]:arr.map((_,i)=>i).slice(0,1);
+  for(const i of ixs){const n=arr[i]; if(!n)continue; const g=cageNoteGtr(n)||cageDefaultPos(n[2],0,5)||{s:0,f:0};
+   cageSetNoteGtr(n,{s:g.s,f:g.f,finger:g.finger!=null?g.finger:cageFingerForFret(g.f,0),pick:dir,pima:null});}
+  refresh(true);
+ });
+ _cageLink.lastWorld=''; cageLinkTick();
+}
+function cageRhApplyPima(p){
+ if(!_cageLink.wid)return;
+ withGridWorld(_cageLink.wid,()=>{
+  const face=cageSelTarget().face; const arr=project.tracks[face]||[];
+  const ixs=(selNotes&&selNotes.size)?[...selNotes]:arr.map((_,i)=>i).slice(0,1);
+  for(const i of ixs){const n=arr[i]; if(!n)continue; const g=cageNoteGtr(n)||cageDefaultPos(n[2],0,5)||{s:0,f:0};
+   cageSetNoteGtr(n,{s:g.s,f:g.f,finger:g.finger!=null?g.finger:cageFingerForFret(g.f,0),pick:null,pima:p});}
+  refresh(true);
+ });
+ _cageLink.lastWorld=''; cageLinkTick();
+}
+
+function cageLinkAttach(w){
+ if(!w||!w.id)return;
+ cageLinkDetach();
+ _cageLink.wid=w.id; _cageLink.rhOpen=true;
+ const strip=document.createElement('div');
+ strip.id='cageNeckStrip';
+ strip.className='pairMid';
+ strip.style.cssText='margin:0;padding:8px 10px 6px;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-top:none;';
+ strip.innerHTML='<div style="display:flex;gap:10px;align-items:stretch;">'
+  +'<div style="flex:1;min-width:0;">'
+  +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
+  +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck · MIDI layout</span>'
+  +'<span id="cageLinkMeta" style="font-size:11px;color:var(--accent);"></span></div>'
+  +'<canvas id="cageLinkBoard" width="920" height="160" style="display:block;width:100%;height:auto;max-height:28vh;"></canvas>'
+  +'<div id="cageFingerLegend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:10px;color:var(--dim);align-items:center;"></div></div>'
+  +'<div id="cageRhPane" style="flex:0 0 168px;border-left:1px solid var(--line);padding-left:8px;">'
+  +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+  +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Right hand</span>'
+  +'<button type="button" id="cageRhClose" class="wbtn" title="Hide right-hand pane">✕</button></div>'
+  +'<select id="cageRhView" style="width:100%;margin-bottom:4px;font-size:11px;"><option value="electric">Electric · pickups</option><option value="acoustic">Acoustic · sound hole</option></select>'
+  +'<canvas id="cageRhBoard" width="150" height="120" style="display:block;width:100%;height:auto;border-radius:6px;"></canvas>'
+  +'<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;">'
+  +'<button type="button" id="cageRhDown" style="padding:3px 7px;font-size:11px;" title="Pick downstroke">↓</button>'
+  +'<button type="button" id="cageRhUp" style="padding:3px 7px;font-size:11px;" title="Pick upstroke">↑</button>'
+  +'<button type="button" data-pima="p" class="cageRhPima" style="padding:3px 7px;font-size:11px;">P</button>'
+  +'<button type="button" data-pima="i" class="cageRhPima" style="padding:3px 7px;font-size:11px;">I</button>'
+  +'<button type="button" data-pima="m" class="cageRhPima" style="padding:3px 7px;font-size:11px;">M</button>'
+  +'<button type="button" data-pima="a" class="cageRhPima" style="padding:3px 7px;font-size:11px;">A</button>'
+  +'</div></div></div>';
+ const gridRoot=w.els&&w.els.root;
+ const panel=document.getElementById('cagePanel');
+ if(gridRoot&&gridRoot.parentNode){
+  /* his [7]: large guitar ABOVE the open 1-track midi grid */
+  gridRoot.parentNode.insertBefore(strip,gridRoot);
+ }else if(panel)panel.parentNode.insertBefore(strip,panel);
+ _cageLink.strip=strip;
+ const tgt=cageSelTarget();
+ _cageLink.sig=cageLinkSig(tgt);
+ const pack=cageLinkRowsJson(tgt);
+ cageLinkPushToWorld(w.id,tgt,pack);
+ _cageLink.lastMain=pack;
+ _cageLink.lastWorld=JSON.stringify(cageLinkWorldRows(w.id,tgt.face));
+ cageLinkNeckDraw(cageLinkWorldRows(w.id,tgt.face));
+ cageRhDraw();
+ const st=document.getElementById('cageLinkMeta');
+ if(st)st.textContent='Linked · '+(typeof trackLabel==='function'?trackLabel(tgt.face):tgt.face);
+ const rhClose=document.getElementById('cageRhClose');
+ if(rhClose)rhClose.onclick=()=>{const pane=document.getElementById('cageRhPane'); if(pane)pane.style.display='none'; _cageLink.rhOpen=false;};
+ const rhView=document.getElementById('cageRhView');
+ if(rhView)rhView.onchange=()=>cageRhDraw();
+ const rd=document.getElementById('cageRhDown'); if(rd)rd.onclick=()=>cageRhApplyPick('down');
+ const ru=document.getElementById('cageRhUp'); if(ru)ru.onclick=()=>cageRhApplyPick('up');
+ strip.querySelectorAll('.cageRhPima').forEach(b=>{b.onclick=()=>cageRhApplyPima(b.dataset.pima);});
+ _cageLink._onNote=e=>{
+  if(!_cageLink.wid||!GRID_WORLDS[_cageLink.wid])return;
+  const hit=e.target&&e.target.closest?e.target.closest('rect[data-n]'):null;
+  if(!hit)return;
+  const root=GRID_WORLDS[_cageLink.wid].els&&GRID_WORLDS[_cageLink.wid].els.root;
+  if(!root||!root.contains(hit))return;
+  const ix=+hit.dataset.n; if(!isFinite(ix))return;
+  cagePickOverlayOpen(ix,hit);
+ };
+ document.addEventListener('click',_cageLink._onNote,true);
+ _cageLink._onKey=e=>{if(e.key==='Escape')cagePickOverlayClose();};
+ document.addEventListener('keydown',_cageLink._onKey,true);
+ _cageLink.iv=setInterval(cageLinkTick,200);
+}
+
+function cagePlayMidi(midi,dur){
+ try{
+  if(typeof Tone!=='undefined'&&Tone&&Tone.context){
+   /* prefer a light synth via existing audition if available */
+  }
+ }catch(e){}
+ try{
+  const Ctx=window.AudioContext||window.webkitAudioContext;
+  if(!cageState._ac)cageState._ac=new Ctx();
+  if(cageState._ac.state==='suspended')cageState._ac.resume();
+  const ctx=cageState._ac,t0=ctx.currentTime;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='triangle'; o.frequency.value=440*Math.pow(2,(midi-69)/12);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.18,t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+(dur||0.35));
+  o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0+(dur||0.35)+0.02);
+ }catch(e){}
+}
+function cageSetStatus(m){const e=document.getElementById('cageStatus');if(e)e.textContent=m||'';}
+function cageApplyPayload(payload){
+ if(!payload||typeof payload!=='object')return;
+ if(payload.scaleRootPc!=null)cageState.scaleRootPc=((+payload.scaleRootPc)%12+12)%12;
+ if(payload.rootPc!=null)cageState.chordRootPc=((+payload.rootPc)%12+12)%12;
+ if(payload.text){cageState.chordText=String(payload.text);
+  const q=cageParseChord(payload.text); cageState.quality=q.quality;}
+ const sr=document.getElementById('cageScaleRoot'); if(sr)sr.value=String(cageState.scaleRootPc);
+ const ci=document.getElementById('cageChordIn'); if(ci)ci.value=cageState.chordText;
+ cagePickShape(); cageDraw();
+ cageSetStatus('Following grid · '+cageState.chordText+' · '+(cageState.numberView==='absolute'?'Absolute':'Relative'));
+}
+function cagePickShape(){
+ const x=cageState.shapePref==='auto'
+  ?cageBestShape(cageState.chordRootPc,cageState.startFret,cageState.window)
+  :cageTransposeForm(cageState.shapePref,cageState.chordRootPc);
+ cageState.activeShape=x.shape; cageState._shapeFrets=x.frets; cageState._shapeColor=x.color;
+ const sb=document.getElementById('cageShapeBig'); if(sb)sb.textContent=x.shape+' shape';
+ const cb=document.getElementById('cageChordBig'); if(cb)cb.textContent=cageState.chordText;
+ const km=document.getElementById('cageKeyMeta'); if(km)km.textContent='Scale root: '+(typeof PCN!=='undefined'?PCN[cageState.scaleRootPc]:cageState.scaleRootPc);
+ const tones=[...cageDegreeSet(cageState.quality,'arp')].sort((a,b)=>a-b)
+  .map(iv=>cageLabelPc((cageState.chordRootPc+iv)%12)).join(' · ');
+ const nm=document.getElementById('cageNumMeta');
+ if(nm)nm.textContent=(cageState.numberView==='absolute'?'Absolute':'Relative')+' · '+tones;
+}
+function cageSeed(){
+ cageState.selected.clear();
+ const q=(cageState.quality==='min'||cageState.quality==='min7')?'min':'maj';
+ const degs=cageDegreeSet(q,cageState.layer==='penta'?'penta':'scale');
+ for(let s=0;s<6;s++)for(let f=cageState.startFret;f<cageState.startFret+cageState.window;f++){
+  if(degs.has((cageMidi(s,f)-cageState.scaleRootPc+120)%12))cageState.selected.add(cageKey(s,f));
+ }
+ cageDraw();
+}
+function buildCageWindow(){
+ const body=document.getElementById('cageBody'); if(!body)return;
+ if(!cageState._built){
+  body.innerHTML=
+   '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Mode'
+   +'<span style="display:inline-flex;gap:4px;">'
+   +'<button type="button" id="cageModeSetup" class="on" style="padding:5px 10px;">Setup</button>'
+   +'<button type="button" id="cageModePlay" style="padding:5px 10px;">Play</button></span></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Numbers'
+   +'<span style="display:inline-flex;gap:4px;">'
+   +'<button type="button" id="cageNumAbs" class="on" style="padding:5px 10px;" title="Scale degrees stay constant — IV shows 4·6·1">Absolute</button>'
+   +'<button type="button" id="cageNumRel" style="padding:5px 10px;" title="Each chord’s own 1·3·5">Relative</button></span></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Scale root<select id="cageScaleRoot" style="padding:5px 8px;"></select></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Chord<input id="cageChordIn" type="text" value="C" style="width:4.8rem;padding:5px 8px;"/></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Layer<select id="cageLayer" style="padding:5px 8px;">'
+   +'<option value="arp" selected>Chord tones</option><option value="penta">Pentatonic</option>'
+   +'<option value="scale">Scale</option><option value="shape">CAGED shape only</option><option value="sel">Selected only</option></select></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Shape<select id="cageShape" style="padding:5px 8px;">'
+   +'<option value="auto">Auto</option><option value="C">C</option><option value="A">A</option><option value="G">G</option><option value="E">E</option><option value="D">D</option></select></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Frets'
+   +'<span style="display:inline-flex;gap:4px;" id="cageFretChips">'
+   +'<button type="button" data-w="4" style="padding:5px 10px;">4</button>'
+   +'<button type="button" data-w="5" class="on" style="padding:5px 10px;">5</button>'
+   +'<button type="button" data-w="6" style="padding:5px 10px;">6</button></span></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Start fret'
+   +'<input id="cageStartFret" type="range" min="0" max="17" value="0" style="width:110px;"/></label>'
+   +'<span id="cageStartLbl" style="font-size:12px;color:var(--dim);padding-bottom:6px;">0</span>'
+   +'<button type="button" id="cageSeed" style="padding:5px 10px;">Seed from scale</button>'
+   +'<button type="button" id="cageClear" style="padding:5px 10px;">Clear selection</button>'
+   +'</div>'
+   +'<div style="font-family:Georgia,serif;font-size:1.45rem;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:baseline;margin-bottom:6px;">'
+   +'<span id="cageChordBig">C</span><span id="cageShapeBig" style="font-size:1rem;color:var(--accent);">E shape</span>'
+   +'<span id="cageNumMeta" style="font-size:.78rem;color:var(--dim);font-family:system-ui,sans-serif;"></span>'
+   +'<span id="cageKeyMeta" style="font-size:.78rem;color:var(--dim);font-family:system-ui,sans-serif;"></span></div>'
+   +'<div id="cageBoardWrap" style="touch-action:none;user-select:none;background:linear-gradient(180deg,#2a241c,#1e1a14);border:1px solid var(--line);border-radius:10px;padding:10px 8px;overflow:auto;">'
+   +'<canvas id="cageBoard" width="900" height="300" style="display:block;width:100%;height:auto;max-height:48vh;cursor:pointer;"></canvas></div>'
+   +'<div style="display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:8px;font-size:11px;color:var(--dim);">'
+   +'<span>□ Scale root</span><span>◇ Chord root</span><span>● Chord / scale tone</span><span>○ Selected</span></div>'
+   +'<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">'
+   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;">Curiosity triggers — hit a saved sequence in Play mode</div>'
+   +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
+   +'<button type="button" id="cageCapStart" style="padding:5px 10px;">● Record</button>'
+   +'<button type="button" id="cageCapSave" style="padding:5px 10px;">Save trigger</button>'
+   +'<select id="cageTrigAction" style="padding:5px 8px;"><option value="modulation">Modulation automation</option>'
+   +'<option value="melody">Melody rise / fall</option><option value="metric">Metric modulation</option>'
+   +'<option value="suite">Suite (all three)</option></select>'
+   +'<span id="cageCapStatus" style="font-size:11px;color:var(--dim);">Idle</span></div>'
+   +'<ul id="cageTrigList" style="list-style:none;padding:0;margin:8px 0 0;font-size:12px;"></ul></div>';
+  const sel=document.getElementById('cageScaleRoot');
+  (typeof PCN!=='undefined'?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B']).forEach((n,i)=>{
+   const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o);
+  });
+  const on=id=>document.getElementById(id);
+  on('cageModeSetup').onclick=()=>{cageState.mode='setup';on('cageModeSetup').classList.add('on');on('cageModePlay').classList.remove('on');cageSetStatus('Setup — click to select/deselect');};
+  on('cageModePlay').onclick=()=>{cageState.mode='play';on('cageModePlay').classList.add('on');on('cageModeSetup').classList.remove('on');cageSetStatus('Play — tap notes; sequences can fire curiosities');};
+  on('cageNumAbs').onclick=()=>{cageState.numberView='absolute';on('cageNumAbs').classList.add('on');on('cageNumRel').classList.remove('on');cageDraw();};
+  on('cageNumRel').onclick=()=>{cageState.numberView='relative';on('cageNumRel').classList.add('on');on('cageNumAbs').classList.remove('on');cageDraw();};
+  on('cageScaleRoot').onchange=e=>{cageState.scaleRootPc=+e.target.value;cageDraw();};
+  on('cageChordIn').onchange=e=>{const q=cageParseChord(e.target.value);cageState.chordText=q.text;cageState.chordRootPc=q.rootPc;cageState.quality=q.quality;cageDraw();};
+  on('cageChordIn').onkeydown=e=>{if(e.key==='Enter')on('cageChordIn').onchange({target:on('cageChordIn')});};
+  on('cageLayer').onchange=e=>{cageState.layer=e.target.value;cageDraw();};
+  on('cageShape').onchange=e=>{cageState.shapePref=e.target.value;cageDraw();};
+  on('cageStartFret').oninput=e=>{cageState.startFret=+e.target.value;on('cageStartLbl').textContent=cageState.startFret;cageDraw();};
+  document.querySelectorAll('#cageFretChips button').forEach(btn=>{
+   btn.onclick=()=>{
+    document.querySelectorAll('#cageFretChips button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on'); cageState.window=+btn.dataset.w;
+    const max=Math.max(0,19-cageState.window); const sl=on('cageStartFret'); sl.max=max;
+    if(cageState.startFret>max){cageState.startFret=max;sl.value=max;on('cageStartLbl').textContent=max;}
+    cageDraw();
+   };
+  });
+  on('cageSeed').onclick=cageSeed; on('cageClear').onclick=()=>{cageState.selected.clear();cageDraw();};
+  on('cageCapStart').onclick=()=>{
+   cageState.mode='play'; on('cageModePlay').classList.add('on'); on('cageModeSetup').classList.remove('on');
+   cageState.capturing=!cageState.capturing;
+   if(cageState.capturing){cageState.captureBuf=[]; on('cageCapStart').textContent='■ Stop'; on('cageCapStatus').textContent='Recording…';}
+   else{on('cageCapStart').textContent='● Record'; on('cageCapStatus').textContent=cageState.captureBuf.length?'Captured: '+cageState.captureBuf.map(x=>x.deg).join(' → '):'Idle';}
+  };
+  on('cageCapSave').onclick=()=>{
+   if(cageState.captureBuf.length<2){cageSetStatus('Record at least 2 notes');return;}
+   const action=on('cageTrigAction').value; const seq=cageState.captureBuf.map(x=>x.deg);
+   cageState.triggers.push({id:Date.now(),action,seq}); cageState.capturing=false;
+   on('cageCapStart').textContent='● Record'; cageRenderTrigs(); cageSetStatus('Trigger armed → '+action);
+   try{localStorage.setItem('cp_caged_trigger',JSON.stringify({action,seq,chord:cageState.chordText,at:Date.now()}));}catch(e){}
+  };
+  const canvas=on('cageBoard');
+  const ptr=(ev,down)=>{
+   ev.preventDefault();
+   const cell=cageEventCell(ev); if(!cell)return;
+   if(cageState.mode==='setup'){
+    if(down){cageState._painting=true; const k=cageKey(cell.s,cell.f); cageState._paintAdd=!cageState.selected.has(k); cageState._last=null;
+     if(cageState._paintAdd)cageState.selected.add(k); else cageState.selected.delete(k);
+     cagePlayMidi(cageMidi(cell.s,cell.f),0.12); cageState._last=k; cageDraw();}
+    else if(cageState._painting){
+     const k=cageKey(cell.s,cell.f);
+     if(cageState._paintAdd)cageState.selected.add(k); else cageState.selected.delete(k);
+     if(cageState._last!==k){cagePlayMidi(cageMidi(cell.s,cell.f),0.08); cageState._last=k;}
+     cageDraw();
+    }
+   }else if(down||cageState._painting){
+    cageState._painting=true; const k=cageKey(cell.s,cell.f);
+    if(cageState._last!==k){cageState._last=k; cageHitPlay(cell.s,cell.f);}
+   }
+  };
+  canvas.addEventListener('mousedown',e=>ptr(e,true));
+  canvas.addEventListener('mousemove',e=>{if(cageState._painting)ptr(e,false);});
+  window.addEventListener('mouseup',()=>{cageState._painting=false;cageState._last=null;});
+  canvas.addEventListener('touchstart',e=>ptr(e,true),{passive:false});
+  canvas.addEventListener('touchmove',e=>{if(cageState._painting)ptr(e,false);},{passive:false});
+  canvas.addEventListener('touchend',()=>{cageState._painting=false;cageState._last=null;});
+  cageState._built=true;
+ }
+ /* greet: song tonic + playhead chord */
+ try{
+  if(typeof project==='object'&&project&&typeof project.tonic==='number')cageState.scaleRootPc=((project.tonic%12)+12)%12;
+  if(typeof cagedBridgePush==='function'){cagedBridgePush._last=null;cagedBridgePush();}
+  else if(typeof cagedBridgePayload==='function'){
+   const beat=(typeof playing!=='undefined'&&playing&&typeof transportBeat==='function')?transportBeat():(typeof playheadBeat==='number'?playheadBeat:0);
+   const ch=(typeof effectiveChords==='function')?effectiveChords():(project&&project.chords);
+   const pl=cagedBridgePayload(ch,beat,project&&project.tonic); if(pl)cageApplyPayload(pl);
+  }
+ }catch(e){}
+ const sr=document.getElementById('cageScaleRoot'); if(sr)sr.value=String(cageState.scaleRootPc);
+ cageRenderTrigs(); cageDraw();
+ cageSetStatus('CAGED Engine ready · Absolute numbers · dual roots');
+}
+function cageRenderTrigs(){
+ const ul=document.getElementById('cageTrigList'); if(!ul)return; ul.innerHTML='';
+ if(!cageState.triggers.length){ul.innerHTML='<li style="color:var(--dim);">None yet</li>';return;}
+ cageState.triggers.forEach((tr,idx)=>{
+  const li=document.createElement('li');
+  li.style.cssText='background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:6px;';
+  li.innerHTML='<b>'+tr.action+'</b> · <span style="font-family:ui-monospace,Menlo,monospace;">'+tr.seq.join(' → ')+'</span> ';
+  const del=document.createElement('button'); del.textContent='Remove'; del.style.marginLeft='8px';
+  del.onclick=()=>{cageState.triggers.splice(idx,1);cageRenderTrigs();};
+  li.appendChild(del); ul.appendChild(li);
+ });
+}
+function cageHitPlay(s,f){
+ const midi=cageMidi(s,f), pc=midi%12, k=cageKey(s,f);
+ cageState.flash.set(k, performance.now()+180);
+ cagePlayMidi(midi);
+ const deg=cageLabelPc(pc);
+ if(cageState.capturing){
+  cageState.captureBuf.push({s,f,pc,deg});
+  const st=document.getElementById('cageCapStatus');
+  if(st)st.textContent='Recording: '+cageState.captureBuf.map(x=>x.deg).join(' → ');
+ }
+ const now=performance.now();
+ cageState.playSeq.push({deg,t:now});
+ cageState.playSeq=cageState.playSeq.filter(x=>now-x.t<4000);
+ for(const tr of cageState.triggers){
+  if(tr.seq.length<2)continue;
+  const recent=cageState.playSeq.map(x=>x.deg);
+  if(recent.length>=tr.seq.length&&recent.slice(-tr.seq.length).every((d,i)=>d===tr.seq[i])){
+   cageState.playSeq=[]; cageSetStatus('⚡ '+tr.action);
+   try{localStorage.setItem('cp_caged_trigger',JSON.stringify({action:tr.action,seq:tr.seq,chord:cageState.chordText,at:Date.now()}));
+    window.dispatchEvent(new CustomEvent('caged-curiosity',{detail:{action:tr.action,seq:tr.seq}}));}catch(e){}
+   /* fire known curiosities when available */
+   try{
+    if(tr.action==='metric'&&typeof rmodApply==='function'){/* UI door already exists — status only here */}
+   }catch(e){}
+  }
+ }
+ cageDraw();
+}
+function cageEventCell(ev){
+ const canvas=document.getElementById('cageBoard'); const g=cageState._geom; if(!canvas||!g)return null;
+ const rect=canvas.getBoundingClientRect();
+ const pt=ev.touches?ev.touches[0]:ev;
+ const x=pt.clientX-rect.left, y=pt.clientY-rect.top;
+ if(x<g.x0-12||x>g.x1+12||y<g.y0-16||y>g.y1+16)return null;
+ const s=Math.round((g.y1-y)/g.strH); if(s<0||s>5)return null;
+ let fret;
+ if(cageState.startFret===0&&x<g.x0+g.fretW*0.3)fret=0;
+ else{const i=Math.max(0,Math.min(g.frets-1,Math.floor((x-g.x0)/g.fretW))); fret=cageState.startFret+i;}
+ return {s,f:fret};
+}
+function cageDraw(){
+ const canvas=document.getElementById('cageBoard'); if(!canvas)return;
+ cagePickShape();
+ const wrap=document.getElementById('cageBoardWrap');
+ const cssW=Math.max(320,(wrap?wrap.clientWidth:900)-16);
+ const cssH=Math.min(Math.max(200,cssW*0.34),420);
+ const dpr=Math.min(2,window.devicePixelRatio||1);
+ canvas.width=Math.floor(cssW*dpr); canvas.height=Math.floor(cssH*dpr);
+ canvas.style.width=cssW+'px'; canvas.style.height=cssH+'px';
+ const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+ const padL=36,padR=16,padT=24,padB=26,frets=cageState.window;
+ const g={frets,x0:padL,y0:padT,x1:cssW-padR,y1:cssH-padB,fretW:(cssW-padL-padR)/frets,strH:(cssH-padT-padB)/5};
+ ctx.clearRect(0,0,cssW,cssH);
+ const grd=ctx.createLinearGradient(0,g.y0,0,g.y1); grd.addColorStop(0,'#3a3024'); grd.addColorStop(1,'#2a2218');
+ ctx.fillStyle=grd; ctx.fillRect(g.x0-8,g.y0-10,g.x1-g.x0+16,g.y1-g.y0+20);
+ for(let i=0;i<=g.frets;i++){
+  const x=g.x0+i*g.fretW; ctx.beginPath(); ctx.moveTo(x,g.y0); ctx.lineTo(x,g.y1);
+  ctx.lineWidth=i===0?5:1.5; ctx.strokeStyle=i===0?'#c4b89a':'#7a6e58'; ctx.stroke();
+  ctx.fillStyle='#9a8f7a'; ctx.font='11px system-ui,sans-serif'; ctx.textAlign='center';
+  if(i===0&&cageState.startFret===0)ctx.fillText('nut',x,g.y1+16);
+  else if(i>0)ctx.fillText(String(cageState.startFret+i),x,g.y1+16);
+ }
+ ctx.fillText(String(cageState.startFret+g.frets),g.x1,g.y1+16);
+ for(let s=0;s<6;s++){
+  const y=g.y1-s*g.strH; ctx.beginPath(); ctx.moveTo(g.x0,y); ctx.lineTo(g.x1,y);
+  ctx.lineWidth=1+(5-s)*0.35; ctx.strokeStyle='#d7cbb0'; ctx.stroke();
+  ctx.fillStyle='#9a8f7a'; ctx.font='12px system-ui,sans-serif'; ctx.textAlign='right';
+  ctx.fillText(CAGED_STR[s],g.x0-8,y+4);
+ }
+ const chordDegs=cageDegreeSet(cageState.quality,'arp');
+ const layerDegs=cageDegreeSet(cageState.quality,cageState.layer==='sel'?'scale':cageState.layer);
+ const shapeSet=new Set(); (cageState._shapeFrets||[]).forEach((f,s)=>{if(f>=0)shapeSet.add(cageKey(s,f));});
+ const xy=(s,f)=>{const i=f-cageState.startFret; return {x:(f===0&&cageState.startFret===0)?g.x0-2:g.x0+(i+0.5)*g.fretW, y:g.y1-s*g.strH};};
+ ctx.strokeStyle=cageState._shapeColor; ctx.lineWidth=2; ctx.globalAlpha=0.5; ctx.beginPath(); let started=false;
+ for(let s=0;s<6;s++){const f=cageState._shapeFrets[s]; if(f==null||f<0)continue;
+  if(f<cageState.startFret||f>cageState.startFret+g.frets)continue; const p=xy(s,f);
+  if(!started){ctx.moveTo(p.x,p.y);started=true;}else ctx.lineTo(p.x,p.y);}
+ ctx.stroke(); ctx.globalAlpha=1;
+ const mark=(x,y,kind,lab,color,a)=>{
+  ctx.globalAlpha=a==null?1:a; ctx.fillStyle=color; ctx.beginPath();
+  if(kind==='sq'){const r=11; ctx.rect(x-r,y-r,r*2,r*2);}
+  else if(kind==='dia'){const r=12; ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);ctx.closePath();}
+  else ctx.arc(x,y,10,0,Math.PI*2);
+  ctx.fill(); ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lab,x,y+0.5);
+ };
+ for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){
+  const f=cageState.startFret+i, pc=cageMidi(s,f)%12;
+  const degC=(pc-cageState.chordRootPc+12)%12, degS=(pc-cageState.scaleRootPc+12)%12, k=cageKey(s,f);
+  const inLayer=cageState.layer==='shape'?shapeSet.has(k):cageState.layer==='sel'?cageState.selected.has(k):layerDegs.has(degC);
+  const isSR=degS===0, isCR=degC===0;
+  if(!inLayer&&!isSR&&!cageState.selected.has(k))continue;
+  const p=xy(s,f), lab=cageLabelPc(pc), inShape=shapeSet.has(k);
+  const alpha=(cageState.layer==='scale'||cageState.layer==='penta')&&!inShape&&!isSR&&!isCR?0.4:1;
+  if(isSR&&isCR){mark(p.x,p.y,'sq',lab,'#e8c547',1);
+   ctx.beginPath(); const r=12; ctx.moveTo(p.x,p.y-r);ctx.lineTo(p.x+r,p.y);ctx.lineTo(p.x,p.y+r);ctx.lineTo(p.x-r,p.y);ctx.closePath();
+   ctx.strokeStyle='#c23b2a'; ctx.lineWidth=2.5; ctx.stroke();}
+  else if(isSR)mark(p.x,p.y,'sq',lab,'#e8c547',1);
+  else if(isCR)mark(p.x,p.y,'dia',lab,'#c23b2a',1);
+  else if(inLayer)mark(p.x,p.y,'cir',lab,chordDegs.has(degC)?'#2f8f5b':'#8a9bb0',alpha);
+  if(cageState.selected.has(k)){ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.strokeStyle='#4a8fd4';ctx.lineWidth=2.5;ctx.stroke();}
+ }
+ if(cageState.mode==='setup'){
+  for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){
+   const f=cageState.startFret+i,k=cageKey(s,f); if(cageState.selected.has(k))continue;
+   const pc=cageMidi(s,f)%12; const degC=(pc-cageState.chordRootPc+12)%12, degS=(pc-cageState.scaleRootPc+12)%12;
+   if(degS===0||degC===0)continue;
+   if(cageState.layer!=='sel'&&layerDegs.has(degC))continue;
+   const p=xy(s,f); ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fill();
+  }
+ }
+ const now=performance.now();
+ for(const [key,until] of [...cageState.flash]){
+  if(until<now){cageState.flash.delete(key);continue;}
+  const [ss,ff]=key.split(':').map(Number);
+  if(ff<cageState.startFret||ff>cageState.startFret+g.frets)continue;
+  const p=xy(ss,ff); ctx.beginPath(); ctx.arc(p.x,p.y,15,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.3)'; ctx.fill();
+ }
+ cageState._geom=g;
+}
+
 function tokenSemis(t,c){switch(t){case 'R':return 0;case '3':return thirdOf(c);case '4':return 5;case '5':return c.iv.includes(6)&&!c.iv.includes(7)?6:7;case '6':return 9;case 'b7':return c.iv.includes(11)?11:10;case '8':return 12;default:return 0;}}
 function bassRootMidi(pc){let m=24+pc;while(m<31)m+=12;return m>43?m-12:m;}
 function renderBass(chords,style){const ev=[];const cyc=style.cycle*4;
@@ -6185,6 +7072,8 @@ function setPlayheadBeat(b){
  updatePlayheadLine();
 }
 function updatePlayheadLine(){
+ try{if(typeof cagedBridgePush==='function')cagedBridgePush();}catch(e){}
+ try{if(typeof cageLinkRedraw==='function')cageLinkRedraw();}catch(e){}
  const ph=document.getElementById('ph');if(!ph)return;
  const beat=playing?transportBeat():playheadBeat;
  if(typeof paperView!=='undefined'&&paperView){   /* 2.2c: the marker jumps system to system */
@@ -10796,7 +11685,8 @@ function cnvTplApply(i){
    CSS-variable layer is the shipped surface — colors hardcoded inside svg paints are
    recorded for their own cut (the spec notes). ==== */
 const CNV_COLORS=[['--bg','Background'],['--panel','Panels'],['--panel2','Controls & cells'],
- ['--line','Borders & lines'],['--text','Text'],['--dim','Secondary text'],['--accent','Accent / highlights']];
+ ['--line','Borders & lines'],['--text','Text'],['--dim','Secondary text'],['--accent','Accent / highlights'],
+ ['--cage-f1','Guitar fretting · 1 index'],['--cage-f2','Guitar fretting · 2 middle'],['--cage-f3','Guitar fretting · 3 ring'],['--cage-f4','Guitar fretting · 4 pinky'],['--cage-f0','Guitar fretting · 0 thumb']];
 /* ==== [CP2] ROADMAP 6.4 — THE COLORLISA PALETTE BROWSER (client, August 28: "The Color Palette
    should be on the Road Map scheduled to be built.  But it would be great if it got built
    soonish.") ====
@@ -11046,6 +11936,10 @@ function canvasApplyColors(){
   }
   else document.documentElement.style.removeProperty(v);
  }
+ try{if(typeof _cageLink==='object'&&_cageLink&&_cageLink.wid&&typeof cageLinkNeckDraw==='function')
+  cageLinkNeckDraw(cageLinkWorldRows(_cageLink.wid,cageSelTarget().face));
+  if(typeof cagePickOverlayDraw==='function'&&_cagePick&&_cagePick.el)cagePickOverlayDraw();
+ }catch(e){}
 }
 function cnvColDefault(v){
  /* the stylesheet's own value, resolved with any live override lifted */
@@ -11618,7 +12512,7 @@ function swRowMembers(cat){
      fourteen cells right, reading as "no longer populates". */
   /* Sept 3: a just-opened engine lands LEFTMOST and pushes the rest right —
      openWins is newest-first; members follow that order, then non-openWins riders. */
-  const ids=['chordPanel','varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','harmPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
+  const ids=['chordPanel','varPanel','melPanel','cagePanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','harmPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
   const isOpen=id=>{
    if(id==='chordPanel')return !(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
    if(id==='tripsPanel')return !!(typeof uiState==='object'&&uiState&&uiState.trips);
@@ -13723,6 +14617,7 @@ drawPsyRows();drawMimicCards();updateModDesc();drawFavMods();
 (function(){
  const statusFor={modPanel:m=>setModStatus(m),
   melPanel:m=>{const e=document.getElementById('melStatus');if(e)e.textContent=m;},
+  cagePanel:m=>{const e=document.getElementById('cageStatus');if(e)e.textContent=m;},
   cadPanel:m=>{const e=document.getElementById('cadStatus');if(e)e.textContent=m;},
   rhyPanel:m=>{const e=document.getElementById('rhyStatus');if(e)e.textContent=m;}};
  for(const [selId,winId] of [['modSongSel','modPanel'],['melSongSel','melPanel'],['cadSongSel','cadPanel'],['rhySongSel','rhyPanel']]){
@@ -30974,6 +31869,7 @@ const WINDOW_DEFS=[
  {id:'hubPanel',   name:'Samples', icon:'≈', tip:'Sample hub — route tracks to real audio · synth patches · Freesound & open libraries'},
  {id:'importPanel',name:'Import',  icon:'⇪', tip:'Import & cross-pollination sources — import music so we can take it apart into bite-sized building blocks: unlimited source songs, every track auditionable and draggable (4.4) · full-song split, drum-kit zips, voice memos (local backend)'},
  {id:'melPanel',   name:'Melisma', icon:'➿', tip:'Melody Melisma Machine — the universal vocal-ornament engine: runs, turns, scoops, gamakas — organized by tradition and era, never by artist'},
+ {id:'cagePanel',  name:'CAGED',  icon:'🎸', title:'CAGED Guitar',tip:'CAGED Guitar Engine — linked 1-track MIDI mirrors the selected multi-track lane(s) · large neck shows MIDI dots (layout + fingering) · Absolute (IV → 4·6·1) / Relative (1·3·5) · square = scale root · diamond = chord root · Setup · 4/5/6 frets'},
  {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'Choose Your Own Sound-Adventure',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
  {id:'wanPanel',   name:'Weber’s Wanderer',icon:'🧭',tip:'Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers on Weber\'s table (4.6), drawn as the old aged map: arrow keys walk the chords of your scale and its parallel relative, every landing plays, ✓ writes it to the lane'},
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
@@ -31159,13 +32055,13 @@ function uiDispatch(action){
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
- if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel'||uiState.open==='harmPanel')){   /* 5.5: the Harmonizer joins the greeter list */
+ if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='cagePanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel'||uiState.open==='harmPanel')){   /* 5.5: the Harmonizer joins the greeter list */
   /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation, Melisma and — 75th round four,
      his words — SCALES windows arrive with a linked audition grid directly ABOVE them —
      no Chord Palette, spawn-linked through the ONE graph. (The palette's 3.3 search
      surface still joins when it ships.) */
   let _ag=null;
-  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='rhyPanel')&&typeof gridAuditionSpawn==='function')
+  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='rhyPanel'||uiState.open==='cagePanel')&&typeof gridAuditionSpawn==='function')
    _ag=gridAuditionSpawn(uiState.open);
   if(uiState.open==='rhyPanel'){try{if(typeof buildRhyWindow==='function')buildRhyWindow();}catch(e){}}   /* 80th R2 — try/catch per landmine ⑪'s general defence: a fault inside the window must never take the toggle down */
   const p=(_ag&&_ag.els&&_ag.els.root)||document.getElementById(uiState.open);
@@ -31173,6 +32069,7 @@ function uiDispatch(action){
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='ragaPanel'&&typeof renderRagaResults==='function'){try{renderRagaResults();renderRagaInfo();}catch(e){}}   /* his 168th: the row tiles re-realize at open — the boot render predates the song's chords, so the ghosts were empty */
   if(uiState.open==='harmPanel'&&typeof buildHarmWindow==='function'){try{buildHarmWindow();}catch(e){}}   /* 5.5: the Harmonizer greets its selection */
+  if(uiState.open==='cagePanel'&&typeof buildCageWindow==='function'){try{buildCageWindow(); if(_ag&&typeof cageLinkAttach==='function')cageLinkAttach(_ag);}catch(e){}}   /* Guitar Engine: shape board + linked 1-track neck */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
@@ -31903,7 +32800,7 @@ function auditionRigDefaults(winId){
     the future Rhythm Window (rhythm track, ghosts from polyphonic+melody — recorded for
     when it exists); Cadence keeps its 75th boot (comping expanded, drums+melody strips)
     until he says otherwise [that reading is recorded in the spec]. Pure — unit-tested. */
- if(winId==='modPanel'||winId==='melPanel'||winId==='ragaPanel')
+ if(winId==='modPanel'||winId==='melPanel'||winId==='ragaPanel'||winId==='cagePanel')
   return {active:'melody',soloTrack:'melody',chordLaneHidden:true,chordGhosts:true};
  if(winId==='cadPanel')return {active:'comping'};
  /* 80th R2, his words (RHYTHM-ENGINE-RAW-2026-08-27.md, first + third messages): the
@@ -32602,7 +33499,7 @@ let _gridEvtEntered=false;
    along); tripsPanel is EXCLUDED — it keeps its [72] auto-stacking under the focused
    window. Drag the ⠿ grip vertically; the gold line (the §3 motion law) shows the
    deposit; the order persists in uiState.colOrder. */
-const COL_MEMBERS=['varPanel','melPanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','snapPanel','harmPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel'];   /* 76th R4: the Snap window joins the column */
+const COL_MEMBERS=['varPanel','melPanel','cagePanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','gridRowWrap','chordPanel','snapPanel','harmPanel','cadPanel','clipPanel','modPanel','hubPanel','setupPanel','rhyPanel'];   /* 76th R4: the Snap window joins the column */
 function colMemberOk(id){
  /* Phase 2 R2: grid INSTANCES (gridRowWrap_g2…) are column members too — "the multi-track
     grid… is itself just another window" extends to every instance of it. They are
