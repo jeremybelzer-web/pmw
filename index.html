@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03am</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03an</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1302,7 +1302,7 @@
        / [Essence Shelf] / [this window]. Matching lands with the extractor round — the
        columns and the info-pane law ship first, states honest. -->
   <div class="gridwrap" id="rhyPanel" style="margin:12px 0;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
     <div id="rhySongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above — Percussion on top, the Polyphonic Instrument under it, the chord lane below. The other tracks arrive hidden but audible.">Load a song into the audition grid</label>
       <select id="rhySongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
@@ -3043,6 +3043,99 @@ function embellish(rows,amount,opts){
   out.push(r);
  }
  return out;}
+/* ==== F3 THE RHYTHM REFINERY — THE EMBELLISHER GUIDED FLOW (pure layer) ====
+   His July 25 spec is the law (the RAW carries it verbatim): strong beats at the
+   melody's NEXT-LARGER subdivision wear blue boxes, three fill options, then the
+   note-population menu decides the pitches. These functions are that flow's laws,
+   unit-tested; the pop-up wiring lives beside the Rhythm window. */
+function embfSubdiv(rows){
+ /* the melody's smallest subdivided note, snapped onto the standard ladder */
+ if(!rows||!rows.length)return null;
+ let mn=Infinity;for(const r of rows)if(r[1]>1e-6&&r[1]<mn)mn=r[1];
+ if(!isFinite(mn))return null;
+ const LAD=[4,2,1,.5,.25,.125,.0625];
+ let best=LAD[0],bd=Infinity;
+ for(const c of LAD){const d=Math.abs(Math.log2(mn/c));if(d<bd){bd=d;best=c;}}
+ return best;
+}
+function embfSlots(rows,a,b){
+ /* the blue boxes: strong-grid places (subdiv x2 — 8ths smallest = the beats, 16ths
+    smallest = beats + &s, his "1 + 2 + 3 + 4 +") carrying a melody note with room
+    for the placed note. The placed note takes the host's LAST subdiv — a pickup into
+    the next note (labeled inference, recorded in the session entry). */
+ const sub=embfSubdiv(rows);
+ if(!sub)return {sub:null,step:null,slots:[]};
+ const step=sub*2;
+ const slots=[];
+ (rows||[]).forEach((r,i)=>{
+  if(r[0]<a-1e-6||r[0]>=b-1e-6)return;
+  const off=((r[0]%step)+step)%step,near=Math.min(off,step-off);
+  if(near>1e-3)return;
+  if(r[1]<sub*2-1e-6)return;
+  slots.push({i,at:+(r[0]+r[1]-sub).toFixed(6),dur:sub});
+ });
+ return {sub,step,slots};
+}
+function embfLikely(rows,slots,chordPcsFor){
+ /* option 3, his "I can choose for you some likely candidates": rank the hosts by
+    prismImportance, keep the top half (never fewer than one), deterministic. */
+ if(!slots||!slots.length)return [];
+ const ranked=slots.slice().sort((x,y)=>
+  prismImportance(rows,y.i,chordPcsFor?chordPcsFor(rows[y.i][0]):null)
+  -prismImportance(rows,x.i,chordPcsFor?chordPcsFor(rows[x.i][0]):null));
+ return ranked.slice(0,Math.max(1,Math.round(slots.length/2))).sort((x,y)=>x.at-y.at);
+}
+function embfPitch(rows,slot,method,ctx){
+ /* the note-population menu, one slot at a time — his list verbatim in the RAW.
+    ctx: chordPcsFor(beat) · nextChordPcsFor(beat) · scalePcs (abs pcs) · selPitches
+    (Populate with selected notes) · slotIdx (this slot's order among the chosen). */
+ const host=rows[slot.i],m0=host?host[2]:60;
+ const scale=(ctx&&ctx.scalePcs&&ctx.scalePcs.length)?ctx.scalePcs:null;
+ const cpcs=(ctx&&ctx.chordPcsFor)?(ctx.chordPcsFor(slot.at)||[]):[];
+ const npcs=(ctx&&ctx.nextChordPcsFor)?(ctx.nextChordPcsFor(slot.at)||[]):[];
+ const stepPc=(pcs,m,dir,k)=>{
+  if(!pcs||!pcs.length)return m;
+  let m2=m,found=0;
+  for(let d=1;d<=24&&found<k;d++){const c=m+dir*d;if(pcs.indexOf(((c%12)+12)%12)>=0){m2=c;found++;}}
+  return m2;
+ };
+ let m=m0;
+ if(method==='passing'){
+  const nx=rows[slot.i+1];
+  const tgt=nx?nx[2]:m0;
+  const dir=tgt>m0?1:tgt<m0?-1:1;
+  m=stepPc(scale||cpcs,m0,dir,1);
+  if(nx){if(dir===1&&m>=tgt)m=Math.max(m0,tgt-1);if(dir===-1&&m<=tgt)m=Math.min(m0,tgt+1);}
+ }
+ else if(method==='ct1a')m=stepPc(cpcs,m0,1,1);
+ else if(method==='ct1b')m=stepPc(cpcs,m0,-1,1);
+ else if(method==='ct2a')m=stepPc(cpcs,m0,1,2);
+ else if(method==='ct2b')m=stepPc(cpcs,m0,-1,2);
+ else if(method==='ant1a')m=stepPc(npcs,m0,1,1);
+ else if(method==='ant1b')m=stepPc(npcs,m0,-1,1);
+ else if(/^deg[1-7]$/.test(method)&&scale){
+  const pc=scale[(+method.slice(3)-1)%scale.length];
+  m=prismNearest([((pc%12)+12)%12],m0);
+ }
+ else if(method==='sel'&&ctx&&ctx.selPitches&&ctx.selPitches.length)
+  m=ctx.selPitches[(ctx.slotIdx||0)%ctx.selPitches.length];
+ return m;
+}
+function embfApply(rows,slots,method,ctx){
+ /* fresh rows out, input untouched: each chosen slot shortens its host by one subdiv
+    and seats the new note in the freed tail. One call = one undo at the write site. */
+ const out=(rows||[]).map(r=>r.slice());
+ const adds=[];
+ (slots||[]).forEach((s,k)=>{
+  const host=out[s.i];if(!host)return;
+  let m=embfPitch(rows,s,method,Object.assign({},ctx||{},{slotIdx:k}));
+  if(ctx&&ctx.snapCT){const cp=(ctx.chordPcsFor?ctx.chordPcsFor(s.at):null)||[];if(cp.length)m=prismNearest(cp,m);}
+  host[1]=+(host[1]-s.dur).toFixed(6);
+  adds.push([s.at,s.dur,m]);
+ });
+ return out.concat(adds).sort((x,y)=>x[0]-y[0]);
+}
+/* ==== /F3 THE EMBELLISHER pure layer ==== */
 function simpleVary(rows,amount,opts){
  /* SIMPLE VARIATION (the ring's ≈, client spec Aug 14): copy the line wholesale,
     re-root it on a DIFFERENT chord tone, then walk the scale keeping every rise
@@ -14058,7 +14151,179 @@ function rhyInfoDraw(){
  if(si)si.oninput=()=>{rhyState.q=si.value||'';buildRhyWindow();};
  const go=document.getElementById('rhyGoBtn');
  if(go)go.onclick=()=>{const st=document.getElementById('rhyStatus');if(st)st.textContent='';buildRhyWindow();};   /* his words: "The SEARCH button should just say SEARCH" — it re-reads the grid selection */
+ const eb=document.getElementById('rhyEmbBtn');
+ if(eb)eb.onclick=()=>{try{embFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='The Embellisher could not open: '+err.message;}};
 })();
+/* ==== F3 THE RHYTHM REFINERY — THE EMBELLISHER / MINIMIZER GUIDED FLOW (UI) ====
+   His July 25 flow, verbatim in the RAW: the guide asks where the first embellishment
+   goes, blue boxes mark the strong beats, three options choose them, and the
+   note-population menu decides the pitches. Everything reads and writes the MAIN
+   grid's melody (the reads-MAIN precedent), one undo per apply. The pure laws live
+   with the F3 block (embfSubdiv and family); Minimize is the shipped minimalize op
+   behind the same door — the merge the engine map ordered. */
+let embFlow=null;
+function embFlowBoxesClear(){document.querySelectorAll('.embBox').forEach(x=>{try{x.remove();}catch(e){}});}
+function embFlowClose(){
+ embFlowBoxesClear();
+ const p=document.getElementById('embFlowPop');if(p){try{p.remove();}catch(e){}}
+ embFlow=null;
+}
+function embFlowScope(){
+ /* the selection's span on the MAIN melody, else the whole song — his words */
+ let out=null;
+ withGridWorld('main',()=>{
+  const rows=project.tracks.melody||[];
+  let a=0,b=LOOP;
+  const selP=[];
+  if(selNotes&&selNotes.size){
+   let lo=Infinity,hi=-Infinity;
+   for(const ix of selNotes){const n=project.tracks.melody[ix];if(!n)continue;lo=Math.min(lo,n[0]);hi=Math.max(hi,n[0]+n[1]);selP.push(n[2]);}
+   if(isFinite(lo)){a=lo;b=hi;}
+  }
+  out={rows:rows.map(r=>r.slice()),a,b,selPitches:selP};
+ });
+ return out;
+}
+function embFlowCtx(){
+ /* chord + scale context, read under MAIN */
+ let ctx=null;
+ withGridWorld('main',()=>{
+  const fc=flatChords(project.chords);
+  const pcAt=beat=>{let acc=0;for(const c of fc){if(beat<acc+c.d-1e-6)return (c.iv||[]).map(v=>((c.r+v)%12+12)%12);acc+=c.d;}return [];};
+  const nxAt=beat=>{let acc=0;for(let i=0;i<fc.length;i++){if(beat<acc+fc[i].d-1e-6)return i+1<fc.length?(fc[i+1].iv||[]).map(v=>((fc[i+1].r+v)%12+12)%12):[];acc+=fc[i].d;}return [];};
+  const sc=curScale().pcs.map(p=>((p+project.tonic)%12+12)%12);
+  ctx={chordPcsFor:pcAt,nextChordPcsFor:nxAt,scalePcs:sc};
+ });
+ return ctx;
+}
+function embFlowBoxesDraw(){
+ embFlowBoxesClear();
+ if(!embFlow)return;
+ withGridWorld('main',()=>{
+  const sv=curSvg();if(!sv)return;
+  for(const s of embFlow.slots){
+   const host=embFlow.rows[s.i];if(!host)continue;
+   const rc=noteRect(host,GRID_VIEWS.main);
+   const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+   r.setAttribute('class','embBox'+(embFlow.chosen.has(s.i)?' on':''));
+   r.setAttribute('x',(GUT+s.at*PPB).toFixed(1));r.setAttribute('y',rc.y+2);
+   r.setAttribute('width',Math.max(4,s.dur*PPB-1).toFixed(1));r.setAttribute('height',Math.max(6,rc.h-4));
+   r.setAttribute('rx','2');
+   r.setAttribute('fill',embFlow.chosen.has(s.i)?'rgba(80,150,255,.5)':'rgba(80,150,255,.18)');
+   r.setAttribute('stroke','#5096ff');r.setAttribute('stroke-width','1.2');
+   r.style.cursor='pointer';
+   r.addEventListener('mousedown',ev=>{ev.stopPropagation();ev.preventDefault();
+    if(embFlow.chosen.has(s.i))embFlow.chosen.delete(s.i);else embFlow.chosen.add(s.i);
+    embFlowBoxesDraw();
+    const cnt=document.getElementById('embChosenN');if(cnt)cnt.textContent=String(embFlow.chosen.size);});
+   sv.appendChild(r);
+  }
+ });
+}
+function embFlowOpen(){
+ embFlowClose();
+ const sc=embFlowScope();
+ if(!sc||!sc.rows.length){const st=document.getElementById('rhyStatus');if(st)st.textContent='The main grid has no melody notes to embellish — nothing to place.';return;}
+ const got=embfSlots(sc.rows,sc.a,sc.b);
+ embFlow={rows:sc.rows,a:sc.a,b:sc.b,sub:got.sub,step:got.step,slots:got.slots,chosen:new Set(),selPitches:sc.selPitches};
+ const pop=document.createElement('div');
+ pop.id='embFlowPop';
+ pop.style.cssText='position:fixed;z-index:150;right:24px;top:90px;width:370px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:12px;box-shadow:0 10px 32px rgba(0,0,0,.6);font-size:12px;color:var(--text);';
+ pop.onmousedown=e=>e.stopPropagation();
+ document.body.appendChild(pop);
+ embFlowStage((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.rmPrompts===false)?'options':'guide');
+}
+function embFlowStage(stage){
+ const pop=document.getElementById('embFlowPop');if(!pop||!embFlow)return;
+ embFlow.stage=stage;
+ const subName=embFlow.sub===.5?'8th note':embFlow.sub===.25?'16th note':embFlow.sub===1?'quarter note':embFlow.sub===.125?'32nd note':'note';
+ const head='<div style="display:flex;align-items:center;margin-bottom:8px;"><b style="font-size:12.5px;">❦ The Embellisher / Minimizer</b><span style="font-size:10px;color:var(--dim);margin-left:8px;">Think Art Nouveau</span><span id="embFlowX" title="Close" style="margin-left:auto;cursor:pointer;color:var(--dim);font-size:14px;">✕</span></div>';
+ if(stage==='guide'){
+  pop.innerHTML=head
+   +'<div style="margin-bottom:10px;">Where do you want to place your first embellishment? The strong beats of your '+(embFlow.b-embFlow.a>=LOOP-1e-6?'song':'selected area')+' are the natural places — with '+subName+'s as the smallest note in the melody, that means every place a note sits on the next larger beat.</div>'
+   +'<div style="display:flex;gap:8px;"><button id="embGo" style="padding:5px 14px;">Show me the places</button><button id="embSelf" style="padding:5px 12px;">I’ll do it myself</button></div>';
+  pop.querySelector('#embGo').onclick=()=>embFlowStage('options');
+  pop.querySelector('#embSelf').onclick=embFlowClose;
+ }else if(stage==='options'){
+  embFlowBoxesDraw();
+  pop.innerHTML=head
+   +'<div style="margin-bottom:8px;"><b>'+embFlow.slots.length+'</b> strong-beat place'+(embFlow.slots.length===1?'':'s')+' wear a blue box on the grid — each would take one '+subName+'. We have 3 options:</div>'
+   +'<div style="display:flex;flex-direction:column;gap:6px;">'
+   +'<button id="embAll" style="text-align:left;padding:5px 10px;">1 · Place a '+subName+' in ALL of these places</button>'
+   +'<button id="embPick" style="text-align:left;padding:5px 10px;">2 · I’ll select the blue boxes myself (click them) — chosen: <b id="embChosenN">'+embFlow.chosen.size+'</b> <span id="embPickDone" style="text-decoration:underline;">done</span></button>'
+   +'<button id="embLikely" style="text-align:left;padding:5px 10px;">3 · Choose some likely candidates for me</button>'
+   +'</div>'
+   +'<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;"><button id="embMinVerb" title="The pair’s other half: strip the least-important notes instead." style="padding:4px 10px;">⤵ Minimize instead…</button></div>'
+   +(embFlow.slots.length?'':'<div style="margin-top:8px;color:var(--dim);">No strong-beat note has room for a smaller note here — try a wider selection, or Minimize.</div>');
+  const ctx=embFlowCtx();
+  pop.querySelector('#embAll').onclick=()=>{if(!embFlow.slots.length)return;embFlow.chosen=new Set(embFlow.slots.map(s=>s.i));embFlowBoxesDraw();embFlowStage('populate');};
+  pop.querySelector('#embPickDone').onclick=e=>{e.stopPropagation();if(embFlow.chosen.size)embFlowStage('populate');};
+  pop.querySelector('#embPick').onclick=()=>{};
+  pop.querySelector('#embLikely').onclick=()=>{if(!embFlow.slots.length)return;
+   embFlow.chosen=new Set(embfLikely(embFlow.rows,embFlow.slots,ctx.chordPcsFor).map(s=>s.i));
+   embFlowBoxesDraw();embFlowStage('populate');};
+  pop.querySelector('#embMinVerb').onclick=()=>embFlowStage('minimize');
+ }else if(stage==='populate'){
+  const opts=[['passing','Passing tone(s) — up to the next melody note'],['ct1a','Next chord tone above'],['ct1b','Next chord tone below'],['ct2a','2 chord tones above'],['ct2b','2 chord tones below'],['ant1a','Anticipated scale degree above, from the next chord'],['ant1b','Anticipated scale degree below, from the next chord'],['deg','Choose scale degree…'],['sel','Populate with selected notes']];
+  pop.innerHTML=head
+   +'<div style="margin-bottom:6px;"><b>'+embFlow.chosen.size+'</b> place'+(embFlow.chosen.size===1?'':'s')+' chosen — which notes should fill them?</div>'
+   +'<div style="display:flex;flex-direction:column;gap:3px;">'
+   +opts.map(([v,l],i)=>'<label style="display:flex;gap:6px;align-items:center;"><input type="radio" name="embPop" value="'+v+'"'+(i===0?' checked':'')+(v==='sel'&&!embFlow.selPitches.length?' disabled':'')+'>'+l+(v==='sel'&&!embFlow.selPitches.length?' <span style="color:var(--dim);font-size:10px;">(select notes first)</span>':'')+'</label>').join('')
+   +'</div>'
+   +'<div id="embDegMat" style="display:none;gap:4px;margin:6px 0 0 20px;">'
+   +'<span style="display:flex;flex-direction:column;gap:3px;">'+[1,2,3,4].map(d=>'<button data-deg="'+d+'" style="padding:2px 10px;">'+d+'</button>').join('')+'</span>'
+   +'<span style="display:flex;flex-direction:column;gap:3px;">'+[5,6,7].map(d=>'<button data-deg="'+d+'" style="padding:2px 10px;">'+d+'</button>').join('')+'</span>'
+   +'</div>'
+   +'<label style="display:flex;gap:6px;align-items:center;margin-top:8px;"><input type="checkbox" id="embSnapCT">Snap to closest chord tone</label>'
+   +'<div style="display:flex;gap:8px;margin-top:10px;"><button id="embPlace" style="padding:5px 16px;">✓ Place the notes</button><button id="embBack" style="padding:5px 10px;">‹ Back</button></div>';
+  let deg=1;
+  pop.querySelectorAll('input[name="embPop"]').forEach(r=>{r.onchange=()=>{pop.querySelector('#embDegMat').style.display=r.value==='deg'&&r.checked?'flex':'none';};});
+  pop.querySelectorAll('#embDegMat [data-deg]').forEach(b=>{b.onclick=()=>{deg=+b.dataset.deg;
+   pop.querySelectorAll('#embDegMat [data-deg]').forEach(x=>{x.style.background=x===b?'var(--accent)':'';x.style.color=x===b?'#1a1408':'';});};});
+  pop.querySelector('#embBack').onclick=()=>embFlowStage('options');
+  pop.querySelector('#embPlace').onclick=()=>{
+   const pick=pop.querySelector('input[name="embPop"]:checked');
+   let method=pick?pick.value:'passing';
+   if(method==='deg')method='deg'+deg;
+   embFlowApplyEmb(method,pop.querySelector('#embSnapCT').checked);
+  };
+ }else if(stage==='minimize'){
+  embFlowBoxesClear();
+  pop.innerHTML=head
+   +'<div style="margin-bottom:8px;">Minimize strips the least-important notes of the '+(embFlow.b-embFlow.a>=LOOP-1e-6?'song':'selected area')+' — metrical weight, duration, contour extremes and chord tones decide, and the first and last notes never leave.</div>'
+   +'<label style="display:flex;gap:8px;align-items:center;">Amount <input id="embMinAmt" type="range" min="0" max="100" step="5" value="30" style="flex:1;"><b id="embMinAmtN">30</b>%</label>'
+   +'<label style="display:flex;gap:6px;align-items:center;margin-top:6px;"><input type="checkbox" id="embMinFill">Extend notes to cover the holes (instead of silences)</label>'
+   +'<div style="display:flex;gap:8px;margin-top:10px;"><button id="embMinGo" style="padding:5px 16px;">✓ Minimize</button><button id="embMinBack" style="padding:5px 10px;">‹ Back</button></div>';
+  const amt=pop.querySelector('#embMinAmt');
+  amt.oninput=()=>{pop.querySelector('#embMinAmtN').textContent=amt.value;};
+  pop.querySelector('#embMinBack').onclick=()=>embFlowStage('options');
+  pop.querySelector('#embMinGo').onclick=()=>embFlowApplyMin(+amt.value,pop.querySelector('#embMinFill').checked);
+ }
+ const x=pop.querySelector('#embFlowX');if(x)x.onclick=embFlowClose;
+}
+function embFlowApplyEmb(method,snapCT){
+ if(!embFlow)return;
+ const slots=embFlow.slots.filter(s=>embFlow.chosen.has(s.i));
+ if(!slots.length){embFlowClose();return;}
+ const ctx=Object.assign(embFlowCtx(),{snapCT,selPitches:embFlow.selPitches});
+ const out=embfApply(embFlow.rows,slots,method,ctx);
+ withGridWorld('main',()=>{snapshot();project.tracks.melody=out;refresh(true);});
+ if(typeof flashHint==='function')flashHint(slots.length+' embellishment'+(slots.length===1?'':'s')+' placed — ⌘Z undoes.');
+ if(typeof noteEngine==='function')try{noteEngine('embellisher',{n:slots.length});}catch(e){}
+ embFlowClose();
+}
+function embFlowApplyMin(amount,fill){
+ if(!embFlow)return;
+ const ctx=embFlowCtx();
+ const inS=[],outS=[];
+ embFlow.rows.forEach(r=>{(r[0]>=embFlow.a-1e-6&&r[0]<embFlow.b-1e-6?inS:outS).push(r.slice());});
+ const done=minimalize(inS,amount,{fill,chordPcs:ctx.chordPcsFor(embFlow.a)});
+ const merged=outS.concat(done).sort((x,y)=>x[0]-y[0]);
+ withGridWorld('main',()=>{snapshot();project.tracks.melody=merged;refresh(true);});
+ if(typeof flashHint==='function')flashHint('Minimized — '+(inS.length-done.length)+' note'+((inS.length-done.length)===1?'':'s')+' stripped. ⌘Z undoes.');
+ embFlowClose();
+}
+/* ==== /F3 THE EMBELLISHER / MINIMIZER flow ==== */
 /* 80th (his seventeenth message): the main Essence Shelf's −/✕ — session-local, the
    restore chip always computed-visible when hidden (the R8 wound class) */
 (function(){
@@ -29974,7 +30239,8 @@ function parseSettings(str){
   classicHeads:false,
  engView:'top-buttons',engTips:true,
  delLinked:true,
- fixedGrid:false};   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ fixedGrid:false,
+ rmPrompts:true};   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -29986,6 +30252,7 @@ function parseSettings(str){
    if(o.clipDrop==='merge'||o.clipDrop==='replace')def.clipDrop=o.clipDrop;   /* default: ask each time */
    if(o.clipChordNames===false)def.clipChordNames=false;   /* July 26b: chord names in every clip, default ON */
    if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
+   if(o.rmPrompts===false)def.rmPrompts=false;   /* F3: an explicit false skips the guided question */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -32205,6 +32472,7 @@ document.addEventListener('keydown',e=>{
   ['#gridAddMenu',el=>{el.style.display='none';}],
   ['#cnvTplPick',el=>el.remove()],
   ['.essObjPop',()=>{try{essObjWinClose();}catch(err){}}],
+  ['#embFlowPop',()=>{try{embFlowClose();}catch(err){}}],
   ['.wanPopup [data-w="popclose"]',el=>el.click()]
  ];
  for(const [sel,fn] of acts){
@@ -33141,6 +33409,7 @@ function settingsHTML(){
   ${auto?`<button id="setRestore" title="Bring back the last autosaved state">Restore autosave · ${auto.toLocaleString()}</button>`:''}
  </p>
  <p><label><input type="checkbox" id="setAuto" ${SETTINGS.autosave?'checked':''}> Autosave the session in this browser (restores after a crash or an accidental close; with this off, closing with unsaved work asks first)</label></p>
+ <p><label><input type="checkbox" id="setRmPrompts" ${SETTINGS.rmPrompts?'checked':''}> Prompts by Pro Music Workbench for Rhythmic Motif — the Embellisher opens with its guided question. Off: straight to the options pop-up.</label></p>
  <p><label><input type="checkbox" id="setRecOver" ${SETTINGS.recordOver?'checked':''}> Record over existing MIDI — while recording, incoming notes REPLACE the armed track's notes in the recorded span. Off (the default): new notes simply add to the MIDI that is already there.</label></p>
  <h3>Clips</h3>
  <p><b>Clip boundaries default to:</b><br>
@@ -33205,6 +33474,7 @@ function openSettings(){
   if(typeof GRID_WORLDS==='object')for(const _gid in GRID_WORLDS)if(_gid!=='main'&&GRID_WORLDS[_gid])try{withGridWorld(_gid,_rd);}catch(err){}};   /* 77th: the standard flips live, every grid */
  if(g('setAuto'))g('setAuto').onchange=e=>{SETTINGS.autosave=e.target.checked;persistSettings();};
  if(g('setRecOver'))g('setRecOver').onchange=e=>{SETTINGS.recordOver=e.target.checked;persistSettings();};
+ if(g('setRmPrompts'))g('setRmPrompts').onchange=e=>{SETTINGS.rmPrompts=e.target.checked;persistSettings();};
  if(g('setClipAlign'))g('setClipAlign').onchange=e=>{SETTINGS.clipAlign=e.target.value==='bars'?'bars':'chords';persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
  if(g('setClipDrop'))g('setClipDrop').onchange=e=>{SETTINGS.clipDrop=(e.target.value==='merge'||e.target.value==='replace')?e.target.value:'ask';persistSettings();};
  if(g('setClipNames'))g('setClipNames').onchange=e=>{SETTINGS.clipChordNames=!!e.target.checked;persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
