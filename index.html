@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ar</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03as</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -14138,12 +14138,57 @@ function buildRhyWindow(){
  }
  for(const s of shown){
   const d=document.createElement('div');
-  d.className='mimCard'+(rhyState.sel===s.id?' on':'');
-  d.title='Click to read this song’s facts in the pane — the informed-decision law: pick which song your next curiosity (or curiosity suite) comes out of.';
-  d.innerHTML='<div class="mimName">'+s.name+'</div>'
-   +'<div class="mimMeta">'+s.bpm+' BPM · '+(s.chords?s.chords.length:0)+' chords'
-   +(matches?' · <span style="color:var(--accent);">♬ '+matches[s.id].map(h=>rhyCapLabel(h[0])+(h[1]>1?' ×'+h[1]:'')).join(' + ')+'</span>':'')+'</div>';
-  d.onclick=()=>{rhyState.sel=s.id;buildRhyWindow();};
+  d.className='mimCard essObjCard'+(rhyState.sel===s.id?' on':'');
+  d.title='Click = this song’s facts in the pane (the informed-decision law) · double-click = the object opens as a real 1-track grid (ghost notes, hidden tracks) · drag = onto the Essence Shelf or a track row · ⤴ expands it whole.';
+  /* his 187th: the result IS the universal object (his 94th/95th contract — represent ·
+     title · open-able · draggable): a 1-track RHYTHM object, one-tone rows (the
+     rhythm-without-any-notes convention), the tile’s ghost notes, the pop-up’s hidden
+     tracks. The rows are the song’s FIRST-MATCHED rhythm (the polyphonic band for the
+     comp curiosities) else its melody rhythm; capped at 32 onsets — the object
+     REPRESENTS, the pop-up holds the whole. */
+  const _hit0=matches&&matches[s.id]&&matches[s.id][0]?matches[s.id][0][0]:null;
+  const _stl=(typeof STYLES!=='undefined')?STYLES.find(x=>x.id===s.style):null;
+  const _beats=(s.chords||[]).reduce((a,c)=>a+(c.d||0),0);
+  let _ons;
+  if(/^(comp|polyr|strikes)/.test(_hit0||'')&&_stl&&Array.isArray(_stl.comp)&&_stl.comp.length)
+   _ons=rhyCycleOnsets(_stl.comp,_stl.cycle,_beats).map(u2=>u2*0.25);
+  else _ons=[...new Set((s.melody||[]).map(n=>+(+n[0]).toFixed(4)))].sort((a,b)=>a-b);
+  const _rd=[];
+  for(let i2=0;i2<_ons.length&&i2<32;i2++){
+   const gap=(i2+1<_ons.length)?_ons[i2+1]-_ons[i2]:.5;
+   _rd.push([+(_ons[i2]-(_ons[0]||0)).toFixed(4),+Math.min(.5,Math.max(.125,gap)).toFixed(4)]);
+  }
+  const po={id:'rhy:'+s.id,name:s.name,strand:'rhythm',data:_rd,org:'rhyPanel'};
+  d.innerHTML='<div class="essObjCap"><div class="mimName">'+s.name+'</div>'
+   +'<div class="mimMeta" style="flex:1;min-width:0;">'+s.bpm+' BPM · '+(s.chords?s.chords.length:0)+' chords'
+   +(matches?' · <span style="color:var(--accent);">♬ '+matches[s.id].map(h=>rhyCapLabel(h[0])+(h[1]>1?' ×'+h[1]:'')).join(' + ')+'</span>':'')+'</div>'
+   +'<span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+  essObjCardMount(d,po,'rhyw');
+  d.onclick=e=>{
+   if(d._dragAte){d._dragAte=false;return;}
+   if(e.target.closest&&e.target.closest('.essObjCardW'))return;
+   if(e.target.classList.contains('essExB')){e.stopPropagation();essObjWorldOpen(po,po.name,{x:e.clientX-60,y:e.clientY-40});essObjWorldExpand(true);return;}
+   rhyState.sel=s.id;buildRhyWindow();};
+  d.ondblclick=e=>{if(e.target.closest&&e.target.closest('.essObjCardW'))return;e.stopPropagation();essObjWorldOpen(po,po.name,{x:e.clientX-40,y:e.clientY-30});};
+  d.onmousedown=ev=>{
+   if(ev.button!==0||ev.target.classList.contains('essExB'))return;
+   if(ev.target.closest&&ev.target.closest('.essObjCardW'))return;
+   ev.preventDefault();
+   const x0=ev.clientX,y0=ev.clientY;
+   const mm=e2=>{
+    if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+     cleanup();d._dragAte=true;
+     chipDrag(e2,'♬ '+po.name,dv=>{
+      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);
+      if(shelfEl){essLibShelfMint(po,'rhyPanel');return;}
+      if(essDropTryDialog(dv,po))return;
+      if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
+     });
+    }};
+   const mu=()=>cleanup();
+   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  };
   cards.appendChild(d);
  }
  if(!shown.length)cards.innerHTML+='<span style="font-size:11.5px;color:var(--dim);">'+(matches?'No song in this list contains the selected rhythm — try a shorter run, or a different list.':'No songs match the 🔎 filter.')+'</span>';
