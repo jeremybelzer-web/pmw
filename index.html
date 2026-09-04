@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03an</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-03ao</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1302,7 +1302,7 @@
        / [Essence Shelf] / [this window]. Matching lands with the extractor round — the
        columns and the info-pane law ship first, states honest. -->
   <div class="gridwrap" id="rhyPanel" style="margin:12px 0;">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">♬ Rhythm SEARCH — search through the “Curiosities” in your curated song list</span><button id="rhyEmbBtn" title="THE RHYTHM REFINERY — the Embellisher / Minimizer guided flow (Think Art Nouveau): blue boxes mark the strong beats of your selection (or the whole song), three ways to choose them, then the note-population menu decides the pitches. Minimize is the same door in reverse." style="margin-left:auto;font-size:11px;letter-spacing:.6px;padding:3px 12px;">❦ EMBELLISH / MINIMIZE</button><button id="rhyCrpBtn" title="THE RHYTHM REFINERY — Continue an existing rhythmic pattern: yellow boxes show the repeating patterns (largest first, with their repeat counts, or Select My Own from a grid selection); blue boxes offer to extend the pattern where it is missing, walking the melody contour on scale passing tones." style="font-size:11px;letter-spacing:.6px;padding:3px 12px;">↬ CONTINUE A PATTERN</button><button id="rhyGoBtn" title="Reads the rhythm of the current selection in the grid above and searches the song list for it." style="font-size:11px;letter-spacing:.6px;padding:3px 14px;">SEARCH</button><input id="rhySearchInp" spellcheck="false" placeholder="🔎 filter" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the song list by name." style="font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:130px;"></div>
     <div id="rhySongRow" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
       <label style="font-size:11px;color:var(--dim);" title="Loads the song into the linked audition grid above — Percussion on top, the Polyphonic Instrument under it, the chord lane below. The other tracks arrive hidden but audible.">Load a song into the audition grid</label>
       <select id="rhySongSel" style="min-width:0;padding:3px 6px;font-size:11.5px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:6px;outline:none;"></select>
@@ -3135,7 +3135,101 @@ function embfApply(rows,slots,method,ctx){
  });
  return out.concat(adds).sort((x,y)=>x[0]-y[0]);
 }
-/* ==== /F3 THE EMBELLISHER pure layer ==== */
+/* ==== F3 — CONTINUE-A-RHYTHMIC-PATTERN (pure layer) ====
+   His July 25 spec is the law: yellow boxes around repeating rhythmic patterns, a
+   ranked list (largest first, each with its repeat count, Select My Own on top), blue
+   boxes where the established rhythm is missing asking to extend, the added notes
+   walking the existing melody contour on scale passing tones. IOIs ride the 16th
+   grid (the corpus convention) and simultaneous notes strike once. */
+function crpPatterns(rows,opts){
+ const u=(opts&&opts.unit)||0.25;
+ const on=[...new Set((rows||[]).filter(n=>n&&typeof n[0]==='number').map(n=>Math.round(n[0]/u)))].sort((a,b)=>a-b);
+ if(on.length<3)return {onsets:on,unit:u,list:[]};
+ const ioi=[];for(let i=1;i<on.length;i++)ioi.push(on[i]-on[i-1]);
+ const seen={},list=[];
+ const maxK=Math.min(16,Math.floor(ioi.length/2));
+ for(let k=maxK;k>=2;k--){
+  for(let i=0;i+k<=ioi.length;i++){
+   const pat=ioi.slice(i,i+k);
+   const key=k+':'+pat.join(',');
+   if(seen[key])continue;seen[key]=1;
+   let count=0,j=0;
+   while(j+k<=ioi.length){
+    let ok=true;for(let m=0;m<k;m++)if(ioi[j+m]!==pat[m]){ok=false;break;}
+    if(ok){count++;j+=k;}else j++;
+   }
+   if(count>=2)list.push({iois:pat,k,count,span:pat.reduce((a,b)=>a+b,0)});
+  }
+ }
+ list.sort((a,b)=>b.k-a.k||b.count-a.count||a.span-b.span);
+ return {onsets:on,unit:u,list:list.slice(0,(opts&&opts.top)||6)};
+}
+function crpFmt(iois){
+ /* his 3,3,3,3,4 idiom — 8th-note units when the run allows, 16ths otherwise */
+ if(!iois||!iois.length)return '';
+ return iois.every(i=>i%2===0)?iois.map(i=>i/2).join(','):iois.join(',')+' (16ths)';
+}
+function crpOccurrences(rows,iois,unit){
+ /* every seat of the chosen motif — non-overlapping, greedy, answered in beats */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ if(!iois||!iois.length)return [];
+ const on=[...new Set((rows||[]).filter(n=>n&&typeof n[0]==='number').map(n=>Math.round(n[0]/u)))].sort((a,b)=>a-b);
+ const k=iois.length,occ=[];
+ let i=0;
+ while(i+k<on.length){
+  let ok=true;
+  for(let m=0;m<k;m++)if(on[i+m+1]-on[i+m]!==iois[m]){ok=false;break;}
+  if(ok){occ.push({at:on[i]*u,end:on[i+k]*u});i+=k;}else i++;
+ }
+ return occ;
+}
+function crpGaps(rows,iois,occs,loop,unit){
+ /* where the established rhythm is MISSING: the motif tiles at its own span from each
+    occurrence's tail — an uncovered anchor inside the song is a blue-box offer. One
+    offer per tail; an accepted extension re-runs the search and re-offers. */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ if(!iois||!iois.length||!occs||!occs.length)return [];
+ const span=iois.reduce((a,b)=>a+b,0)*u;
+ if(!(span>0))return [];
+ const gaps=[];
+ for(const o of occs){
+  const b=+o.end.toFixed(6);
+  if(b>loop-span+1e-6)continue;
+  if(occs.some(x=>b>x.at-1e-6&&b<x.end-1e-6))continue;
+  if(occs.some(x=>Math.abs(x.at-b)<1e-6))continue;
+  if(gaps.some(g=>Math.abs(g.at-b)<1e-6))continue;
+  gaps.push({at:b});
+ }
+ return gaps.sort((a,b)=>a.at-b.at);
+}
+function crpExtend(rows,iois,at,ctx,unit){
+ /* the YES: every onset of the tile (its boundary included — completing a PARTIAL
+    seat is the point) gains a note wherever none sits, pitches walking the scale
+    from the note before the anchor toward the note after the span — his "existing
+    melody contour, and passing tones of the scale". Pure: fresh rows out. */
+ const u=(typeof unit==='number'&&unit>0)?unit:0.25;
+ if(!iois||!iois.length)return (rows||[]).map(r=>r.slice());
+ const scale=(ctx&&ctx.scalePcs&&ctx.scalePcs.length)?ctx.scalePcs:[0,2,4,5,7,9,11];
+ const span=iois.reduce((a,b)=>a+b,0)*u;
+ const sorted=(rows||[]).slice().sort((x,y)=>x[0]-y[0]);
+ let p0=null,p1=null;
+ for(const n of sorted){if(n[0]<=at+1e-6)p0=n[2];if(p1==null&&n[0]>=at+span-1e-6)p1=n[2];}
+ if(p0==null)p0=(p1!=null?p1:60);
+ if(p1==null)p1=p0;
+ const dir=p1>p0?1:p1<p0?-1:0;
+ const out=(rows||[]).map(r=>r.slice());
+ let b=at,cur=p0;
+ for(let i=0;i<=iois.length;i++){
+  const stepUp=()=>{let nxt=cur;for(let d=1;d<=12;d++){const c=cur+dir*d;if(scale.indexOf(((c%12)+12)%12)>=0){nxt=c;break;}}
+   return dir===1?Math.min(nxt,p1):dir===-1?Math.max(nxt,p1):cur;};
+  const occupied=sorted.some(n=>Math.abs(n[0]-b)<u/2);
+  const dur=iois[Math.min(i,iois.length-1)]*u;
+  if(!occupied)out.push([+b.toFixed(6),+dur.toFixed(6),cur]);
+  if(i<iois.length){cur=dir===0?cur:stepUp();b+=iois[i]*u;}
+ }
+ return out.sort((x,y)=>x[0]-y[0]);
+}
+/* ==== /F3 pure layers ==== */
 function simpleVary(rows,amount,opts){
  /* SIMPLE VARIATION (the ring's ≈, client spec Aug 14): copy the line wholesale,
     re-root it on a DIFFERENT chord tone, then walk the scale keeping every rise
@@ -14153,6 +14247,8 @@ function rhyInfoDraw(){
  if(go)go.onclick=()=>{const st=document.getElementById('rhyStatus');if(st)st.textContent='';buildRhyWindow();};   /* his words: "The SEARCH button should just say SEARCH" — it re-reads the grid selection */
  const eb=document.getElementById('rhyEmbBtn');
  if(eb)eb.onclick=()=>{try{embFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='The Embellisher could not open: '+err.message;}};
+ const cb=document.getElementById('rhyCrpBtn');
+ if(cb)cb.onclick=()=>{try{crpFlowOpen();}catch(err){const st=document.getElementById('rhyStatus');if(st)st.textContent='Continue-a-Pattern could not open: '+err.message;}};
 })();
 /* ==== F3 THE RHYTHM REFINERY — THE EMBELLISHER / MINIMIZER GUIDED FLOW (UI) ====
    His July 25 flow, verbatim in the RAW: the guide asks where the first embellishment
@@ -14324,6 +14420,130 @@ function embFlowApplyMin(amount,fill){
  embFlowClose();
 }
 /* ==== /F3 THE EMBELLISHER / MINIMIZER flow ==== */
+/* ==== F3 — CONTINUE-A-RHYTHMIC-PATTERN (UI) ====
+   His July 25 flow: the list leads (Select My Own on top, then the found patterns,
+   largest first with repeat counts), the chosen motif wears YELLOW boxes at every
+   seat, and BLUE boxes ask "Try extending the pattern to here?" — a click is the YES.
+   Reads and writes the MAIN grid's melody, one undo per extension. */
+let crpFlow=null;
+function crpFlowBoxesClear(){document.querySelectorAll('.crpBoxY,.crpBoxB').forEach(x=>{try{x.remove();}catch(e){}});}
+function crpFlowClose(){
+ crpFlowBoxesClear();
+ const p=document.getElementById('crpFlowPop');if(p){try{p.remove();}catch(e){}}
+ crpFlow=null;
+}
+function crpFlowRead(){
+ let out=null;
+ withGridWorld('main',()=>{
+  const rows=(project.tracks.melody||[]).map(r=>r.slice());
+  const selIdx=[...(selNotes||[])].filter(ix=>project.tracks.melody[ix]);
+  let own=null;
+  if(selIdx.length>=2){
+   const on=[...new Set(selIdx.map(ix=>Math.round(project.tracks.melody[ix][0]/0.25)))].sort((a,b)=>a-b);
+   const io=[];for(let i=1;i<on.length;i++)io.push(on[i]-on[i-1]);
+   if(io.length)own={iois:io,k:io.length,span:io.reduce((a,b)=>a+b,0)};
+  }
+  out={rows,loop:LOOP,own};
+ });
+ return out;
+}
+function crpFlowBoxesDraw(){
+ crpFlowBoxesClear();
+ if(!crpFlow||!crpFlow.pick)return;
+ withGridWorld('main',()=>{
+  const sv=curSvg();if(!sv)return;
+  const h=sv.getBBox?Math.max(120,sv.getBBox().height):sv.clientHeight||300;
+  const mk=(a,b2,cls,fill,stroke)=>{
+   const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+   r.setAttribute('class',cls);
+   r.setAttribute('x',(GUT+a*PPB).toFixed(1));r.setAttribute('y','0');
+   r.setAttribute('width',Math.max(4,(b2-a)*PPB-1).toFixed(1));r.setAttribute('height',h);
+   r.setAttribute('rx','3');r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);r.setAttribute('stroke-width','1.4');
+   sv.appendChild(r);return r;
+  };
+  for(const o of crpFlow.occs){const r=mk(o.at,o.end,'crpBoxY','rgba(255,210,63,.10)','#d9b23a');r.style.pointerEvents='none';}
+  for(const g of crpFlow.gaps){
+   const r=mk(g.at,g.at+crpFlow.pick.span*0.25,'crpBoxB','rgba(80,150,255,.14)','#5096ff');
+   r.style.cursor='pointer';
+   const tt=document.createElementNS('http://www.w3.org/2000/svg','title');
+   tt.textContent='Try extending the pattern to here? Click = yes — the notes arrive on the melody contour with scale passing tones. ⌘Z undoes.';
+   r.appendChild(tt);
+   r.addEventListener('mousedown',ev=>{ev.stopPropagation();ev.preventDefault();crpFlowExtend(g.at);});
+  }
+ });
+}
+function crpFlowRecalc(){
+ if(!crpFlow||!crpFlow.pick)return;
+ const rd=crpFlowRead();
+ crpFlow.rows=rd.rows;crpFlow.loop=rd.loop;
+ crpFlow.occs=crpOccurrences(crpFlow.rows,crpFlow.pick.iois,0.25);
+ crpFlow.gaps=crpGaps(crpFlow.rows,crpFlow.pick.iois,crpFlow.occs,crpFlow.loop,0.25).filter(g=>!(crpFlow.dead&&crpFlow.dead.has(+g.at.toFixed(6))));
+ crpFlowBoxesDraw();
+ const n=document.getElementById('crpOccN'),m=document.getElementById('crpGapN');
+ if(n)n.textContent=String(crpFlow.occs.length);
+ if(m)m.textContent=String(crpFlow.gaps.length);
+}
+function crpFlowExtend(at){
+ if(!crpFlow||!crpFlow.pick)return;
+ const ctx=embFlowCtx();
+ const out=crpExtend(crpFlow.rows,crpFlow.pick.iois,at,ctx,0.25);
+ if(out.length===crpFlow.rows.length){
+  /* a fully-occupied tile adds nothing — retire the offer instead of looping on it */
+  if(!crpFlow.dead)crpFlow.dead=new Set();
+  crpFlow.dead.add(+at.toFixed(6));crpFlowRecalc();return;
+ }
+ withGridWorld('main',()=>{snapshot();project.tracks.melody=out;refresh(true);});
+ if(typeof flashHint==='function')flashHint('The pattern extended to beat '+at+' — ⌘Z undoes.');
+ if(typeof noteEngine==='function')try{noteEngine('crp-extend',{at});}catch(e){}
+ crpFlowRecalc();
+}
+function crpFlowOpen(){
+ crpFlowClose();
+ const rd=crpFlowRead();
+ if(!rd||rd.rows.length<3){const st=document.getElementById('rhyStatus');if(st)st.textContent='Continue-a-Pattern needs a melody with at least three notes on the main grid.';return;}
+ const found=crpPatterns(rd.rows,{unit:0.25,top:6});
+ crpFlow={rows:rd.rows,loop:rd.loop,own:rd.own,found:found.list,pick:null,occs:[],gaps:[]};
+ const pop=document.createElement('div');
+ pop.id='crpFlowPop';
+ pop.style.cssText='position:fixed;z-index:150;right:24px;top:90px;width:370px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:12px;box-shadow:0 10px 32px rgba(0,0,0,.6);font-size:12px;color:var(--text);';
+ pop.onmousedown=e=>e.stopPropagation();
+ document.body.appendChild(pop);
+ crpFlowStage('list');
+}
+function crpFlowStage(stage){
+ const pop=document.getElementById('crpFlowPop');if(!pop||!crpFlow)return;
+ const head='<div style="display:flex;align-items:center;margin-bottom:8px;"><b style="font-size:12.5px;">↬ Continue a rhythmic pattern</b><span id="crpFlowX" title="Close" style="margin-left:auto;cursor:pointer;color:var(--dim);font-size:14px;">✕</span></div>';
+ if(stage==='list'){
+  crpFlowBoxesClear();
+  const ownRow=crpFlow.own
+   ?'<button id="crpOwn" style="text-align:left;padding:5px 10px;border:1px dashed var(--accent);">Select My Own — your grid selection: <b>'+crpFmt(crpFlow.own.iois)+'</b></button>'
+   :'<div style="padding:5px 10px;border:1px dashed var(--line);color:var(--dim);">Select My Own — select a range of notes in the grid first (one note is not a rhythm), then reopen.</div>';
+  pop.innerHTML=head
+   +'<div style="margin-bottom:8px;">Choose the size of the repeating rhythmic pattern:</div>'
+   +'<div style="display:flex;flex-direction:column;gap:5px;">'
+   +ownRow
+   +crpFlow.found.map((f,i)=>'<button data-crp="'+i+'" style="text-align:left;padding:5px 10px;">𝄆 '+crpFmt(f.iois)+' 𝄇 — repeats ×'+f.count+'</button>').join('')
+   +(crpFlow.found.length?'':'<div style="color:var(--dim);">No repeating rhythmic pattern found in the melody.</div>')
+   +'</div>';
+  pop.querySelectorAll('[data-crp]').forEach(b=>{b.onclick=()=>{crpFlow.pick=crpFlow.found[+b.dataset.crp];crpFlowStage('boxes');};});
+  const ob=pop.querySelector('#crpOwn');
+  if(ob)ob.onclick=()=>{crpFlow.pick=crpFlow.own;crpFlowStage('boxes');};
+ }else if(stage==='boxes'){
+  pop.innerHTML=head
+   +'<div style="margin-bottom:6px;">𝄆 <b>'+crpFmt(crpFlow.pick.iois)+'</b> 𝄇 — <b id="crpOccN">0</b> seats wear the yellow boxes; <b id="crpGapN">0</b> blue box(es) ask: <i>Try extending the pattern to here?</i> Click a blue box = yes (one undo each).</div>'
+   +'<div style="display:flex;gap:8px;margin-top:8px;"><button id="crpAllGaps" style="padding:5px 12px;">Extend to ALL the offers</button><button id="crpBack" style="padding:5px 10px;">‹ Back</button><button id="crpDone" style="padding:5px 12px;">Done</button></div>';
+  crpFlowRecalc();
+  pop.querySelector('#crpBack').onclick=()=>{crpFlow.pick=null;crpFlowStage('list');};
+  pop.querySelector('#crpDone').onclick=crpFlowClose;
+  pop.querySelector('#crpAllGaps').onclick=()=>{
+   let guard=0;
+   while(crpFlow&&crpFlow.gaps.length&&guard++<64)crpFlowExtend(crpFlow.gaps[0].at);
+  };
+ }
+ const x=pop.querySelector('#crpFlowX');if(x)x.onclick=crpFlowClose;
+}
+/* ==== /F3 CONTINUE-A-RHYTHMIC-PATTERN flow ==== */
+
 /* 80th (his seventeenth message): the main Essence Shelf's −/✕ — session-local, the
    restore chip always computed-visible when hidden (the R8 wound class) */
 (function(){
@@ -32472,6 +32692,7 @@ document.addEventListener('keydown',e=>{
   ['#gridAddMenu',el=>{el.style.display='none';}],
   ['#cnvTplPick',el=>el.remove()],
   ['.essObjPop',()=>{try{essObjWinClose();}catch(err){}}],
+  ['#crpFlowPop',()=>{try{crpFlowClose();}catch(err){}}],
   ['#embFlowPop',()=>{try{embFlowClose();}catch(err){}}],
   ['.wanPopup [data-w="popclose"]',el=>el.click()]
  ];
