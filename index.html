@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05f</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05g</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -25796,8 +25796,8 @@ function wanHallExchange(chord,step){
  const r=((Math.round(+chord.r)||0)%12+12)%12,minor=chord.iv[1]===3;
  if(!minor&&chord.iv[1]!==4)return null;
  const MAJ=[0,4,7],MIN=[0,3,7];
- const cands=minor?[{op:'P',r,iv:MAJ},{op:'L',r:(r+8)%12,iv:MAJ},{op:'R',r:(r+3)%12,iv:MAJ}]
-                  :[{op:'P',r,iv:MIN},{op:'L',r:(r+4)%12,iv:MIN},{op:'R',r:(r+9)%12,iv:MIN}];
+ /* R9: one law — the Tonnetz pilot's tonnetzNr answers P · L · R (and would answer S · N · H) */
+ const cands=['P','L','R'].map(op=>{const n=tonnetzNr(op,r,minor);return {op,r:n.tonic,iv:n.minor?MIN:MAJ};});
  const k=((Math.round(+step)||0)%4+4)%4;
  if(k===0)return {op:'',r,iv:(minor?MIN:MAJ).slice()};
  const c=cands[k-1];return {op:c.op,r:c.r,iv:c.iv.slice()};
@@ -25824,23 +25824,31 @@ function wanHallDraw(host){
   host.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
    +'<span class="cpchip" id="wanHallPlay" title="Play the progression from where you stand">▶ Play from here</span>'
    +'<span class="cpchip" id="wanHallBack" title="Stand at the song\'s start">⇤</span>'
-   +'<span id="wanHallStatus" style="font-size:10.5px;color:#6b4f28;"></span>'
+   +'<span id="wanHallStatus" style="font-size:10.5px;color:#6b4f28;white-space:nowrap;"></span>'
    +'<span style="flex:1"></span>'
    +'<span class="cpchip wanHallSkin" data-skin="books" title="Books on the shelves">📚</span><span class="cpchip wanHallSkin" data-skin="cubes" title="Cube blocks on the shelves">🧊</span><span class="cpchip wanHallSkin" data-skin="puzzle" title="Puzzle geometry on the walls, the ceiling and the floor">🧩</span>'
    +'<select id="wanHallMotion" title="Motion — how the camera advances: smoothly with the transport, or snapping to the beat or the bar" style="font-size:10px;"><option value="smooth">smooth</option><option value="beat">by the beat</option><option value="bar">by the bar</option></select>'
    +'<span class="cpchip" id="wanHallReset" title="Look straight ahead again">↺</span>'
+   +'<span class="cpchip'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?' on':'')+'" id="wanHallElev" title="The bamboo elevator — the thatched shelter that sinks you into the hallway when the view opens. Off = skip it (remembered in this browser, as his text says)">🎋</span>'
    +'<span style="font-size:9.5px;color:#6b4f28;">click = hear · double-click = exchange · drag = look around · wheel = look ahead</span></div>'
    +'<canvas id="wanHallCanvas" width="640" height="280" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;"></canvas>';
   const c=document.getElementById('wanHallCanvas');
   c.onclick=e=>{if(wanHall.drag&&wanHall.drag.moved){wanHall.drag=null;return;}wanHall.drag=null;wanHallClick(e);};
   c.ondblclick=wanHallDblClick;
-  c.onmousedown=e=>{wanHall.drag={x:e.clientX,y:e.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,moved:false};};
+  c.onmousedown=e=>{
+   if(e.button!==0)return;
+   const rr=c.getBoundingClientRect();const h=wanHallHit((e.clientX-rr.left)*c.width/rr.width,(e.clientY-rr.top)*c.height/rr.height);
+   if(h){wanHallChordDrag(e,h);return;}   /* R9: a book drags its chord to the chord lane */
+   wanHall.drag={x:e.clientX,y:e.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,moved:false};};
   c.onmousemove=e=>{const d=wanHall.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
    wanHall.look={dx:Math.max(-c.width*.25,Math.min(c.width*.25,d.dx+mx)),dy:Math.max(-c.height*.2,Math.min(c.height*.2,d.dy+my))};wanHallDraw();};
   c.onmouseup=()=>{if(wanHall.drag&&!wanHall.drag.moved)wanHall.drag=null;};
   host.querySelectorAll('.wanHallSkin').forEach(el=>{el.onclick=()=>{wanHall.skin=el.getAttribute('data-skin')||'books';wanHallDraw();};});
   const mo=document.getElementById('wanHallMotion');if(mo){mo.value=wanHall.motion;mo.onchange=()=>{wanHall.motion=mo.value;wanHallDraw();};}
   const rs=document.getElementById('wanHallReset');if(rs)rs.onclick=()=>{wanHall.look={dx:0,dy:0};wanHall.ahead=0;wanHallDraw();};
+  const el=document.getElementById('wanHallElev');if(el)el.onclick=()=>{try{SETTINGS.hallElevator=!(SETTINGS.hallElevator!==false);persistSettings();}catch(e){}el.classList.toggle('on',!!(SETTINGS&&SETTINGS.hallElevator!==false));};
+  /* the entry: the shelter sinks like an elevator into the hallway — once per opening of the view, unless skipped */
+  wanHall.elev=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?{t0:performance.now(),dur:1400}:null;
   c.onwheel=e=>{e.preventDefault();wanHall.ahead=Math.max(0,Math.min(HALL_DEPTH,(wanHall.ahead||0)+(e.deltaY>0?1:-1)));wanHallDraw();};
   const pb=document.getElementById('wanHallPlay');if(pb)pb.onclick=()=>wanHallPlay();
   const bb=document.getElementById('wanHallBack');if(bb)bb.onclick=()=>{wanHall.ahead=0;try{setPlayheadBeat(0);}catch(e){}wanHallDraw();};
@@ -25892,8 +25900,63 @@ function wanHallDraw(host){
  ctx.strokeStyle=paintOf('--playhead','#e8a33d');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xw(-1,1),yFloor(1)-1);ctx.lineTo(xw(1,1),yFloor(1)-1);ctx.stroke();
  const st=document.getElementById('wanHallStatus');
  if(st){const bar=Math.floor(cam/4)+1,beat=Math.floor(cam%4)+1;st.textContent='bar '+bar+' · beat '+beat+' · '+books.length+' chord'+(books.length===1?'':'s')+' ahead'+(wanHall.ahead?' · looking '+wanHall.ahead+' beat'+(wanHall.ahead===1?'':'s')+' ahead':'');}
- wanHall.last={cam,books:books.length,hits:hits.length,W,H};
+ const elevOn=wanHallElevDraw(ctx,W,H);
+ wanHall.last={cam,books:books.length,hits:hits.length,W,H,elev:elevOn};
  return wanHall.last;
+}
+function wanHallChordDrag(e3,h){
+ /* his INTERACTIONS row: "Drag selected/colored items → … Chord Lane" — the chain's own seam (cadFillBack ending AT the drop
+    cell, the slot's duration kept, one undo). A press without a move stays a click (select + audition). */
+ const bk=wanHall.books.find(b=>b.i===h.i);if(!bk)return;
+ e3.preventDefault();
+ let ghost=null,went=false;
+ const mv=ev=>{
+  if(!went&&Math.hypot(ev.clientX-e3.clientX,ev.clientY-e3.clientY)<6)return;
+  went=true;
+  if(!ghost){ghost=document.createElement('div');ghost.style.cssText='position:fixed;z-index:2000;pointer-events:none;font-size:11px;padding:3px 8px;border-radius:8px;background:#efe6d2;border:1px solid #6b4f28;color:#4a3a20;opacity:.9;';let l=bk.lbl;try{l=dispLbl(bk.lbl);}catch(e){}ghost.textContent=l;document.body.appendChild(ghost);}
+  ghost.style.left=(ev.clientX+10)+'px';ghost.style.top=(ev.clientY+8)+'px';
+  const lane=document.getElementById('chordlane');
+  if(lane)lane.style.outline=(()=>{const lr=lane.getBoundingClientRect();return (ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom)?'1px dashed var(--accent)':'';})();
+ };
+ const up=ev=>{
+  document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+  if(ghost)ghost.remove();
+  const lane=document.getElementById('chordlane');if(lane)lane.style.outline='';
+  wanHall.drag={moved:went};   /* the click that follows a real drag selects nothing */
+  if(!went)return;
+  const st=document.getElementById('wanHallStatus');
+  if(!lane||!lane.getClientRects().length){if(st)st.textContent='no chord lane on screen to drop into';return;}
+  const lr=lane.getBoundingClientRect();
+  if(!(ev.clientX>=lr.left&&ev.clientX<=lr.right&&ev.clientY>=lr.top&&ev.clientY<=lr.bottom))return;
+  const cell=(document.elementFromPoint(ev.clientX,ev.clientY)||{closest:()=>null}).closest('.cb');
+  const cm=cell?/^cb(\d+)$/.exec(cell.id):null;
+  const ci=cm?+cm[1]:(project.chords.length-1);
+  let beat=0;for(let k=0;k<ci&&k<project.chords.length;k++)beat+=(+project.chords[k].d||0);
+  let lbl=bk.lbl;try{lbl=withKeyAt(beat,()=>romanFor(bk.r,bk.iv));}catch(err){}
+  const rows=cadFillBack(project.chords,ci,[{r:bk.r,iv:bk.iv.slice(),lbl}]);
+  if(!rows){if(st)st.textContent='nowhere to land that';return;}
+  snapshot();
+  project.chords=rows;
+  drawChordLane();refresh(false);
+  if(st)st.textContent+=' · '+lbl+' landed on chord '+(ci+1)+' (its length kept) · ⌘Z undoes';
+ };
+ document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+function wanHallElevDraw(ctx,W,H){
+ /* the bamboo elevator (his ENTRY row): a small thatched roof on poles that SINKS like an elevator while the hallway rises
+    out of the dark; then the view runs. Returns true while it plays. */
+ const ev=wanHall.elev;if(!ev)return false;
+ const p=Math.min(1,(performance.now()-ev.t0)/(ev.dur||1400));
+ if(p>=1){wanHall.elev=null;return false;}
+ const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+ ctx.fillStyle='rgba(0,0,0,'+(0.85*(1-ease)).toFixed(3)+')';ctx.fillRect(0,0,W,H);
+ const y=-H*.25+ease*H*1.5,cx=W/2,rw=W*.34,rh=H*.16;
+ ctx.strokeStyle='#8a6a3a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx-rw*.7,y+rh);ctx.lineTo(cx-rw*.7,y+rh*3.2);ctx.moveTo(cx+rw*.7,y+rh);ctx.lineTo(cx+rw*.7,y+rh*3.2);ctx.stroke();
+ ctx.fillStyle='#b8985a';ctx.beginPath();ctx.moveTo(cx-rw,y+rh);ctx.lineTo(cx,y);ctx.lineTo(cx+rw,y+rh);ctx.lineTo(cx+rw*.85,y+rh*1.25);ctx.lineTo(cx-rw*.85,y+rh*1.25);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='#7a5a2a';ctx.lineWidth=1;for(let k=1;k<7;k++){ctx.beginPath();ctx.moveTo(cx-rw+k*rw*2/7,y+rh*1.25);ctx.lineTo(cx-rw*.6+k*rw*1.2/7,y+rh*.3);ctx.stroke();}
+ ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('descending into the hallway…',cx,y+rh*3.6);ctx.textAlign='left';
+ try{requestAnimationFrame(()=>{if(wanHall.elev)wanHallDraw();});}catch(e){}
+ return true;
 }
 function wanHallHit(x,y){
  /* the nearest book whose spine contains the point (ray-cast over the quad) */
@@ -33703,7 +33766,8 @@ function parseSettings(str){
  engView:'top-buttons',engTips:true,
  delLinked:true,
  fixedGrid:false,
- rmPrompts:true};   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ rmPrompts:true,
+ hallElevator:true};   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -33716,6 +33780,7 @@ function parseSettings(str){
    if(o.clipChordNames===false)def.clipChordNames=false;   /* July 26b: chord names in every clip, default ON */
    if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
    if(o.rmPrompts===false)def.rmPrompts=false;   /* F3: an explicit false skips the guided question */
+   if(o.hallElevator===false)def.hallElevator=false;   /* R9: skip the hallway's elevator entry */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -37008,6 +37073,7 @@ function settingsHTML(){
  </p>
  <p><label><input type="checkbox" id="setAuto" ${SETTINGS.autosave?'checked':''}> Autosave the session in this browser (restores after a crash or an accidental close; with this off, closing with unsaved work asks first)</label></p>
  <p><label><input type="checkbox" id="setRmPrompts" ${SETTINGS.rmPrompts?'checked':''}> Prompts by Pro Music Workbench for Rhythmic Motif — the Embellisher opens with its guided question. Off: straight to the options pop-up.</label></p>
+ <p><label><input type="checkbox" id="setHallElev" ${SETTINGS.hallElevator!==false?'checked':''}> The Wanderer's bamboo elevator — the thatched shelter that sinks you into the Hallway view when it opens. Off: skip straight to the corridor (the 🎋 chip in the hallway's header flips this too).</label></p>
  <p><label><input type="checkbox" id="setRecOver" ${SETTINGS.recordOver?'checked':''}> Record over existing MIDI — while recording, incoming notes REPLACE the armed track's notes in the recorded span. Off (the default): new notes simply add to the MIDI that is already there.</label></p>
  <h3>Clips</h3>
  <p><b>Clip boundaries default to:</b><br>
@@ -37073,6 +37139,7 @@ function openSettings(){
  if(g('setAuto'))g('setAuto').onchange=e=>{SETTINGS.autosave=e.target.checked;persistSettings();};
  if(g('setRecOver'))g('setRecOver').onchange=e=>{SETTINGS.recordOver=e.target.checked;persistSettings();};
  if(g('setRmPrompts'))g('setRmPrompts').onchange=e=>{SETTINGS.rmPrompts=e.target.checked;persistSettings();};
+ if(g('setHallElev'))g('setHallElev').onchange=e=>{SETTINGS.hallElevator=e.target.checked;persistSettings();};
  if(g('setClipAlign'))g('setClipAlign').onchange=e=>{SETTINGS.clipAlign=e.target.value==='bars'?'bars':'chords';persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
  if(g('setClipDrop'))g('setClipDrop').onchange=e=>{SETTINGS.clipDrop=(e.target.value==='merge'||e.target.value==='replace')?e.target.value:'ask';persistSettings();};
  if(g('setClipNames'))g('setClipNames').onchange=e=>{SETTINGS.clipChordNames=!!e.target.checked;persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
