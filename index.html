@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -25756,10 +25756,131 @@ function wanViewMenu(e,side){
  wanFloatMenu(e,[
   {hd:'View / Skin'},
   {label:'Weber&#8217;s Matrix of Related Keys (scales)',cur:cur==='weber',fn:()=>pick('weber')},
+  {label:'Hallway with books',cur:cur==='hallway',dis:side!==2,fn:()=>pick('hallway')},   /* R6 (the 96th): his [6]'s first animation view */
   {label:'3D Matrix',cur:cur==='3d',dis:side!==2,fn:()=>pick('3d')},
   {label:'Decision Trees',cur:cur==='tree',dis:side!==2,fn:()=>pick('tree')},
   {label:'More views land with their rounds',dis:true}
  ]);
+}
+/* ==== R6 (build 2026-09-05e, the 96th) — THE HALLWAY WITH BOOKS, the Weber Wanderer's first animation view. His [6]
+   (PARTS-DEPARTMENT-RAW [6]: "the full animation views… 3D, Hallway with books, etc.") and his Aug 31 brainstorm's
+   CORE UX, taken as written: TIME = SPACE — the hallway's empty space between objects is the bars and beats; forward
+   distance is musical time; the objects on the shelves are the song's chords (the default; the essence selector is a
+   global feature for its own round). View 4 of his five: books on shelves, click = audition, ▶ at the lane's end plays
+   the progression. The camera stands at the playhead and walks forward as the song plays. One-point perspective on a
+   canvas inside side 2 of the dual board. Not built, recorded: the bamboo-elevator entry (optional in his text), the
+   double-click exchange, drag-to-lane, the camera orbit, the other four views. */
+const HALL_F=6,HALL_DEPTH=32;
+function wanHallScale(z){
+ /* one-point perspective: the size of a thing z beats ahead of the camera (1 at the camera, smaller ahead, never 0) */
+ return HALL_F/(HALL_F+Math.max(0,+z||0));
+}
+function wanHallLayout(chords,cam,depth){
+ /* the chord lane as books ahead of the camera → [{i,t,d,z1,z2,lbl,r,iv,inside}] in time order: z = beats ahead; a chord the
+    camera stands in starts at 0 (inside); nothing behind the camera, nothing past `depth` beats. Pure. */
+ const out=[];let t=0;const D=(+depth>0)?+depth:HALL_DEPTH,c0=+cam||0;
+ let flat=[];try{flat=flatChords(Array.isArray(chords)?chords:[]);}catch(e){flat=[];}
+ flat.forEach((c,i)=>{const d=+c.d||0;const z1=t-c0,z2=t+d-c0;t+=d;if(d<=0||z2<=0||z1>=D)return;
+  out.push({i,t:t-d,d,z1:Math.max(0,z1),z2:Math.min(D,z2),lbl:String(c.lbl||''),r:c.r,iv:c.iv,inside:z1<=0});});   /* inside = the camera stands in it, its start at or behind the camera */
+ return out;
+}
+var wanHall={cam:0,ahead:0,sel:null,books:[],hits:[],iv:null,last:null};
+function wanHallCam(){
+ let b=0;try{b=notPlayheadBeat();}catch(e){b=(typeof playheadBeat==='number')?playheadBeat:0;}
+ return Math.max(0,b+(wanHall.ahead||0));
+}
+function wanHallChordColor(c){
+ /* the chord's paint, the paper view's law: chromatic grey, else the degree colour in the key at its beat */
+ try{return withKeyAt(c.t,()=>{if(chordIsChromatic({r:c.r,iv:c.iv}))return '#4a4f60';const di=curScale().pcs.indexOf(((c.r-project.tonic)%12+12)%12);return degColor(di<0?0:di);});}catch(e){return '#8a7a5a';}
+}
+function wanHallDraw(host){
+ host=host||document.getElementById('wanSide2');if(!host)return null;
+ if(!document.getElementById('wanHallCanvas')){
+  host.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
+   +'<span class="cpchip" id="wanHallPlay" title="Play the progression from where you stand">▶ Play from here</span>'
+   +'<span class="cpchip" id="wanHallBack" title="Stand at the song\'s start">⇤</span>'
+   +'<span id="wanHallStatus" style="font-size:10.5px;color:#6b4f28;"></span>'
+   +'<span style="flex:1"></span><span style="font-size:9.5px;color:#6b4f28;">time = space · click a book to hear it · wheel to look ahead</span></div>'
+   +'<canvas id="wanHallCanvas" width="640" height="280" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;"></canvas>';
+  const c=document.getElementById('wanHallCanvas');
+  c.onclick=wanHallClick;
+  c.onwheel=e=>{e.preventDefault();wanHall.ahead=Math.max(0,Math.min(HALL_DEPTH,(wanHall.ahead||0)+(e.deltaY>0?1:-1)));wanHallDraw();};
+  const pb=document.getElementById('wanHallPlay');if(pb)pb.onclick=()=>wanHallPlay();
+  const bb=document.getElementById('wanHallBack');if(bb)bb.onclick=()=>{wanHall.ahead=0;try{setPlayheadBeat(0);}catch(e){}wanHallDraw();};
+  if(!wanHall.iv)wanHall.iv=setInterval(wanHallTick,100);
+ }
+ const c=document.getElementById('wanHallCanvas');if(!c)return null;
+ const ctx=c.getContext('2d'),W=c.width,H=c.height;
+ const cam=wanHallCam();wanHall.cam=cam;
+ const books=wanHallLayout(project.chords,cam,HALL_DEPTH);wanHall.books=books;
+ const cx=W/2,cy=H*.42,halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17;
+ const xw=(side,s)=>cx+(side<0?-1:1)*halfW*s, yFloor=s=>cy+floorH*s, yShelf=s=>cy+shelfH*s;
+ /* the hall: ceiling · walls · floor, from the vanishing point out */
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#2a2320';ctx.fillRect(0,0,W,H);
+ const s0=1,sFar=wanHallScale(HALL_DEPTH);
+ ctx.fillStyle='#6b5a44';ctx.beginPath();ctx.moveTo(xw(-1,s0),yFloor(s0));ctx.lineTo(xw(1,s0),yFloor(s0));ctx.lineTo(xw(1,sFar),yFloor(sFar));ctx.lineTo(xw(-1,sFar),yFloor(sFar));ctx.closePath();ctx.fill();
+ for(const side of [-1,1]){ctx.fillStyle=side<0?'#4a3d31':'#54463a';ctx.beginPath();ctx.moveTo(xw(side,s0),0);ctx.lineTo(xw(side,s0),yFloor(s0));ctx.lineTo(xw(side,sFar),yFloor(sFar));ctx.lineTo(xw(side,sFar),cy-floorH*sFar*.6);ctx.closePath();ctx.fill();}
+ /* the floor's bars and beats — the empty space IS the time */
+ const first=Math.ceil(cam-1e-6);
+ for(let b=first;b<=cam+HALL_DEPTH;b++){const z=b-cam,s=wanHallScale(z);const bar=b%4===0;ctx.strokeStyle=bar?'rgba(255,230,180,.55)':'rgba(255,230,180,.18)';ctx.lineWidth=bar?1.2:.8;ctx.beginPath();ctx.moveTo(xw(-1,s),yFloor(s)+.5);ctx.lineTo(xw(1,s),yFloor(s)+.5);ctx.stroke();
+  if(bar&&s>.2){ctx.fillStyle='rgba(255,230,180,.6)';ctx.font=Math.max(8,Math.round(11*s))+'px system-ui';ctx.fillText(String(b/4+1),cx-8*s,yFloor(s)-3);}}
+ /* the shelves */
+ for(const side of [-1,1]){ctx.strokeStyle='#a8895f';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xw(side,s0),yShelf(s0));ctx.lineTo(xw(side,sFar),yShelf(sFar));ctx.stroke();}
+ /* the books, far to near, alternating walls */
+ const hits=[];
+ books.slice().sort((a,b)=>b.z1-a.z1).forEach(bk=>{
+  const side=bk.i%2?1:-1,s1=wanHallScale(bk.z1),s2=wanHallScale(bk.z2);
+  const xa=xw(side,s1),xb=xw(side,s2),ya=yShelf(s1),yb=yShelf(s2),ha=bookH*s1,hb=bookH*s2;
+  const pts=[[xa,ya],[xb,yb],[xb,yb-hb],[xa,ya-ha]];
+  const col=wanHallChordColor(bk),sel=wanHall.sel===bk.i;
+  ctx.fillStyle=col;ctx.globalAlpha=bk.inside?1:.92;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2:1;ctx.stroke();
+  /* the spine's title, upright, sized by nearness */
+  if(s1>.14){ctx.fillStyle='#fff';ctx.font='bold '+Math.max(8,Math.round(12*s1))+'px system-ui';ctx.textAlign='center';let lbl=bk.lbl;try{lbl=dispLbl(bk.lbl);}catch(e){}ctx.fillText(lbl,(xa+xb)/2,(ya+yb)/2-(ha+hb)/4+4);ctx.textAlign='left';}
+  hits.push({i:bk.i,pts,z:bk.z1});
+ });
+ wanHall.hits=hits.sort((a,b)=>a.z-b.z);   /* nearest first for the click */
+ /* where you stand */
+ ctx.strokeStyle=paintOf('--playhead','#e8a33d');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xw(-1,1),yFloor(1)-1);ctx.lineTo(xw(1,1),yFloor(1)-1);ctx.stroke();
+ const st=document.getElementById('wanHallStatus');
+ if(st){const bar=Math.floor(cam/4)+1,beat=Math.floor(cam%4)+1;st.textContent='bar '+bar+' · beat '+beat+' · '+books.length+' chord'+(books.length===1?'':'s')+' ahead'+(wanHall.ahead?' · looking '+wanHall.ahead+' beat'+(wanHall.ahead===1?'':'s')+' ahead':'');}
+ wanHall.last={cam,books:books.length,hits:hits.length,W,H};
+ return wanHall.last;
+}
+function wanHallHit(x,y){
+ /* the nearest book whose spine contains the point (ray-cast over the quad) */
+ const inside=(pts,px,py)=>{let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/((yj-yi)||1e-9)+xi))c=!c;}return c;};
+ for(const h of wanHall.hits){if(inside(h.pts,x,y))return h;}
+ return null;
+}
+function wanHallClick(e){
+ const c=document.getElementById('wanHallCanvas');if(!c)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ const h=wanHallHit(x,y);
+ if(!h){wanHall.sel=null;wanHallDraw();return;}
+ wanHall.sel=h.i;
+ const bk=wanHall.books.find(b=>b.i===h.i);
+ if(bk)wanHallAudition([bk]);
+ wanHallDraw();
+}
+function wanHallAudition(list){
+ /* click = audition, the audition voicing law (audVoice); ▶ = the strip in sequence at the song's rate */
+ if(!list||!list.length)return;
+ const bpm=Math.max(20,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||120)),spb=60/bpm;
+ const go=()=>{try{
+  const t0=Tone.now()+.03;let at=0,prev=null;
+  list.forEach(bk=>{const v=audVoice({r:bk.r,iv:bk.iv},prev);if(!v)return;prev=v.notes;inst.note('comping',[v.bass].concat(v.notes),Math.max(.15,bk.d*spb*.92),t0+at,.6);at+=bk.d*spb;});
+ }catch(e){}};
+ if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
+}
+function wanHallPlay(){wanHallAudition(wanHall.books.slice());}
+function wanHallTick(){
+ const c=document.getElementById('wanHallCanvas');
+ const shown=(typeof uiWinShown==='function')&&uiWinShown('wanPanel');
+ if(!c||!shown||wanWeb2State().view!=='hallway'){clearInterval(wanHall.iv);wanHall.iv=null;return;}
+ const cam=wanHallCam();
+ if(cam!==wanHall.cam)wanHallDraw();
 }
 function wanSide2Draw(){
  /* his 165th/166th: THE 2ND WANDERER — the dual board's right side. v1, recorded
@@ -25770,6 +25891,7 @@ function wanSide2Draw(){
     the next rounds' territory, not claimed. */
  const host=document.getElementById('wanSide2');if(!host)return;
  const st=wanState,w2=wanWeb2State();
+ if(w2.view==='hallway'){wanHallDraw(host);return;}   /* R6: the first animation view */
  if(w2.view!=='weber'){
   host.innerHTML='<div style="font-size:11px;color:#6b4f28;padding:22px 10px;line-height:1.5;">'+(w2.view==='3d'?'The <b>3D Matrix</b> view lands with its own round — the colour categories you set here will paint it too.':'The <b>Decision Trees</b> view lands with its own round — the colour categories you set here will paint it too.')+'</div>';
   return;
@@ -25914,7 +26036,7 @@ function wanWeberDraw(){
     +'<span id="wanLinkBtn" class="cpchip" style="font-size:12px;letter-spacing:-1px;cursor:pointer;" title="'+(wanWeb2State().linked?'Linked — the left side is linked with the right side. They both are in the same key, with the same scale. Click for options.':'Unlinked — each side is independent of the other. Click for options.')+'">'+(wanWeb2State().linked?'◅━▻':'━')+'</span>'
     +'<div style="flex:1;width:3px;border-radius:2px;background:#a8895f;opacity:.6;"></div></div>'
    +'<div id="wanSide2Col" style="flex:'+(1-wanWeb2State().split).toFixed(3)+' 1 0;min-width:200px;display:flex;flex-direction:column;gap:4px;">'
-   +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='3d'?'3D Matrix':'Decision Trees')+' ▾</span>'
+   +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='hallway'?'Hallway with books':wanWeb2State().view==='3d'?'3D Matrix':'Decision Trees')+' ▾</span>'
    +(wanWeb2State().linked?'':'<span style="font-size:9.5px;color:#6b4f28;">independent — double-click a key to set THIS side&#8217;s home</span>')+'</div>'
    +'<div id="wanSide2" style="overflow-x:auto;"></div></div>':'')
   +'<div id="wanLegend"></div></div>';   /* 80th R21: the arrow marker stood down; R22: the legend rides the right */
