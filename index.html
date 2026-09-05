@@ -797,7 +797,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-04i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-04j</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4374,7 +4374,7 @@ const CAGED_STR=['E','A','D','G','B','e'];
 let cageState={
  mode:'setup', numberView:'absolute',
  scaleRootPc:0, chordText:'C', chordRootPc:0, quality:'maj',
- layer:'scale', soloView:'scale', splitNeck:false, shapePref:'auto', window:5, startFret:0,
+ layer:'scale', soloView:'scale', splitNeck:false, layoutView:'midi', moveArmed:false, moveIx:0, shapePref:'auto', window:5, startFret:0,
  upcoming:{text:'',rootPc:0,quality:'maj'},
  selected:new Set(), flash:new Map(),
  capturing:false, captureBuf:[], triggers:[], playSeq:[],
@@ -4489,6 +4489,58 @@ function cageDefaultPos(midi,startFret,window){
  const pool=inWin.length?inWin:opts;
  return pool.slice().sort((a,b)=>a.f-b.f||a.s-b.s)[0];
 }
+/* A [23] — Change Where It’s Played: position candidates · roman frets · TAB cycle · soft-miss hint */
+function cageRomanFret(f){
+ const n=+f||0;
+ if(n<=0)return 'open';
+ const R=['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII'];
+ return R[n]||String(n);
+}
+function cageMoveEvalAt(midis, startFret, window){
+ const lo=+startFret||0, win=Math.max(1,+(window||5)), hi=lo+win-1;
+ const placements=[], missing=[];
+ (midis||[]).forEach((midi,ix)=>{
+  const opts=cagePositionsForMidi(midi).filter(p=>p.f>=lo&&p.f<=hi);
+  if(!opts.length){missing.push({ix,midi:+midi}); placements.push(null); return;}
+  placements.push(opts.slice().sort((a,b)=>a.f-b.f||a.s-b.s)[0]);
+ });
+ const miss=missing.length, n=(midis||[]).length;
+ return {startFret:lo, window:win, placements, missing, ok:miss===0&&n>0, soft:miss>0&&miss<=2&&miss<n};
+}
+function cageMoveCandidates(midis, window, maxStart){
+ const win=Math.max(1,+(window||5)), maxS=(maxStart==null?12:+maxStart);
+ const lit=[], soft=[], dark=[];
+ for(let s=0;s<=maxS;s++){
+  const ev=cageMoveEvalAt(midis,s,win);
+  if(ev.ok)lit.push(ev);
+  else if(ev.soft)soft.push(ev);
+  else dark.push(ev);
+ }
+ return {lit, soft, dark, window:win};
+}
+function cageMoveHint(ev, midis){
+ if(!ev||!ev.soft||!ev.missing||!ev.missing.length)return '';
+ const names=ev.missing.map(m=>{
+  const pc=((+m.midi)%12+12)%12;
+  return (typeof PCN!=='undefined'?PCN[pc]:String(pc));
+ });
+ const uniq=[...new Set(names)];
+ const who=uniq.length<=2?uniq.join(' and '):uniq.slice(0,2).join(', ')+'…';
+ return 'HINT: Try unselecting the '+who+' note(s) and try again.';
+}
+function cageMoveLayouts(midis, window){
+ /* Each lit position → one full placement list (TAB cycles these). */
+ const c=cageMoveCandidates(midis, window);
+ return c.lit.map(ev=>({startFret:ev.startFret, window:ev.window, placements:ev.placements.slice()}));
+}
+function cageMoveNextLayout(midis, curPlacements, window){
+ const layouts=cageMoveLayouts(midis, window); if(!layouts.length)return null;
+ const key=pl=> (pl||[]).map(p=>p?p.s+':'+p.f:'-').join('|');
+ const cur=key(curPlacements);
+ let ix=layouts.findIndex(L=>key(L.placements)===cur);
+ ix=(ix+1)%layouts.length;
+ return {layout:layouts[ix], index:ix, total:layouts.length, all:layouts};
+}
 function cageNoteGtr(n){return (n&&n[7]&&typeof n[7]==='object'&&n[7].gtr)?n[7].gtr:null;}
 function cageSetNoteGtr(n,gtr){
  if(!n)return;
@@ -4501,6 +4553,7 @@ function cageSetNoteGtr(n,gtr){
   const pm=gtr.pima!=null?String(gtr.pima).toLowerCase():'';
   if(pm==='p'||pm==='i'||pm==='m'||pm==='a')g.pima=pm;
   else if(gtr.pima===null){} else if(base.gtr&&base.gtr.pima)g.pima=base.gtr.pima;
+  if(gtr.locked)g.locked=true; else if(base.gtr&&base.gtr.locked&&gtr.locked!==false)g.locked=true;
   base.gtr=g;
  }else delete base.gtr;
  n[7]=Object.keys(base).length?base:null;
@@ -5023,6 +5076,173 @@ function cageRhTapFinish(){
  });
  _cageLink.lastWorld=''; cageLinkTick();
 }
+function cageMoveTargetIxs(rows){
+ const arr=rows||[];
+ if(typeof selNotes!=='undefined'&&selNotes&&selNotes.size){
+  const ixs=[...selNotes].filter(i=>arr[i]).sort((a,b)=>a-b);
+  if(ixs.length)return ixs;
+ }
+ const beat=(typeof playing!=='undefined'&&playing&&typeof transportBeat==='function')
+  ?transportBeat():(typeof playheadBeat==='number'?playheadBeat:0);
+ let best=-1, bd=1e9;
+ for(let i=0;i<arr.length;i++){
+  const n=arr[i]; if(!n||!isFinite(+n[0]))continue;
+  const d=Math.abs(+n[0]-beat); if(d<bd){bd=d; best=i;}
+ }
+ /* gather simultaneous notes at that beat (±ε) */
+ if(best<0)return [];
+ const t0=+arr[best][0], eps=0.08;
+ const ixs=[];
+ for(let i=0;i<arr.length;i++){const n=arr[i]; if(n&&Math.abs(+n[0]-t0)<=eps)ixs.push(i);}
+ return ixs;
+}
+function cageMoveMidisFrom(rows, ixs){
+ return (ixs||[]).map(i=>rows[i]&&+rows[i][2]).filter(m=>isFinite(m));
+}
+function cageMoveCurPlacements(rows, ixs){
+ return (ixs||[]).map(i=>{const g=cageNoteGtr(rows[i]); return g&&g.s!=null?{s:+g.s,f:+g.f}:null;});
+}
+function cageMoveRomansRender(cands, armed){
+ const host=document.getElementById('cageRomanStrip'); if(!host)return;
+ const lit=new Set((cands.lit||[]).map(e=>e.startFret));
+ const soft=new Set((cands.soft||[]).map(e=>e.startFret));
+ let html='';
+ for(let f=0;f<=12;f++){
+  const on=lit.has(f), softOn=soft.has(f);
+  const lab=cageRomanFret(f);
+  const bg=on?'var(--accent)':(softOn&&armed?'rgba(232,163,61,.35)':'transparent');
+  const col=on?'#1a1208':(softOn&&armed?'var(--text)':'var(--dim)');
+  const op=armed?1:0.45;
+  html+='<button type="button" data-f="'+f+'" class="cageRomanBtn" title="Position '+lab+'"'
+   +' style="min-width:28px;padding:4px 6px;font-size:11px;font-family:Georgia,serif;opacity:'+op+';'
+   +'background:'+bg+';color:'+col+';border:1px solid var(--line);border-radius:4px;'
+   +(on||(softOn&&armed)?'':'opacity:.35;')+'">'+(f===0?'open':lab)+'</button>';
+ }
+ host.innerHTML=html;
+ host.querySelectorAll('.cageRomanBtn').forEach(btn=>{
+  btn.onclick=()=>{
+   if(!cageState.moveArmed){cageMoveArm(true); return;}
+   const f=+btn.dataset.f;
+   const hit=(cands.lit||[]).find(e=>e.startFret===f)||(cands.soft||[]).find(e=>e.startFret===f);
+   if(hit&&hit.ok)cageMoveApplyEval(hit);
+   else if(hit&&hit.soft){
+    const hint=document.getElementById('cageMoveHint');
+    if(hint)hint.textContent=cageMoveHint(hit, null);
+   }
+  };
+ });
+}
+function cageMoveGather(){
+ if(!_cageLink.wid)return null;
+ let rows=[], ixs=[];
+ withGridWorld(_cageLink.wid,()=>{
+  const face=cageSelTarget().face; rows=(project.tracks[face]||[]).slice();
+  ixs=cageMoveTargetIxs(rows);
+ });
+ if(!ixs.length)return null;
+ const midis=cageMoveMidisFrom(rows, ixs);
+ return {rows, ixs, midis, cands:cageMoveCandidates(midis, cageState.window||5)};
+}
+function cageMoveArm(on){
+ cageState.moveArmed=!!on;
+ const btn=document.getElementById('cageMovePos');
+ if(btn)btn.classList.toggle('on', cageState.moveArmed);
+ const g=cageMoveGather();
+ if(!g){cageSetStatus('Move position — select notes or park the playhead on a note'); return;}
+ cageMoveRomansRender(g.cands, cageState.moveArmed);
+ const hint=document.getElementById('cageMoveHint');
+ if(hint){
+  if(cageState.moveArmed&&g.cands.soft.length&&!g.cands.lit.length)
+   hint.textContent=cageMoveHint(g.cands.soft[0], g.midis);
+  else if(cageState.moveArmed)hint.textContent='Lit romans = positions where every selected/playhead note fits. Tab cycles.';
+  else hint.textContent='';
+ }
+ cageSetStatus(cageState.moveArmed
+  ?('Move position armed · '+(g.cands.lit.length)+' fit · Tab to cycle')
+  :'');
+}
+function cageMoveApplyEval(ev){
+ if(!_cageLink.wid||!ev||!ev.placements)return;
+ withGridWorld(_cageLink.wid,()=>{
+  if(typeof snapshot==='function')snapshot();
+  const face=cageSelTarget().face; const rows=project.tracks[face]||[];
+  const ixs=cageMoveTargetIxs(rows);
+  ixs.forEach((ix,j)=>{
+   const pl=ev.placements[j]; const n=rows[ix]; if(!n||!pl)return;
+   const prev=cageNoteGtr(n)||{};
+   const finger=cageFingerForFret(pl.f, ev.startFret);
+   cageSetNoteGtr(n,{s:pl.s,f:pl.f,finger,pick:prev.pick||null,pima:prev.pima||null,locked:true});
+  });
+  cageState.startFret=ev.startFret;
+  const sl=document.getElementById('cageStartFret'); if(sl){sl.value=ev.startFret;}
+  const lb=document.getElementById('cageStartLbl'); if(lb)lb.textContent=String(ev.startFret);
+  if(typeof refresh==='function')refresh(true);
+ });
+ _cageLink.lastWorld=''; cageLinkTick();
+ cageMoveArm(true);
+}
+function cageMoveCycleTab(){
+ const g=cageMoveGather(); if(!g){cageSetStatus('Nothing to move — select notes or use the playhead'); return;}
+ if(!cageState.moveArmed)cageMoveArm(true);
+ const cur=cageMoveCurPlacements(g.rows, g.ixs);
+ const nxt=cageMoveNextLayout(g.midis, cur, cageState.window||5);
+ if(!nxt||!nxt.layout){cageSetStatus('No alternate positions for this set'); return;}
+ cageState.moveIx=nxt.index;
+ cageMoveApplyEval(nxt.layout);
+ cageSetStatus('Position '+(nxt.index+1)+'/'+nxt.total+' · start fret '+nxt.layout.startFret);
+}
+function cageLayoutViewApply(){
+ const v=cageState.layoutView||'midi';
+ const notation=document.getElementById('cageNotationLane');
+ const mini=document.getElementById('cageMiniMidi');
+ const midiHide=document.getElementById('cageMidiHideNote');
+ if(notation)notation.style.display=(v==='notation'||v==='custom')?'block':'none';
+ if(mini)mini.style.display=(v==='neckMini'||v==='custom')?'block':'none';
+ /* midi+neck = default strip above grid; neckMini still shows grid but dims via note */
+ if(midiHide)midiHide.textContent=v==='neckMini'?'Neck + song miniature (1-track still linked below)':(v==='notation'?'Treble notation lane + neck':(v==='custom'?'Custom — toggle lanes above':'MIDI track + neck'));
+ if(v==='notation')cageNotationStubDraw();
+ if(v==='neckMini'||v==='custom')cageMiniMidiDraw();
+}
+function cageNotationStubDraw(){
+ const c=document.getElementById('cageNotationCanvas'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+ ctx.clearRect(0,0,W,H); ctx.fillStyle='#f7f3ea'; ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='#222'; ctx.lineWidth=1;
+ const y0=18, gap=8;
+ for(let i=0;i<5;i++){const y=y0+i*gap; ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(W-10,y);ctx.stroke();}
+ ctx.font='28px Georgia,serif'; ctx.fillStyle='#222'; ctx.fillText('𝄞', 8, y0+3*gap);
+ ctx.font='11px system-ui'; ctx.fillStyle='#666';
+ ctx.fillText('Standard notation (treble) — stub · notes follow the linked track', 48, H-8);
+ if(!_cageLink.wid)return;
+ const rows=cageLinkWorldRows(_cageLink.wid, cageSelTarget().face)||[];
+ ctx.fillStyle='#1a1a1a';
+ rows.slice(0,48).forEach(n=>{
+  const x=48+(+n[0])*28; if(x>W-12)return;
+  const pc=((+n[2])%12+12)%12; const y=y0+4*gap-(pc%8)*1.2;
+  ctx.beginPath(); ctx.ellipse(x,y,5,3.5, -0.3, 0, Math.PI*2); ctx.fill();
+ });
+}
+function cageMiniMidiDraw(){
+ const c=document.getElementById('cageMiniMidiCanvas'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+ ctx.clearRect(0,0,W,H); ctx.fillStyle='#1a1814'; ctx.fillRect(0,0,W,H);
+ let rows=[];
+ try{
+  if(typeof project!=='undefined'&&project&&project.tracks){
+   const face=(typeof cageSelTarget==='function'?cageSelTarget().face:'melody');
+   rows=project.tracks[face]||project.melody||[];
+  }
+ }catch(e){}
+ const loop=(typeof LOOP==='number'&&LOOP>0)?LOOP:16;
+ ctx.fillStyle='#e8c547';
+ rows.forEach(n=>{
+  const x=(+n[0]/loop)*W; const y=H-8-(((+n[2])%24)/24)*(H-16);
+  const w=Math.max(2,(+n[1]/loop)*W);
+  ctx.fillRect(x,y,w,3);
+ });
+ ctx.fillStyle='#888'; ctx.font='10px system-ui'; ctx.fillText('Whole-song miniature', 6, 12);
+}
+
 function cageLinkAttach(w){
  if(!w||!w.id)return;
  cageLinkDetach();
@@ -5033,11 +5253,26 @@ function cageLinkAttach(w){
  strip.style.cssText='margin:0;padding:8px 10px 6px;background:linear-gradient(180deg,var(--cage-wood2),var(--cage-wood));border:1px solid var(--line);border-top:none;';
  strip.innerHTML='<div style="display:flex;gap:10px;align-items:stretch;">'
   +'<div style="flex:1;min-width:0;">'
-  +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">'
-  +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck · MIDI layout</span>'
+  +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px;flex-wrap:wrap;">'
+  +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck</span>'
+  +'<label style="font-size:10px;color:var(--dim);display:flex;align-items:center;gap:4px;">View'
+  +'<select id="cageLayoutView" style="padding:3px 6px;font-size:11px;">'
+  +'<option value="midi">MIDI + neck</option>'
+  +'<option value="notation">Notation + neck</option>'
+  +'<option value="neckMini">Neck + song miniature</option>'
+  +'<option value="custom">Custom</option></select></label>'
   +'<span id="cageLinkMeta" style="font-size:11px;color:var(--accent);"></span></div>'
+  +'<div id="cageMidiHideNote" style="font-size:10px;color:var(--dim);margin-bottom:4px;">MIDI track + neck</div>'
+  +'<div id="cageNotationLane" style="display:none;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;">'
+  +'<canvas id="cageNotationCanvas" width="920" height="72" style="display:block;width:100%;height:auto;"></canvas></div>'
+  +'<div id="cageMiniMidi" style="display:none;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;">'
+  +'<canvas id="cageMiniMidiCanvas" width="920" height="48" style="display:block;width:100%;height:auto;"></canvas></div>'
   +'<canvas id="cageLinkBoard" width="920" height="160" style="display:block;width:100%;height:auto;max-height:28vh;"></canvas>'
-  +'<div id="cageFingerLegend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:10px;color:var(--dim);align-items:center;"></div></div>'
+  +'<div id="cageRomanStrip" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center;"></div>'
+  +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">'
+  +'<div id="cageFingerLegend" style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--dim);align-items:center;"></div>'
+  +'<button type="button" id="cageMovePos" style="padding:6px 12px;font-size:11px;margin-left:auto;" title="Change Where It’s Played — roman frets light for positions that fit; Tab cycles">Move position</button></div>'
+  +'<div id="cageMoveHint" style="font-size:11px;color:var(--accent);margin-top:4px;min-height:1.2em;"></div></div>'
   +'<div id="cageRhPane" style="flex:0 0 168px;border-left:1px solid var(--line);padding-left:8px;">'
   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Right hand</span>'
@@ -5086,6 +5321,11 @@ function cageLinkAttach(w){
  const r16=document.getElementById('cageRhStrum16'); if(r16)r16.onclick=()=>cageRhApplyStrum(16);
  const rt=document.getElementById('cageRhTap'); if(rt)rt.onclick=()=>cageRhTapArm();
  strip.querySelectorAll('.cageRhPima').forEach(b=>{b.onclick=()=>cageRhApplyPima(b.dataset.pima);});
+ const mv=document.getElementById('cageMovePos'); if(mv)mv.onclick=()=>cageMoveArm(!cageState.moveArmed);
+ const lv=document.getElementById('cageLayoutView');
+ if(lv){lv.value=cageState.layoutView||'midi'; lv.onchange=e=>{cageState.layoutView=e.target.value; cageLayoutViewApply();};}
+ cageLayoutViewApply();
+ cageMoveRomansRender(cageMoveCandidates([],5), false);
  _cageLink._onNote=e=>{
   if(!_cageLink.wid||!GRID_WORLDS[_cageLink.wid])return;
   const hit=e.target&&e.target.closest?e.target.closest('rect[data-n]'):null;
@@ -5096,7 +5336,7 @@ function cageLinkAttach(w){
   cagePickOverlayOpen(ix,hit);
  };
  document.addEventListener('click',_cageLink._onNote,true);
- _cageLink._onKey=e=>{if(e.key==='Escape')cagePickOverlayClose();};
+ _cageLink._onKey=e=>{if(e.key==='Escape'){cagePickOverlayClose(); if(cageState.moveArmed)cageMoveArm(false);} if(e.key==='Tab'&&_cageLink.wid&&uiWinShown('cagePanel')){e.preventDefault(); cageMoveCycleTab();}};
  document.addEventListener('keydown',_cageLink._onKey,true);
  _cageLink.iv=setInterval(cageLinkTick,200);
 }
