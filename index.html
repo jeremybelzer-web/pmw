@@ -115,6 +115,7 @@
   body.swipeH #gridRowWrap~.gridwrap,body.swipeH #gridRowWrap~#snapPanel{display:inline-block;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}
   body.swipeH #gridRowWrap~#chordPanel{display:inline-flex;white-space:normal;width:46vw;margin-right:12px;vertical-align:top;}   /* the palette IS a flex container — inline-flex keeps its inner layout (a blanket inline-block broke it; scoped to the real column members so hidden menus stay hidden) */
   :root{--bg:#17181d;--panel:#20222a;--panel2:#2a2d38;--line:#3a3e4d;--text:#e9eaef;--dim:#98a0b2;--accent:#e8a33d;--cage-f1:#e8c547;--cage-f2:#7b6cf0;--cage-f3:#3d9be9;--cage-f4:#3ecf8e;--cage-f0:#e8a33d;--cage-wood:#1e1a14;--cage-wood2:#2a241c;--cage-fret:#c8b48c;--cage-string:#d7cbb0;--cage-ink:#1a1208;--cage-ring:#ffffff;--cage-ball:#ffffff;--cage-nut:#c4b89a;--cage-root:#e8c547;--cage-chord:#c23b2a;--cage-tone:#2f8f5b;--cage-scale:#8a9bb0;}
+  :root{--deg-1:#e15759;--deg-2:#f28e2b;--deg-3:#edc948;--deg-4:#59a14f;--deg-5:#4e79a7;--deg-6:#8f6bb8;--deg-7:#d9c9f0;--grid-cell:#22242e;--grid-cell-alt:#1d1f27;--grid-tonic:#262a36;--grid-bar:#5e6584;--grid-beat:#464d66;--grid-sub:#2e3342;--key-white:#e8eaf1;--key-black:#181920;--note-sel:#fff;--note-chromatic:#e8a33d;--ghost:#8b93a8;--playhead:#e8a33d;--loop:#ffd23f;--marker:#6fd08c;--ink-melody:#edc948;--ink-drums:#e8a33d;--ink-chords:#93c47d;--strand-contour:#e8a33d;--strand-dna:#5bb98c;--strand-rhythm:#7f9cf5;--auto-line:#e8a33d;--auto-curve:#98a0b2;--orb-ink:#8b93a7;--orb-ink-bright:#c8cde0;--orb-dim:#59607a;--orb-dim2:#7b8194;--orb-dim3:#6b7186;--orb-green:#5bb98c;--orb-purple:#c77dff;--orb-red:#d9534f;--orb-cream:#fff3d0;--orb-ground:#14161c;--wan-wood:#6b4f28;--wan-wood-dark:#3a2c18;--wan-wood-mid:#5a4426;--wan-wood-light:#7a5a30;--wan-parchment:#a8895f;--wan-parchment-dark:#8a6f4d;--wan-cream:#c9b085;--wan-ink:#4a3a20;--lane-ground:#23252e} /* Guitar C · Color Tier 2 (his [15][16], build 2026-09-04m): the paints the app used to hard-code, as slots — read through paintOf() */
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;padding:22px 26px;}
   h1{font-size:20px;font-weight:600;} h1 span{color:var(--accent);}
@@ -797,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-04j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1282,6 +1283,9 @@
     <div class="gridwrap" id="harmPanel" style="margin:12px 0;">
       <div id="harmBody"></div>
     </div>
+    <div class="gridwrap" id="wqPanel" style="margin:12px 0;">
+      <div id="wqBody"></div>
+    </div>
     <div class="gridwrap" id="cadPanel" style="margin:12px 0;">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">𝄂 Cadence SEARCH — “a cadence means: the chords at the end of a musical phrase. Nothing more or less.”</span><input id="cadSearchInp" spellcheck="false" placeholder="🔎 SEARCH" title="One more filter on top of the columns — the Omnisphere model. Type to narrow the cadence list by name, label or description." style="margin-left:auto;font-size:11px;letter-spacing:.4px;padding:3px 10px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);outline:none;width:150px;"></div>
     <!-- 75th round two (his YES ×2): the song selector rides every auto-spawn window -->
@@ -1513,7 +1517,7 @@ function degColor(deg){ /* color by the degree family its label belongs to (syne
  const s=curScale(),base=s.bases[deg],iv=s.pcs[deg];
  if(iv<IONIAN[base])return DEG_DARK[base];
  if(iv>IONIAN[base])return DEG_RAISED[base];
- return DEG_BRIGHT[base];
+ return paintOf('--deg-'+(base+1),DEG_BRIGHT[base]);   /* Guitar C: Tier 2 slot */
 }
 
 /* ==== THEORY ENGINE ==== */
@@ -3360,9 +3364,11 @@ function contourToSamples(contour){
 function validShelf(a){
  /* 30r: 'chords' joined the strand kinds — an Orbits journey keeps its whole re-harmonization (chords + sections) as ONE shelf object.
     EN4 (build 2026-08-20c): 'form' is the FIFTH kind and the first with a SHAPE guard — admitted only through validFormData (the strand rule: the whitelist entry ships with the extractor)
-    4.7 R4 (build 2026-08-23b): 'travel' is the SIXTH kind — E-079/E-080 as a list of 4.3 mod-templates, admitted only through validTravelData (the form pattern: own guard, own clause, the four-kind literal untouched) */
+    4.7 R4 (build 2026-08-23b): 'travel' is the SIXTH kind — E-079/E-080 as a list of 4.3 mod-templates, admitted only through validTravelData (the form pattern: own guard, own clause, the four-kind literal untouched)
+    EN5 R0 (build 2026-09-04k, the 95th): 'relation' is the EIGHTH kind — the CROSS-PART landing shape (LAWS §2 consequence 1 closed): chord-relative
+    interval events over time, NO pitches and NO roots inside, admitted only through validRelationData (the legal gate refuses smuggled rows/notes/chords) */
  return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
-  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data))||(x.strand==='melody'&&validMelodyRows(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
+  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data))||(x.strand==='melody'&&validMelodyRows(x.data))||(x.strand==='relation'&&validRelationData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
 function shelfNextId(shelf){
  let n=1;
  const ids=new Set((shelf||[]).map(x=>x.id));
@@ -4569,6 +4575,22 @@ function cageFingerColor(finger){
  return def[f===0?0:Math.max(1,Math.min(4,f))]||'#e8a33d';
 }
 
+var _paintCache={};
+function paintCacheClear(){_paintCache={};}
+function paintOf(v,fallback){
+ /* Guitar C: the app's paint slots. A CSS variable on :root, cached until canvasApplyColors clears the cache. */
+ if(Object.prototype.hasOwnProperty.call(_paintCache,v))return _paintCache[v]||fallback;
+ let val='';
+ try{val=getComputedStyle(document.documentElement).getPropertyValue(v).trim();}catch(e){val='';}
+ _paintCache[v]=val;
+ return val||fallback;
+}
+var _paintRepaintQ=false;
+function paintRepaintSoon(){
+ /* one repaint per frame while a colour is being dragged */
+ if(_paintRepaintQ)return;_paintRepaintQ=true;
+ requestAnimationFrame(()=>{_paintRepaintQ=false;try{if(typeof refresh==='function')refresh(true);}catch(e){}try{if(typeof buildPrism==='function')buildPrism();}catch(e){}});
+}
 function cageCss(key, fallback){
  try{const live=getComputedStyle(document.documentElement).getPropertyValue(key).trim(); if(live)return live;}catch(e){}
  return fallback||'#888';
@@ -4637,6 +4659,349 @@ function cageStrumPattern(hits, subdiv, bars){
   out.push({t:+t, stroke:cageStrumStroke(barBeat, sd)});
  }
  return out;
+}
+/* ==== Guitar B (build 2026-09-04l, the 95th) — REAL TAP / CLAP → MIDI → D / U / miss, pure layer ====
+   His [17]: "The User should be able to TAP out the strumming pattern or clap out or drum out the strumming
+   pattern while the app listens which are then turned into midi notes - which then fall on specific beats of
+   the bar - and the app uses the up down algorithm to determine which beats have a down stroke, which have an
+   up stroke, and which miss a stroke and don't strum. Example: D-miss-D-U-miss-U-D-U." 8ths: down on 1 2 3 4,
+   up on the &s. 16ths: 1&2&3&4& down, e/a up (cageStrumStroke is that law). A slot nobody hit is a MISS. */
+function cageTapAutoSubdiv(taps){
+ /* 16 when any tap sits nearer an e/a slot than an 8th slot (tolerance: a 32nd), else 8 */
+ for(const t of (taps||[])){const q=(+t)*4;if(!isFinite(q))continue;const r=Math.abs(q-Math.round(q));if(r<=0.5&&Math.round(q)%2===1)return 16;}
+ return 8;
+}
+function cageTapSlots(taps,subdiv,bars){
+ /* taps = beats from the count's "1" (0..4·bars) → every slot of the strum grid, hit or miss */
+ const sd=(+subdiv===16)?16:8, nb=Math.max(1,Math.min(4,Math.round(+bars)||1));
+ const step=4/sd, n=nb*sd, hit=new Array(n).fill(false);
+ for(const t of (taps||[])){
+  const b=+t;if(!isFinite(b))continue;
+  const i=Math.round(b/step);
+  if(i<0||i>=n)continue;
+  hit[i]=true;
+ }
+ const slots=[];
+ for(let i=0;i<n;i++){const t=+(i*step).toFixed(4);slots.push({i,t,stroke:cageStrumStroke(t%4,sd),hit:hit[i]});}
+ return {subdiv:sd,bars:nb,step,slots};
+}
+function cageTapPatternText(slots){
+ /* his own notation: D-miss-D-U-miss-U-D-U */
+ return ((slots&&slots.slots)||slots||[]).map(x=>x.hit?(x.stroke==='down'?'D':'U'):'miss').join('-');
+}
+function cageTapRows(slots,voicingAt,barStart,gate){
+ /* one strummed chord per HIT slot — the sounding chord's voicing at that beat (voicingAt(beat) → midis,
+    a single 60 when it answers nothing); misses write no note. Every note wears its stroke as gtr.pick. */
+ const g=(isFinite(gate)&&gate>0&&gate<=1)?+gate:0.9, at=isFinite(barStart)?+barStart:0;
+ const out=[];
+ for(const x of ((slots&&slots.slots)||[])){
+  if(!x.hit)continue;
+  let midis=null;try{midis=typeof voicingAt==='function'?voicingAt(at+x.t):null;}catch(e){midis=null;}
+  if(!Array.isArray(midis)||!midis.length)midis=[60];
+  const d=+(slots.step*g).toFixed(4);
+  for(const m of midis){
+   if(!isFinite(m))continue;
+   const n=[+(at+x.t).toFixed(4),d,Math.round(m)];
+   const pos=cageDefaultPos(Math.round(m),0,5)||{s:0,f:0};
+   cageSetNoteGtr(n,{s:pos.s,f:pos.f,finger:cageFingerForFret(pos.f,0),pick:x.stroke,pima:null});
+   out.push(n);
+  }
+ }
+ return out;
+}
+/* ==== Guitar D (build 2026-09-04o, the 95th) — STUDENT MODE, pure layer. Design §3 Mode B: play-along with the
+   song's MIDI · personalized timing grades "a bit early / early / very early / a bit late / late / very late (+ Perfect)"
+   · practice speed 25/50/75/100% through the app's ONE tempo control · loop / count-in / metronome = the transport's own. */
+const CAGE_GRADE_MS={perfect:35,bit:90,plain:180,very:320};   /* the pink-feedback ladder, in ms of |hit − expected| */
+function cageGradeDelta(ms){
+ /* signed ms (negative = early) → his grade words; null beyond the ladder (an extra hit, not a graded one) */
+ if(!isFinite(ms))return null;
+ const a=Math.abs(ms),side=ms<0?'early':'late';
+ if(a<=CAGE_GRADE_MS.perfect)return 'Perfect';
+ if(a<=CAGE_GRADE_MS.bit)return 'a bit '+side;
+ if(a<=CAGE_GRADE_MS.plain)return side;
+ if(a<=CAGE_GRADE_MS.very)return 'very '+side;
+ return null;
+}
+function cageStudentMatch(expected,hitBeat,bpm,matched,windowMs){
+ /* the nearest UNMATCHED expected onset within the window → {i, deltaMs, grade}; null when none is near. Pure. */
+ const msPerBeat=60000/((+bpm>0)?+bpm:120), win=((+windowMs>0)?+windowMs:CAGE_GRADE_MS.very)/msPerBeat;
+ let best=null;
+ (expected||[]).forEach((b,i)=>{
+  if(matched&&matched.has&&matched.has(i))return;
+  const d=(+hitBeat)-(+b); if(!isFinite(d)||Math.abs(d)>win)return;
+  if(!best||Math.abs(d)<Math.abs(best.d))best={i,d};
+ });
+ if(!best)return null;
+ const deltaMs=+(best.d*msPerBeat).toFixed(1);
+ return {i:best.i,deltaMs,grade:cageGradeDelta(deltaMs)};
+}
+function cageStudentSummary(grades){
+ /* the scorecard: Perfect · early · late · missed · extra, and an accuracy where Perfect = 1, any graded early/late = ½,
+    missed/extra = 0 [labelled: the weighting is the session's, not his] */
+ const c={perfect:0,early:0,late:0,missed:0,extra:0,total:0,accuracy:0};
+ for(const g of (grades||[])){
+  if(g==='Perfect')c.perfect++;else if(g==='missed')c.missed++;else if(g==='extra')c.extra++;
+  else if(/early/.test(String(g)))c.early++;else if(/late/.test(String(g)))c.late++;else continue;
+  c.total++;
+ }
+ c.accuracy=c.total?Math.round(100*(c.perfect+0.5*(c.early+c.late))/c.total):0;
+ return c;
+}
+/* ==== E1 — NOTIFY, THE PURE NOTATION CORE (build 2026-09-04p, the 95th). The reference product's one idea taken
+   whole (NOTATION-ENGINE-FEATURE-PASS §0): you write MUSIC — beat · duration · pitch, which the grid already stores —
+   and the program NOTATES it. This module is the notating: durations spelled into tied note values that respect the
+   meter (beat groups · the half-bar rule · compound groups), rests filling every gap, simple tuplets, beams by beat
+   group, letters + accidentals per key (once per bar, courtesy naturals), staff steps. No DOM: E2 paints it. Ticks =
+   48 per beat (16ths · 32nds · triplet 8ths/16ths all land on integers). Pure, unit-tested before a pixel. */
+const NOT_TPB=48;
+const NOT_VALUES=[[192,'w',0],[144,'h',1],[96,'h',0],[72,'q',1],[48,'q',0],[36,'8',1],[24,'8',0],[18,'16',1],[12,'16',0],[6,'32',0]];
+const NOT_TUPLETS=[[32,'q',3],[16,'8',3],[8,'16',3]];   /* triplet quarter · 8th · 16th */
+const NOT_LETTERS=['C','D','E','F','G','A','B'], NOT_LETTER_PC=[0,2,4,5,7,9,11];
+function notKeyMap(tonicPc,pcs){
+ /* a 7-note scale spelled from its tonic letter → pc → {letter, acc}; the tonic spelling (sharp or flat name) that
+    costs the fewest accidentals wins; chromatic pcs take the key's leaning (sharps in sharp keys, flats in flat keys) */
+ const t=((Math.round(+tonicPc)||0)%12+12)%12;
+ const sc=(Array.isArray(pcs)&&pcs.length===7)?pcs.map(p=>((p%12)+12)%12):[0,2,4,5,7,9,11];
+ const cands=[];
+ for(let L=0;L<7;L++){const diff=t-NOT_LETTER_PC[L];const acc=((diff+6)%12+12)%12-6;if(Math.abs(acc)<=1)cands.push({L,acc});}
+ let best=null;
+ for(const c of cands){
+  const map={};let cost=0,lean=0,ok=true;
+  for(let d=0;d<7;d++){
+   const L=(c.L+d)%7,pc=((t+sc[d])%12+12)%12;
+   const diff=((pc-NOT_LETTER_PC[L]+6)%12+12)%12-6;
+   if(Math.abs(diff)>2){ok=false;break;}
+   map[pc]={letter:NOT_LETTERS[L],acc:diff,L};cost+=Math.abs(diff);lean+=diff;
+  }
+  if(ok&&(!best||cost<best.cost))best={map,cost,lean,tonicL:c.L};
+ }
+ if(!best)return null;
+ const useSharps=best.lean>=0;
+ const NEUTRAL_SHARP={1:true,3:false,6:true,8:false,10:false};   /* a neutral key (C major · A minor) spells chromatics the app's own way: C♯ · E♭ · F♯ · A♭ · B♭ (PCN) */
+ for(let pc=0;pc<12;pc++){
+  if(best.map[pc])continue;
+  /* chromatic: sharpen the letter below, or flatten the letter above — the key's leaning decides, PCN when the key has none */
+  const sharp=(best.lean===0&&pc in NEUTRAL_SHARP)?NEUTRAL_SHARP[pc]:useSharps;
+  let L=null;
+  for(let k=0;k<7;k++){const lp=NOT_LETTER_PC[k];if(sharp?(((pc-lp)%12+12)%12===1):(((lp-pc)%12+12)%12===1)){L=k;break;}}
+  if(L===null)L=0;
+  best.map[pc]={letter:NOT_LETTERS[L],acc:sharp?1:-1,L,chromatic:true};
+ }
+ return {tonic:t,map:best.map,sharps:best.lean,useSharps};
+}
+function notSpellPitch(midi,km){
+ /* midi → {letter, acc, octave, step} where step counts diatonic steps from C4 (60) — the staff's own ladder */
+ const m=Math.round(+midi); if(!isFinite(m))return null;
+ const pc=((m%12)+12)%12, e=(km&&km.map&&km.map[pc])||{letter:NOT_LETTERS[NOT_LETTER_PC.indexOf(pc)>=0?NOT_LETTER_PC.indexOf(pc):0],acc:NOT_LETTER_PC.indexOf(pc)>=0?0:1,L:0};
+ const L=NOT_LETTERS.indexOf(e.letter);
+ /* the written note's octave: the letter's natural pc shifted by the accidental must equal midi */
+ const natural=m-e.acc;
+ const octave=Math.floor(natural/12)-1;
+ return {letter:e.letter,acc:e.acc,octave,step:(octave-4)*7+L,midi:m};
+}
+function notBeatGroup(meter){
+ /* ticks per beam/boundary group: the quarter in simple meters, the dotted quarter in compound (6/8 · 9/8 · 12/8) */
+ const num=(meter&&+meter.num>0)?+meter.num:4, den=(meter&&+meter.den>0)?+meter.den:4;
+ if(den===8&&num%3===0&&num>3)return 72;
+ return 48;
+}
+function notMeasureTicks(meter){
+ const num=(meter&&+meter.num>0)?+meter.num:4, den=(meter&&+meter.den>0)?+meter.den:4;
+ return Math.round(num*(4/den)*NOT_TPB);
+}
+function notSplitTicks(pos,len,meter){
+ /* ONE span [pos, pos+len) inside a measure → the note values that spell it, greedy largest-first, never obscuring a
+    group boundary it did not start on, never the half-bar unless it started at the bar or the half-bar. Triplet values
+    only when duple values cannot land the remainder. Returns [{ticks,value,dots,tuplet}] */
+ const M=notMeasureTicks(meter), G=notBeatGroup(meter), half=(M%(2*G)===0&&M>2*G)?M/2:null;
+ const out=[];let p=pos,rem=len,guard=0;
+ while(rem>0&&guard++<64){
+  const startsOnGroup=(p%G===0), atBarOrHalf=(p===0||(half!==null&&p===half));
+  let limit=startsOnGroup?(G*Math.ceil((p+1)/G)):(G*Math.ceil((p+1)/G));   /* the next group edge */
+  if(startsOnGroup)limit=(half!==null&&!atBarOrHalf&&p<half)?half:M;         /* on a beat: may run to the half-bar, or the bar */
+  limit=Math.min(limit,M);
+  const room=Math.min(rem,limit-p);
+  let pick=null;
+  for(const [tk,val,dots] of NOT_VALUES){if(tk<=room&&(tk%12===0||tk===6)){pick={ticks:tk,value:val,dots,tuplet:null};break;}}
+  if(!pick||(room%12!==0&&room%8===0)){for(const [tk,val,tup] of NOT_TUPLETS){if(tk<=room&&(rem%8===0)){pick={ticks:tk,value:val,dots:0,tuplet:tup};break;}}}
+  if(!pick){for(const [tk,val,dots] of NOT_VALUES){if(tk<=room){pick={ticks:tk,value:val,dots,tuplet:null};break;}}}
+  if(!pick)pick={ticks:room>0?room:rem,value:'32',dots:0,tuplet:null};
+  out.push(pick);p+=pick.ticks;rem-=pick.ticks;
+ }
+ return out;
+}
+function notSpell(rows,opts){
+ /* rows [[beat,dur,midi],…] → measures of items. opts.meterAt(beat)→{num,den} · opts.keyAt(beat)→{tonic,pcs} ·
+    opts.loop (beats). Items: {t,d (ticks in the measure), kind:'note'|'rest', value, dots, tuplet, tie:null|'start'|
+    'mid'|'end', notes:[{midi,letter,acc,octave,step,accShow}], beam} */
+ opts=opts||{};
+ const meterAt=typeof opts.meterAt==='function'?opts.meterAt:()=>({num:4,den:4});
+ const keyAt=typeof opts.keyAt==='function'?opts.keyAt:()=>({tonic:0,pcs:[0,2,4,5,7,9,11]});
+ const clean=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0&&isFinite(r[2]))
+  .map(r=>({t:Math.round(r[0]*NOT_TPB),d:Math.max(1,Math.round(r[1]*NOT_TPB)),midi:Math.round(r[2])})).sort((a,b)=>a.t-b.t||a.midi-b.midi);
+ const endT=Math.max(clean.reduce((a,n)=>Math.max(a,n.t+n.d),0),Math.round(((+opts.loop>0)?+opts.loop:4)*NOT_TPB));
+ /* the measures, walking the meter map */
+ const measures=[];let b=0,idx=0;
+ while(b<endT&&idx<512){const mt=meterAt(b/NOT_TPB)||{num:4,den:4};const M=notMeasureTicks(mt);measures.push({index:idx,start:b,end:b+M,num:+mt.num||4,den:+mt.den||4,items:[],key:null});b+=M;idx++;}
+ /* notes → per-measure pieces (a note crossing the bar ties across) */
+ const pieces=[];
+ for(const n of clean){
+  let t=n.t,rem=n.d,first=true;
+  while(rem>0){
+   const m=measures.find(x=>t>=x.start&&t<x.end);if(!m)break;
+   const span=Math.min(rem,m.end-t);
+   pieces.push({m:m.index,pos:t-m.start,len:span,midi:n.midi,tieIn:!first,tieOut:rem-span>0});
+   t+=span;rem-=span;first=false;
+  }
+ }
+ for(const m of measures){
+  const km=notKeyMap((keyAt(m.start/NOT_TPB)||{}).tonic||0,(keyAt(m.start/NOT_TPB)||{}).pcs);
+  m.key={tonic:km?km.tonic:0,sharps:km?km.sharps:0};
+  const mp=pieces.filter(p=>p.m===m.index);
+  /* chords: pieces sharing pos AND len stack */
+  const groups=new Map();
+  for(const p of mp){const k=p.pos+':'+p.len;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);}
+  const meter={num:m.num,den:m.den};
+  const items=[];
+  for(const [k,g] of groups){
+   const pos=g[0].pos,len=g[0].len;
+   const parts=notSplitTicks(pos,len,meter);
+   let p=pos;
+   parts.forEach((part,i)=>{
+    const tie=(i===0&&!g[0].tieIn&&parts.length===1&&!g[0].tieOut)?null:(i===0&&!g[0].tieIn)?'start':(i===parts.length-1&&!g[0].tieOut)?'end':'mid';
+    items.push({t:p,d:part.ticks,kind:'note',value:part.value,dots:part.dots,tuplet:part.tuplet,tie,
+     notes:g.map(x=>notSpellPitch(x.midi,km)).sort((a,b)=>a.midi-b.midi),beam:null});
+    p+=part.ticks;
+   });
+  }
+  items.sort((a,b)=>a.t-b.t||a.notes[0].midi-b.notes[0].midi);
+  /* rests fill the gaps (overlapping stacks of different length are voices E3 will split; V1 skips their overlap) */
+  const rests=[];let cursor=0;
+  for(const it of items){if(it.t>cursor){for(const part of notSplitTicks(cursor,it.t-cursor,meter)){rests.push({t:cursor,d:part.ticks,kind:'rest',value:part.value,dots:part.dots,tuplet:part.tuplet,tie:null,notes:[],beam:null});cursor+=part.ticks;}}cursor=Math.max(cursor,it.t+it.d);}
+  const M=m.end-m.start;
+  if(cursor<M){if(cursor===0)rests.push({t:0,d:M,kind:'rest',value:'measure',dots:0,tuplet:null,tie:null,notes:[],beam:null});
+   else for(const part of notSplitTicks(cursor,M-cursor,meter)){rests.push({t:cursor,d:part.ticks,kind:'rest',value:part.value,dots:part.dots,tuplet:part.tuplet,tie:null,notes:[],beam:null});cursor+=part.ticks;}}
+  m.items=items.concat(rests).sort((a,b)=>a.t-b.t||(a.kind==='rest'?1:0)-(b.kind==='rest'?1:0));
+  /* accidentals: shown when the letter+octave's state differs from the key signature (or the bar's last alteration); a
+     courtesy natural when a letter returns to the signature after an alteration */
+  const state={};
+  for(const it of m.items){for(const n of it.notes){
+   const keyAcc=(km&&km.map[((n.midi%12)+12)%12]&&!km.map[((n.midi%12)+12)%12].chromatic)?(km.map[((n.midi%12)+12)%12].letter===n.letter?km.map[((n.midi%12)+12)%12].acc:null):null;
+   const sig=notSigAcc(km,n.letter);
+   const k=n.letter+n.octave;
+   const cur=(k in state)?state[k]:sig;
+   n.accShow=(n.acc===cur)?'':(n.acc===0?'♮':n.acc===1?'♯':n.acc===-1?'♭':n.acc===2?'𝄪':'𝄫');
+   state[k]=n.acc;
+  }}
+  /* beams: 8ths and shorter, by group, broken at rests */
+  const G=notBeatGroup(meter);let bid=0;
+  for(let i=0;i<m.items.length;i++){
+   const it=m.items[i];
+   if(it.kind!=='note'||!(it.value==='8'||it.value==='16'||it.value==='32')){continue;}
+   const grp=Math.floor(it.t/G);
+   const prev=m.items[i-1];
+   if(prev&&prev.kind==='note'&&prev.beam!==null&&Math.floor(prev.t/G)===grp&&prev.t+prev.d===it.t)it.beam=prev.beam;
+   else it.beam=++bid;
+  }
+  for(let i=0;i<m.items.length;i++){const it=m.items[i];if(it.beam!==null&&!m.items.some((o,j)=>j!==i&&o.beam===it.beam))it.beam=null;}   /* a lone 8th has no beam */
+ }
+ return {tpb:NOT_TPB,measures};
+}
+function notSigAcc(km,letter){
+ /* the key signature's accidental for a letter (0 when the letter is natural in the key) */
+ if(!km||!km.map)return 0;
+ for(const pc in km.map){const e=km.map[pc];if(!e.chromatic&&e.letter===letter)return e.acc;}
+ return 0;
+}
+function notWindow(measures,beat,count){
+ /* the measures shown: `count` measures starting at the one containing `beat` (ticks = beat·48), clamped to the end */
+ const n=Math.max(1,Math.round(+count)||2), tk=(+beat||0)*NOT_TPB;
+ if(!measures||!measures.length)return {from:0,to:0};
+ let i=measures.findIndex(m=>tk>=m.start&&tk<m.end); if(i<0)i=tk<measures[0].start?0:measures.length-1;
+ const from=Math.max(0,Math.min(i,measures.length-n));
+ return {from,to:Math.min(measures.length,from+n)};
+}
+function notStaffY(step,bottomY,gap){
+ /* a staff step (E4 = the treble staff's bottom line = step 2) → y; half a line gap per step, upward */
+ return bottomY-((+step)-2)*(gap/2);
+}
+function notMeterAtApp(beat){
+ /* the app's meter map (entries {beat,n|num,d|den}) → {num,den}; 4/4 when none */
+ try{
+  const map=Array.isArray(project.tsigMap)?project.tsigMap:[];let e=null;
+  for(const x of map){if(x&&typeof x.beat==='number'&&x.beat<=beat+1e-6)e=x;else if(x&&typeof x.beat==='number'&&x.beat>beat)break;}
+  if(e)return {num:+(e.num||e.n)||4,den:+(e.den||e.d)||4};
+ }catch(err){}
+ return {num:4,den:4};
+}
+function notSpellTrack(rows){
+ /* the app adapter: the project's meter map and per-section key (melismaKeyAt's {tonic,pcs}) around the pure speller */
+ return notSpell(rows,{meterAt:notMeterAtApp,keyAt:b=>{try{return melismaKeyAt(b);}catch(e){return {tonic:0,pcs:[0,2,4,5,7,9,11]};}},loop:(typeof LOOP==='number'&&LOOP>0)?LOOP:4});
+}
+/* ==== E4 (build 2026-09-05a, the 96th) — WIG & QUILL STEP INPUT, the caret grammar of the feature pass §2. You pick a
+   value and type letters; the caret is the grid's own playhead (it rides playheadBeat and advances by what you write).
+   1 whole · 2 half · 3 quarter · 4 8th · 5 16th · 6 32nd · . dotted · T triplet · A–G a pitch in the key at the caret
+   (the signature's accidental) in the octave nearest the previous note · + − sharpen/flatten the note just written (or
+   arm the next) · ↑ ↓ an octave · ⇧+letter stacks a chord at the caret · R a rest (the caret moves, nothing is written)
+   · ⌫ takes the last note back · ← → step the caret · Esc leaves. Overwrite only (pass §2): a note replaces what
+   starts inside its span on that part. Pure below, the window's handler beneath it. 48 ticks a beat, as E1. */
+function wqStepValue(key){
+ /* a duration key → the note value it names, or null */
+ const m={'1':'w','2':'h','3':'q','4':'8','5':'16','6':'32'};
+ return m[String(key)]||null;
+}
+function wqStepTicks(value,dots,tuplet){
+ /* a value (+ dot, + triplet) → ticks; 0 for a value the grammar does not know */
+ const base={w:192,h:96,q:48,'8':24,'16':12,'32':6}[String(value)];
+ if(!base)return 0;
+ let t=base; if(dots)t=t*1.5; if(+tuplet===3)t=t*2/3;
+ return Math.round(t);
+}
+function wqStepAction(key,shift){
+ /* one keystroke → the grammar's action, or null when the key is not the grammar's (so the app keeps it) */
+ const k=String(key==null?'':key);
+ if(/^[1-6]$/.test(k))return {kind:'dur',value:wqStepValue(k)};
+ if(k==='.')return {kind:'dot'};
+ if(k==='t'||k==='T')return {kind:'tuplet'};
+ if(/^[a-gA-G]$/.test(k))return {kind:'note',letter:k.toUpperCase(),stack:!!shift};
+ if(k==='r'||k==='R'||k==='0')return {kind:'rest'};
+ if(k==='+'||k==='=')return {kind:'acc',delta:1};
+ if(k==='-'||k==='_')return {kind:'acc',delta:-1};
+ if(k==='ArrowUp')return {kind:'octave',delta:1};
+ if(k==='ArrowDown')return {kind:'octave',delta:-1};
+ if(k==='ArrowLeft')return {kind:'move',dir:-1};
+ if(k==='ArrowRight')return {kind:'move',dir:1};
+ if(k==='Backspace')return {kind:'back'};
+ if(k==='Escape')return {kind:'leave'};
+ return null;
+}
+function wqStepPitch(letter,km,prevMidi,acc){
+ /* the letter's pitch in the key (the signature's accidental unless one is given) in the octave nearest the previous
+    note — a tie goes up. null for a letter the staff does not have. */
+ const L=NOT_LETTERS.indexOf(String(letter||'').toUpperCase()); if(L<0)return null;
+ const a=(acc===0||acc===1||acc===-1||acc===2||acc===-2)?acc:notSigAcc(km,NOT_LETTERS[L]);
+ const ref=(prevMidi!=null&&isFinite(+prevMidi))?Math.round(+prevMidi):60;
+ const pc=NOT_LETTER_PC[L]+a;
+ let best=null;
+ for(let o=-1;o<=9;o++){const m=12*(o+1)+pc;if(m<0||m>127)continue;const d=Math.abs(m-ref);if(!best||d<best.d||(d===best.d&&m>best.m))best={m,d};}
+ return best?best.m:null;
+}
+function wqStepWrite(rows,beat,ticks,midi,stack){
+ /* the over-write law: a note at the caret replaces whatever STARTS inside its span on that part; a stacked note
+    (⇧) joins the chord at the caret instead, replacing only its own pitch there. Times snap to the tick. Pure —
+    returns {rows,removed,row} or null for junk. */
+ if(!isFinite(+beat)||+beat<0||!(+ticks>0)||!isFinite(+midi))return null;
+ const t=Math.round(+beat*NOT_TPB)/NOT_TPB, d=Math.round(+ticks)/NOT_TPB, m=Math.max(0,Math.min(127,Math.round(+midi)));
+ const src=Array.isArray(rows)?rows:[];
+ let removed=0;
+ const kept=src.filter(n=>{
+  if(!Array.isArray(n))return false;
+  const hit=stack?(Math.abs(n[0]-t)<1e-6&&Math.round(n[2])===m):(n[0]>=t-1e-6&&n[0]<t+d-1e-6);
+  if(hit)removed++;return !hit;});
+ const row=[t,d,m];
+ kept.push(row);kept.sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ return {rows:kept,removed,row};
 }
 function cageApplyPassageToRows(rows, rootPc){
  const plan=cagePassageLayout(rows, rootPc);
@@ -4851,6 +5216,8 @@ function cageLinkRedraw(){
 function cageLinkTick(){
  if(!_cageLink.wid||!GRID_WORLDS[_cageLink.wid]){cageLinkDetach();return;}
  if(typeof uiWinShown==='function'&&!uiWinShown('cagePanel')){cageLinkDetach();return;}
+ try{cageStudentTick();}catch(e){}   /* Guitar D: missed onsets ride the 200ms tick */
+ try{const _nl=document.getElementById('cageNotationLane');if(_nl&&_nl.style.display!=='none')cageNotationDraw();}catch(e){}   /* E2: the part follows the transport */
  try{
   const tgt=cageSelTarget();
   const sig=cageLinkSig(tgt);
@@ -5038,43 +5405,270 @@ function cageRhApplyStrum(subdiv){
  });
  _cageLink.lastWorld=''; cageLinkTick();
 }
-var _cageTap={on:false,hits:[],t0:0,subdiv:8};
-function cageRhTapArm(){
- _cageTap={on:true,hits:[],t0:performance.now(),subdiv:8};
- const btn=document.getElementById('cageRhTap'); if(btn)btn.textContent='Tapping… (click)';
- const board=document.getElementById('cageLinkBoard');
- const onTap=e=>{
+var _cageTap={on:false,taps:[],t0:null,barStart:0,bars:1,subdiv:'auto',source:'click',mic:null,last:null,timer:null,key:null};
+/* ==== Guitar B — THE CAPTURE (his [17]): the app LISTENS — mic (real claps/taps/drums, the align module's
+   onset gate) · or clicks on the neck / RH board · or the T key — every source lands in cageTapRegister(beat).
+   Beats: with the transport PLAYING he taps along and the transport clock says where each tap fell (the bar
+   the capture started in is "1"); stopped, his FIRST tap is the "1" and project.bpm counts from there. The
+   capture ends itself when the bar(s) are full, on Stop, or on Escape. Then the pattern is quantized to the
+   strum grid, misses are the empty slots, and one strummed chord per hit lands in the linked track's bar(s) —
+   ONE undo. The pattern strip under the RH board reads it back in his notation: D-miss-D-U-miss-U-D-U. */
+function cageTapBpm(){try{const b=+(project&&project.bpm);if(isFinite(b)&&b>20)return b;}catch(e){}try{return +Tone.Transport.bpm.value||120;}catch(e){return 120;}}
+function cageTapBeatNow(){
+ /* the capture's clock: transport beat relative to the start bar while playing; wall clock from the first tap otherwise */
+ if(_cageTap.clock==='transport'){
+  let tb=0;try{tb=transportBeat();}catch(e){tb=0;}
+  let b=tb-_cageTap.barStart;
+  if(b<-1e-6)b+=(typeof LOOP==='number'&&LOOP>0)?LOOP:4*_cageTap.bars;   /* the loop wrapped under the count */
+  return b;
+ }
+ if(_cageTap.t0==null)return 0;
+ return (performance.now()-_cageTap.t0)/1000*cageTapBpm()/60;
+}
+function cageTapRegister(beat){
+ if(!_cageTap.on)return false;
+ if(_cageTap.student){cageStudentHit(cageTapBeatNow());return true;}   /* Guitar D: practice grades the hit, writes nothing */
+ if(_cageTap.clock==='wall'&&_cageTap.t0==null){_cageTap.t0=performance.now();beat=0;if(typeof _cageTap.armOnFirst==='function')_cageTap.armOnFirst();}   /* the first tap IS the 1 — and it starts the safety net */
+ const b=isFinite(beat)?+beat:cageTapBeatNow();
+ if(b>=4*_cageTap.bars-1e-6){cageRhTapFinish();return false;}
+ _cageTap.taps.push(+b.toFixed(4));
+ cageTapStripDraw();
+ return true;
+}
+function cageTapMicOff(){
+ const m=_cageTap.mic;if(!m)return;
+ try{m.proc.disconnect();m.srcN.disconnect();m.mute.disconnect();}catch(e){}
+ try{m.stream.getTracks().forEach(tk=>tk.stop());}catch(e){}
+ _cageTap.mic=null;
+}
+async function cageTapMicOn(){
+ /* the align module's own gate (stepOnset) on a live stream — claps, taps, a drum: an onset is a tap */
+ await ensureAudio();
+ const ctx=Tone.getContext().rawContext;
+ const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+ const srcN=ctx.createMediaStreamSource(stream);
+ const proc=ctx.createScriptProcessor(1024,1,1);
+ const mute=ctx.createGain();mute.gain.value=0;
+ let det={};
+ proc.onaudioprocess=ev=>{
   if(!_cageTap.on)return;
-  const elapsed=(performance.now()-_cageTap.t0)/1000;
-  /* map ~2 sec of tapping onto one 4-beat bar at 120bpm ≈ 2s */
-  const beat=(elapsed/2)*4;
-  if(beat>4){cageRhTapFinish(); return;}
-  _cageTap.hits.push(beat);
+  const d=ev.inputBuffer.getChannelData(0);let peak=0;
+  for(let i=0;i<d.length;i++){const a=Math.abs(d[i]);if(a>peak)peak=a;}
+  const thr=+(_cageTap.thr)||.25;
+  const r=stepOnset(det,peak,ctx.currentTime,{threshold:thr,refractoryMs:80});   /* 80ms clears a 16th at 180bpm */
+  det=r.state;
+  if(r.onset)cageTapRegister(_cageTap.clock==='wall'&&_cageTap.t0==null?0:cageTapBeatNow());
  };
- if(board){board._cageTapHandler=onTap; board.addEventListener('click', onTap);}
- setTimeout(()=>{if(_cageTap.on)cageRhTapFinish();}, 2200);
+ srcN.connect(proc);proc.connect(mute);mute.connect(ctx.destination);
+ _cageTap.mic={stream,srcN,proc,mute};
+}
+function cageTapPopClose(){const p=document.getElementById('cageTapPop');if(p){try{p.remove();}catch(e){}}}
+function cageTapCancel(){
+ cageTapPopClose();
+ if(!_cageTap.on)return;
+ _cageTap.on=false;cageTapMicOff();cageTapListenersOff();
+ clearTimeout(_cageTap.timer);
+ const btn=document.getElementById('cageRhTap'); if(btn)btn.textContent='Tap pattern';
+ cageTapStripDraw('cancelled — nothing written');
+}
+function cageTapListenersOff(){
+ for(const id of ['cageLinkBoard','cageRhBoard']){const el=document.getElementById(id);if(el&&el._cageTapHandler){el.removeEventListener('mousedown',el._cageTapHandler);el._cageTapHandler=null;}}
+ if(_cageTap.key){document.removeEventListener('keydown',_cageTap.key,true);_cageTap.key=null;}
+}
+function cageRhTapArm(){
+ /* the chooser: source · bars · grid — then Start */
+ if(_cageTap.on){cageRhTapFinish();return;}
+ cageTapPopClose();
+ const pop=document.createElement('div');
+ pop.id='cageTapPop';
+ pop.style.cssText='position:fixed;left:50%;top:38%;transform:translateX(-50%);z-index:110;background:var(--panel,#1c1f27);color:var(--text,#e6e7ec);border:1px solid #4a4f5e;border-radius:8px;padding:12px 14px;min-width:320px;box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:12px;';
+ const mic=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+ pop.innerHTML='<div style="font-weight:700;margin-bottom:4px;">Tap out the strumming pattern</div>'
+  +'<div style="color:var(--dim);font-size:11px;margin-bottom:8px;">Tap, clap or drum it — the app listens, turns the hits into MIDI on the linked track, and works out which slots are DOWN, which are UP, and which MISS. With the song playing, tap along; stopped, your first tap is the 1.</div>'
+  +'<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;">'
+  +'<span>Listen to</span><select id="cageTapSource" style="font-size:12px;">'+(mic?'<option value="mic">🎤 Microphone (clap · tap · drum)</option>':'')+'<option value="click"'+(mic?'':' selected')+'>🖱 Clicks on the neck / T key</option></select>'
+  +'<span>Bars</span><select id="cageTapBars" style="font-size:12px;"><option value="1">1 bar</option><option value="2">2 bars</option></select>'
+  +'<span>Grid</span><select id="cageTapGrid" style="font-size:12px;"><option value="auto">auto (8ths, 16ths if you play them)</option><option value="8">8ths — D on 1 2 3 4, U on the &amp;s</option><option value="16">16ths — D on 1&amp;2&amp;3&amp;4&amp;, U on e / a</option></select>'
+  +'<span title="How loud a clap must be to count">Mic sensitivity</span><input id="cageTapThr" type="range" min="0.05" max="0.6" step="0.01" value="0.25">'
+  +'</div>'
+  +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;"><span class="cpchip" data-tap="cancel">✕ Cancel</span><span class="cpchip" data-tap="start" style="font-weight:700;">● Start listening</span></div>';
+ pop.querySelector('[data-tap="cancel"]').onclick=()=>cageTapPopClose();
+ pop.querySelector('[data-tap="start"]').onclick=()=>{
+  const source=(document.getElementById('cageTapSource')||{}).value||'click';
+  const bars=+(document.getElementById('cageTapBars')||{}).value||1;
+  const grid=(document.getElementById('cageTapGrid')||{}).value||'auto';
+  const thr=+(document.getElementById('cageTapThr')||{}).value||.25;
+  cageTapPopClose();
+  cageTapStart({source,bars,subdiv:grid,thr});
+ };
+ document.body.appendChild(pop);
+}
+function cageTapStart(o){
+ o=o||{};
+ const isPlaying=(typeof playing!=='undefined'&&playing);
+ let barStart=0;
+ if(isPlaying){try{barStart=Math.floor(transportBeat()/4)*4;}catch(e){barStart=0;}}
+ else{try{barStart=Math.floor(((typeof playheadBeat==='number')?playheadBeat:0)/4)*4;}catch(e){barStart=0;}}
+ _cageTap={on:true,taps:[],t0:null,barStart,bars:Math.max(1,Math.min(4,+o.bars||1)),subdiv:o.subdiv||'auto',source:o.source||'click',thr:+o.thr||.25,
+           clock:isPlaying?'transport':'wall',mic:null,last:null,timer:null,key:null};
+ const btn=document.getElementById('cageRhTap'); if(btn)btn.textContent='● Listening… (click to stop)';
+ /* clicks on the neck or the RH board, and the T key, are taps in every mode */
+ const onTap=e=>{if(!_cageTap.on)return;e.preventDefault();cageTapRegister(_cageTap.clock==='wall'&&_cageTap.t0==null?0:cageTapBeatNow());};
+ for(const id of ['cageLinkBoard','cageRhBoard']){const el=document.getElementById(id);if(el){el._cageTapHandler=onTap;el.addEventListener('mousedown',onTap);}}
+ _cageTap.key=e=>{if(!_cageTap.on)return;if(e.key==='t'||e.key==='T'){e.preventDefault();e.stopPropagation();onTap(e);}};
+ document.addEventListener('keydown',_cageTap.key,true);
+ if(_cageTap.source==='mic'){
+  cageTapMicOn().catch(err=>{cageTapStripDraw('microphone unavailable — '+String(err&&err.message||err)+' · clicks and the T key still count');});
+ }
+ /* the safety net: the bar(s) plus one beat, from the first tap (wall) or from now (transport); 20s if nobody taps */
+ const beats=4*_cageTap.bars+1, ms=beats*60000/cageTapBpm();
+ const arm=()=>{clearTimeout(_cageTap.timer);_cageTap.timer=setTimeout(()=>{if(_cageTap.on)cageRhTapFinish();},ms);};
+ if(_cageTap.clock==='transport')arm();
+ else{_cageTap.timer=setTimeout(()=>{if(_cageTap.on&&_cageTap.t0==null)cageTapCancel();},20000);_cageTap.armOnFirst=arm;}
+ cageTapStripDraw();
 }
 function cageRhTapFinish(){
  if(!_cageTap.on)return;
- _cageTap.on=false;
- const board=document.getElementById('cageLinkBoard');
- if(board&&board._cageTapHandler){board.removeEventListener('click',board._cageTapHandler); board._cageTapHandler=null;}
+ _cageTap.on=false;cageTapMicOff();cageTapListenersOff();clearTimeout(_cageTap.timer);
  const btn=document.getElementById('cageRhTap'); if(btn)btn.textContent='Tap pattern';
- const hits=_cageTap.hits.slice();
- const pat=cageStrumPattern(hits, _cageTap.subdiv);
- if(!_cageLink.wid)return;
+ const taps=_cageTap.taps.slice();
+ if(!taps.length){cageTapStripDraw('no taps heard — nothing written');return;}
+ const sd=(_cageTap.subdiv==='16'||_cageTap.subdiv===16)?16:(_cageTap.subdiv==='8'||_cageTap.subdiv===8)?8:cageTapAutoSubdiv(taps);
+ const slots=cageTapSlots(taps,sd,_cageTap.bars);
+ _cageTap.last=slots;
+ /* the voicing under each beat comes from MAIN's chord lane — the strum plays the song's chord */
+ let vt=null,chs=null;
+ try{withGridWorld('main',()=>{chs=project.chords||[];vt=laneVoicingsTop(chs,[]);});}catch(e){vt=null;}
+ const voicingAt=beat=>{try{const c=chordAt(chs,((beat%LOOP)+LOOP)%LOOP);return (vt&&c&&vt[c.i])?vt[c.i].slice():null;}catch(e){return null;}};
+ const rows=cageTapRows(slots,voicingAt,_cageTap.barStart);
+ if(!_cageLink.wid){cageTapStripDraw();return;}
+ const a=_cageTap.barStart,b=a+4*_cageTap.bars;
  withGridWorld(_cageLink.wid,()=>{
   if(typeof snapshot==='function')snapshot();
   const face=cageSelTarget().face;
-  const rows=pat.map((p,i)=>{
-   const midi=60; const n=[p.t, 0.4, midi];
-   cageSetNoteGtr(n,{s:1,f:3,finger:1,pick:p.stroke});
-   return n;
-  });
-  project.tracks[face]=rows;
+  const arr=Array.isArray(project.tracks[face])?project.tracks[face]:[];
+  const kept=arr.filter(n=>!(n[0]>=a-1e-6&&n[0]<b-1e-6));   /* over-write the captured bar(s) only */
+  kept.push.apply(kept,rows);
+  kept.sort((x,y)=>x[0]-y[0]);
+  project.tracks[face]=kept;
   if(typeof refresh==='function')refresh(true);
  });
  _cageLink.lastWorld=''; cageLinkTick();
+ cageTapStripDraw();
+}
+function cageTapStripDraw(msg){
+ /* the pattern strip under the RH board — his notation, one chip per slot: D · U · miss */
+ const host=document.getElementById('cageRhPattern'); if(!host)return;
+ if(msg){host.innerHTML='<span style="color:var(--dim);font-size:10.5px;">'+msg+'</span>';return;}
+ if(_cageTap.on){
+  const n=_cageTap.taps.length;
+  host.innerHTML='<span style="color:var(--accent);font-size:10.5px;">● listening · '+n+' tap'+(n===1?'':'s')+' · '+(_cageTap.clock==='transport'?'along with the song':(_cageTap.t0==null?'your first tap is the 1':'counting at '+Math.round(cageTapBpm())+' bpm'))+'</span>';
+  return;
+ }
+ const sl=_cageTap.last; if(!sl){host.innerHTML='';return;}
+ host.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;">'+sl.slots.map(x=>'<span class="cageTapSlot'+(x.hit?' hit':' miss')+'" title="'+(x.hit?(x.stroke==='down'?'down stroke':'up stroke'):'miss — the hand moves, no strings')+'" style="min-width:16px;text-align:center;font-size:10.5px;font-weight:700;padding:1px 3px;border-radius:3px;'+(x.hit?'background:var(--accent);color:#111;':'background:rgba(255,255,255,.08);color:var(--dim);')+'">'+(x.hit?(x.stroke==='down'?'↓':'↑'):'·')+'</span>').join('')+'</div>'
+  +'<div style="font-size:10px;color:var(--dim);margin-top:3px;">'+cageTapPatternText(sl)+' · '+sl.subdiv+'ths · '+sl.bars+' bar'+(sl.bars===1?'':'s')+'</div>';
+}
+/* ==== Guitar D — STUDENT MODE, the engine. The listener is B's (mic · clicks on the neck / RH board · the T key)
+   with _cageTap.student routing every hit to cageStudentHit; the clock is the transport's; expected onsets are the
+   linked track's; a hit within 320ms of an unmatched onset takes its grade, a farther hit is "extra", an onset the
+   transport passes unheard is "missed" (cageStudentTick rides cageLinkTick's 200ms). Practice speed scales the app's
+   ONE tempo (setTempo) from a remembered base and restores it on stop. Count-in, loop and metronome are the transport's. */
+var _cageStudent={on:false,listening:false,pct:100,baseTempo:null,grades:[],matched:new Set(),lastBeat:-1,expected:[],fbTimer:null,nowFn:null};
+function cageStudentNow(){if(typeof _cageStudent.nowFn==='function')return _cageStudent.nowFn();try{return transportBeat();}catch(e){return NaN;}}
+function cageStudentToggle(force){
+ const on=(typeof force==='boolean')?force:!_cageStudent.on;
+ _cageStudent.on=on;
+ const btn=document.getElementById('cageStudentBtn'); if(btn)btn.classList.toggle('on',on);
+ const strip=document.getElementById('cageStudentStrip'); if(!strip)return;
+ if(!on){cageStudentStop();strip.style.display='none';return;}
+ strip.style.display='block';
+ const mic=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+ strip.innerHTML='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+  +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">🎓 Student</span>'
+  +'<span style="font-size:10.5px;color:var(--dim);">Speed</span>'
+  +[25,50,75,100].map(p=>'<button type="button" class="cageStudentSpd'+(p===_cageStudent.pct?' on':'')+'" data-spd="'+p+'" style="padding:2px 7px;font-size:10.5px;" title="Practice speed — the song\'s own tempo scaled; restored when you stop">'+p+'%</button>').join('')
+  +'<span style="font-size:10.5px;color:var(--dim);margin-left:6px;">Listen</span><select id="cageStudentSrc" style="font-size:10.5px;">'+(mic?'<option value="mic">🎤 Mic</option>':'')+'<option value="click"'+(mic?'':' selected')+'>🖱 Clicks / T</option></select>'
+  +'<button type="button" id="cageStudentGo" style="padding:3px 9px;font-size:11px;font-weight:700;" title="Play along — the app listens and grades every hit: Perfect · a bit early/late · early/late · very early/late · missed">● Start practice</button>'
+  +'<span id="cageStudentScore" style="font-size:10.5px;color:var(--dim);"></span>'
+  +'<span id="cageStudentFb" style="opacity:0;transition:opacity .25s;background:var(--student-fb,#ff7fb6);color:#1b1d22;font-weight:700;font-size:11px;padding:2px 9px;border-radius:10px;"></span>'
+  +'</div>';
+ strip.querySelectorAll('.cageStudentSpd').forEach(b=>{b.onclick=()=>{cageStudentSpeed(+b.dataset.spd);strip.querySelectorAll('.cageStudentSpd').forEach(x=>x.classList.toggle('on',+x.dataset.spd===_cageStudent.pct));};});
+ strip.querySelector('#cageStudentGo').onclick=()=>{if(_cageStudent.listening)cageStudentStop();else cageStudentStart((document.getElementById('cageStudentSrc')||{}).value||'click');};
+ cageStudentDraw();
+}
+function cageStudentSpeed(pct){
+ pct=[25,50,75,100].indexOf(+pct)>=0?+pct:100;
+ if(_cageStudent.baseTempo==null)_cageStudent.baseTempo=+tempo.value||96;
+ _cageStudent.pct=pct;
+ setTempo(Math.max(40,Math.min(220,Math.round(_cageStudent.baseTempo*pct/100))));
+ if(pct===100){_cageStudent.baseTempo=null;}   /* 100% = the song's own tempo again; nothing to restore */
+ cageStudentDraw();
+}
+function cageStudentRestoreTempo(){if(_cageStudent.baseTempo!=null){setTempo(_cageStudent.baseTempo);_cageStudent.baseTempo=null;}_cageStudent.pct=100;}
+function cageStudentExpected(){
+ if(!_cageLink.wid)return [];
+ const face=cageSelTarget().face;
+ const rows=cageLinkWorldRows(_cageLink.wid,face)||[];
+ return [...new Set(rows.map(n=>+(+n[0]).toFixed(4)).filter(isFinite))].sort((a,b)=>a-b);
+}
+function cageStudentStart(source,opts){
+ opts=opts||{};
+ _cageStudent.listening=true;_cageStudent.grades=[];_cageStudent.matched=new Set();
+ _cageStudent.expected=cageStudentExpected();
+ const n0=cageStudentNow();_cageStudent.lastBeat=isFinite(n0)?n0:-1;
+ /* B's listener, routed to the student */
+ _cageTap={on:true,student:true,taps:[],t0:null,barStart:0,bars:1e9,subdiv:'auto',source:source||'click',thr:.25,clock:'transport',mic:null,last:_cageTap.last,timer:null,key:null};
+ const onTap=e=>{if(!_cageTap.on)return;e.preventDefault();cageStudentHit(cageStudentNow());};
+ for(const id of ['cageLinkBoard','cageRhBoard']){const el=document.getElementById(id);if(el){el._cageTapHandler=onTap;el.addEventListener('mousedown',onTap);}}
+ _cageTap.key=e=>{if(!_cageTap.on)return;if(e.key==='t'||e.key==='T'){e.preventDefault();e.stopPropagation();onTap(e);}};
+ document.addEventListener('keydown',_cageTap.key,true);
+ if(_cageTap.source==='mic')cageTapMicOn().catch(err=>{cageStudentFeedback('mic unavailable — clicks and T still count');});
+ if(opts.autoplay!==false&&typeof playing!=='undefined'&&!playing){try{togglePlay();}catch(e){}}   /* the transport's own count-in leads it in */
+ const go=document.getElementById('cageStudentGo'); if(go)go.textContent='■ Stop practice';
+ cageStudentDraw();
+}
+function cageStudentStop(){
+ _cageStudent.listening=false;
+ if(_cageTap.student){_cageTap.on=false;cageTapMicOff();cageTapListenersOff();_cageTap.student=false;}
+ cageStudentRestoreTempo();
+ const go=document.getElementById('cageStudentGo'); if(go)go.textContent='● Start practice';
+ cageStudentDraw();
+}
+function cageStudentHit(beat){
+ if(!_cageStudent.listening)return null;
+ const m=cageStudentMatch(_cageStudent.expected,beat,cageTapBpm(),_cageStudent.matched,CAGE_GRADE_MS.very);
+ let grade='extra';
+ if(m&&m.grade){_cageStudent.matched.add(m.i);grade=m.grade;}
+ _cageStudent.grades.push(grade);
+ cageStudentFeedback(grade==='extra'?'extra hit':grade==='Perfect'?'Perfect!':grade);
+ cageStudentDraw();
+ return grade;
+}
+function cageStudentTick(){
+ /* onsets the transport has passed without a hit are MISSED; a loop wrap starts a fresh pass */
+ if(!_cageStudent.listening)return;
+ const now=cageStudentNow(); if(!isFinite(now))return;
+ if(_cageStudent.lastBeat>=0&&now<_cageStudent.lastBeat-1){_cageStudent.matched=new Set();_cageStudent.lastBeat=now;return;}
+ const late=CAGE_GRADE_MS.very/(60000/cageTapBpm());
+ let missed=0;
+ _cageStudent.expected.forEach((b,i)=>{
+  if(_cageStudent.matched.has(i))return;
+  if(b<=now-late&&(_cageStudent.lastBeat<0||b>_cageStudent.lastBeat-late)){_cageStudent.matched.add(i);_cageStudent.grades.push('missed');missed++;}
+ });
+ _cageStudent.lastBeat=now;
+ if(missed){cageStudentFeedback('missed');cageStudentDraw();}
+ return missed;
+}
+function cageStudentFeedback(txt){
+ const el=document.getElementById('cageStudentFb'); if(!el)return;
+ el.textContent=txt; el.style.opacity='1';
+ clearTimeout(_cageStudent.fbTimer); _cageStudent.fbTimer=setTimeout(()=>{el.style.opacity='0';},700);
+}
+function cageStudentDraw(){
+ const sc=document.getElementById('cageStudentScore'); if(!sc)return;
+ const c=cageStudentSummary(_cageStudent.grades);
+ sc.textContent=(_cageStudent.listening?'listening · ':'')+(c.total?('Perfect '+c.perfect+' · early '+c.early+' · late '+c.late+' · missed '+c.missed+' · extra '+c.extra+' · '+c.accuracy+'%'):(_cageStudent.listening?'play along — every hit is graded':'pick a speed, then ● Start practice'))+(_cageStudent.pct!==100?' · '+_cageStudent.pct+'% speed ('+(+tempo.value)+' bpm'+((_cageStudent.baseTempo!=null&&Math.round(_cageStudent.baseTempo*_cageStudent.pct/100)!==+tempo.value)?', the tempo floor':'')+')':'');
 }
 function cageMoveTargetIxs(rows){
  const arr=rows||[];
@@ -5203,24 +5797,377 @@ function cageLayoutViewApply(){
  if(v==='notation')cageNotationStubDraw();
  if(v==='neckMini'||v==='custom')cageMiniMidiDraw();
 }
-function cageNotationStubDraw(){
- const c=document.getElementById('cageNotationCanvas'); if(!c)return;
- const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+function cageNotationStubDraw(){cageNotationDraw();}   /* E2 (build 2026-09-04q): the stub's name stays as the door; the real part is below */
+var _cageNotation={last:null};
+/* ==== E2/E3 — THE STAFF DRAWER (shared by the Guitar part, the Wig & Quill window and its pop-up). One system of one
+   part: clef · key/time signatures · bar lines · heads · ledgers · stems · flags · beams · dots · tuplets · rests ·
+   accidentals · ties · optional TAB · optional chord symbols · optional dynamics · the playhead. geom: {x0,W,staffBottom,
+   GAP,clef:'treble'|'bass',shift:(written steps up: 7 for the guitar's 8vb),tab:{top,gap,gtrAt}|null,chords:[{tick,lbl}]|null,
+   dyn:[{tick,word}]|null,playheadTick,ink,paper,dim,barNumbers}. Returns what it drew. */
+const NOT_SHARP_STEPS=[10,7,11,8,5,9,6], NOT_FLAT_STEPS=[6,9,5,8,4,7,3];   /* treble: F5 C5 G5 D5 A4 E5 B4 · B4 E5 A4 D5 G4 C5 F4 */
+function notClefFor(rows){
+ /* the clef a part reads best in: the median pitch below A3 → bass, else treble */
+ const ms=(rows||[]).map(n=>+n[2]).filter(isFinite).sort((a,b)=>a-b);
+ if(!ms.length)return 'treble';
+ return ms[Math.floor(ms.length/2)]<57?'bass':'treble';
+}
+function notDynamic(vel){
+ /* velocity (0..1, the note's n[8]; missing = mf) → the dynamic word */
+ const v=(typeof vel==='number'&&isFinite(vel))?Math.max(0,Math.min(1,vel)):0.6;
+ return v<.2?'pp':v<.35?'p':v<.5?'mp':v<.65?'mf':v<.8?'f':'ff';
+}
+function notDynamics(rows){
+ /* the dynamic marks of a part: one at the first note, another wherever the word changes. [[beat,dur,midi,…,vel],…] → [{tick,word}] */
+ const out=[];let last=null;
+ for(const n of (rows||[]).slice().sort((a,b)=>a[0]-b[0])){const w=notDynamic(n[8]);if(w!==last){out.push({tick:Math.round(n[0]*NOT_TPB),word:w});last=w;}}
+ return out;
+}
+function notChordSymbols(chords,fromTick,toTick){
+ /* the chord lane's labels inside a tick window → [{tick,lbl}] (flattened, sub-chords as their own symbols) */
+ const out=[];let t=0;
+ for(const c of flatChords(Array.isArray(chords)?chords:[])){const tk=Math.round(t*NOT_TPB);if(tk>=fromTick&&tk<toTick&&c.lbl)out.push({tick:tk,lbl:String(c.lbl)});t+=(+c.d||0);}
+ return out;
+}
+function notDrawStaff(ctx,sp,from,to,geom){
+ const g=geom||{}, GAP=g.GAP||7, staffBottom=g.staffBottom||50, staffTop=staffBottom-4*GAP;
+ const INK=g.ink||'#222', DIM=g.dim||'#8a8577', PAPER=g.paper||'#f7f3ea', W=g.W||900;
+ const clef=g.clef||'treble', bottomStep=clef==='bass'?-10:2, shift=+g.shift||0;
+ const shown=sp.measures.slice(from,to); if(!shown.length)return {items:0};
+ const ticks=shown.reduce((a,m)=>a+(m.end-m.start),0)||1;
+ let x0=g.x0||46;
+ const km=notKeyMap(shown[0].key.tonic,(typeof melismaKeyAt==='function'?(melismaKeyAt(shown[0].start/NOT_TPB)||{}).pcs:null));
+ const sharps=(km&&km.sharps)||0;
+ const yOf=step=>notStaffY(step+shift-(bottomStep-2),staffBottom,GAP);   /* the staff's bottom line carries bottomStep */
+ ctx.fillStyle=INK; ctx.font='36px Georgia,serif'; ctx.fillText(clef==='bass'?'𝄢':'𝄞',6,clef==='bass'?staffBottom-GAP+2:staffBottom+2);
+ if(shift===7){ctx.font='bold 9px system-ui';ctx.fillText('8',15,staffBottom+13);}
+ ctx.font='13px Georgia,serif';
+ const nAcc=Math.abs(sharps), accGlyph=sharps>=0?'♯':'♭', accSteps=(sharps>=0?NOT_SHARP_STEPS:NOT_FLAT_STEPS).map(st=>clef==='bass'?st-14:st);
+ for(let k=0;k<Math.min(7,nAcc);k++){ctx.fillText(accGlyph,x0,notStaffY(accSteps[k]-(bottomStep-2),staffBottom,GAP)+4);x0+=8;}
+ x0+=4;
+ ctx.font='bold 13px Georgia,serif'; ctx.fillText(String(shown[0].num),x0,staffBottom-2*GAP-1); ctx.fillText(String(shown[0].den),x0,staffBottom-1); x0+=16;
+ ctx.strokeStyle='#444'; ctx.lineWidth=1;
+ for(let i=0;i<5;i++){const y=staffBottom-i*GAP;ctx.beginPath();ctx.moveTo(30,y+.5);ctx.lineTo(W-8,y+.5);ctx.stroke();}
+ const tab=g.tab||null;
+ if(tab){ctx.fillStyle=INK;ctx.font='9px system-ui';ctx.fillText('TAB',8,tab.top+3*tab.gap+3);ctx.strokeStyle='#777';for(let i=0;i<6;i++){const y=tab.top+i*tab.gap;ctx.beginPath();ctx.moveTo(30,y+.5);ctx.lineTo(W-8,y+.5);ctx.stroke();}}
+ const px=(W-x0-10)/ticks, tk0=shown[0].start, xAt=tk=>x0+(tk-tk0)*px;
+ let drawn=0,tabN=0,ties=[],syms=0,dyns=0;
+ const headY=n=>yOf(n.step);
+ for(const m of shown){
+  const mx=xAt(m.start);
+  ctx.strokeStyle='#333'; ctx.beginPath(); ctx.moveTo(mx+.5,staffTop); ctx.lineTo(mx+.5,staffBottom); ctx.stroke();
+  if(tab){ctx.beginPath();ctx.moveTo(mx+.5,tab.top);ctx.lineTo(mx+.5,tab.top+5*tab.gap);ctx.stroke();}
+  if(g.barNumbers!==false){ctx.fillStyle=DIM;ctx.font='8px system-ui';ctx.fillText(String(m.index+1),mx+2,staffTop-14);}
+  const beams={};
+  for(const it of m.items){
+   const x=xAt(m.start+it.t)+6;
+   if(it.kind==='rest'){
+    ctx.fillStyle=INK;
+    if(it.value==='measure'||it.value==='w'){ctx.fillRect(x+(it.value==='measure'?(m.end-m.start)*px/2-6:0),staffBottom-3*GAP,12,3);}
+    else if(it.value==='h'){ctx.fillRect(x,staffBottom-2*GAP-3,12,3);}
+    else{ctx.font='18px Georgia,serif';ctx.fillText(it.value==='q'?'𝄽':it.value==='8'?'𝄾':'𝄿',x,staffBottom-GAP+2);}
+    if(it.dots){ctx.beginPath();ctx.arc(x+15,staffBottom-2*GAP-1,1.3,0,7);ctx.fill();}
+    continue;
+   }
+   const ys=it.notes.map(headY), yTop=Math.min.apply(null,ys), yBot=Math.max.apply(null,ys);
+   const mid=(yTop+yBot)/2, stemUp=mid>staffBottom-2*GAP;
+   const hollow=(it.value==='w'||it.value==='h');
+   for(const y of ys){for(let ly=staffBottom+GAP;ly<=y+.1;ly+=GAP){ctx.strokeStyle='#444';ctx.beginPath();ctx.moveTo(x-6,ly+.5);ctx.lineTo(x+6,ly+.5);ctx.stroke();}
+    for(let ly=staffTop-GAP;ly>=y-.1;ly-=GAP){ctx.strokeStyle='#444';ctx.beginPath();ctx.moveTo(x-6,ly+.5);ctx.lineTo(x+6,ly+.5);ctx.stroke();}}
+   it.notes.forEach((n,i)=>{
+    const y=ys[i];
+    ctx.fillStyle=INK;ctx.strokeStyle=INK;ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.ellipse(x,y,4.4,3,-0.35,0,Math.PI*2);
+    if(hollow)ctx.stroke();else ctx.fill();
+    if(n.accShow){ctx.font='12px Georgia,serif';ctx.fillText(n.accShow,x-13,y+4);}
+    if(it.dots){ctx.beginPath();ctx.arc(x+8,y-2,1.3,0,7);ctx.fill();}
+    if(tab&&tab.gtrAt){const gg=tab.gtrAt[Math.round(m.start+it.t)+':'+n.midi]||null;
+     if(gg&&it.tie!=='mid'&&it.tie!=='end'){const ty=tab.top+(5-gg.s)*tab.gap;ctx.fillStyle=PAPER;ctx.fillRect(x-5,ty-5,11,10);ctx.fillStyle=INK;ctx.font='bold 9.5px system-ui';ctx.fillText(String(gg.f),x-(gg.f>=10?5:2.5),ty+3.5);tabN++;}}
+    drawn++;
+   });
+   if(it.value!=='w'){
+    const sx=stemUp?x+4:x-4, y1=stemUp?yBot:yTop, y2=stemUp?yTop-3.5*GAP:yBot+3.5*GAP;
+    ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(sx,y1);ctx.lineTo(sx,y2);ctx.stroke();
+    const short=(it.value==='8'||it.value==='16'||it.value==='32');
+    if(short&&it.beam===null){const nfl=it.value==='8'?1:it.value==='16'?2:3;for(let f=0;f<nfl;f++){ctx.beginPath();ctx.moveTo(sx,y2+(stemUp?f*5:-f*5));ctx.quadraticCurveTo(sx+7,y2+(stemUp?4+f*5:-4-f*5),sx+6,y2+(stemUp?11+f*5:-11-f*5));ctx.stroke();}}
+    if(short&&it.beam!==null){(beams[it.beam]=beams[it.beam]||[]).push({sx,y2,stemUp,n:it.value==='8'?1:it.value==='16'?2:3});}
+    if(it.tuplet){ctx.fillStyle=DIM;ctx.font='italic 9px Georgia,serif';ctx.fillText(String(it.tuplet),sx-2,stemUp?y2-3:y2+9);}
+   }
+   if(it.tie==='start'||it.tie==='mid'){ties.push({x,y:yBot+4,toTick:m.start+it.t+it.d});}
+  }
+  for(const id in beams){const bg=beams[id];if(bg.length<2)continue;const up=bg[0].stemUp;const y=up?Math.min.apply(null,bg.map(z=>z.y2)):Math.max.apply(null,bg.map(z=>z.y2));
+   const nB=Math.min.apply(null,bg.map(z=>z.n));
+   for(let b=0;b<nB;b++){ctx.strokeStyle=INK;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(bg[0].sx,y+(up?b*5:-b*5));ctx.lineTo(bg[bg.length-1].sx,y+(up?b*5:-b*5));ctx.stroke();}
+   for(const z of bg){ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(z.sx,z.y2);ctx.lineTo(z.sx,y);ctx.stroke();}}
+ }
+ for(const t of ties){const x2=xAt(t.toTick)+6;ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(t.x+4,t.y);ctx.quadraticCurveTo((t.x+x2)/2,t.y+7,x2-4,t.y);ctx.stroke();}
+ /* chord symbols above · dynamics below */
+ if(Array.isArray(g.chords)){ctx.fillStyle=INK;ctx.font='bold 11px system-ui';for(const c of g.chords){if(c.tick>=tk0&&c.tick<tk0+ticks){ctx.fillText(c.lbl,xAt(c.tick)+2,staffTop-24);syms++;}}}
+ if(Array.isArray(g.dyn)){ctx.fillStyle=INK;ctx.font='italic bold 12px Georgia,serif';for(const d of g.dyn){if(d.tick>=tk0&&d.tick<tk0+ticks){ctx.fillText(d.word,xAt(d.tick)+1,(tab?tab.top+5*tab.gap:staffBottom)+16);dyns++;}}}
+ if(g.playheadTick!=null&&isFinite(g.playheadTick)&&g.playheadTick>=tk0&&g.playheadTick<=tk0+ticks){const xp=xAt(g.playheadTick);ctx.strokeStyle=paintOf('--playhead','#e8a33d');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xp,staffTop-8);ctx.lineTo(xp,(tab?tab.top+5*tab.gap:staffBottom)+4);ctx.stroke();}
+ /* E4: the write caret — a blue line at the caret's tick with the value it will write */
+ let caretDrawn=false;
+ if(g.caret&&isFinite(g.caret.tick)&&g.caret.tick>=tk0&&g.caret.tick<=tk0+ticks){const xc=xAt(g.caret.tick)+6;ctx.strokeStyle='#2f6fd6';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xc,staffTop-12);ctx.lineTo(xc,(tab?tab.top+5*tab.gap:staffBottom)+8);ctx.stroke();
+  ctx.fillStyle='#2f6fd6';ctx.beginPath();ctx.moveTo(xc-5,staffTop-16);ctx.lineTo(xc+5,staffTop-16);ctx.lineTo(xc,staffTop-10);ctx.closePath();ctx.fill();
+  if(g.caret.label){ctx.font='bold 9px system-ui';ctx.fillText(String(g.caret.label),xc+8,staffTop-12);}caretDrawn=true;}
+ return {items:drawn,tab:tabN,ties:ties.length,syms,dyns,key:sharps,meter:shown[0].num+'/'+shown[0].den,from,to,x0,px,tk0,ticks,caret:caretDrawn};
+}
+function notPlayheadBeat(){
+ try{if(typeof playing!=='undefined'&&playing)return transportBeat();}catch(e){}
+ return (typeof playheadBeat==='number')?playheadBeat:0;
+}
+function cageNotationDraw(){
+ /* ==== E2 — NOTIFY'S FIRST SURFACE, now WIG & QUILL'S GUITAR PART (his [30]): treble 8vb over TAB from notSpellTrack of
+    the linked track, two measures around the playhead (or the selection), following the transport. ==== */
+ const c=document.getElementById('cageNotationCanvas'); if(!c)return null;
+ const lane=document.getElementById('cageNotationLane'); if(lane&&lane.style.display==='none')return null;
+ const W=c.width, H=150; if(c.height!==H)c.height=H;
+ const ctx=c.getContext('2d');
  ctx.clearRect(0,0,W,H); ctx.fillStyle='#f7f3ea'; ctx.fillRect(0,0,W,H);
- ctx.strokeStyle='#222'; ctx.lineWidth=1;
- const y0=18, gap=8;
- for(let i=0;i<5;i++){const y=y0+i*gap; ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(W-10,y);ctx.stroke();}
- ctx.font='28px Georgia,serif'; ctx.fillStyle='#222'; ctx.fillText('𝄞', 8, y0+3*gap);
- ctx.font='11px system-ui'; ctx.fillStyle='#666';
- ctx.fillText('Standard notation (treble) — stub · notes follow the linked track', 48, H-8);
- if(!_cageLink.wid)return;
- const rows=cageLinkWorldRows(_cageLink.wid, cageSelTarget().face)||[];
- ctx.fillStyle='#1a1a1a';
- rows.slice(0,48).forEach(n=>{
-  const x=48+(+n[0])*28; if(x>W-12)return;
-  const pc=((+n[2])%12+12)%12; const y=y0+4*gap-(pc%8)*1.2;
-  ctx.beginPath(); ctx.ellipse(x,y,5,3.5, -0.3, 0, Math.PI*2); ctx.fill();
+ let rows=[]; try{if(_cageLink.wid)rows=cageLinkWorldRows(_cageLink.wid,cageSelTarget().face)||[];}catch(e){rows=[];}
+ let sp=null; try{sp=notSpellTrack(rows.map(n=>[n[0],n[1],n[2]]));}catch(e){sp=null;}
+ if(!sp||!sp.measures.length){ctx.fillStyle='#8a8577';ctx.font='11px system-ui';ctx.fillText('Notation — nothing on the linked track yet',48,H/2);_cageNotation.last={items:0};return _cageNotation.last;}
+ let at=0;
+ try{
+  if(typeof selNotes!=='undefined'&&selNotes&&selNotes.size){const i0=[...selNotes].sort((a,b)=>a-b)[0];const n=project.tracks[cageSelTarget().face]?project.tracks[cageSelTarget().face][i0]:null;if(n)at=+n[0];}
+  else at=notPlayheadBeat();
+ }catch(e){at=0;}
+ if(!isFinite(at))at=0;
+ const win=notWindow(sp.measures,at,2);
+ const gtrAt={}; rows.forEach(n=>{gtrAt[Math.round(n[0]*NOT_TPB)+':'+Math.round(n[2])]=cageNoteGtr(n)||cageDefaultPos(Math.round(n[2]),0,5)||null;});
+ const r=notDrawStaff(ctx,sp,win.from,win.to,{W,staffBottom:50,GAP:7,clef:'treble',shift:7,tab:{top:92,gap:8,gtrAt},playheadTick:notPlayheadBeat()*NOT_TPB});
+ ctx.fillStyle='#8a8577';ctx.font='9px system-ui';ctx.fillText('Wig & Quill · guitar part (written 8vb) · bars '+(win.from+1)+'–'+win.to,W-230,H-4);
+ _cageNotation.last=Object.assign({at,measures:win.to-win.from},r);
+ return _cageNotation.last;
+}
+/* ==== E3 (build 2026-09-04r, the 95th) — WIG & QUILL, THE NOTATION WINDOW (his [30]; RAW [24]: its own Engine window AND
+   a pop-up from the Guitar window). Score = every note-carrying pitched part stacked, each in the clef it reads best in
+   (a part carrying guitar layouts is written 8vb over TAB) · Part = one track · chord symbols from the chord lane above
+   the top staff · dynamics from velocity under each staff · 2 or 4 bars a line · follows the transport. The feature
+   pass's E3, round 1 (Score/Part · symbols · dynamics); step input (E4) and the grid's view (E5) follow. */
+var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null};
+function wqParts(){
+ /* the parts a score shows: pitched tracks that carry notes, in the app's own order */
+ try{return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length);}catch(e){return [];}
+}
+function wqPartRows(t){try{return (project.tracks[t]||[]).slice();}catch(e){return [];}}
+function wqHasGtr(rows){return (rows||[]).some(n=>n&&n[7]&&typeof n[7]==='object'&&n[7].gtr);}
+function buildWqWindow(){
+ const B=document.getElementById('wqBody');if(!B)return;
+ const parts=wqParts();
+ if(parts.indexOf(wqState.part)<0&&parts.length)wqState.part=parts[0];
+ const lbl=t=>{try{return (typeof trackLabel==='function'?trackLabel(t):t);}catch(e){return t;}};
+ B.innerHTML='<div class="winProse" style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">Write the music on the grid — Wig &amp; Quill notates it: the values, ties and rests follow the meter, the accidentals follow the key, the chord symbols come from the chord lane, the dynamics from the notes’ velocity. Score stacks every part · Part shows one track.</div>'
+  +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
+  +'<span class="cpchip'+(wqState.layout==='score'?' on':'')+'" id="wqLayScore" title="Every note-carrying part, stacked">Score</span>'
+  +'<span class="cpchip'+(wqState.layout==='part'?' on':'')+'" id="wqLayPart" title="One track on its own staff">Part</span>'
+  +'<label id="wqPartLbl" style="font-size:11px;color:var(--text);display:'+((wqState.layout==='part'||wqInput.on)?'inline-flex':'none')+';gap:4px;align-items:center;">Track <select id="wqPart" style="font-size:11px;">'+parts.map(t=>'<option value="'+t+'"'+(t===wqState.part?' selected':'')+'>'+lbl(t)+'</option>').join('')+'</select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;">Bars a line <select id="wqBars" style="font-size:11px;"><option value="2"'+(wqState.bars===2?' selected':'')+'>2</option><option value="4"'+(wqState.bars===4?' selected':'')+'>4</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="wqFollow"'+(wqState.follow?' checked':'')+'/> Follow the transport</label>'
+  +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
+  +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead): 1 whole · 2 half · 3 quarter · 4 8th · 5 16th · 6 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · R a rest · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves">✎ Write</span>'
+  +'<span id="wqWriteChip" style="font-size:10.5px;color:var(--dim);"></span></div>'
+  +'<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;"><canvas id="wqCanvas" width="1100" height="180" style="display:block;width:100%;height:auto;"></canvas></div>';
+ const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
+ on('wqLayScore',()=>{wqState.layout='score';buildWqWindow();});
+ on('wqLayPart',()=>{wqState.layout='part';buildWqWindow();});
+ const ps=document.getElementById('wqPart');if(ps)ps.onchange=()=>{wqState.part=ps.value;wqDraw();};
+ const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
+ const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
+ on('wqWriteBtn',()=>wqInputToggle());
+ const cv=document.getElementById('wqCanvas');if(cv)cv.onclick=wqInputClick;
+ wqInputChip('');
+ wqDraw();
+ if(!wqState.iv)wqState.iv=setInterval(wqTick,250);
+}
+function wqTick(){
+ const shown=(typeof uiWinShown==='function')&&uiWinShown('wqPanel');
+ const pop=document.getElementById('wqPop');
+ if(!shown&&wqInput.on){wqInput.on=false;wqInput.last=null;}
+ if(!shown&&!pop){clearInterval(wqState.iv);wqState.iv=null;return;}
+ if(shown&&wqState.follow&&!wqInput.on)wqDraw();
+ if(pop)wqPopDraw();
+}
+function wqDrawInto(canvas,partIds,opts){
+ /* the systems: one staff per part, stacked; the window = `bars` measures from the playhead */
+ opts=opts||{};
+ const ctx=canvas.getContext('2d'); const W=canvas.width;
+ const per=opts.per||150, H=Math.max(per,per*partIds.length)+10; if(canvas.height!==H)canvas.height=H;
+ ctx.clearRect(0,0,W,H); ctx.fillStyle='#f7f3ea'; ctx.fillRect(0,0,W,H);
+ const at=(opts.at!=null&&isFinite(+opts.at))?+opts.at:notPlayheadBeat(), out={parts:0,items:0,syms:0,dyns:0,from:0,to:0,tab:0,caret:false,geoms:[],bars:opts.bars||wqState.bars||4};
+ partIds.forEach((t,k)=>{
+  const rows=wqPartRows(t);
+  let sp=null;try{sp=notSpellTrack(rows.map(n=>[n[0],n[1],n[2]]));}catch(e){sp=null;}
+  if(!sp||!sp.measures.length)return;
+  let win=notWindow(sp.measures,at,opts.bars||wqState.bars||4);
+  /* E4: while writing, the window HOLDS as long as the caret is inside it — the phrase just written stays on the sheet */
+  if(opts.keepFrom!=null&&isFinite(+opts.keepFrom)){const tk=at*NOT_TPB,n=Math.max(1,opts.bars||wqState.bars||4),kf=Math.round(+opts.keepFrom);const i=sp.measures.findIndex(m=>tk>=m.start&&tk<m.end);if(i>=kf&&i<kf+n&&kf+n<=sp.measures.length)win={from:kf,to:kf+n};}
+  const gtr=wqHasGtr(rows)||opts.forceGuitar;
+  const clef=gtr?'treble':notClefFor(rows);
+  const base=k*per;
+  const tab=gtr?{top:base+96,gap:8,gtrAt:(()=>{const m={};rows.forEach(n=>{m[Math.round(n[0]*NOT_TPB)+':'+Math.round(n[2])]=cageNoteGtr(n)||cageDefaultPos(Math.round(n[2]),0,5)||null;});return m;})()}:null;
+  const chords=(k===0&&opts.chords!==false)?notChordSymbols(project.chords,sp.measures[win.from].start,sp.measures[win.to-1].end):null;
+  const caret=(opts.caret&&opts.caret.part===t)?{tick:Math.round(opts.caret.beat*NOT_TPB),label:opts.caret.label}:null;
+  const r=notDrawStaff(ctx,sp,win.from,win.to,{W,staffBottom:base+62,GAP:7,clef,shift:gtr?7:0,tab,chords,dyn:notDynamics(rows),playheadTick:at*NOT_TPB,caret});
+  ctx.fillStyle='#8a8577';ctx.font='9px system-ui';ctx.fillText((typeof trackLabel==='function'?trackLabel(t):t)+(gtr?' · guitar, written 8vb':clef==='bass'?' · bass clef':'')+(caret?' · ✎ writing here':''),34,base+14);
+  out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
+  out.geoms.push({t,base,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks});
  });
+ return out;
+}
+function wqDraw(){
+ const c=document.getElementById('wqCanvas');if(!c)return null;
+ const ids=wqState.layout==='part'?[wqState.part]:wqParts();
+ const o={bars:wqState.bars};
+ if(wqInput.on){o.at=wqCaretBeat();o.caret={part:wqInputPart(),beat:wqCaretBeat(),label:wqInputValueWord()};if(wqState.last&&wqState.last.parts&&wqState.last.bars===(wqState.bars||4))o.keepFrom=wqState.last.from;}
+ const r=wqDrawInto(c,ids.filter(t=>wqPartRows(t).length),o);
+ const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'):'nothing to notate yet — write some notes on the grid';
+ wqState.last=r;return r;
+}
+/* the pop-up from the Guitar window (RAW [24]) — the linked part as a floating sheet, following the transport; Escape closes */
+var _wqPop={last:null};
+function wqPopClose(){const p=document.getElementById('wqPop');if(p){try{p.remove();}catch(e){}}}
+function wqPopOpen(){
+ wqPopClose();
+ const pop=document.createElement('div');
+ pop.id='wqPop';
+ pop.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:110;background:#f7f3ea;color:#222;border:1px solid #4a4f5e;border-radius:8px;padding:8px 10px;width:min(960px,92vw);box-shadow:0 10px 30px rgba(0,0,0,.5);';
+ pop.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-weight:700;font-size:12px;">✒ Wig &amp; Quill — the guitar part</span><span class="cpchip" id="wqPopClose">✕</span></div><canvas id="wqPopCanvas" width="920" height="160" style="display:block;width:100%;height:auto;"></canvas>';
+ document.body.appendChild(pop);
+ pop.querySelector('#wqPopClose').onclick=()=>wqPopClose();
+ wqPopDraw();
+ if(!wqState.iv)wqState.iv=setInterval(wqTick,250);
+ return pop;
+}
+function wqPopDraw(){
+ const c=document.getElementById('wqPopCanvas');if(!c)return null;
+ let face='melody';try{face=cageSelTarget().face;}catch(e){}
+ _wqPop.last=wqDrawInto(c,[face],{bars:4,per:150,forceGuitar:true});
+ return _wqPop.last;
+}
+/* the window's write mode — the handler over the pure grammar above (E4) */
+var wqInput={on:false,value:'q',dots:0,tuplet:null,acc:null,last:null,prevMidi:null};
+function wqCaretBeat(){return (typeof playheadBeat==='number'&&isFinite(playheadBeat))?playheadBeat:0;}
+function wqInputPart(){
+ const parts=wqParts();
+ if(parts.indexOf(wqState.part)<0&&parts.length)wqState.part=parts[0];
+ return wqState.part;
+}
+function wqInputRefMidi(part,beat){
+ /* the octave reference when nothing has been written this session: the part's last note before the caret, else its
+    median, else middle C */
+ const rows=wqPartRows(part).filter(n=>Array.isArray(n)&&isFinite(n[2]));
+ if(!rows.length)return 60;
+ const before=rows.filter(n=>n[0]<beat-1e-6).sort((a,b)=>b[0]-a[0]);
+ if(before.length)return Math.round(before[0][2]);
+ const ms=rows.map(n=>Math.round(n[2])).sort((a,b)=>a-b);
+ return ms[Math.floor(ms.length/2)];
+}
+function wqInputValueWord(){
+ const w={w:'whole',h:'half',q:'quarter','8':'8th','16':'16th','32':'32nd'}[wqInput.value]||wqInput.value;
+ return (wqInput.dots?'dotted ':'')+w+(wqInput.tuplet===3?' triplet':'');
+}
+function wqInputChip(msg){
+ const b=document.getElementById('wqWriteBtn');if(b)b.classList.toggle('on',!!wqInput.on);
+ const c=document.getElementById('wqWriteChip');if(!c)return;
+ if(!wqInput.on){c.textContent='';return;}
+ const beat=wqCaretBeat();
+ c.textContent='✎ '+wqInputValueWord()+(wqInput.acc===1?' · ♯ next':wqInput.acc===-1?' · ♭ next':'')+' · caret at beat '+(Math.round(beat*100)/100)+(msg?' · '+msg:'');
+}
+function wqInputToggle(on){
+ wqInput.on=(on==null)?!wqInput.on:!!on;
+ wqInput.last=null;wqInput.acc=null;
+ if(!wqInput.on)wqInput.prevMidi=null;
+ const sel=document.getElementById('wqPartLbl');if(sel)sel.style.display=(wqState.layout==='part'||wqInput.on)?'inline-flex':'none';
+ wqInputChip('');wqDraw();
+}
+function wqInputAfterWrite(){
+ try{autosaveSoon();}catch(e){}
+ try{drawTrackSel();}catch(e){}
+ try{refresh(true);}catch(e){}
+}
+function wqInputAudition(part,midi,ticks){
+ try{if(typeof audioReady==='undefined'||!audioReady||!inst)return;
+  const spb=60/Math.max(20,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||120));
+  inst.note(part,[midi],Math.max(.12,(ticks/NOT_TPB)*spb*.9),Tone.now()+.02,.7);}catch(e){}
+}
+function wqInputApply(a){
+ /* one action of the grammar against the part, the caret (the playhead) and the undo stack */
+ if(!a)return false;
+ const part=wqInputPart(), beat=wqCaretBeat();
+ const ticks=wqStepTicks(wqInput.value,wqInput.dots,wqInput.tuplet)||48;
+ const rows=()=>Array.isArray(project.tracks[part])?project.tracks[part]:null;
+ const snapBeat=b=>Math.max(0,Math.round(b*NOT_TPB)/NOT_TPB);
+ const loopEnd=(typeof LOOP==='number'&&LOOP>0)?LOOP:32;
+ let msg='',did=false;
+ switch(a.kind){
+  case 'dur':wqInput.value=a.value||'q';break;
+  case 'dot':wqInput.dots=wqInput.dots?0:1;break;
+  case 'tuplet':wqInput.tuplet=wqInput.tuplet===3?null:3;break;
+  case 'acc':
+   if(wqInput.last&&rows()&&rows().indexOf(wqInput.last.row)>=0){snapshot();const n=wqInput.last.row;n[2]=Math.max(0,Math.min(127,Math.round(n[2])+a.delta));wqInput.prevMidi=n[2];wqInputAudition(part,n[2],ticks);wqInputAfterWrite();did=true;}
+   else wqInput.acc=(wqInput.acc===a.delta)?null:a.delta;
+   break;
+  case 'octave':
+   if(wqInput.last&&rows()&&rows().indexOf(wqInput.last.row)>=0){snapshot();const n=wqInput.last.row;n[2]=Math.max(0,Math.min(127,Math.round(n[2])+12*a.delta));wqInput.prevMidi=n[2];wqInputAudition(part,n[2],ticks);wqInputAfterWrite();did=true;}
+   else wqInput.prevMidi=Math.max(0,Math.min(127,(wqInput.prevMidi==null?wqInputRefMidi(part,beat):wqInput.prevMidi)+12*a.delta));
+   break;
+  case 'move':wqInput.last=null;setPlayheadBeat(snapBeat(beat+a.dir*ticks/NOT_TPB));break;
+  case 'rest':wqInput.last=null;if(beat>=loopEnd-1e-6)msg='the caret is at the end of the song';else setPlayheadBeat(snapBeat(beat+ticks/NOT_TPB));break;
+  case 'back':
+   if(wqInput.last&&rows()&&rows().indexOf(wqInput.last.row)>=0){snapshot();const arr=rows();arr.splice(arr.indexOf(wqInput.last.row),1);setPlayheadBeat(wqInput.last.beat);wqInput.last=null;wqInputAfterWrite();did=true;}
+   else{wqInput.last=null;setPlayheadBeat(snapBeat(beat-ticks/NOT_TPB));}
+   break;
+  case 'leave':wqInputToggle(false);return true;
+  case 'note':{
+   const arr=rows();
+   if(!arr){msg='that part has no stored notes yet';break;}
+   const at=(a.stack&&wqInput.last)?wqInput.last.beat:beat;
+   if(at>=loopEnd-1e-6){msg='the caret is at the end of the song';break;}
+   let key=null;try{key=melismaKeyAt(at);}catch(e){key=null;}
+   const km=notKeyMap((key&&key.tonic)||0,key&&key.pcs);
+   const prev=(wqInput.prevMidi!=null)?wqInput.prevMidi:wqInputRefMidi(part,at);
+   const midi=wqStepPitch(a.letter,km,prev,wqInput.acc);
+   if(midi==null)break;
+   const w=wqStepWrite(arr,at,ticks,midi,a.stack);
+   if(!w)break;
+   snapshot();
+   if(wqHasGtr(arr)){const pos=cageDefaultPos(midi,0,5);if(pos)cageSetNoteGtr(w.row,{s:pos.s,f:pos.f,finger:cageFingerForFret(pos.f,0),pick:null,pima:null});}
+   project.tracks[part]=w.rows;
+   wqInput.last={row:w.row,beat:at,part};
+   wqInput.prevMidi=midi;wqInput.acc=null;
+   if(!a.stack)setPlayheadBeat(snapBeat(at+ticks/NOT_TPB));
+   wqInputAudition(part,midi,ticks);
+   wqInputAfterWrite();did=true;
+   break;}
+  default:return false;
+ }
+ wqInputChip(msg);wqDraw();
+ return did;
+}
+function wqInputKey(e){
+ /* capture-phase, like the Guitar's tap listener: the grammar's keys are the window's while write mode is on and the
+    window shows; everything else (⌘Z, Space, typing in a field) stays the app's */
+ if(!wqInput.on)return;
+ if(e.metaKey||e.ctrlKey||e.altKey)return;
+ if(isTypingTarget(e.target)||isTypingTarget(document.activeElement))return;
+ if(!(typeof uiWinShown==='function'&&uiWinShown('wqPanel'))){wqInput.on=false;wqInputChip('');return;}
+ const a=wqStepAction(e.key,e.shiftKey);if(!a)return;
+ e.preventDefault();e.stopPropagation();
+ wqInputApply(a);
+}
+document.addEventListener('keydown',wqInputKey,true);
+function wqInputClick(e){
+ /* a click on the sheet in write mode moves the caret there (snapped to the 16th) and, in Score, picks that part */
+ if(!wqInput.on)return;
+ const c=document.getElementById('wqCanvas');if(!c)return;
+ const geoms=(wqState.last&&wqState.last.geoms)||[];if(!geoms.length)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ let g=geoms[0];for(const z of geoms){if(y>=z.base)g=z;}
+ if(g.t!==wqState.part){wqState.part=g.t;const ps=document.getElementById('wqPart');if(ps)ps.value=g.t;}
+ const tk=g.tk0+(x-g.x0)/g.px;
+ const snapped=Math.max(g.tk0,Math.min(g.tk0+g.ticks-1,Math.round(tk/12)*12));
+ wqInput.last=null;setPlayheadBeat(snapped/NOT_TPB);
+ wqInputChip('');wqDraw();
 }
 function cageMiniMidiDraw(){
  const c=document.getElementById('cageMiniMidiCanvas'); if(!c)return;
@@ -5272,7 +6219,8 @@ function cageLinkAttach(w){
   +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">'
   +'<div id="cageFingerLegend" style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--dim);align-items:center;"></div>'
   +'<button type="button" id="cageMovePos" style="padding:6px 12px;font-size:11px;margin-left:auto;" title="Change Where It’s Played — roman frets light for positions that fit; Tab cycles">Move position</button></div>'
-  +'<div id="cageMoveHint" style="font-size:11px;color:var(--accent);margin-top:4px;min-height:1.2em;"></div></div>'
+  +'<div id="cageMoveHint" style="font-size:11px;color:var(--accent);margin-top:4px;min-height:1.2em;"></div>'
+  +'<div id="cageStudentStrip" style="display:none;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;"></div></div>'
   +'<div id="cageRhPane" style="flex:0 0 168px;border-left:1px solid var(--line);padding-left:8px;">'
   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Right hand</span>'
@@ -5291,8 +6239,8 @@ function cageLinkAttach(w){
   +'<button type="button" id="cageRhAuto" style="padding:3px 7px;font-size:10px;" title="Apply alternate picking + CAGED layout">Auto D/U</button>'
   +'<button type="button" id="cageRhStrum8" style="padding:3px 7px;font-size:10px;" title="Assign 8th-note strum strokes to selected/all notes">Strum 8ths</button>'
   +'<button type="button" id="cageRhStrum16" style="padding:3px 7px;font-size:10px;" title="Assign 16th-note strum strokes">Strum 16ths</button>'
-  +'<button type="button" id="cageRhTap" style="padding:3px 7px;font-size:10px;" title="Tap a strum pattern (clicks → hits; misses are empty slots)">Tap pattern</button>'
-  +'</div></div></div>';
+  +'<button type="button" id="cageRhTap" style="padding:3px 7px;font-size:10px;" title="Tap, clap or drum the strumming pattern while the app listens (mic · clicks · T key) — hits become MIDI on the linked track, D / U by the strum law, empty slots are misses">Tap pattern</button>'
+  +'</div><div id="cageRhPattern" style="margin-top:4px;min-height:1.2em;"></div></div></div>';
  const gridRoot=w.els&&w.els.root;
  const panel=document.getElementById('cagePanel');
  if(gridRoot&&gridRoot.parentNode){
@@ -5415,6 +6363,8 @@ function buildCageWindow(){
    +'<button type="button" id="cageNumRel" style="padding:5px 10px;" title="Each chord’s own 1·3·5">Relative</button></span></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Scale root<select id="cageScaleRoot" style="padding:5px 8px;"></select></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Chord<input id="cageChordIn" type="text" value="C" style="width:4.8rem;padding:5px 8px;"/></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Notation<button type="button" id="cageInkBtn" style="padding:5px 10px;" title="✒ Ink it — open the linked part as a Wig & Quill sheet (treble 8vb + TAB), following the transport">✒ Ink it</button></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Student<button type="button" id="cageStudentBtn" style="padding:5px 10px;" title="Student mode — play along with the song’s MIDI while the app listens (mic · clicks · T) and grades every hit: Perfect · a bit early/late · early/late · very early/late · missed. Practice speed 25–100% scales the song’s own tempo.">🎓 Practice</button></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Solo view<select id="cageSoloView" style="padding:5px 8px;">'
    +'<option value="scale" selected>Complete scale</option>'
    +'<option value="penta">Pentatonic</option>'
@@ -5484,6 +6434,8 @@ function buildCageWindow(){
   on('cageScaleRoot').onchange=e=>{cageState.scaleRootPc=+e.target.value;cageDraw();};
   on('cageChordIn').onchange=e=>{const q=cageParseChord(e.target.value);cageState.chordText=q.text;cageState.chordRootPc=q.rootPc;cageState.quality=q.quality;cageDraw();};
   on('cageChordIn').onkeydown=e=>{if(e.key==='Enter')on('cageChordIn').onchange({target:on('cageChordIn')});};
+  const _stb=document.getElementById('cageStudentBtn'); if(_stb)_stb.onclick=()=>cageStudentToggle();   /* Guitar D */
+  const _ink=document.getElementById('cageInkBtn'); if(_ink)_ink.onclick=()=>wqPopOpen();   /* E3: the pop-up from the Guitar window (RAW [24]) */
   on('cageSoloView').onchange=e=>{
    cageState.soloView=e.target.value; cageState.layer=cageSoloToLayer(e.target.value);
    const cl=document.getElementById('cageCurLbl');
@@ -8293,18 +9245,18 @@ function sizeSvg(){
    grids, and by the docked lane rows everywhere else. Same gestures in every home. */
 function barLaneMarkup(isMainLane){
  let out='';
- out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="#23252e" style="cursor:zoom-in"><title>Click: playhead · drag ↕: zoom · drag ←→: scroll · loop: ⌘L from a time selection, double-click-drag draws, edges resize · middle moves · double-click deletes · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
+ out+=`<rect ${isMainLane?'id="barlane" ':''}x="0" y="0" width="${gridW()}" height="${BARH}" fill="${paintOf('--lane-ground','#23252e')}" style="cursor:zoom-in"><title>Click: playhead · drag ↕: zoom · drag ←→: scroll · loop: ⌘L from a time selection, double-click-drag draws, edges resize · middle moves · double-click deletes · ⌘-click: insert blank bar · ⌥-click: split section here</title></rect>`;
  out+=barLaneTicks(PPB,LOOP,GUT,BARH,gridTriplets);   /* 2026-08-11a FIX 4: bar/beat/subdivision delineation, zoom-adaptive */
  /* ⑪b (Q2 + T1, client-confirmed): THE BRACE ALWAYS EXISTS — with no region of its own
     it covers the whole arrangement, dimmer; a user-made region keeps the shipped look.
     ⚠ the magnifying-glass cursor above is the CLIENT's ask, not the reference's — no such
     cursor is documented there (§9.9 correction 3). */
  {const effB=braceRegion(loopSel,LOOP),defB=!loopSel;
-  out+=`<rect x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="${BARH}" fill="#ffd23f" opacity="${defB?.05:loopOn?.4:.18}" pointer-events="none"/>`;
-  out+=`<rect class="lbrace" x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="3.5" fill="#ffd23f" opacity="${defB?.35:loopOn?.95:.55}" pointer-events="none"/>`;
+  out+=`<rect x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="${BARH}" fill="${paintOf('--loop','#ffd23f')}" opacity="${defB?.05:loopOn?.4:.18}" pointer-events="none"/>`;
+  out+=`<rect class="lbrace" x="${GUT+effB.a*PPB}" y="0" width="${(effB.b-effB.a)*PPB}" height="3.5" fill="${paintOf('--loop','#ffd23f')}" opacity="${defB?.35:loopOn?.95:.55}" pointer-events="none"/>`;
   /* July 30 fix 4: visible EDGE HANDLES — the resize grips announce themselves */
-  out+=`<rect class="lph" x="${GUT+effB.a*PPB}" y="0" width="5" height="${BARH}" rx="1" fill="#ffd23f" opacity="${defB?.3:loopOn?.9:.5}" pointer-events="none"/>`;
-  out+=`<rect class="lph" x="${GUT+effB.b*PPB-5}" y="0" width="5" height="${BARH}" rx="1" fill="#ffd23f" opacity="${defB?.3:loopOn?.9:.5}" pointer-events="none"/>`;
+  out+=`<rect class="lph" x="${GUT+effB.a*PPB}" y="0" width="5" height="${BARH}" rx="1" fill="${paintOf('--loop','#ffd23f')}" opacity="${defB?.3:loopOn?.9:.5}" pointer-events="none"/>`;
+  out+=`<rect class="lph" x="${GUT+effB.b*PPB-5}" y="0" width="5" height="${BARH}" rx="1" fill="${paintOf('--loop','#ffd23f')}" opacity="${defB?.3:loopOn?.9:.5}" pointer-events="none"/>`;
  }
  for(let b=0;b<LOOP/4;b++)
   out+=`<text x="${GUT+b*4*PPB+4}" y="${BARH-8}" fill="#98a0b2" font-size="10.5" font-weight="600" pointer-events="none">${b+1}</text>`;
@@ -8322,7 +9274,7 @@ function barLaneMarkup(isMainLane){
    out+=`<line x1="${GUT+b*4*PPB}" y1="${BARH}" x2="${GUT+b*4*PPB}" y2="${BARH+SCRUBH}" stroke="#2e3342" stroke-width="0.8" pointer-events="none"/>`;
   if(scrubLive!=null)out+=`<rect x="${GUT+scrubLive*PPB}" y="${BARH}" width="${4*PPB}" height="${SCRUBH}" fill="#e8a33d" opacity=".3" pointer-events="none"/>`;
  }
- if(!isMainLane)out+=`<line class="phx" x1="${GUT}" y1="0" x2="${GUT}" y2="${hdrH()}" stroke="#e8a33d" stroke-width="1.6" opacity="0"/>`;
+ if(!isMainLane)out+=`<line class="phx" x1="${GUT}" y1="0" x2="${GUT}" y2="${hdrH()}" stroke="${paintOf('--playhead','#e8a33d')}" stroke-width="1.6" opacity="0"/>`;
  return out;
 }
 function redrawBarLanes(){
@@ -8522,7 +9474,7 @@ function drawGridView(v,svgEl){
  if(viewTop(v)>0)out+=barLaneMarkup(true);
  /* section BOUNDARY lines belong to the grid (flags travel with the bar lane) */
  if(project.sections.length>1)project.sections.forEach((s,i)=>{
-  if(i)out+=`<line x1="${GUT+s.start*PPB}" y1="0" x2="${GUT+s.start*PPB}" y2="${vt+v.px}" stroke="#6fd08c" stroke-width="1.3" stroke-dasharray="5 4" opacity=".5" pointer-events="none"/>`;
+  if(i)out+=`<line x1="${GUT+s.start*PPB}" y1="0" x2="${GUT+s.start*PPB}" y2="${vt+v.px}" stroke="${paintOf('--marker','#6fd08c')}" stroke-width="1.3" stroke-dasharray="5 4" opacity=".5" pointer-events="none"/>`;
  });
  }   /* /isMain — bar lane, boundary lines */
  /* ⑪f: MARKER LINES through the event display — the docked-lane
@@ -8548,7 +9500,7 @@ function drawGridView(v,svgEl){
   const tonicRow=deg===0;
   /* [PR2] (his piano-roll doc: "subtle alternating pitch-row shading") — a quiet zebra
      under the lattice; the tonic row keeps its accent above both stripes */
-  out+=`<rect x="${GUT}" y="${viewRowY(v,r)}" width="${W.bN*PPB}" height="${CELLH}" fill="${tonicRow?'#262a36':(r%2?'#1d1f27':'#22242e')}" stroke="#262933" stroke-width="0.5"/>`;
+  out+=`<rect x="${GUT}" y="${viewRowY(v,r)}" width="${W.bN*PPB}" height="${CELLH}" fill="${tonicRow?paintOf('--grid-tonic','#262a36'):(r%2?paintOf('--grid-cell-alt','#1d1f27'):paintOf('--grid-cell','#22242e'))}" stroke="#262933" stroke-width="0.5"/>`;
   out+=`<text x="${GUT-5}" y="${viewRowY(v,r)+15}" fill="${degColor(deg)}" font-size="10.5" text-anchor="end" font-weight="600">${curScale().labels[deg]}</text>`;
   /* 2.5 ③: the PIANO ROLL down the far left of every open grid lane (Ardour's clear
      roll is the model): white/black keys per row, C rows named. It renders INSIDE the
@@ -8565,9 +9517,9 @@ function drawGridView(v,svgEl){
    const pmid=scalePitch(k),ppc=((pmid%12)+12)%12;
    const isBlkPc=p=>p===1||p===3||p===6||p===8||p===10;
    const blk=isBlkPc(ppc),y0=viewRowY(v,r);
-   out+=`<rect x="0" y="${y0}" width="18" height="${CELLH}" fill="#e8eaf1" stroke="#9aa0b0" stroke-width="0.6" pointer-events="none"/>`;
+   out+=`<rect x="0" y="${y0}" width="18" height="${CELLH}" fill="${paintOf('--key-white','#e8eaf1')}" stroke="#9aa0b0" stroke-width="0.6" pointer-events="none"/>`;
    if(blk){
-    out+=`<rect x="0" y="${y0+2.5}" width="11.5" height="${CELLH-5}" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
+    out+=`<rect x="0" y="${y0+2.5}" width="11.5" height="${CELLH-5}" rx="1.5" fill="${paintOf('--key-black','#181920')}" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
     out+=`<rect x="1" y="${y0+3.5}" width="1.6" height="${CELLH-7}" fill="rgba(255,255,255,.14)" pointer-events="none"/>`;
    }
    if(r>0){
@@ -8578,9 +9530,9 @@ function drawGridView(v,svgEl){
     const gap=keyGapSpec(pmid,scalePitch(k+1));
     if(gap&&gap.length){
      for(const g of gap)if(!g.blk)
-      out+=`<rect x="0" y="${(y0+g.yOff).toFixed(1)}" width="18" height="${g.h}" fill="#e8eaf1" stroke="#9aa0b0" stroke-width="0.6" pointer-events="none"/>`;
+      out+=`<rect x="0" y="${(y0+g.yOff).toFixed(1)}" width="18" height="${g.h}" fill="${paintOf('--key-white','#e8eaf1')}" stroke="#9aa0b0" stroke-width="0.6" pointer-events="none"/>`;
      for(const g of gap)if(g.blk)
-      out+=`<rect x="0" y="${(y0+g.yOff).toFixed(1)}" width="11.5" height="${g.h}" rx="1.5" fill="#181920" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
+      out+=`<rect x="0" y="${(y0+g.yOff).toFixed(1)}" width="11.5" height="${g.h}" rx="1.5" fill="${paintOf('--key-black','#181920')}" stroke="#000" stroke-width="0.5" pointer-events="none"/>`;
     }
    }
    if(ppc===0)out+=`<text x="2" y="${y0+14.5}" font-size="7.5" fill="#565a68" font-weight="700" pointer-events="none">C${Math.floor(pmid/12)-1}</text>`;
@@ -8612,7 +9564,7 @@ function drawGridView(v,svgEl){
   const isBar=Math.abs(b-4*Math.round(b/4))<1e-6, isBeat=Math.abs(b-Math.round(b))<1e-6;
   /* [PR2] (his doc: "stronger beat divisions · stronger bar divisions") — the grid's own
      hierarchy lifts; the bar-lane ruler's ticks keep their shipped ink (their pins stand) */
-  out+=`<line x1="${x}" y1="${isBar&&isMain?0:vt}" x2="${x}" y2="${vt+v.px}" stroke="${isBar?'#5e6584':isBeat?'#464d66':'#2e3342'}" stroke-width="${isBar?1.7:isBeat?1:0.6}"/>`;
+  out+=`<line x1="${x}" y1="${isBar&&isMain?0:vt}" x2="${x}" y2="${vt+v.px}" stroke="${isBar?paintOf('--grid-bar','#5e6584'):isBeat?paintOf('--grid-beat','#464d66'):paintOf('--grid-sub','#2e3342')}" stroke-width="${isBar?1.7:isBeat?1:0.6}"/>`;
  }
  out+=`<g clip-path="url(#${gcId})">`;   /* ghosts + notes scroll with the rows */
  /* 👥 ghost overlay (Phase 2.1): every other pitched track's notes, dimmed, no hit-testing —
@@ -8659,7 +9611,7 @@ function drawGridView(v,svgEl){
    const cgX=bx(Math.max(cg0,W.b0)),cgW=(Math.min(cg0+c.d,W.bEnd)-Math.max(cg0,W.b0))*PPB;
    for(const m of (cgV[ci]||[])){
     const gr2=withKeyAt(cg0,()=>rowOfK(midiToK(m,v),v));
-    out+=`<rect class="cgGhost" x="${cgX+1}" y="${viewRowY(v,gr2)+5}" width="${Math.max(cgW-2,5)}" height="${CELLH-10}" rx="3" fill="#8b93a8" opacity=".22" pointer-events="none"/>`;
+    out+=`<rect class="cgGhost" x="${cgX+1}" y="${viewRowY(v,gr2)+5}" width="${Math.max(cgW-2,5)}" height="${CELLH-10}" rx="3" fill="${paintOf('--ghost','#8b93a8')}" opacity=".22" pointer-events="none"/>`;
    }
   });
  }
@@ -8680,7 +9632,7 @@ function drawGridView(v,svgEl){
   const pinned=!!nn[3];
   const vop=(typeof nn[8]==='number')?(0.45+0.55*nn[8]).toFixed(2):'1';   /* 2.3: velocity = brightness */
   out+=`<rect data-n="${i}" x="${x+1}" y="${ry+2}" width="${Math.max(w,8)}" height="${CELLH-4}" rx="3"
-     fill="${NK.col}" fill-opacity="${vop}" stroke="${sel?'#fff':pinned?'#fff':chromatic?'#e8a33d':'rgba(0,0,0,.35)'}" stroke-width="${sel?2.2:pinned?1.6:chromatic?1.8:1}" ${pinned?'stroke-dasharray="3 2"':''} style="cursor:grab"/>`;
+     fill="${NK.col}" fill-opacity="${vop}" stroke="${sel?paintOf('--note-sel','#fff'):pinned?paintOf('--note-sel','#fff'):chromatic?paintOf('--note-chromatic','#e8a33d'):'rgba(0,0,0,.35)'}" stroke-width="${sel?2.2:pinned?1.6:chromatic?1.8:1}" ${pinned?'stroke-dasharray="3 2"':''} style="cursor:grab"/>`;
   if(chromatic)out+=`<rect x="${x+1}" y="${ry+2}" width="${Math.max(w,8)}" height="${CELLH-4}" rx="3" fill="url(#chromStripe)" pointer-events="none"/>`;
   if(pinned)out+=`<circle cx="${x+6}" cy="${ry+7}" r="2.4" fill="#fff" pointer-events="none"/>`;
   if(chromatic)out+=`<text x="${x+4}" y="${ry+16}" font-size="10" fill="#fff" font-weight="700" pointer-events="none">${NK.sharp?'♯':'♭'}</text>`;
@@ -8746,7 +9698,7 @@ function drawGridView(v,svgEl){
  }
  }   /* /!asStrip — lattice, selection visuals, scrollbars */
  /* playhead (main view — the one timeline marker; in lane form it lives in the bar lane) */
- if(isMain)out+=`<line id="ph" x1="${GUT}" y1="0" x2="${GUT}" y2="${BARH+(asStrip?0:v.px)}" stroke="#e8a33d" stroke-width="1.6" opacity="0"/>`;
+ if(isMain)out+=`<line id="ph" x1="${GUT}" y1="0" x2="${GUT}" y2="${BARH+(asStrip?0:v.px)}" stroke="${paintOf('--playhead','#e8a33d')}" stroke-width="1.6" opacity="0"/>`;
  svgEl.innerHTML=out;
  if(isMain)updatePlayheadLine();   /* redraws wipe the SVG — restore the marker (stopped) immediately */
  });
@@ -8962,6 +9914,7 @@ function drawPaper(){
  if(canAdd)out+=`<g style="cursor:pointer"><rect id="paperAdd" x="0" y="${systems*sysH+4}" width="${w}" height="22" rx="6" fill="rgba(255,255,255,.02)" stroke="#5a6178" stroke-dasharray="6 5"><title>Add 4 more bars — the page grows as your music approaches the end</title></rect><text x="${w/2}" y="${systems*sysH+19}" text-anchor="middle" font-size="11" fill="#8a90a3" pointer-events="none">+ 4 bars</text></g>`;
  svg.innerHTML=out;
  updatePlayheadLine();
+ try{paintSwapDom((typeof svg!=='undefined'?svg:null));}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function paperMouseDown(e){
  const r=svg.getBoundingClientRect();
@@ -12290,6 +13243,64 @@ function cnvTplApply(i){
 const CNV_COLORS=[['--bg','Background'],['--panel','Panels'],['--panel2','Controls & cells'],
  ['--line','Borders & lines'],['--text','Text'],['--dim','Secondary text'],['--accent','Accent / highlights'],
  ['--cage-f1','Guitar fretting · 1 index'],['--cage-f2','Guitar fretting · 2 middle'],['--cage-f3','Guitar fretting · 3 ring'],['--cage-f4','Guitar fretting · 4 pinky'],['--cage-f0','Guitar fretting · 0 thumb'], ['--cage-wood','Guitar · neck wood'],['--cage-wood2','Guitar · neck wood 2'],['--cage-fret','Guitar · frets'],['--cage-string','Guitar · strings'], ['--cage-ink','Guitar · note ink'],['--cage-ring','Guitar · current ring'],['--cage-ball','Guitar · bouncing ball'],['--cage-nut','Guitar · nut'], ['--cage-root','Guitar · scale root'],['--cage-chord','Guitar · chord root'],['--cage-tone','Guitar · chord tone'],['--cage-scale','Guitar · scale tone']];
+/* ==== Guitar C (build 2026-09-04m, the 95th) — COLOR TIER 2 · EVERYTHING (his [15]: "The Color palette
+   should be able to change the color of any aspect of what we are making"; his [16]: two tiers, Tier 2 so he
+   can "recolor anything I want before releasing the app"). These are the paints the renderers used to hard-code.
+   ⛔ Kept OUT of CNV_COLORS: Tier 1 (24, the Guitar slots always listed) is pinned by verify-caged91f; Tier 2 is
+   LISTED only while the Tier 2 checkbox is on, and every renderer reads it through paintOf() whether listed or
+   not. Round 1 wires the grid · the keys · the playhead/loop/marker · the object tiles · the Prism thumbs · the
+   automation lane; the Orbit (166 literals) and the Wanderer skin are Round 2's. */
+const CNV_COLORS_T2=[
+ ['--deg-1','Notes · degree 1 (tonic family)'],['--deg-2','Notes · degree 2'],['--deg-3','Notes · degree 3'],['--deg-4','Notes · degree 4'],
+ ['--deg-5','Notes · degree 5'],['--deg-6','Notes · degree 6'],['--deg-7','Notes · degree 7'],
+ ['--note-sel','Notes · selected outline'],['--note-chromatic','Notes · chromatic outline'],['--ghost','Notes · ghosts'],
+ ['--grid-cell','Grid · cells'],['--grid-cell-alt','Grid · alternate rows'],['--grid-tonic','Grid · tonic row'],
+ ['--grid-bar','Grid · bar lines'],['--grid-beat','Grid · beat lines'],['--grid-sub','Grid · subdivision lines'],
+ ['--key-white','Keys · white'],['--key-black','Keys · black'],
+ ['--playhead','Transport · playhead'],['--loop','Transport · loop brace'],['--marker','Transport · section marker'],
+ ['--ink-melody','Objects · melody ink'],['--ink-drums','Objects · drums ink'],['--ink-chords','Objects · chords ink'],
+ ['--strand-contour','Prism · rise and fall'],['--strand-dna','Prism · note DNA'],['--strand-rhythm','Prism · rhythm'],
+ ['--auto-line','Automation · line'],['--auto-curve','Automation · curve'],
+ ['--orb-ink','Orbits · ink'],['--orb-ink-bright','Orbits · bright ink'],['--orb-dim','Orbits · dim ink'],['--orb-dim2','Orbits · dim ink 2'],['--orb-dim3','Orbits · dim ink 3'],
+ ['--orb-green','Orbits · landings (green)'],['--orb-purple','Orbits · psych-out (purple)'],['--orb-red','Orbits · warnings (red)'],['--orb-cream','Orbits · cream'],['--orb-ground','Orbits · ground'],
+ ['--wan-wood','Wanderer · wood'],['--wan-wood-dark','Wanderer · wood dark'],['--wan-wood-mid','Wanderer · wood mid'],['--wan-wood-light','Wanderer · wood light'],
+ ['--wan-parchment','Wanderer · parchment'],['--wan-parchment-dark','Wanderer · parchment dark'],['--wan-cream','Wanderer · cream'],['--wan-ink','Wanderer · ink'],
+ ['--lane-ground','Lanes · bar-lane ground']];
+/* ==== Guitar C round 2 (build 2026-09-04n, the 95th) — THE PAINT SWAP: the Orbit (166 literals), the Wanderer's
+   parchment skin and the Paper view painted their colours as LITERALS in the markup they emit. Rather than edit
+   250 string sites (each a chance to break a template), the round swaps at the EMIT POINT: after a renderer has
+   set its markup, paintSwapDom walks the DOM it produced and rewrites fill / stroke / style values that carry a
+   registered literal with the slot's live colour. Fast path: an untouched app never walks (no slot differs from
+   its literal), so the shipped paint is byte-identical. */
+const PAINT_SWAP={'#8b93a7':'--orb-ink','#c8cde0':'--orb-ink-bright','#59607a':'--orb-dim','#7b8194':'--orb-dim2','#6b7186':'--orb-dim3',
+ '#5bb98c':'--orb-green','#c77dff':'--orb-purple','#d9534f':'--orb-red','#fff3d0':'--orb-cream','#e9eaef':'--text','#e8a33d':'--accent',
+ '#6b4f28':'--wan-wood','#3a2c18':'--wan-wood-dark','#5a4426':'--wan-wood-mid','#7a5a30':'--wan-wood-light',
+ '#a8895f':'--wan-parchment','#8a6f4d':'--wan-parchment-dark','#c9b085':'--wan-cream','#4a3a20':'--wan-ink','#23252e':'--lane-ground'};
+const PAINT_SWAP_GROUND={lit:'20,22,28',slot:'--orb-ground',hex:'#14161c'};   /* the Orbit's rgba(20,22,28,α) ground family */
+function paintSwapMap(){
+ /* literal → live colour, ONLY for slots that differ from their literal (pure over paintOf); null = nothing to swap */
+ if(Object.prototype.hasOwnProperty.call(_paintCache,'__swap'))return _paintCache.__swap;
+ const m={};let any=false;
+ for(const lit in PAINT_SWAP){const v=String(paintOf(PAINT_SWAP[lit],lit)).toLowerCase();if(v&&v!==lit.toLowerCase()){m[lit.toLowerCase()]=v;any=true;}}
+ const g=String(paintOf(PAINT_SWAP_GROUND.slot,PAINT_SWAP_GROUND.hex)).toLowerCase();
+ if(g&&g!==PAINT_SWAP_GROUND.hex&&/^#[0-9a-f]{6}$/.test(g)){m.__ground=parseInt(g.slice(1,3),16)+','+parseInt(g.slice(3,5),16)+','+parseInt(g.slice(5,7),16);any=true;}
+ _paintCache.__swap=any?m:null;return _paintCache.__swap;
+}
+function paintSwapStr(str,m){
+ if(!m||typeof str!=='string'||str.indexOf('#')<0&&str.indexOf('rgba(')<0)return str;
+ let out=str.replace(/#[0-9a-fA-F]{6}\b/g,h=>{const k=h.toLowerCase();return m[k]||h;});
+ if(m.__ground)out=out.split('rgba('+PAINT_SWAP_GROUND.lit+',').join('rgba('+m.__ground+',');
+ return out;
+}
+function paintSwapDom(root){
+ const m=paintSwapMap();if(!m||!root||!root.querySelectorAll)return 0;
+ let n=0;const els=[root].concat([...root.querySelectorAll('*')]);
+ for(const el of els){
+  for(const a of ['fill','stroke','stop-color','flood-color','data-col']){const v=el.getAttribute&&el.getAttribute(a);   /* data-col: the Orbit's colour payload, written for later paint */if(v&&/#|rgba\(/.test(v)){const w=paintSwapStr(v,m);if(w!==v){el.setAttribute(a,w);n++;}}}
+  const st=el.getAttribute&&el.getAttribute('style');if(st&&/#|rgba\(/.test(st)){const w=paintSwapStr(st,m);if(w!==st){el.setAttribute('style',w);n++;}}
+ }
+ return n;
+}
 /* ==== [CP2] ROADMAP 6.4 — THE COLORLISA PALETTE BROWSER (client, August 28: "The Color Palette
    should be on the Road Map scheduled to be built.  But it would be great if it got built
    soonish.") ====
@@ -12524,9 +13535,10 @@ function canvasApplyColors(){
     ⭐ A SECOND THING FALLS OUT OF THIS FOR FREE AND IS WORTH KEEPING: a per-slot ↺ now falls back
     to the PALETTE when one is applied, instead of jumping all the way to the app's shipped colour
     — which is what a reader of that button would expect and what R5 got wrong. */
+ paintCacheClear();paintRepaintSoon();   /* Guitar C: the Tier-2 readers re-read, the grid repaints once */
  const pal=cnvPalMapNow();
  const A=canvasState.alpha||{};
- for(const [v] of CNV_COLORS){
+ for(const [v] of CNV_COLORS.concat(typeof CNV_COLORS_T2!=='undefined'?CNV_COLORS_T2:[])){   /* Guitar C: Tier 2 rides the same three layers */
   const base=canvasState.colors[v]||(pal?pal[v]:'');
   /* 82nd R8: OPACITY IS A THIRD LAYER AND IT COMPOSES OVER THE OTHER TWO — it applies to whichever
      colour won, by hand or from the swatch, and to the app's OWN colour when neither did. */
@@ -12645,12 +13657,14 @@ function cnvColBuild(){
  if(t2)t2.onchange=()=>{canvasState.tier2=!!t2.checked; persistCanvas();
   /* Tier 2 is the Everything mode flag — CSS-variable slots already paint the app; remaining
      hard-coded SVG paints are the unfinished half of Tier 2 (his [16]). */
-  try{if(typeof cageLinkRedraw==='function')cageLinkRedraw();}catch(e){};};
+  try{if(typeof cageLinkRedraw==='function')cageLinkRedraw();}catch(e){};
+  try{cnvColBuild();}catch(e){};};   /* Guitar C: the Tier-2 rows appear and leave with the checkbox */
  const slots=document.createElement('div');
  slots.innerHTML='<div class="cp-title">Every colour, by hand · and its opacity</div>';
  rows.appendChild(slots);
  const palNow=cnvPalMapNow();
- for(const [v,name] of CNV_COLORS){
+ const tierList=canvasState.tier2?CNV_COLORS.concat(CNV_COLORS_T2):CNV_COLORS;   /* Guitar C: Tier 2 rows ride the same builder */
+ for(const [v,name] of tierList){
   /* 82nd R6: a slot shows its EFFECTIVE colour and says which layer it came from, because with two
      layers "edited" alone no longer tells him what he is looking at. */
   const byHand=canvasState.colors[v];
@@ -13122,7 +14136,7 @@ function swRowMembers(cat){
      fourteen cells right, reading as "no longer populates". */
   /* Sept 3: a just-opened engine lands LEFTMOST and pushes the rest right —
      openWins is newest-first; members follow that order, then non-openWins riders. */
-  const ids=['chordPanel','varPanel','melPanel','cagePanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','harmPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
+  const ids=['chordPanel','varPanel','melPanel','cagePanel','ragaPanel','wanPanel','orbPanel','prismPanel','importPanel','snapPanel','harmPanel','wqPanel','cadPanel','modPanel','hubPanel','setupPanel','tripsPanel','pcsPanel','progPanel','slideWin','rhyPanel'];
   const isOpen=id=>{
    if(id==='chordPanel')return !(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
    if(id==='tripsPanel')return !!(typeof uiState==='object'&&uiState&&uiState.trips);
@@ -16629,7 +17643,7 @@ function setPrzStatus(msg){
  przStatusEl.textContent=msg;
  clearTimeout(przStatusTimer);przStatusTimer=setTimeout(()=>{przStatusEl.textContent='';},6000);
 }
-const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES',form:'THE FORM',travel:'KEY TRAVEL'};
+const PRZ_LABELS={contour:'MELODY RISE AND FALL',dna:'NOTE DNA',rhythm:'RHYTHM WITHOUT ANY NOTES',form:'THE FORM',travel:'KEY TRAVEL',relation:'NOTES ↔ CHORDS'};
 /* EN4 PERSISTENCE (build 2026-08-20c) — the beam's lettering as a RECORD: one formMap
    pass over the track's sections (the same segmentSection/letterSegments the chips
    show), no note rows inside (the legal gate is in the pure layer). */
@@ -16659,6 +17673,83 @@ function przKeepForm(){
  buildPrism();
  const np=rec.pairs.length;
  setPrzStatus('The form is on the Essence Shelf — '+rec.songForm+' · '+np+' echo pair'+(np===1?'':'s')+' recorded · it rides the project file · ⌘Z undoes.');
+ return true;
+}
+/* ==== EN5 R0 (build 2026-09-04k, the 95th) — THE PARTS DEPARTMENT OPENS: THE RELATIONSHIP OBJECT ====
+   LAWS.md §2: a cross-part essence is a property of the RELATIONSHIP between two streams and had
+   nowhere to land. Now it does: the 'relation' strand (E-063, his E:51/P:24 — "the relationship
+   between the notes and the chords underneath them", "doesn't contain actual notes or chords").
+   Q36 answered ⓒ (RAW [3], Sept 4): ✓ Apply OFFERS BOTH directions — change the melody (the
+   events re-realized over the chords) or change the chords (the lane re-rooted under the notes).
+   The pure layer sits with strandTrackRows (relMelChord · relCollapse · relRealizeMelody ·
+   relRerootChords · validRelationData). */
+function przKeepRelation(){
+ const tr=przState.track;
+ const notes=(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]]).sort((a,b)=>a[0]-b[0]);
+ if(!notes.length){setPrzStatus('Nothing to keep — this beam has no notes yet. Draw or import some first.');return false;}
+ const rec=relMelChord(notes,project.chords||[]);
+ if(!rec){setPrzStatus('Nothing to keep — no note on this beam could be read against the chord lane.');return false;}
+ snapshot();
+ noteEngine('prism-keep',{strand:'relation'});
+ const tl=(typeof trackLabel==='function'?trackLabel(tr):tr);
+ const col=relCollapse(rec.events);
+ const name=('notes ↔ chords · '+tl+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled')).slice(0,60);
+ const fp=prismHash(rec.events.map(e=>e.join(':')).join(','));
+ project.shelf.push({id:shelfNextId(project.shelf),strand:'relation',name,level:'L1',data:rec,fp,org:'prism'});
+ autosaveSoon();
+ buildPrism();
+ setPrzStatus('The relationship is on the Essence Shelf — '+rec.events.length+' notes read against the chords · mostly the '+(col[0]?col[0].label:'—')+' · no notes travel with it · ⌘Z undoes.');
+ return true;
+}
+function relApplyClose(){const p=document.getElementById('relApplyPop');if(p){try{p.remove();}catch(e){}}}
+function relApplyChooser(data){
+ /* Q36 ⓒ — the apply verb ASKS which stream changes. The target is the Prism's beam
+    (przState.track) against the chord lane; both writes are ONE undo each. */
+ if(!validRelationData(data)){setPrzStatus('That relationship object is empty or malformed — nothing to apply.');return false;}
+ relApplyClose();
+ const tr=przState.track,tl=(typeof trackLabel==='function'?trackLabel(tr):tr);
+ const col=relCollapse(data.events);
+ const pop=document.createElement('div');
+ pop.id='relApplyPop';
+ pop.style.cssText='position:fixed;left:50%;top:34%;transform:translateX(-50%);z-index:110;background:var(--panel,#1c1f27);color:var(--text,#e6e7ec);border:1px solid #4a4f5e;border-radius:8px;padding:12px 14px;min-width:340px;max-width:480px;box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:12.5px;';
+ pop.innerHTML='<div style="font-weight:700;margin-bottom:4px;">Apply the notes ↔ chords relationship</div>'
+  +'<div style="color:var(--dim);font-size:11px;margin-bottom:8px;">'+data.events.length+' relationship events · mostly the <b>'+(col[0]?col[0].label:'—')+'</b> of the chord · this object holds no notes and no chords, so applying it changes ONE of the two streams here — you pick which.</div>'
+  +'<div style="display:flex;flex-direction:column;gap:6px;">'
+  +'<button class="cpchip" data-rel="melody" style="text-align:left;padding:6px 8px;" title="The notes on '+tl+' are re-written so each one sits against the CURRENT chord lane exactly as the source notes sat against theirs — same extension, same rhythm; the pitch seats in the octave nearest the note before it. Notes in the covered span are over-written; the chords never move. One undo.">Change the melody — re-write <b>'+tl+'</b> over the chord lane</button>'
+  +'<button class="cpchip" data-rel="chords" style="text-align:left;padding:6px 8px;" title="Every chord keeps its length and quality and takes the ROOT under which the notes of '+tl+' carry the relationship for the most time (the ear hears the note you hold longest). The notes never move. One undo.">Change the chords — re-root the lane under <b>'+tl+'</b>’s notes</button>'
+  +'</div>'
+  +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;"><span class="cpchip" data-rel="cancel">✕ Cancel</span></div>';
+ pop.querySelector('[data-rel="melody"]').onclick=()=>{relApplyClose();relApplyMelody(data,tr);};
+ pop.querySelector('[data-rel="chords"]').onclick=()=>{relApplyClose();relApplyChords(data,tr);};
+ pop.querySelector('[data-rel="cancel"]').onclick=()=>relApplyClose();
+ document.body.appendChild(pop);
+ return true;
+}
+function relApplyMelody(data,tr){
+ /* CHANGE THE MELODY: the object's reading over the current lane lands on the beam through
+    the shipped paste writer (span over-write, one undo) — the drop dialog's own law. */
+ const arr=project.tracks[tr];
+ if(!Array.isArray(arr)){setPrzStatus('That beam has no stored notes to write into.');return false;}
+ const o={id:null,strand:'relation',name:'relationship',data,org:'prism'};
+ const ok=essDropPaste({t:tr,at:0,x:0,y:0},[o],'melody');
+ if(ok)setPrzStatus('The notes on '+(typeof trackLabel==='function'?trackLabel(tr):tr)+' now sit against the chord lane as the source did — the chords never moved · ⌘Z undoes.');
+ return !!ok;
+}
+function relApplyChords(data,tr){
+ /* CHANGE THE CHORDS: the lane re-rooted under the beam's notes — durations and qualities
+    kept, one snapshot. The psych-out guard is the chords-keep's own. */
+ if(effectiveChords()!==project.chords){setPrzStatus('Toggle ⚡ off first — the lane is read-only while a psych-out is armed.');return false;}
+ const rows=(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]]);
+ if(!rows.length){setPrzStatus('That beam has no notes — nothing for the chords to sit under.');return false;}
+ const res=relRerootChords(data,rows,project.chords||[],{at:0,label:(r,iv)=>romanFor(r,iv)});   /* the lane's own labeler */
+ if(!res){setPrzStatus('The lane could not be read — nothing changed.');return false;}
+ if(!res.changed){setPrzStatus('The chords already sit under these notes the way the source did — nothing to change.');return false;}
+ snapshot();
+ noteEngine('relation-apply-chords',{n:res.changed});
+ project.chords=res.chords;
+ selChord=null;selChordSet.clear();
+ refresh(true);
+ setPrzStatus(res.changed+' chord'+(res.changed===1?'':'s')+' re-rooted under the notes — lengths and qualities kept, the notes never moved · ⌘Z undoes.');
  return true;
 }
 function przTracks(){
@@ -16715,20 +17806,32 @@ function przThumb(strand,data){
    inner+='<rect x="'+(x+1).toFixed(1)+'" y="6" width="'+Math.max(2,bw-2).toFixed(1)+'" height="28" rx="4" fill="hsl('+(psy?275:35)+',55%,45%)" opacity=".85"/>'
     +'<text x="'+(x+bw/2).toFixed(1)+'" y="24" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">'+(psy?'Psych!':'+'+m.interval)+'</text>';
   });
+ }else if(strand==='relation'){
+  /* EN5 R0: THE RELATIONSHIP OBJECT wears the BLACK & WHITE CHECKERBOARD (his P:24 ruling) — each
+     event a block carrying its chord-relative extension (1 · 3 · ♭7 · N.C.), never a pitch */
+  const ev=(data&&Array.isArray(data.events))?data.events:[];
+  const end=Math.max(1,(data&&data.span>0)?data.span:ev.reduce((a,e)=>Math.max(a,e[0]+e[1]),0));
+  inner+='<defs><pattern id="przChk" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#e6e7ec"/><rect width="5" height="5" fill="#15171d"/><rect x="5" y="5" width="5" height="5" fill="#15171d"/></pattern></defs>'
+   +'<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="url(#przChk)" class="przRelChk"/>';
+  for(const e of ev){
+   const x=(e[0]/end)*W,w=Math.max(3,(e[1]/end)*W-1),lb=relExtLabel(e[2]);
+   inner+='<rect x="'+x.toFixed(1)+'" y="9" width="'+w.toFixed(1)+'" height="22" rx="3" fill="#edc948" stroke="#15171d" stroke-width=".8" opacity=".95"/>'
+    +(w>=12?'<text x="'+(x+w/2).toFixed(1)+'" y="24" text-anchor="middle" font-size="'+(lb.length>2?7:9)+'" font-weight="700" fill="#15171d">'+lb+'</text>':'');
+  }
  }else if(strand==='contour'){
   const s=contourToSamples(data)||[[0,.5],[1,.5]];
   const pts=s.map(([x,y])=>(x*W).toFixed(1)+','+((1-y)*(H-8)+4).toFixed(1)).join(' ');
-  inner='<polyline points="'+pts+'" fill="none" stroke="#e8a33d" stroke-width="1.6"/>';
+  inner='<polyline points="'+pts+'" fill="none" stroke="'+paintOf('--strand-contour','#e8a33d')+'" stroke-width="1.6"/>';
  }else if(strand==='dna'){
   const lo=Math.min.apply(null,data),hi=Math.max.apply(null,data),rg=(hi-lo)||1;
   data.forEach((m,i)=>{
    const x=(data.length>1?i/(data.length-1):0)*(W-8)+4,y=(1-(m-lo)/rg)*(H-10)+5;
-   inner+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="#5bb98c"/>';
+   inner+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="'+paintOf('--strand-dna','#5bb98c')+'"/>';
   });
  }else{
   const end=Math.max.apply(null,data.map(s=>s[0]+s[1]))||1;
   for(const [t,d] of data){
-   inner+='<rect x="'+((t/end)*W).toFixed(1)+'" y="14" width="'+Math.max(2,(d/end)*W-1).toFixed(1)+'" height="12" rx="2" fill="#7f9cf5"/>';
+   inner+='<rect x="'+((t/end)*W).toFixed(1)+'" y="14" width="'+Math.max(2,(d/end)*W-1).toFixed(1)+'" height="12" rx="2" fill="'+paintOf('--strand-rhythm','#7f9cf5')+'"/>';
   }
  }
  return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+inner+'</svg>';
@@ -16815,6 +17918,8 @@ function przApply(strand,data){
   setPrzStatus('★ '+o.name+' is aboard the Orbits window as its sun — the moments ring the planet; click one to land it (one undo).');
   return true;
  }
+ /* EN5 R0: a 'relation' strand's ✓ ASKS which stream changes (Q36 ⓒ) — the chooser writes, one undo each */
+ if(strand==='relation')return relApplyChooser(data);
  /* 30r: a 'chords' keep needs no note selection — ✓ writes the whole journey back
     (chord lane + its key sections, one undo) */
  if(strand==='chords'){
@@ -16962,8 +18067,10 @@ function buildPrism(reanalyze){
   const np=rec.pairs.length;
   fr.innerHTML='<span style="font-size:11px;color:var(--dim);" title="The sections themselves through the same letterer the phrases get: a section that repeats another is its letter again, close is ′, new is the next letter. — means the section has no notes on this beam.">Song form: <b id="przSongForm" style="color:var(--text);">'+(rec.songForm||'—')+'</b></span>'
    +'<span class="cpchip przKeepFormB" title="Keep the whole lettering on the Essence Shelf as ONE form strand — the song form, every section’s phrase form, and every echo pair (A → A′) with which strands changed. No notes travel with it; it is a map. Rides the project file · one undo.">★ Keep form</span>'
+   +'<span class="cpchip przKeepRelB" title="Keep how this beam’s notes sit against the chords beneath them — every note’s chord extension (the 1, the 3, the ♭7, N.C.) over time — as ONE relationship object on the Essence Shelf. It carries NO notes and NO chords, only the relationship (the checkerboard object). ✓ Apply offers both directions: change the melody or change the chords. Rides the project file · one undo.">★ Keep relationship</span>'
    +'<span style="font-size:10.5px;color:var(--dim);" title="Phrases that echo an earlier phrase — exact repeats, ′ variants and -tags — paired with the phrase they echo. These pairs are what the development map and the variation ladder learn from.">'+np+' echo pair'+(np===1?'':'s')+'</span>';
   fr.querySelector('.przKeepFormB').onclick=()=>przKeepForm();
+  fr.querySelector('.przKeepRelB').onclick=()=>przKeepRelation();
   body.appendChild(fr);
  }catch(e){}
  (przState.analysis||[]).forEach((secA,si)=>{
@@ -17872,8 +18979,8 @@ function essMiniSvg(o,big){
  let gh='';
  for(const g of essMiniGhosts(sp))gh+='<rect class="essMiniGh" x="'+g.x.toFixed(1)+'" y="'+g.y.toFixed(1)+'" width="'+g.w.toFixed(1)+'" height="'+g.h.toFixed(1)+'" rx="1" fill="#8a8f9f" opacity=".22" pointer-events="none"/>';
  let inner='';
- const KIND_COL={melody:'#edc948',drums:'#e8a33d',chords:'#93c47d'};
- const ink=KIND_COL[st.kind]||'#edc948';
+ const KIND_COL={melody:paintOf('--ink-melody','#edc948'),drums:paintOf('--ink-drums','#e8a33d'),chords:paintOf('--ink-chords','#93c47d')};   /* Guitar C: Tier 2 slots */
+ const ink=KIND_COL[st.kind]||paintOf('--ink-melody','#edc948');
  for(const r of sp.rects)inner+='<rect data-mi="'+r.i+'" data-m="'+r.m+'" data-t="'+r.t+'" x="'+r.x.toFixed(1)+'" y="'+r.y.toFixed(1)+'" width="'+r.w.toFixed(1)+'" height="'+r.h.toFixed(1)+'" rx="'+(big?3:1)+'" fill="'+ink+'" opacity=".92"'+(big?' style="cursor:pointer"':'')+'/>';
  return '<svg class="'+(big?'essObjBig':'essObjMini')+'" data-hi="'+sp.hi+'" data-lo="'+sp.lo+'" data-rh="'+sp.rh+'" width="'+sp.w+'" height="'+sp.h+'" viewBox="0 0 '+sp.w+' '+sp.h+'"'
   +' style="display:block;background:#191b22;border:1px solid #262933;border-radius:'+(big?'8':'3')+'px;'+(big?'':'max-width:130px;max-height:24px;')+'flex:0 0 auto;">'+lat+gh+inner+'</svg>';
@@ -17929,8 +19036,11 @@ function essClipTile(o){
     what's in it; opening (double-press) and dragging live on the card's own handlers. */
  const st=essObjRows(o);
  if(!st||!st.rows||!st.rows.length)return null;
- const KIND_COL={melody:'#edc948',drums:'#e8a33d',chords:'#93c47d'};
- const ink=KIND_COL[st.kind]||'#edc948';
+ /* EN5 R0: a RELATION object's tile is its READING over the current chords on the BLACK & WHITE
+    CHECKERBOARD (his P:24) — the marks carry their extension, so the eye knows no notes live here */
+ const rel=!!(o&&o.strand==='relation'&&o.data&&Array.isArray(o.data.events));
+ const KIND_COL={melody:paintOf('--ink-melody','#edc948'),drums:paintOf('--ink-drums','#e8a33d'),chords:paintOf('--ink-chords','#93c47d')};   /* Guitar C: Tier 2 slots */
+ const ink=KIND_COL[st.kind]||paintOf('--ink-melody','#edc948');
  let span=0,lo=127,hi=0;
  for(const r of st.rows){if(r[0]+r[1]>span)span=r[0]+r[1];if(r[2]<lo)lo=r[2];if(r[2]>hi)hi=r[2];}
  span=Math.max(1,Math.ceil(span));
@@ -17967,12 +19077,14 @@ function essClipTile(o){
    }
   });
  }catch(e){}
- for(const r of st.rows){
+ st.rows.forEach((r,i)=>{
   const x=gx(r[0]),w2=Math.max(2,r[1]/span*(W-KW-1)-1);
-  marks+='<rect x="'+x.toFixed(1)+'" y="'+yOf(r[2]).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+rh+'" rx="1" fill="'+ink+'" opacity=".95" class="essClipN"/>';
- }
- return '<div class="essClipT" style="background:#1c1f27;border:1px solid #343845;border-radius:4px;overflow:hidden;width:'+W+'px;flex:0 0 auto;">'
-  +'<div class="essClipName" style="color:#cfd4e2;font-size:9.5px;font-weight:600;padding:1px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+String(o&&o.name||'object')+'</div>'
+  marks+='<rect x="'+x.toFixed(1)+'" y="'+yOf(r[2]).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+rh+'" rx="1" fill="'+ink+'" '+(rel?'stroke="#15171d" stroke-width=".7" ':'')+'opacity=".95" class="essClipN'+(rel?' essClipRel':'')+'"/>';
+  if(rel&&w2>=11&&o.data.events[i])marks+='<text x="'+(x+w2/2).toFixed(1)+'" y="'+(yOf(r[2])+rh-0.5).toFixed(1)+'" text-anchor="middle" font-size="'+Math.max(4,Math.min(rh+1,7))+'" font-weight="700" fill="#15171d">'+relExtLabel(o.data.events[i][2])+'</text>';
+ });
+ const ground=rel?'background:repeating-conic-gradient(#15171d 0 25%,#e6e7ec 0 50%) 0 0/12px 12px;':'background:#1c1f27;';
+ return '<div class="essClipT'+(rel?' essClipRelT':'')+'" data-rel="'+(rel?'1':'0')+'" style="'+ground+'border:1px solid #343845;border-radius:4px;overflow:hidden;width:'+W+'px;flex:0 0 auto;">'
+  +'<div class="essClipName" style="color:#cfd4e2;font-size:9.5px;font-weight:600;padding:1px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'+(rel?'background:rgba(21,23,29,.86);':'')+'">'+String(o&&o.name||'object')+'</div>'
   +'<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;">'+marks+'</svg></div>';
 }
 function essObjCardMount(host,o,surface){
@@ -18965,7 +20077,7 @@ function renderAutoLane(lane,id){
    let d='';
    for(const p of nn[7].pb)d+=(d?'L':'M')+(x0+p[0]*w).toFixed(1)+','+alaneCentsY(p[1],h).toFixed(1)+' ';
    const isLine=!!nn[7].line;
-   inner+=`<path data-bn="${ni}" d="${d}" fill="none" stroke="${isLine?'#e8a33d':'#98a0b2'}" stroke-width="1.6" style="pointer-events:stroke;cursor:pointer;" opacity="${selNotes.has(ni)?'1':'.75'}"><title>${isLine?'Slide line — click: select the notes at both ends (drag either to move the line with them)':'Bend curve ('+((nn[7].orn)||'drawn')+') — drag a node ↕ to re-bend'}</title></path>`;
+   inner+=`<path data-bn="${ni}" d="${d}" fill="none" stroke="${isLine?paintOf('--auto-line','#e8a33d'):paintOf('--auto-curve','#98a0b2')}" stroke-width="1.6" style="pointer-events:stroke;cursor:pointer;" opacity="${selNotes.has(ni)?'1':'.75'}"><title>${isLine?'Slide line — click: select the notes at both ends (drag either to move the line with them)':'Bend curve ('+((nn[7].orn)||'drawn')+') — drag a node ↕ to re-bend'}</title></path>`;
    pts+=nn[7].pb.length;
   });
   sv.innerHTML=inner;lane.appendChild(sv);
@@ -24390,6 +25502,7 @@ function wanPathsWinOpen(){
   if(s2.value==='__search'){openProg();return;}
   const S2=wanPathsState();(S2.types[s2.getAttribute('data-pt')]=S2.types[s2.getAttribute('data-pt')]||{}).progSel=+s2.value;wanPathsPersist(S2);
  });
+ try{paintSwapDom(w);}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function wanWeb2State(){
  /* his 166th: the dual board's right-side state — LINKED by default (same key, same
@@ -25333,6 +26446,7 @@ function wanWeberDraw(){
   };
  }
  try{wanSide2Draw();}catch(e){}
+ try{paintSwapDom(W);}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function renderWan(){
  try{wanWeberDraw();}catch(e){}   /* its own surface — a fault here must never take the board down */
@@ -25837,6 +26951,7 @@ function renderWan(){
   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
  };
  document.getElementById('wanUseBtn').onclick=()=>wanUse();
+ try{paintSwapDom(B);}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function buildWanPanel(){
  const B=document.getElementById('wanBody');
@@ -28590,6 +29705,7 @@ function renderOrb(){
  }
  orbState.shipBusy=0;   /* R5: a rebuild recreates the ship overlay — any ride in progress is over (a flight starts its own after this) */
  orbShipTick();
+ try{paintSwapDom(B);}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function orbFormSatellites(rec){
  /* R5 (20g) — pure: the Form moon's satellites from a formMap record — one per section that has
@@ -28627,6 +29743,7 @@ function orbVarSatShow(moon){
   el.addEventListener('mousedown',ev=>ev.stopPropagation());
  });
  g.addEventListener('mouseleave',()=>{setTimeout(()=>{const mn=document.querySelector('.orbVarN[data-var="form"]');if(mn&&mn.matches(':hover'))return;if(!g.matches(':hover'))orbVarSatHide();},160);});
+ try{paintSwapDom(g);}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function orbVarSatHide(){const g=document.getElementById('orbVarSat');if(g)g.remove();orbState.varHover=null;}
 function orbBridgeMenu(x,y,pv){
@@ -32486,6 +33603,7 @@ const WINDOW_DEFS=[
  {id:'tripsPanel', name:'Trips',   icon:'🧳',tip:'Upcoming Trips — the itinerary of chord and key changes waiting to enter the song. Opens as a bridge between the window above and the one below. ▶ Start next trip in: the musical time until insert. Small = a chord lane of the trips · expanded = a full editable track.'},
  {id:'prismPanel', name:'Prism',   icon:'△', tip:'THE SONG PRISM — the Melody Analyzer / Rhythmic Isolator (5.1): split any track into MELODY RISE AND FALL · NOTE DNA · RHYTHM WITHOUT ANY NOTES, letter the phrases (A A′ B -tag), keep essences on the ESSENCE SHELF, apply any strand to a selection. “We are distilling inspiration out of the basic building blocks of music.”'},
  {id:'harmPanel',  name:'Harmonizer',icon:'👄',title:'The Harmonizer',tip:'5.5 THE HARMONIZER + counter-melodies — the singer at your shoulder: follow-the-topline harmony or a background counter-melody · 2–5 voices · no-crossing (its own toggle, default ON) · consonance targeted at peaks, valleys, starts, ends, long notes and strong beats · chord-extension allowances · classical counterpoint or modern parallel-OK.'},
+ {id:'wqPanel',  name:'Wig & Quill',icon:'✒',title:'Wig & Quill',tip:'WIG & QUILL — the notation window: write music on the grid and the program notates it — Score (every part stacked) or Part (one track) · treble, bass or guitar 8vb + TAB by the part · chord symbols from the chord lane · dynamics from velocity · follows the transport · also a pop-up from the Guitar window (✒ Ink it)'},
  {id:'cadPanel',   name:'Cadences',icon:'𝄂', tip:'The Cadence Window (5.3) — the chords at the end of a musical phrase, nothing more or less: Classical incl. Elided (≥2 voices) · Modulating · Psych-out · Curated from your selected songs. Its own window in the column — the SEARCH button is the coming Cadence Search Window\u2019s home.'},
  {id:'rhyPanel',   name:'Rhythm',  icon:'\u266c', tip:'THE RHYTHM ENGINE \u2014 the Rhythm Search Window: search the Curiosities of your curated song list for the rhythm selected in the grid above. Chord Strikes \u00b7 the rhythm of a melody or a polyphonic instrument \u00b7 Rate of Chord Change \u00b7 Rhythmic Form \u00b7 the song as a Compound Rhythm.'},
  {id:'setupPanel', name:'Setup',   icon:'🔧',tip:'Setup — click track & count-in · Web MIDI (device inputs · outputs · connection status) · audio device (output choice · sample rate · latency) · tempo & time signature (the sample-directory and DAW-routing guides live behind the ⇪ Import window)'}];
@@ -32503,6 +33621,7 @@ const RAIL_DEFS=[
  {icon:'🪐', win:'orbPanel',tip:'Open Interplanetary Orbits — the planet is the key you are in, pivot chords open roads to new worlds (4.7 rework)'},
  {icon:'△', win:'prismPanel',tip:'Open THE SONG PRISM — split any track into contour · Note DNA · rhythm, letter the phrases, keep essences on the Shelf (5.1)'},
  {icon:'👄', win:'harmPanel',tip:'Open the Harmonizer — follow-the-topline harmonies and background counter-melodies, 2–5 voices (5.5)'},
+ {icon:'✒', win:'wqPanel',tip:'Open Wig & Quill — the notation window: Score or Part, chord symbols, dynamics, following the transport'},
  {icon:'𝄂', win:'cadPanel',tip:'Open the Cadence Window — the chords at the end of a musical phrase. Nothing more or less. (5.3)'},
  {icon:'⤢', ui:'expandAll',tip:'Expand every collapsed window (v3 §3 — collapsed windows rest as quiet grey strips)'}];
 /* 4.5: the Variations window is OPEN BY DEFAULT (client spec) — the one-window law is
@@ -32665,7 +33784,7 @@ function uiDispatch(action){
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
- if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='cagePanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel'||uiState.open==='harmPanel')){   /* 5.5: the Harmonizer joins the greeter list */
+ if(justOpened&&action&&action.type==='toggle'&&(uiState.open==='melPanel'||uiState.open==='cagePanel'||uiState.open==='ragaPanel'||uiState.open==='varPanel'||uiState.open==='wanPanel'||uiState.open==='orbPanel'||uiState.open==='importPanel'||uiState.open==='prismPanel'||uiState.open==='modPanel'||uiState.open==='rhyPanel'||uiState.open==='harmPanel'||uiState.open==='wqPanel')){   /* 5.5: the Harmonizer joins the greeter list · E3: Wig & Quill joins it too */
   /* Phase 2 R2 · AUTO-SPAWN (the spec): the Modulation, Melisma and — 75th round four,
      his words — SCALES windows arrive with a linked audition grid directly ABOVE them —
      no Chord Palette, spawn-linked through the ONE graph. (The palette's 3.3 search
@@ -32679,6 +33798,7 @@ function uiDispatch(action){
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='ragaPanel'&&typeof renderRagaResults==='function'){try{renderRagaResults();renderRagaInfo();}catch(e){}}   /* his 168th: the row tiles re-realize at open — the boot render predates the song's chords, so the ghosts were empty */
   if(uiState.open==='harmPanel'&&typeof buildHarmWindow==='function'){try{buildHarmWindow();}catch(e){}}   /* 5.5: the Harmonizer greets its selection */
+  if(uiState.open==='wqPanel'&&typeof buildWqWindow==='function'){try{buildWqWindow();}catch(e){}}   /* E3: Wig & Quill greets the song */
   if(uiState.open==='cagePanel'&&typeof buildCageWindow==='function'){try{buildCageWindow(); if(_ag&&typeof cageLinkAttach==='function')cageLinkAttach(_ag);}catch(e){}}   /* Guitar Engine: shape board + linked 1-track neck */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
@@ -34422,6 +35542,9 @@ document.addEventListener('keydown',e=>{
   ['#polyFlowPop',()=>{try{polyFlowClose();}catch(err){}}],
   ['#rmodFlowPop',()=>{try{rmodFlowClose();}catch(err){}}],
   ['#crpFlowPop',()=>{try{crpFlowClose();}catch(err){}}],
+  ['#wqPop',()=>{try{wqPopClose();}catch(err){}}],
+  ['#cageTapPop',()=>{try{cageTapCancel();}catch(err){}}],
+  ['#relApplyPop',()=>{try{relApplyClose();}catch(err){}}],
   ['#embFlowPop',()=>{try{embFlowClose();}catch(err){}}],
   ['.wanPopup [data-w="popclose"]',el=>el.click()]
  ];
@@ -34563,6 +35686,14 @@ function strandTrackRows(strand,data,opts){
   if(!validMelodyRows(data))return null;
   return {kind:'melody',rows:data.rows.map(r=>[at+r[0],r[1],Math.round(r[2])])};
  }
+ if(strand==='relation'){
+  /* EN5 R0: the object realizes as its READING over the chords at the landing — the events
+     against opts.chords (pure) or the project's lane; the tonic seats N.C. events */
+  const chs=Array.isArray(opts.chords)?opts.chords:((typeof project==='object'&&project&&Array.isArray(project.chords))?project.chords:[]);
+  let tonic=isFinite(opts.tonic)?opts.tonic:0;
+  if(!isFinite(opts.tonic)&&typeof keyFor==='function')try{tonic=keyFor(at).tonic||0;}catch(e){}
+  return relRealizeMelody(data,chs,{at,base,tonic});
+ }
  if(strand==='chords'){
   const cs=(data&&Array.isArray(data.chords))?data.chords.filter(c=>c&&isFinite(c.d)&&c.d>0&&(Array.isArray(c.iv)&&c.iv.length||Array.isArray(c.sub)&&c.sub.length)):[];
   if(!cs.length)return null;
@@ -34574,6 +35705,121 @@ function strandTrackRows(strand,data,opts){
   return {kind:'chords',rows};
  }
  return null;
+}
+/* ==== EN5 R0 — THE RELATIONSHIP OBJECT, pure layer (unit-tested) ====
+   The 'relation' payload: {rel:'melchord', a:'melody', b:'chords', span, events:[[t,d,code],…]}
+   code = semitones of the note above the chord root sounding at its onset (0..11), or -1 = N.C.
+   (his E:51 list: 1 · ♭2 · 2/9 · ♭3 · 3 · 4 · ♯4/♭5 · 5 · ♭6 · 6 · ♭7 · 7). NO pitches, NO roots
+   ride — from the events alone neither stream can be rebuilt (master §3's gate in the data). */
+const REL_EXT=['1','♭2','2/9','♭3','3','4','♯4/♭5','5','♭6','6','♭7','7'];
+function relExtLabel(code){const c=+code;if(!isFinite(c)||c<0)return 'N.C.';return REL_EXT[((Math.round(c)%12)+12)%12];}
+function validRelationData(d){
+ /* the guard IS the gate: the relationship kind, 1..512 well-formed events, and NOTHING that
+    carries content — rows/notes/midis/chords inside refuse the whole object */
+ if(!d||typeof d!=='object'||Array.isArray(d))return false;
+ if(d.rows!==undefined||d.notes!==undefined||d.midis!==undefined||d.chords!==undefined)return false;
+ if(d.rel!=='melchord')return false;
+ if(!Array.isArray(d.events)||!d.events.length||d.events.length>512)return false;
+ for(const e of d.events){
+  if(!Array.isArray(e)||e.length<3)return false;
+  if(!isFinite(e[0])||e[0]<0||!isFinite(e[1])||e[1]<=0)return false;
+  if(!isFinite(e[2])||e[2]<-1||e[2]>11||Math.round(e[2])!==e[2])return false;
+ }
+ return true;
+}
+function relChordRootAt(fc,beat){
+ /* the root pc of the flattened chord sounding at beat; null past the lane's end (N.C.) */
+ let t=0;
+ for(const c of (fc||[])){const d=+c.d||0;if(beat<t+d-1e-6)return ((Math.round(+c.r||0)%12)+12)%12;t+=d;}
+ return null;
+}
+function relMelChord(rows,chords){
+ /* E-063 EXTRACT: each note → its chord-relative extension at its onset. Pure. */
+ const fc=flatChords(Array.isArray(chords)?chords:[]);
+ const ev=[];
+ for(const r of (rows||[])){
+  if(!Array.isArray(r)||!isFinite(r[0])||r[0]<0||!isFinite(r[1])||r[1]<=0||!isFinite(r[2]))continue;
+  const root=relChordRootAt(fc,r[0]);
+  ev.push([+(+r[0]).toFixed(4),+(+r[1]).toFixed(4),root===null?-1:(((Math.round(r[2])-root)%12)+12)%12]);
+ }
+ ev.sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ if(!ev.length)return null;
+ let span=0;for(const e of ev)if(e[0]+e[1]>span)span=e[0]+e[1];
+ return {rel:'melchord',a:'melody',b:'chords',span:+span.toFixed(4),events:ev.slice(0,512)};
+}
+function relCollapse(events){
+ /* THE TIME-WEIGHTED COLLAPSE (master §4 #4, his approval): the extension you spend most TIME
+    on wins — a fast run of passing tones never out-votes the note the ear hears. Pure. */
+ const w=new Map();
+ for(const e of (events||[])){if(!Array.isArray(e)||e.length<3)continue;w.set(e[2],(w.get(e[2])||0)+(+e[1]||0));}
+ return [...w.entries()].map(([code,t])=>({code,t:+t.toFixed(4),label:relExtLabel(code)})).sort((a,b)=>b.t-a.t||a.code-b.code);
+}
+function relRealizeMelody(data,chords,opts){
+ /* CHANGE THE MELODY: the events over the TARGET chords → pitch = root + code, seated in the
+    octave nearest the note before it (the first near opts.base); N.C. seats on opts.tonic. Pure. */
+ if(!validRelationData(data))return null;
+ opts=opts||{};
+ const at=(isFinite(opts.at)&&opts.at>0)?+opts.at:0;
+ const base=isFinite(opts.base)?Math.round(opts.base):60;
+ const tonic=isFinite(opts.tonic)?((Math.round(opts.tonic)%12)+12)%12:0;
+ const fc=flatChords(Array.isArray(chords)?chords:[]);
+ const rows=[];let prev=null;
+ for(const e of data.events){
+  const t=at+e[0];
+  const root=relChordRootAt(fc,t);
+  const pc=((((root===null?tonic:root)+(e[2]<0?0:e[2]))%12)+12)%12;
+  const ref=prev===null?base:prev;
+  let m=ref-(((ref-pc)%12)+12)%12;
+  if(ref-m>6)m+=12;
+  m=Math.max(0,Math.min(127,m));
+  rows.push([+t.toFixed(4),e[1],m]);prev=m;
+ }
+ return rows.length?{kind:'melody',rows}:null;
+}
+function relRerootChords(data,rows,chords,opts){
+ /* CHANGE THE CHORDS: every slot keeps its length and quality and takes the ROOT under which the
+    target notes inside it carry the relation's codes for the most TIME (the collapse law scores);
+    ties keep the standing root; a slot with no readable notes keeps its root; a consolidated clip
+    (sub-chords) is left as written. opts.label(r,iv,c) names the re-rooted chord (the app passes its
+    own roman labeler, romanFor — the lane's law); without one the letter form stands. Returns
+    {chords, changed} or null. Pure. */
+ if(!validRelationData(data))return null;
+ const cs=Array.isArray(chords)?chords:[];
+ if(!cs.length)return null;
+ opts=opts||{};
+ const at=(isFinite(opts.at)&&opts.at>0)?+opts.at:0;
+ const sp=data.span>0?data.span:1;
+ const codeAt=beat=>{let b=beat-at;if(b<-1e-6)return null;b=((b%sp)+sp)%sp;for(const e of data.events){if(b>=e[0]-1e-6&&b<e[0]+e[1]-1e-6)return e[2];}return null;};
+ const out=[];let t=0,changed=0;
+ for(const c of cs){
+  const d=+c.d||0,a=t,b=t+d;t=b;
+  const nc=JSON.parse(JSON.stringify(c));
+  if(Array.isArray(c.sub)&&c.sub.length){out.push(nc);continue;}
+  const score=new Array(12).fill(0);let any=false;
+  for(const r of (rows||[])){
+   if(!Array.isArray(r)||!isFinite(r[0])||r[0]<a-1e-6||r[0]>=b-1e-6)continue;
+   const code=codeAt(r[0]);if(code===null||code<0)continue;
+   const pc=((Math.round(r[2])%12)+12)%12;
+   score[(((pc-code)%12)+12)%12]+=Math.max(0,Math.min(+r[1]||0,b-r[0]));any=true;
+  }
+  if(any){
+   const cur=((Math.round(+c.r||0)%12)+12)%12;
+   let best=cur,bs=score[cur];
+   for(let k=0;k<12;k++)if(score[k]>bs+1e-9){best=k;bs=score[k];}
+   if(best!==cur){
+    nc.r=best;
+    if(typeof opts.label==='function'){try{nc.lbl=String(opts.label(best,Array.isArray(c.iv)?c.iv:[],c));}catch(e){}}
+    else{
+     const old=(typeof c.lbl==='string')?c.lbl:'';
+     const suf=old.replace(/^[A-Ga-g](#|b|♯|♭)?/,'').replace(/\/.*$/,'');
+     nc.lbl=PCN[best]+suf;
+    }
+    changed++;
+   }
+  }
+  out.push(nc);
+ }
+ return {chords:out,changed};
 }
 function validMelodyRows(d){
  /* [E1] (85th, his 60th-65th): the object's own notes as a SHELF shape — {rows:[[t,d,midi],...]}.
@@ -35477,6 +36723,12 @@ buildWanPanel();    /* 4.6: the Chord Wanderer builds at boot too */
 try{buildOrbPanel();}catch(e){console.error('Orbit panel failed to build at boot',e);}    /* 4.7: Interplanetary Orbits builds at boot too — 20i: and a fault in it must never abort the boot (loadSong follows) */
 try{fixedChromeInit();}catch(e){console.error('fixed chrome failed to init at boot',e);}   /* 76th R2 — the 20i defence */
 loadSong('bj');drawParts();drawVars();drawPatchRow();
+/* EN5 R0 (the 95th) — landmine ⑪'s ordering class, found by verify-rel95's reload probe: a Prism saved OPEN
+   in cp_ui builds ABOVE this loadSong, so its analysis was null and the whole ★ Keep row (form AND relationship)
+   never rendered until a later rebuild — the 89th R6's Harmonizer wound in the Prism. The post-load rebuild
+   closes it; wrapped so a fault inside the Prism can never take the boot down (the 20i defence). */
+try{if(typeof uiWinShown==='function'&&uiWinShown('prismPanel'))buildPrism();}catch(e){}
+try{if(uiWinShown('wqPanel'))buildWqWindow();}catch(e){}   /* E3 (the 95th): a Wig & Quill saved OPEN builds after the song, the Harmonizer's own lesson */
 try{if(uiWinShown('harmPanel'))buildHarmWindow();}catch(e){}   /* his 184th: the pre-load harm builds run with NO SONG (this line's ancestors sit above loadSong), so the inline object row rendered 0px and the window's lower half sat blank — the song exists NOW, rebuild */
 document.getElementById('patchKit').onclick=e=>{
  patchSel=Object.assign(defaultPatchSel(),PATCH_KIT);
