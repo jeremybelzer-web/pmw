@@ -803,7 +803,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05o</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4837,6 +4837,33 @@ function notSplitTicks(pos,len,meter){
  }
  return out;
 }
+/* ==== E9 (build 2026-09-05o, the 96th, Fable) — HIS [43]: THE SCORE READS THE SIMPLEST NOTATION ====
+   His words (CAGED-INSTRUMENT-RAW-2026-09-04.md [43]): "It should assume the simplest notation: like 1 voice, and if the
+   ending is close to a dotted quarter note that's what it should be. - like if it's just a 16th note off... and/or the app
+   can ask" · "the notes currently look really squished together". The law: the score READS the played notes at a
+   resolution (the notes themselves never change) — starts to the 16th, endings to the read-at value (an 8th by default:
+   a note a 16th short of a half is written as the half; three notes struck together become one chord in ONE voice, so
+   E7's pair rule no longer fires on display noise). The ask is a standing choice (Read at: exact · 16th · 8th) with the
+   count of what was rounded in the status, not a modal. The width: bars a line fall until every head has room. */
+function notRoundNote(t,d,res){
+ /* pure: one note in ticks read at `res` ticks — its start to the 16th (or finer when res is finer), its end to res, never
+    shorter than the start grid. res 0 = exact. {t,d} */
+ const q=Math.max(1,Math.round(+res||0)),T=Math.round(+t||0),D=Math.max(1,Math.round(+d||1));
+ if(!(res>0))return {t:T,d:D};
+ const g=Math.min(q,12);
+ const t2=Math.round(T/g)*g, e2=Math.round((T+D)/q)*q;
+ return {t:t2,d:Math.max(g,e2-t2)};
+}
+function notBarsThatFit(measures,from,want,W,minW){
+ /* pure: how many of the `want` measures from `from` fit a staff of width W when every item (a head or a rest) needs
+    minW pixels — the count falls until they fit, never below one. */
+ const ms=Array.isArray(measures)?measures:[],f=Math.max(0,Math.round(+from)||0);
+ let n=Math.max(1,Math.min(Math.round(+want)||1,ms.length-f));
+ const room=Math.max(0,(+W||0)-80),mw=(+minW>0)?+minW:14;
+ while(n>1){const items=ms.slice(f,f+n).reduce((a,m)=>a+((m&&m.items)?m.items.length:0),0);if(items*mw<=room)break;n--;}
+ return n;
+}
+function notReadRes(){return (typeof wqState==='object'&&wqState&&isFinite(+wqState.res))?+wqState.res:24;}
 function notSpell(rows,opts){
  /* rows [[beat,dur,midi],…] → measures of items. opts.meterAt(beat)→{num,den} · opts.keyAt(beat)→{tonic,pcs} ·
     opts.loop (beats). Items: {t,d (ticks in the measure), kind:'note'|'rest', value, dots, tuplet, tie:null|'start'|
@@ -4844,8 +4871,9 @@ function notSpell(rows,opts){
  opts=opts||{};
  const meterAt=typeof opts.meterAt==='function'?opts.meterAt:()=>({num:4,den:4});
  const keyAt=typeof opts.keyAt==='function'?opts.keyAt:()=>({tonic:0,pcs:[0,2,4,5,7,9,11]});
+ const res=(+opts.res>0)?Math.round(+opts.res):0;let rounded=0;   /* E9 [43]: the read-at resolution in ticks (0 = exact) */
  const clean0=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0&&isFinite(r[2]))
-  .map(r=>({t:Math.round(r[0]*NOT_TPB),d:Math.max(1,Math.round(r[1]*NOT_TPB)),midi:Math.round(r[2])})).sort((a,b)=>a.t-b.t||a.midi-b.midi);
+  .map(r=>{let t=Math.round(r[0]*NOT_TPB),d=Math.max(1,Math.round(r[1]*NOT_TPB));if(res>0){const q=notRoundNote(t,d,res);if(q.d!==d||q.t!==t)rounded++;t=q.t;d=q.d;}return {t,d,midi:Math.round(r[2])};}).sort((a,b)=>a.t-b.t||a.midi-b.midi);   /* E9: read at the resolution */
  /* E8 (his [36]): two notes of ONE pitch that overlap are one note — a held note and its repeat inside it are not two
     voices (they drew as one head wearing two stems); the later one is absorbed, the sound's end kept */
  const clean=[];
@@ -4947,7 +4975,7 @@ function notSpell(rows,opts){
   }
   for(let i=0;i<m.items.length;i++){const it=m.items[i];if(it.beam!==null&&!m.items.some((o,j)=>j!==i&&o.beam===it.beam))it.beam=null;}   /* a lone 8th has no beam */
  }
- return {tpb:NOT_TPB,measures};
+ return {tpb:NOT_TPB,measures,rounded,res};
 }
 function notSigAcc(km,letter){
  /* the key signature's accidental for a letter (0 when the letter is natural in the key) */
@@ -4976,9 +5004,9 @@ function notMeterAtApp(beat){
  }catch(err){}
  return {num:4,den:4};
 }
-function notSpellTrack(rows){
- /* the app adapter: the project's meter map and per-section key (melismaKeyAt's {tonic,pcs}) around the pure speller */
- return notSpell(rows,{meterAt:notMeterAtApp,keyAt:b=>{try{return melismaKeyAt(b);}catch(e){return {tonic:0,pcs:[0,2,4,5,7,9,11]};}},loop:(typeof LOOP==='number'&&LOOP>0)?LOOP:4});
+function notSpellTrack(rows,opts){
+ /* the app adapter: the project's meter map and per-section key (melismaKeyAt's {tonic,pcs}) around the pure speller — read at Wig & Quill's resolution (E9) */
+ return notSpell(rows,{res:(opts&&opts.res!=null)?+opts.res:notReadRes(),meterAt:notMeterAtApp,keyAt:b=>{try{return melismaKeyAt(b);}catch(e){return {tonic:0,pcs:[0,2,4,5,7,9,11]};}},loop:(typeof LOOP==='number'&&LOOP>0)?LOOP:4});
 }
 /* ==== E4 (build 2026-09-05a, the 96th) — WIG & QUILL STEP INPUT, the caret grammar of the feature pass §2. You pick a
    value and type letters; the caret is the grid's own playhead (it rides playheadBeat and advances by what you write).
@@ -6073,7 +6101,7 @@ function cageNotationDraw(){
    (a part carrying guitar layouts is written 8vb over TAB) · Part = one track · chord symbols from the chord lane above
    the top staff · dynamics from velocity under each staff · 2 or 4 bars a line · follows the transport. The feature
    pass's E3, round 1 (Score/Part · symbols · dynamics); step input (E4) and the grid's view (E5) follow. */
-var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null};
+var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:24};   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
 function wqParts(){
  /* the parts a score shows: pitched tracks that carry notes, in the app's own order */
  try{return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length);}catch(e){return [];}
@@ -6091,6 +6119,7 @@ function buildWqWindow(){
   +'<span class="cpchip'+(wqState.layout==='part'?' on':'')+'" id="wqLayPart" title="One track on its own staff">Part</span>'
   +'<label id="wqPartLbl" style="font-size:11px;color:var(--text);display:'+((wqState.layout==='part'||wqInput.on)?'inline-flex':'none')+';gap:4px;align-items:center;">Track <select id="wqPart" style="font-size:11px;">'+parts.map(t=>'<option value="'+t+'"'+(t===wqState.part?' selected':'')+'>'+lbl(t)+'</option>').join('')+'</select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;">Bars a line <select id="wqBars" style="font-size:11px;"><option value="2"'+(wqState.bars===2?' selected':'')+'>2</option><option value="4"'+(wqState.bars===4?' selected':'')+'>4</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Read at — how the score reads the played lengths (E9, his words: the simplest notation). 8th (default): an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. 16th: finer. Exact: every tick as played — the second voice and the tied fragments come back. The notes themselves are never changed; the status counts what was rounded.">Read at <select id="wqRes" style="font-size:11px;"><option value="24"'+(wqState.res===24?' selected':'')+'>8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>16th</option><option value="0"'+(!(wqState.res>0)?' selected':'')+'>exact</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="wqFollow"'+(wqState.follow?' checked':'')+'/> Follow the transport</label>'
   +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
   +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead): 1 whole · 2 half · 3 quarter · 4 8th · 5 16th · 6 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · R a rest · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves">✎ Write</span>'
@@ -6101,6 +6130,7 @@ function buildWqWindow(){
  on('wqLayPart',()=>{wqState.layout='part';buildWqWindow();});
  const ps=document.getElementById('wqPart');if(ps)ps.onchange=()=>{wqState.part=ps.value;wqDraw();};
  const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
+ const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=+rsl.value||0;wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
  const cv=document.getElementById('wqCanvas');if(cv)cv.onclick=wqInputClick;
@@ -6130,6 +6160,7 @@ function wqDrawInto(canvas,partIds,opts){
   let win=notWindow(sp.measures,at,opts.bars||wqState.bars||4);
   /* E4: while writing, the window HOLDS as long as the caret is inside it — the phrase just written stays on the sheet */
   if(opts.keepFrom!=null&&isFinite(+opts.keepFrom)){const tk=at*NOT_TPB,n=Math.max(1,opts.bars||wqState.bars||4),kf=Math.round(+opts.keepFrom);const i=sp.measures.findIndex(m=>tk>=m.start&&tk<m.end);if(i>=kf&&i<kf+n&&kf+n<=sp.measures.length)win={from:kf,to:kf+n};}
+  if(opts.fit!==false){const nf=notBarsThatFit(sp.measures,win.from,win.to-win.from,W,14);win={from:win.from,to:win.from+nf};}   /* E9 [43]: bars a line fall until every head has room — no squish */
   const gtr=wqHasGtr(rows)||opts.forceGuitar;
   const clef=gtr?'treble':notClefFor(rows);
   const base=k*per;
@@ -6139,7 +6170,7 @@ function wqDrawInto(canvas,partIds,opts){
   const hair=notHairpins(rows);
   const r=notDrawStaff(ctx,sp,win.from,win.to,{W,staffBottom:base+62,GAP:7,clef,shift:gtr?7:0,tab,chords,dyn:notDynamics(rows,hair),hair,acc:notAccents(rows,hair),playheadTick:at*NOT_TPB,caret});
   ctx.fillStyle='#8a8577';ctx.font='9px system-ui';ctx.fillText((typeof trackLabel==='function'?trackLabel(t):t)+(gtr?' · guitar, written 8vb':clef==='bass'?' · bass clef':'')+(caret?' · ✎ writing here':''),34,base+14);
-  out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.hair+=r.hair||0;out.acc+=r.acc||0;out.v2+=r.v2||0;out.rests+=r.rests||0;out.stems=out.stems.concat(r.stems||[]);out.symX=out.symX.concat(r.symX||[]);out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
+  out.rounded=(out.rounded||0)+(sp.rounded||0);out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.hair+=r.hair||0;out.acc+=r.acc||0;out.v2+=r.v2||0;out.rests+=r.rests||0;out.stems=out.stems.concat(r.stems||[]);out.symX=out.symX.concat(r.symX||[]);out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
   out.geoms.push({t,base,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks,bars:r.bars,pad:r.pad});
  });
  return out;
@@ -6150,7 +6181,7 @@ function wqDraw(){
  const o={bars:wqState.bars};
  if(wqInput.on){o.at=wqCaretBeat();o.caret={part:wqInputPart(),beat:wqCaretBeat(),label:wqInputValueWord()};if(wqState.last&&wqState.last.parts&&wqState.last.bars===(wqState.bars||4))o.keepFrom=wqState.last.from;}
  const r=wqDrawInto(c,ids.filter(t=>wqPartRows(t).length),o);
- const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'):'nothing to notate yet — write some notes on the grid';
+ const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' read at the '+(wqState.res===12?'16th':'8th')+' (as played they are untouched — Read at: exact shows them)':'')):'nothing to notate yet — write some notes on the grid';
  wqState.last=r;return r;
 }
 /* the pop-up from the Guitar window (RAW [24]) — the linked part as a floating sheet, following the transport; Escape closes */
