@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -17909,11 +17909,81 @@ function przKeepRelation(){
  return true;
 }
 function relApplyClose(){const p=document.getElementById('relApplyPop');if(p){try{p.remove();}catch(e){}}}
+function przKeepStrikeDrums(){
+ /* E-026 KEEP: the comping (the polyphonic instrument — the beam's track when it is one, else 'comping') against the drums */
+ let tr=przState.track;if(tr==='melody'||tr==='bass'||!Array.isArray(project.tracks[tr]))tr='comping';
+ const comp=(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]]);
+ if(!comp.length){setPrzStatus('Nothing to keep — the '+(typeof trackLabel==='function'?trackLabel(tr):tr)+' has no strikes yet.');return false;}
+ let drums=[];try{drums=stripNotes('drums')||[];}catch(e){drums=[];}
+ const rec=relStrikeDrums(comp,drums,{});
+ if(!rec){setPrzStatus('Nothing to keep — no strike could be read.');return false;}
+ snapshot();
+ noteEngine('prism-keep',{strand:'relation',rel:'strikedrums'});
+ const tl=(typeof trackLabel==='function'?trackLabel(tr):tr);
+ const name=('strikes ↔ drums · '+tl+' · '+relStrikePattern(rec.events)).slice(0,60);
+ const fp=prismHash(rec.events.map(e=>e.join(':')).join(','));
+ project.shelf.push({id:shelfNextId(project.shelf),strand:'relation',name,level:'L1',data:rec,fp,org:'prism'});
+ autosaveSoon();
+ buildPrism();
+ const withHit=rec.events.filter(e=>e[2]).length;
+ setPrzStatus('The strike ↔ drums relationship is on the Essence Shelf — '+rec.events.length+' strikes ('+relStrikePattern(rec.events)+' in 8ths), '+withHit+' landing with a drum hit · no notes, chords or hits travel with it · ⌘Z undoes.');
+ return true;
+}
+function relApplyStrikeComping(data,tr){
+ /* CHANGE THE COMPING: the strikes over the CURRENT chord lane, the lane's own voicings, the span over-written — one undo */
+ const arr=project.tracks[tr];
+ if(!Array.isArray(arr)){setPrzStatus('That track has no stored notes to write into.');return false;}
+ const st=strandTrackRows('relation',data,{at:0});
+ if(!st||!st.rows.length){setPrzStatus('The lane could not be read — nothing changed.');return false;}
+ snapshot();
+ noteEngine('relation-apply-comping',{n:st.rows.length});
+ const end=Math.max.apply(null,st.rows.map(r=>r[0]+r[1]));
+ const kept=arr.filter(n=>!(n[0]>=-1e-6&&n[0]<end-1e-6));
+ kept.push.apply(kept,st.rows.map(r=>r.slice()));kept.sort((a,b)=>a[0]-b[0]);
+ project.tracks[tr]=kept;
+ autosaveSoon();drawTrackSel();refresh(true);
+ setPrzStatus('The '+(typeof trackLabel==='function'?trackLabel(tr):tr)+' now strikes the CURRENT chords in the source’s rhythm ('+relStrikePattern(data.events)+' in 8ths) — the chords and the drums never moved · ⌘Z undoes.');
+ return true;
+}
+function relApplyStrikeDrums(data){
+ /* CHANGE THE DRUMS: hits at the strikes per their class, the span over-written in the stored kit (the style's rendering
+    becomes the stored kit if none stood) — one undo */
+ const st=relStrikeRealizeDrums(data,{at:0});
+ if(!st||!st.rows.length){setPrzStatus('No strike in this relationship landed with a drum — nothing to write.');return false;}
+ let base=[];try{base=(stripNotes('drums')||[]).map(r=>r.slice());}catch(e){base=[];}
+ snapshot();
+ noteEngine('relation-apply-drums',{n:st.rows.length});
+ const end=Math.max(data.span||0,Math.max.apply(null,st.rows.map(r=>r[0]+r[1])));
+ const kept=base.filter(n=>!(n[0]>=-1e-6&&n[0]<end-1e-6));
+ kept.push.apply(kept,st.rows.map(r=>r.slice()));kept.sort((a,b)=>a[0]-b[0]);
+ project.tracks.drums=kept;
+ autosaveSoon();drawTrackSel();refresh(true);
+ setPrzStatus('The drums now hit where the source’s strikes landed ('+st.rows.length+' hits: kick · snare · hat by the source’s classes) — the comping never moved · ⌘Z undoes.');
+ return true;
+}
 function relApplyChooser(data){
  /* Q36 ⓒ — the apply verb ASKS which stream changes. The target is the Prism's beam
     (przState.track) against the chord lane; both writes are ONE undo each. */
  if(!validRelationData(data)){setPrzStatus('That relationship object is empty or malformed — nothing to apply.');return false;}
  relApplyClose();
+ if(data.rel==='strikedrums'){   /* EN5 R1: Q36 ⓒ for E-026 — change the comping, or change the drums */
+  let tr=przState.track;if(tr==='melody'||tr==='bass'||!Array.isArray(project.tracks[tr]))tr='comping';
+  const tl2=(typeof trackLabel==='function'?trackLabel(tr):tr);
+  const pop=document.createElement('div');pop.id='relApplyPop';
+  pop.style.cssText='position:fixed;left:50%;top:34%;transform:translateX(-50%);z-index:110;background:var(--panel,#1c1f27);color:var(--text,#e6e7ec);border:1px solid #4a4f5e;border-radius:8px;padding:12px 14px;min-width:340px;max-width:480px;box-shadow:0 10px 30px rgba(0,0,0,.5);';
+  pop.innerHTML='<div style="font-weight:700;margin-bottom:4px;">Apply the strike ↔ drums relationship</div>'
+   +'<div style="color:var(--dim);font-size:11px;margin-bottom:8px;">'+data.events.length+' strikes · '+relStrikePattern(data.events)+' in 8ths · this object holds no notes, no chords and no hits, so applying it changes ONE of the two streams.</div>'
+   +'<div style="display:flex;flex-direction:column;gap:6px;">'
+   +'<button class="cpchip" data-rel="comping" style="text-align:left;padding:6px 8px;" title="The '+tl2+' is re-written to strike the CURRENT chord lane in the source’s rhythm — the lane’s own voicings under each strike; the chords and the drums never move. One undo.">🎹 Change the '+tl2+' — strike the current chords in this rhythm</button>'
+   +'<button class="cpchip" data-rel="drums" style="text-align:left;padding:6px 8px;" title="The drums are re-written to hit where the source’s strikes landed — kick, snare or hat by the source’s classes; the comping never moves. One undo.">🥁 Change the drums — hit where the strikes land</button>'
+   +'</div>'
+   +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;"><span class="cpchip" data-rel="cancel">✕ Cancel</span></div>';
+  pop.querySelector('[data-rel="comping"]').onclick=()=>{relApplyClose();relApplyStrikeComping(data,tr);};
+  pop.querySelector('[data-rel="drums"]').onclick=()=>{relApplyClose();relApplyStrikeDrums(data);};
+  pop.querySelector('[data-rel="cancel"]').onclick=()=>relApplyClose();
+  document.body.appendChild(pop);
+  return true;
+ }
  const tr=przState.track,tl=(typeof trackLabel==='function'?trackLabel(tr):tr);
  const col=relCollapse(data.events);
  const pop=document.createElement('div');
@@ -18020,8 +18090,9 @@ function przThumb(strand,data){
   const end=Math.max(1,(data&&data.span>0)?data.span:ev.reduce((a,e)=>Math.max(a,e[0]+e[1]),0));
   inner+='<defs><pattern id="przChk" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#e6e7ec"/><rect width="5" height="5" fill="#15171d"/><rect x="5" y="5" width="5" height="5" fill="#15171d"/></pattern></defs>'
    +'<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="url(#przChk)" class="przRelChk"/>';
+  const sd=!!(data&&data.rel==='strikedrums');
   for(const e of ev){
-   const x=(e[0]/end)*W,w=Math.max(3,(e[1]/end)*W-1),lb=relExtLabel(e[2]);
+   const x=(e[0]/end)*W,w=Math.max(3,(e[1]/end)*W-1),lb=sd?(REL_HIT_NAMES[e[2]]||'—'):relExtLabel(e[2]);
    inner+='<rect x="'+x.toFixed(1)+'" y="9" width="'+w.toFixed(1)+'" height="22" rx="3" fill="#edc948" stroke="#15171d" stroke-width=".8" opacity=".95"/>'
     +(w>=12?'<text x="'+(x+w/2).toFixed(1)+'" y="24" text-anchor="middle" font-size="'+(lb.length>2?7:9)+'" font-weight="700" fill="#15171d">'+lb+'</text>':'');
   }
@@ -18278,6 +18349,10 @@ function buildPrism(reanalyze){
    +'<span style="font-size:10.5px;color:var(--dim);" title="Phrases that echo an earlier phrase — exact repeats, ′ variants and -tags — paired with the phrase they echo. These pairs are what the development map and the variation ladder learn from.">'+np+' echo pair'+(np===1?'':'s')+'</span>';
   fr.querySelector('.przKeepFormB').onclick=()=>przKeepForm();
   fr.querySelector('.przKeepRelB').onclick=()=>przKeepRelation();
+  const sdB=document.createElement('span');sdB.className='cpchip przKeepSdB';sdB.textContent='★ Keep strike ↔ drums';
+  sdB.title='Keep the rhythm of the polyphonic instrument IN RELATION TO THE DRUMS (his "chord to drums ratio", E-026) — every strike of the comping with its length (3,3,3,3,4…), the drum piece it lands with (kick · snare · hat) and how early or late — as ONE relationship object on the Essence Shelf. It carries NO notes, NO chords and NO drum hits, only the relationship; apply it over an entirely new set of chord changes. Rides the project file · one undo.';
+  sdB.onclick=()=>przKeepStrikeDrums();
+  fr.insertBefore(sdB,fr.querySelector('.przKeepRelB').nextSibling);
   body.appendChild(fr);
  }catch(e){}
  (przState.analysis||[]).forEach((secA,si)=>{
@@ -19284,10 +19359,16 @@ function essClipTile(o){
    }
   });
  }catch(e){}
+ const relSd=rel&&o.data.rel==='strikedrums',relDone=new Set();   /* EN5 R1: a strike is several rows at one onset — label the onset once, by its drum class */
  st.rows.forEach((r,i)=>{
   const x=gx(r[0]),w2=Math.max(2,r[1]/span*(W-KW-1)-1);
   marks+='<rect x="'+x.toFixed(1)+'" y="'+yOf(r[2]).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+rh+'" rx="1" fill="'+ink+'" '+(rel?'stroke="#15171d" stroke-width=".7" ':'')+'opacity=".95" class="essClipN'+(rel?' essClipRel':'')+'"/>';
-  if(rel&&w2>=11&&o.data.events[i])marks+='<text x="'+(x+w2/2).toFixed(1)+'" y="'+(yOf(r[2])+rh-0.5).toFixed(1)+'" text-anchor="middle" font-size="'+Math.max(4,Math.min(rh+1,7))+'" font-weight="700" fill="#15171d">'+relExtLabel(o.data.events[i][2])+'</text>';
+  if(rel&&w2>=11){
+   let lb=null;
+   if(relSd){const k=(+r[0]).toFixed(4);if(!relDone.has(k)){relDone.add(k);const ev=o.data.events.find(e=>(+e[0]).toFixed(4)===k);if(ev)lb=REL_HIT_NAMES[ev[2]]||'—';}}
+   else if(o.data.events[i])lb=relExtLabel(o.data.events[i][2]);
+   if(lb!==null)marks+='<text x="'+(x+w2/2).toFixed(1)+'" y="'+(yOf(r[2])+rh-0.5).toFixed(1)+'" text-anchor="middle" font-size="'+Math.max(4,Math.min(rh+1,7))+'" font-weight="700" fill="#15171d">'+lb+'</text>';
+  }
  });
  const ground=rel?'background:repeating-conic-gradient(#15171d 0 25%,#e6e7ec 0 50%) 0 0/12px 12px;':'background:#1c1f27;';
  return '<div class="essClipT'+(rel?' essClipRelT':'')+'" data-rel="'+(rel?'1':'0')+'" style="'+ground+'border:1px solid #343845;border-radius:4px;overflow:hidden;width:'+W+'px;flex:0 0 auto;">'
@@ -36157,6 +36238,11 @@ function strandTrackRows(strand,data,opts){
   /* EN5 R0: the object realizes as its READING over the chords at the landing — the events
      against opts.chords (pure) or the project's lane; the tonic seats N.C. events */
   const chs=Array.isArray(opts.chords)?opts.chords:((typeof project==='object'&&project&&Array.isArray(project.chords))?project.chords:[]);
+  if(data&&data.rel==='strikedrums'){   /* EN5 R1: the strikes over the chords at the landing, the lane's own voicings */
+   let vAt=opts.voicingAt;
+   if(typeof vAt!=='function'){try{const flat=flatChords(chs).filter(c=>c&&isFinite(c.d)&&c.d>0&&Array.isArray(c.iv)&&c.iv.length);const vs=laneVoicings(flat,[]);vAt=b=>{let t=0;for(let i=0;i<flat.length;i++){const d=+flat[i].d||0;if(b<t+d-1e-6)return vs[i]?vs[i].midis.slice():null;t+=d;}return null;};}catch(e){vAt=null;}}
+   return relStrikeRealizeComping(data,chs,{at,voicingAt:vAt});
+  }
   let tonic=isFinite(opts.tonic)?opts.tonic:0;
   if(!isFinite(opts.tonic)&&typeof keyFor==='function')try{tonic=keyFor(at).tonic||0;}catch(e){}
   return relRealizeMelody(data,chs,{at,base,tonic});
@@ -36178,6 +36264,80 @@ function strandTrackRows(strand,data,opts){
    code = semitones of the note above the chord root sounding at its onset (0..11), or -1 = N.C.
    (his E:51 list: 1 · ♭2 · 2/9 · ♭3 · 3 · 4 · ♯4/♭5 · 5 · ♭6 · 6 · ♭7 · 7). NO pitches, NO roots
    ride — from the events alone neither stream can be rebuilt (master §3's gate in the data). */
+/* ==== EN5 R1 (build 2026-09-05h, the 96th) — E-026 STRIKE PATTERN ↔ DRUMS, his "chord to drums ratio" (G:1016: "the rhythm
+   of the Polyphonic Instrument in relation to the drums… preserves it, but allows you to try it over an entirely new set
+   of chord changes"; master §4 #1: coincidence + offset over two EN1 outputs). The SECOND 'relation' kind on R0's landing
+   shape: {rel:'strikedrums', a:'comping', b:'drums', span, events:[[t, d, hit, off],…]} — each STRIKE of the polyphonic
+   instrument (its onsets grouped within a 16th) with its length to the next strike (his "3,3,3,3,4"), the drum piece
+   CLASS it lands with (0 none · 1 kick · 2 snare · 3 hat/cymbal · 4 other) and its offset from that hit. No pitches, no
+   roots, no chords ride (master §3's gate in the data). Q36 ⓒ: apply changes the COMPING (the strikes over the current
+   chords, the lane's own voicings) or the DRUMS (hits at the strikes per their class). Pure below. ==== */
+const REL_HIT_NAMES=['—','K','S','H','·'];
+function relDrumClass(gm){
+ /* a GM drum pitch → the piece class: kick 35/36 · snare 38/40 (clap 39) · hats 42/44/46 and cymbals 49/51/52/55/57 (tamb 54) · other */
+ const p=Math.round(+gm);if(!isFinite(p))return 0;
+ if(p===35||p===36)return 1;
+ if(p===38||p===40||p===39)return 2;
+ if(p===42||p===44||p===46||p===49||p===51||p===52||p===55||p===57||p===54)return 3;
+ return 4;
+}
+function relStrikes(rows,tol){
+ /* the polyphonic instrument's STRIKES: onsets grouped within `tol` beats (default a 16th) → [{t,d}] with d the length to
+    the next strike (the last keeps its longest note). Pure. */
+ const T=(+tol>0)?+tol:.25;
+ const on=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0).map(r=>[+r[0],+r[1]]).sort((a,b)=>a[0]-b[0]);
+ const out=[];
+ for(const [t,d] of on){const last=out[out.length-1];if(last&&t-last.t<T){last.end=Math.max(last.end,t+d);continue;}out.push({t,end:t+d});}
+ return out.map((s,i)=>({t:+s.t.toFixed(4),d:+((i<out.length-1?out[i+1].t:s.end)-s.t).toFixed(4)})).filter(s=>s.d>0);
+}
+function relStrikeDrums(compRows,drumRows,opts){
+ /* E-026 EXTRACT: each strike → its length, the class of the nearest drum hit within `win` beats (default an 8th) and the
+    offset to it (strike − hit; early is negative). Pure. */
+ const win=(opts&&+opts.win>0)?+opts.win:.5;
+ const strikes=relStrikes(compRows,opts&&opts.tol);
+ if(!strikes.length)return null;
+ const hits=(drumRows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&isFinite(r[2])).map(r=>[+r[0],relDrumClass(r[2])]).sort((a,b)=>a[0]-b[0]);
+ const ev=strikes.map(s=>{
+  let best=null;
+  for(const h of hits){const off=s.t-h[0];if(Math.abs(off)>win)continue;if(!best||Math.abs(off)<Math.abs(best.off)||(Math.abs(off)===Math.abs(best.off)&&h[1]<best.cls))best={off,cls:h[1]};}
+  return [s.t,s.d,best?best.cls:0,best?+best.off.toFixed(4):0];
+ });
+ let span=0;for(const e of ev)if(e[0]+e[1]>span)span=e[0]+e[1];
+ return {rel:'strikedrums',a:'comping',b:'drums',span:+span.toFixed(4),events:ev.slice(0,512)};
+}
+function relStrikePattern(events,unit){
+ /* his notation for the strike pattern — the lengths in 8ths (default), "3,3,3,3,4" */
+ const u=(+unit>0)?+unit:.5;
+ return (events||[]).map(e=>String(Math.round((+e[1]||0)/u))).join(',');
+}
+function relStrikeRealizeComping(data,chords,opts){
+ /* CHANGE THE COMPING: every strike sounds the chord under it on the TARGET lane — opts.voicingAt(beat)→midis (the lane's
+    own voicings), else root+iv in the small octave — for its length × gate. Pure. */
+ if(!validRelationData(data)||data.rel!=='strikedrums')return null;
+ opts=opts||{};
+ const at=(isFinite(opts.at)&&opts.at>0)?+opts.at:0,gate=(isFinite(opts.gate)&&opts.gate>0&&opts.gate<=1)?+opts.gate:.9;
+ const fc=flatChords(Array.isArray(chords)?chords:[]);
+ const chordAtBeat=b=>{let t=0;for(const c of fc){const d=+c.d||0;if(b<t+d-1e-6)return c;t+=d;}return null;};
+ const rows=[];
+ for(const e of data.events){
+  const t=at+e[0];
+  let midis=null;try{midis=typeof opts.voicingAt==='function'?opts.voicingAt(t):null;}catch(err){midis=null;}
+  if(!Array.isArray(midis)||!midis.length){const c=chordAtBeat(t);if(!c)continue;midis=(Array.isArray(c.iv)?c.iv:[0,4,7]).map(iv=>48+(((Math.round(+c.r)||0)%12)+12)%12+(+iv||0));   /* root+iv stacked in the small octave, never wrapped */}
+  const d=+(e[1]*gate).toFixed(4);
+  for(const m of midis)if(isFinite(m))rows.push([+t.toFixed(4),d,Math.max(0,Math.min(127,Math.round(m)))]);
+ }
+ return rows.length?{kind:'chords',rows}:null;
+}
+function relStrikeRealizeDrums(data,opts){
+ /* CHANGE THE DRUMS: a hit at every strike that had one, in its class's GM voice (kick 36 · snare 38 · closed hat 42 · tom 45),
+    at the strike's beat less its offset (the hit the strike leaned on). Pure. */
+ if(!validRelationData(data)||data.rel!=='strikedrums')return null;
+ const at=(opts&&isFinite(opts.at)&&opts.at>0)?+opts.at:0;
+ const GM=[null,36,38,42,45];
+ const rows=[];
+ for(const e of data.events){if(!e[2])continue;rows.push([+Math.max(0,at+e[0]-e[3]).toFixed(4),.25,GM[e[2]]]);}
+ return rows.length?{kind:'drums',rows}:null;
+}
 const REL_EXT=['1','♭2','2/9','♭3','3','4','♯4/♭5','5','♭6','6','♭7','7'];
 function relExtLabel(code){const c=+code;if(!isFinite(c)||c<0)return 'N.C.';return REL_EXT[((Math.round(c)%12)+12)%12];}
 function validRelationData(d){
@@ -36185,14 +36345,27 @@ function validRelationData(d){
     carries content — rows/notes/midis/chords inside refuse the whole object */
  if(!d||typeof d!=='object'||Array.isArray(d))return false;
  if(d.rows!==undefined||d.notes!==undefined||d.midis!==undefined||d.chords!==undefined)return false;
- if(d.rel!=='melchord')return false;
  if(!Array.isArray(d.events)||!d.events.length||d.events.length>512)return false;
- for(const e of d.events){
-  if(!Array.isArray(e)||e.length<3)return false;
-  if(!isFinite(e[0])||e[0]<0||!isFinite(e[1])||e[1]<=0)return false;
-  if(!isFinite(e[2])||e[2]<-1||e[2]>11||Math.round(e[2])!==e[2])return false;
+ if(d.rel==='melchord'){
+  for(const e of d.events){
+   if(!Array.isArray(e)||e.length<3)return false;
+   if(!isFinite(e[0])||e[0]<0||!isFinite(e[1])||e[1]<=0)return false;
+   if(!isFinite(e[2])||e[2]<-1||e[2]>11||Math.round(e[2])!==e[2])return false;
+  }
+  return true;
  }
- return true;
+ if(d.rel==='strikedrums'){
+  /* EN5 R1 (E-026): [t, d, hit, off] — a strike's beat and length, the drum PIECE CLASS it lands with (0 none · 1 kick ·
+     2 snare · 3 hat/cymbal · 4 other) and its offset from that hit in beats. No pitch, no root, no chord anywhere. */
+  for(const e of d.events){
+   if(!Array.isArray(e)||e.length<4)return false;
+   if(!isFinite(e[0])||e[0]<0||!isFinite(e[1])||e[1]<=0)return false;
+   if(!isFinite(e[2])||e[2]<0||e[2]>4||Math.round(e[2])!==e[2])return false;
+   if(!isFinite(e[3])||Math.abs(e[3])>.5)return false;
+  }
+  return true;
+ }
+ return false;
 }
 function relChordRootAt(fc,beat){
  /* the root pc of the flattened chord sounding at beat; null past the lane's end (N.C.) */
