@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05i</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -3369,7 +3369,7 @@ function validShelf(a){
     EN5 R0 (build 2026-09-04k, the 95th): 'relation' is the EIGHTH kind — the CROSS-PART landing shape (LAWS §2 consequence 1 closed): chord-relative
     interval events over time, NO pitches and NO roots inside, admitted only through validRelationData (the legal gate refuses smuggled rows/notes/chords) */
  return Array.isArray(a)&&a.every(x=>x&&typeof x==='object'&&typeof x.id==='string'
-  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data))||(x.strand==='melody'&&validMelodyRows(x.data))||(x.strand==='relation'&&validRelationData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}
+  &&(['contour','dna','rhythm','chords'].includes(x.strand)||(x.strand==='form'&&validFormData(x.data))||(x.strand==='travel'&&validTravelData(x.data))||(x.strand==='melody'&&validMelodyRows(x.data))||(x.strand==='relation'&&validRelationData(x.data))||(x.strand==='feel'&&validFeelData(x.data)))&&typeof x.name==='string'&&x.data!==undefined);}   /* EN6 R1 (2026-09-05i): 'feel' is the NINTH kind — velocity · gate · timing as [t,value] events, admitted only through validFeelData */
 function shelfNextId(shelf){
  let n=1;
  const ids=new Set((shelf||[]).map(x=>x.id));
@@ -17909,6 +17909,41 @@ function przKeepRelation(){
  return true;
 }
 function relApplyClose(){const p=document.getElementById('relApplyPop');if(p){try{p.remove();}catch(e){}}}
+function przKeepFeel(kind){
+ /* EN6 R1: one feel of the beam's notes → one object on the Shelf */
+ const tr=przState.track;
+ const rows=(project.tracks[tr]||[]).map(n=>n.slice());
+ if(!rows.length){setPrzStatus('Nothing to keep — this beam has no notes yet.');return false;}
+ let step=.25;try{step=gridStep();}catch(e){}
+ const rec=feelExtract(rows,kind,{step});
+ if(!rec){setPrzStatus('Nothing to keep — the '+kind+' could not be read.');return false;}
+ snapshot();
+ noteEngine('prism-keep',{strand:'feel',feel:kind});
+ const tl=(typeof trackLabel==='function'?trackLabel(tr):tr);
+ const name=(kind+' · '+tl+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled')).slice(0,60);
+ const fp=prismHash(kind+':'+rec.events.map(e=>e.join(':')).join(','));
+ project.shelf.push({id:shelfNextId(project.shelf),strand:'feel',name,level:'L1',data:rec,fp,org:'prism'});
+ autosaveSoon();
+ buildPrism();
+ const vals=rec.events.map(e=>e[1]),lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);
+ setPrzStatus('The '+kind+' of '+tl+' is on the Essence Shelf — '+rec.events.length+' notes, '+(kind==='timing'?('from '+lo+' to +'+hi+' beats off the grid'):(kind==='gate'?('gate '+lo+'–'+hi+' of the slot'):('velocity '+lo+'–'+hi)))+' · no notes travel with it · ⌘Z undoes.');
+ return true;
+}
+function feelApplyTo(data,tr){
+ /* ✓ Apply a feel onto the beam's notes — one undo */
+ if(!validFeelData(data)){setPrzStatus('That feel object is empty or malformed — nothing to apply.');return false;}
+ const arr=project.tracks[tr];
+ if(!Array.isArray(arr)||!arr.length){setPrzStatus('That beam has no notes to lay the '+data.feel+' onto.');return false;}
+ let step=.25;try{step=gridStep();}catch(e){}
+ const out=feelApply(arr,data,{step,win:1});
+ if(!out||!out.changed){setPrzStatus('The notes already carry this '+data.feel+' — nothing to change.');return false;}
+ snapshot();
+ noteEngine('feel-apply',{feel:data.feel,n:out.changed});
+ project.tracks[tr]=out.rows;
+ autosaveSoon();drawTrackSel();refresh(true);
+ setPrzStatus(out.changed+' note'+(out.changed===1?'':'s')+' on '+(typeof trackLabel==='function'?trackLabel(tr):tr)+' took the '+data.feel+' (each from the nearest source note within a beat) · ⌘Z undoes.');
+ return true;
+}
 function przKeepStrikeDrums(){
  /* E-026 KEEP: the comping (the polyphonic instrument — the beam's track when it is one, else 'comping') against the drums */
  let tr=przState.track;if(tr==='melody'||tr==='bass'||!Array.isArray(project.tracks[tr]))tr='comping';
@@ -18083,6 +18118,19 @@ function przThumb(strand,data){
    inner+='<rect x="'+(x+1).toFixed(1)+'" y="6" width="'+Math.max(2,bw-2).toFixed(1)+'" height="28" rx="4" fill="hsl('+(psy?275:35)+',55%,45%)" opacity=".85"/>'
     +'<text x="'+(x+bw/2).toFixed(1)+'" y="24" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">'+(psy?'Psych!':'+'+m.interval)+'</text>';
   });
+ }else if(strand==='feel'){
+  /* EN6 R1: a feel is a lane of values over time — velocity as bar heights, gate as bar widths of its slot, timing as ticks above/below the line */
+  const ev=(data&&Array.isArray(data.events))?data.events:[];
+  const end=Math.max(1,(data&&data.span>0)?data.span:ev.reduce((a,e)=>Math.max(a,e[0]),0)+1);
+  const kind=data&&data.feel;
+  inner+='<line x1="0" y1="'+(H/2).toFixed(1)+'" x2="'+W+'" y2="'+(H/2).toFixed(1)+'" stroke="#3a3f4e" stroke-width="1"/>';
+  ev.forEach((e,i)=>{
+   const x=(e[0]/end)*W,nx=ev[i+1]?(ev[i+1][0]/end)*W:W,bw=Math.max(2,Math.min(12,nx-x-1));
+   if(kind==='velocity'){const h=Math.max(2,e[1]*(H-6));inner+='<rect x="'+x.toFixed(1)+'" y="'+(H-3-h).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="1" fill="#edc948" opacity=".9"/>';}
+   else if(kind==='gate'){const w=Math.max(2,Math.min(nx-x-1,(nx-x)*Math.min(1,e[1])));inner+='<rect x="'+x.toFixed(1)+'" y="'+(H/2-7).toFixed(1)+'" width="'+w.toFixed(1)+'" height="14" rx="2" fill="#5bb98c" opacity=".9"/>';}
+   else{const dy=-e[1]*(H/2-4)*4;inner+='<line x1="'+(x+1).toFixed(1)+'" y1="'+(H/2).toFixed(1)+'" x2="'+(x+1).toFixed(1)+'" y2="'+(H/2+dy).toFixed(1)+'" stroke="#e8a33d" stroke-width="2"/>';}
+  });
+  inner+='<text x="3" y="9" font-size="7.5" font-weight="700" fill="#cfd4e2">'+(kind||'feel')+'</text>';
  }else if(strand==='relation'){
   /* EN5 R0: THE RELATIONSHIP OBJECT wears the BLACK & WHITE CHECKERBOARD (his P:24 ruling) — each
      event a block carrying its chord-relative extension (1 · 3 · ♭7 · N.C.), never a pitch */
@@ -18198,6 +18246,8 @@ function przApply(strand,data){
  }
  /* EN5 R0: a 'relation' strand's ✓ ASKS which stream changes (Q36 ⓒ) — the chooser writes, one undo each */
  if(strand==='relation')return relApplyChooser(data);
+ /* EN6 R1: a 'feel' strand's ✓ lays it onto the beam's notes — one undo */
+ if(strand==='feel')return feelApplyTo(data,przState.track);
  /* 30r: a 'chords' keep needs no note selection — ✓ writes the whole journey back
     (chord lane + its key sections, one undo) */
  if(strand==='chords'){
@@ -18353,6 +18403,13 @@ function buildPrism(reanalyze){
   sdB.title='Keep the rhythm of the polyphonic instrument IN RELATION TO THE DRUMS (his "chord to drums ratio", E-026) — every strike of the comping with its length (3,3,3,3,4…), the drum piece it lands with (kick · snare · hat) and how early or late — as ONE relationship object on the Essence Shelf. It carries NO notes, NO chords and NO drum hits, only the relationship; apply it over an entirely new set of chord changes. Rides the project file · one undo.';
   sdB.onclick=()=>przKeepStrikeDrums();
   fr.insertBefore(sdB,fr.querySelector('.przKeepRelB').nextSibling);
+  /* EN6 R1: the feel strands — velocity · gate · timing of this beam, each ONE object on the Shelf */
+  let feelAfter=sdB;
+  [['velocity','★ Keep velocity','Keep how hard this beam plays — every note’s velocity over time — as ONE feel object on the Essence Shelf. No notes travel with it; ✓ Apply lays it onto another beam’s notes (each note takes the nearest value within a beat). One undo.'],
+   ['gate','★ Keep gate','Keep how long this beam sounds — every note’s sounded length against its slot (staccato ⇄ legato) — as ONE feel object. No notes travel with it; ✓ Apply lays it onto another beam’s notes. One undo.'],
+   ['timing','★ Keep timing','Keep this beam’s feel against the grid — every onset’s push or drag from the grid at its step — as ONE feel object. No notes travel with it; ✓ Apply lays it onto another beam’s notes. One undo.']].forEach(([k,lbl,tip])=>{
+   const b=document.createElement('span');b.className='cpchip przKeepFeelB';b.setAttribute('data-feel',k);b.textContent=lbl;b.title=tip;b.onclick=()=>przKeepFeel(k);fr.insertBefore(b,feelAfter.nextSibling);feelAfter=b;   /* in order: velocity · gate · timing */
+  });
   body.appendChild(fr);
  }catch(e){}
  (przState.analysis||[]).forEach((secA,si)=>{
@@ -36337,6 +36394,72 @@ function relStrikeRealizeDrums(data,opts){
  const rows=[];
  for(const e of data.events){if(!e[2])continue;rows.push([+Math.max(0,at+e[0]-e[3]).toFixed(4),.25,GM[e[2]]]);}
  return rows.length?{kind:'drums',rows}:null;
+}
+/* ==== EN6 R1 (build 2026-09-05i, the 96th) — THE FEEL STRANDS. Master §4 #2: "velocity, gate, micro-timing, bend are
+   already inside every note. Four strands, no new analysis." Three ship here — VELOCITY (E-132, n[8]), GATE (E-024, the
+   sounded length against the slot to the next onset) and TIMING (E-013's per-track layer, the offset from the grid at
+   its step); the fourth, bend, waits on a stored shape for the slide. The 'feel' strand is the NINTH validShelf kind —
+   its own guard, its own clause, the four-kind literal untouched (landmine ⑩'s recipe, a fifth time). A feel object
+   holds only [t, value] events: no pitch, no note. Apply lays it onto the notes of a target track — each note takes the
+   nearest event within a beat — one undo. Pure below. ==== */
+const FEEL_KINDS=['velocity','gate','timing'];
+function validFeelData(d){
+ /* the guard IS the gate: a known feel, 1..2048 [t,value] events in that feel's range, and NOTHING that carries content */
+ if(!d||typeof d!=='object'||Array.isArray(d))return false;
+ if(d.rows!==undefined||d.notes!==undefined||d.midis!==undefined||d.chords!==undefined)return false;
+ if(FEEL_KINDS.indexOf(d.feel)<0)return false;
+ if(!Array.isArray(d.events)||!d.events.length||d.events.length>2048)return false;
+ for(const e of d.events){
+  if(!Array.isArray(e)||e.length<2||!isFinite(e[0])||e[0]<0||!isFinite(e[1]))return false;
+  if(d.feel==='velocity'&&(e[1]<0||e[1]>1))return false;
+  if(d.feel==='gate'&&(e[1]<=0||e[1]>4))return false;
+  if(d.feel==='timing'&&Math.abs(e[1])>1)return false;
+ }
+ return true;
+}
+function feelSlots(rows){
+ /* each note's SLOT — the distance to the next onset on the track; the last onset's notes keep their own length. Pure. */
+ const on=[...new Set(rows.map(r=>+r[0]))].sort((a,b)=>a-b);
+ return rows.map(r=>{const t=+r[0];let nx=null;for(const o of on){if(o>t+1e-6){nx=o;break;}}return nx===null?+r[1]:+(nx-t).toFixed(4);});
+}
+function feelExtract(rows,kind,opts){
+ /* EXTRACT one feel from a track's rows → {feel, span, events:[[t,value],…]} or null. velocity = n[8] (a missing one reads .8) ·
+    gate = the sounded length over the slot · timing = the onset's offset from the grid at opts.step (default a 16th). Pure. */
+ if(FEEL_KINDS.indexOf(kind)<0)return null;
+ const step=(opts&&+opts.step>0)?+opts.step:.25;
+ const clean=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0).map(r=>r.slice()).sort((a,b)=>a[0]-b[0]);
+ if(!clean.length)return null;
+ const slots=feelSlots(clean);
+ const ev=clean.map((r,i)=>{
+  const t=+(+r[0]).toFixed(4);
+  if(kind==='velocity')return [t,+Math.max(0,Math.min(1,(typeof r[8]==='number'&&isFinite(r[8]))?r[8]:.8)).toFixed(3)];
+  if(kind==='gate')return [t,+Math.max(.01,Math.min(4,(+r[1])/(slots[i]||+r[1]))).toFixed(3)];
+  return [t,+(t-Math.round(t/step)*step).toFixed(4)];
+ });
+ let span=0;for(const r of clean)if(r[0]+r[1]>span)span=r[0]+r[1];
+ return {feel:kind,span:+span.toFixed(4),events:ev.slice(0,2048)};
+}
+function feelApply(rows,data,opts){
+ /* APPLY onto a target track's rows: each note takes the nearest event within opts.win (default a beat) — velocity into
+    n[8] · gate as its own slot × the ratio · timing as its grid-snapped beat plus the offset (never below 0). A note with no
+    event near it stands. Pure — fresh rows, re-sorted; {rows, changed}. */
+ if(!validFeelData(data))return null;
+ opts=opts||{};
+ const win=(+opts.win>0)?+opts.win:1,step=(+opts.step>0)?+opts.step:.25,at=(isFinite(opts.at)&&opts.at>0)?+opts.at:0;
+ const src=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&isFinite(r[1])).map(r=>r.slice());
+ const slots=feelSlots(src);
+ const ev=data.events.slice().sort((a,b)=>a[0]-b[0]);
+ let changed=0;
+ src.forEach((r,i)=>{
+  const t=+r[0];let best=null;
+  for(const e of ev){const d=Math.abs(e[0]+at-t);if(d>win)continue;if(!best||d<best.d)best={d,v:+e[1]};}
+  if(!best)return;
+  if(data.feel==='velocity'){const v=+Math.max(0,Math.min(1,best.v)).toFixed(3);if(r[8]!==v){while(r.length<9)r.push(r.length===7?0:0);r[8]=v;changed++;}}
+  else if(data.feel==='gate'){const d=+Math.max(.05,(slots[i]||+r[1])*best.v).toFixed(4);if(r[1]!==d){r[1]=d;changed++;}}
+  else{const nt=+Math.max(0,Math.round(t/step)*step+best.v).toFixed(4);if(r[0]!==nt){r[0]=nt;changed++;}}
+ });
+ src.sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ return {rows:src,changed};
 }
 const REL_EXT=['1','♭2','2/9','♭3','3','4','♯4/♭5','5','♭6','6','♭7','7'];
 function relExtLabel(code){const c=+code;if(!isFinite(c)||c<0)return 'N.C.';return REL_EXT[((Math.round(c)%12)+12)%12];}
