@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1072,6 +1072,7 @@
         <span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);">Grid:</span>
         <label class="part" style="gap:5px;" title="Show every other track's notes dimmed behind the one you're editing"><input type="checkbox" id="chkGhosts" style="accent-color:var(--accent);">👥 All tracks</label>
         <label class="part" style="gap:5px;" title="Music-paper view: the song wraps into systems of 4 bars, like a score page. Read &amp; navigate — click anywhere to move the playhead, click notes to select (Delete works), click the dashed strip at the bottom to add 4 more bars. Section edits live in the linear view's Section Lane — untick to go back."><input type="checkbox" id="chkPaper" style="accent-color:var(--accent);">📄 Paper</label>
+        <label class="part" style="gap:5px;" title="Notation view: the multi-track grid as a score page — every note-carrying part on its own staff (treble, bass, or guitar 8vb + TAB), systems of 4 bars, chord symbols from the chord lane, dynamics from velocity, the sections named. Read &amp; navigate — click anywhere to move the playhead; ✎ Write types notes at the playhead (Wig &amp; Quill's step input). Untick to go back."><input type="checkbox" id="chkNotation" style="accent-color:var(--accent);">𝄞 Notation</label><span class="cpchip" id="paperWriteChip" style="display:none;" title="Step input on the page — Wig &amp; Quill's caret grammar: 1–6 the value · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · R a rest · ⌫ back · click the page to place the caret · Esc leaves">✎ Write</span><span id="paperWriteState" style="font-size:10.5px;color:var(--dim);"></span>
         <label class="part" style="gap:5px;"><input type="checkbox" id="chkTrip" style="accent-color:var(--accent);">Triplets</label>
         <label class="part" style="gap:5px;" title="Playback-only: every second 1/8 shifts to the triplet position. Grid stays straight."><input type="checkbox" id="chkSwing" style="accent-color:var(--accent);">Swing</label>
         <div class="part" id="btnSwingAct" title="Destructive: rewrites note start times to a physical 1/8-triplet swing (editable tracks). Undo with ⌘Z.">Swing-Actual ⚠</div>
@@ -5982,7 +5983,7 @@ function buildWqWindow(){
 function wqTick(){
  const shown=(typeof uiWinShown==='function')&&uiWinShown('wqPanel');
  const pop=document.getElementById('wqPop');
- if(!shown&&wqInput.on){wqInput.on=false;wqInput.last=null;}
+ if(!shown&&wqInput.on&&wqInputSurface()!=='page'){wqInput.on=false;wqInput.last=null;}
  if(!shown&&!pop){clearInterval(wqState.iv);wqState.iv=null;return;}
  if(shown&&wqState.follow&&!wqInput.on)wqDraw();
  if(pop)wqPopDraw();
@@ -6047,6 +6048,12 @@ function wqPopDraw(){
 /* the window's write mode — the handler over the pure grammar above (E4) */
 var wqInput={on:false,value:'q',dots:0,tuplet:null,acc:null,last:null,prevMidi:null};
 function wqCaretBeat(){return (typeof playheadBeat==='number'&&isFinite(playheadBeat))?playheadBeat:0;}
+function wqInputSurface(){
+ /* where step input can act: the Wig & Quill window, or the grid's notation page (E5); null = nowhere */
+ if(typeof uiWinShown==='function'&&uiWinShown('wqPanel'))return 'window';
+ if(typeof paperView!=='undefined'&&paperView&&typeof paperMode!=='undefined'&&paperMode==='score')return 'page';
+ return null;
+}
 function wqInputPart(){
  const parts=wqParts();
  if(parts.indexOf(wqState.part)<0&&parts.length)wqState.part=parts[0];
@@ -6068,10 +6075,14 @@ function wqInputValueWord(){
 }
 function wqInputChip(msg){
  const b=document.getElementById('wqWriteBtn');if(b)b.classList.toggle('on',!!wqInput.on);
- const c=document.getElementById('wqWriteChip');if(!c)return;
- if(!wqInput.on){c.textContent='';return;}
  const beat=wqCaretBeat();
- c.textContent='✎ '+wqInputValueWord()+(wqInput.acc===1?' · ♯ next':wqInput.acc===-1?' · ♭ next':'')+' · caret at beat '+(Math.round(beat*100)/100)+(msg?' · '+msg:'');
+ const txt=wqInput.on?('✎ '+wqInputValueWord()+(wqInput.acc===1?' · ♯ next':wqInput.acc===-1?' · ♭ next':'')+' · caret at beat '+(Math.round(beat*100)/100)+(msg?' · '+msg:'')):'';
+ const pc=document.getElementById('paperWriteChip'),ps=document.getElementById('paperWriteState');
+ const page=(typeof paperView!=='undefined'&&paperView&&typeof paperMode!=='undefined'&&paperMode==='score');
+ if(pc){pc.style.display=page?'':'none';pc.classList.toggle('on',!!wqInput.on&&page);}
+ if(ps)ps.textContent=page?txt:'';
+ const c=document.getElementById('wqWriteChip');if(!c)return;
+ c.textContent=txt;
 }
 function wqInputToggle(on){
  wqInput.on=(on==null)?!wqInput.on:!!on;
@@ -6079,6 +6090,7 @@ function wqInputToggle(on){
  if(!wqInput.on)wqInput.prevMidi=null;
  const sel=document.getElementById('wqPartLbl');if(sel)sel.style.display=(wqState.layout==='part'||wqInput.on)?'inline-flex':'none';
  wqInputChip('');wqDraw();
+ if(wqInputSurface()==='page'){try{drawPaper();}catch(e){}}
 }
 function wqInputAfterWrite(){
  try{autosaveSoon();}catch(e){}
@@ -6142,6 +6154,7 @@ function wqInputApply(a){
   default:return false;
  }
  wqInputChip(msg);wqDraw();
+ if(!did&&wqInputSurface()==='page'){try{drawPaper();}catch(e){}}   /* a caret move or a value change repaints the page; a write already did through refresh */
  return did;
 }
 function wqInputKey(e){
@@ -6150,7 +6163,7 @@ function wqInputKey(e){
  if(!wqInput.on)return;
  if(e.metaKey||e.ctrlKey||e.altKey)return;
  if(isTypingTarget(e.target)||isTypingTarget(document.activeElement))return;
- if(!(typeof uiWinShown==='function'&&uiWinShown('wqPanel'))){wqInput.on=false;wqInputChip('');return;}
+ if(!wqInputSurface()){wqInput.on=false;wqInputChip('');return;}
  const a=wqStepAction(e.key,e.shiftKey);if(!a)return;
  e.preventDefault();e.stopPropagation();
  wqInputApply(a);
@@ -8629,6 +8642,7 @@ function updatePlayheadLine(){
  try{if(typeof cageLinkRedraw==='function')cageLinkRedraw();}catch(e){}
  const ph=document.getElementById('ph');if(!ph)return;
  const beat=playing?transportBeat():playheadBeat;
+ if(typeof paperView!=='undefined'&&paperView&&typeof paperMode!=='undefined'&&paperMode==='score'){notPagePlayhead(ph,beat);return;}   /* E5: the notation page places its own marker */
  if(typeof paperView!=='undefined'&&paperView){   /* 2.2c: the marker jumps system to system */
   const spb=PAPER_BARS*4,sysH=paperSysH();
   const cb=Math.max(0,Math.min(LOOP-1e-6,beat));
@@ -9802,6 +9816,7 @@ function arethaPlan(notes,idxs,chords,cycle,run,loop,keyAt){
    here mutates except the add-bars strip, which routes through setSongBars). Pure
    layout helpers unit-tested. */
 let paperView=false;
+let paperMode='roll';   /* E5 (the 96th): 'roll' = the 2.2c page · 'score' = the NOTATION VIEW (his [5]) — a mode, so every paper gate holds */
 const PAPER_BARS=4,PAPER_GAP=27;
 function paperSys(beat,spb){return Math.floor((beat+1e-9)/spb);}
 function paperOff(beat,spb){return +(beat-paperSys(beat,spb)*spb).toFixed(6);}
@@ -9825,6 +9840,7 @@ function paperHitBeat(x,y,o){
  return Math.max(0,Math.min(o.loop,+(sys*o.spb+local).toFixed(6)));}
 function paperSysH(){return BARH+GRID_VIEWS.main.rows*CELLH+PAPER_GAP;}   /* paper draws the full lattice — independent of the (possibly minimized) viewport */
 function drawPaper(){
+ if(paperMode==='score'){drawNotationPage();return;}   /* E5: the notation view is the paper's second mode */
  const v=GRID_VIEWS.main;   /* 2.1b refactor: paper is the active-track page view — always the main grid view (decision #12d keeps it that way) */
  const spb=PAPER_BARS*4,systems=Math.ceil(LOOP/spb),sysH=paperSysH();
  const w=GUT+spb*PPB;
@@ -9917,6 +9933,7 @@ function drawPaper(){
  try{paintSwapDom((typeof svg!=='undefined'?svg:null));}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function paperMouseDown(e){
+ if(paperMode==='score'){notPageMouseDown(e);return;}   /* E5 */
  const r=svg.getBoundingClientRect();
  const x=e.clientX-r.left,y=e.clientY-r.top;
  const sec=e.target&&e.target.dataset?e.target.dataset.sec:undefined;
@@ -9935,6 +9952,111 @@ function paperMouseDown(e){
   selNotes.clear();selChordSet.clear();selChord=null;
   setPlayheadBeat(b);refresh(false);
  }
+}
+/* ==== E5 (build 2026-09-05b, the 96th) — THE GRID'S NOTATION VIEW, his [5] ("a standard notation view in the multi-track
+   grid… casual parts for a group without much formatting"): the multi-track grid as a SCORE PAGE — every note-carrying
+   part on its own staff (Wig & Quill's Score layout), systems of PAPER_BARS bars, chord symbols from the lane over the top
+   staff, dynamics from velocity, the sections named at their bars. A MODE of the paper view (paperMode==='score'), so every
+   paper gate holds unchanged: the lanes hide, no grid edit gesture fires, the marker jumps system to system. Read & navigate
+   (a click moves the playhead) and WRITE (E4's step input rides the page: ✎ Write in the header, the caret = the playhead).
+   One drawer for the lane, the window, the pop-up and the page: notDrawStaff. */
+const NOT_PAGE_H=100,NOT_PAGE_H_TAB=155,NOT_PAGE_HEAD=16,NOT_PAGE_GAP=22;
+function notPagePartH(gtr){return gtr?NOT_PAGE_H_TAB:NOT_PAGE_H;}
+function notPageSystems(nMeasures,barsPerSys){
+ /* measures → systems of `barsPerSys` (the last one shorter); none for no measures. Pure. */
+ const n=Math.max(1,Math.round(+barsPerSys)||4),N=Math.max(0,Math.round(+nMeasures)||0),out=[];
+ for(let f=0;f<N;f+=n)out.push({from:f,to:Math.min(N,f+n)});
+ return out;
+}
+var _notPage={systems:[],last:null};
+function drawNotationPage(){
+ const parts=wqParts();
+ const W=Math.max(720,GUT+PAPER_BARS*4*PPB);
+ const sp={},rowsOf={},gtrOf={};
+ parts.forEach(t=>{rowsOf[t]=wqPartRows(t);gtrOf[t]=wqHasGtr(rowsOf[t]);try{sp[t]=notSpellTrack(rowsOf[t].map(n=>[n[0],n[1],n[2]]));}catch(e){sp[t]=null;}});
+ let ref=null;for(const t of parts){if(sp[t]&&sp[t].measures.length){ref=sp[t];break;}}
+ if(!ref){try{ref=notSpellTrack([]);}catch(e){ref=null;}}
+ const loopTk=((typeof LOOP==='number'&&LOOP>0)?LOOP:32)*NOT_TPB;
+ const nM=ref?ref.measures.filter(m=>m.start<loopTk).length:0;   /* the page is the SONG (LOOP), as the paper's is — a note past the end is the grid's to show */
+ const systems=notPageSystems(nM,PAPER_BARS);
+ const per=parts.map(t=>notPagePartH(gtrOf[t]));
+ const sysH=NOT_PAGE_HEAD+(per.reduce((a,b)=>a+b,0)||NOT_PAGE_H)+NOT_PAGE_GAP;
+ const H=Math.max(140,systems.length*sysH+10);
+ const canAdd=LOOP+4<=MAX_BARS*4;
+ svg.setAttribute('width',W);svg.setAttribute('height',H+(canAdd?32:6));
+ selBox=null;
+ let out=`<foreignObject x="0" y="0" width="${W}" height="${H}"><canvas xmlns="http://www.w3.org/1999/xhtml" id="notPageCanvas" width="${W}" height="${H}" style="display:block;"></canvas></foreignObject>`;
+ out+=`<line id="ph" x1="${GUT}" y1="0" x2="${GUT}" y2="${sysH-NOT_PAGE_GAP}" stroke="${paintOf('--playhead','#e8a33d')}" stroke-width="1.6" opacity="0"/>`;
+ if(canAdd)out+=`<g style="cursor:pointer"><rect id="paperAdd" x="0" y="${H+4}" width="${W}" height="22" rx="6" fill="rgba(255,255,255,.02)" stroke="#5a6178" stroke-dasharray="6 5"><title>Add 4 more bars — the page grows as your music approaches the end</title></rect><text x="${W/2}" y="${H+19}" text-anchor="middle" font-size="10.5" fill="#98a0b2" pointer-events="none">+ 4 bars</text></g>`;
+ svg.innerHTML=out;
+ _notPage.systems=[];_notPage.last={systems:systems.length,parts:parts.length,items:0,syms:0,dyns:0,tab:0,caret:false,W,H};
+ const c=document.getElementById('notPageCanvas');
+ if(c){
+  const ctx=c.getContext('2d');ctx.fillStyle='#f7f3ea';ctx.fillRect(0,0,W,H);
+  const caretPart=wqInput.on?wqInputPart():null,caretTick=Math.round(wqCaretBeat()*NOT_TPB);
+  const secs=Array.isArray(project.sections)?project.sections:[];
+  systems.forEach((sy,si)=>{
+   const y0=si*sysH;let base=y0+NOT_PAGE_HEAD;const geoms=[];
+   parts.forEach((t,k)=>{
+    const s=sp[t];const h=per[k];
+    if(!s||!s.measures.length||sy.from>=s.measures.length){base+=h;return;}
+    const from=sy.from,to=Math.min(sy.to,s.measures.length);
+    const gtr=gtrOf[t],clef=gtr?'treble':notClefFor(rowsOf[t]);
+    const tab=gtr?{top:base+96,gap:8,gtrAt:(()=>{const m={};rowsOf[t].forEach(n=>{m[Math.round(n[0]*NOT_TPB)+':'+Math.round(n[2])]=cageNoteGtr(n)||cageDefaultPos(Math.round(n[2]),0,5)||null;});return m;})()}:null;
+    const chords=(k===0)?notChordSymbols(project.chords,s.measures[from].start,s.measures[to-1].end):null;
+    const caret=(caretPart===t)?{tick:caretTick,label:wqInputValueWord()}:null;
+    const r=notDrawStaff(ctx,s,from,to,{W,staffBottom:base+62,GAP:7,clef,shift:gtr?7:0,tab,chords,dyn:notDynamics(rowsOf[t]),playheadTick:null,caret,barNumbers:k===0});
+    ctx.fillStyle='#8a8577';ctx.font='9px system-ui';ctx.fillText((typeof trackLabel==='function'?trackLabel(t):t)+(gtr?' · 8vb':clef==='bass'?' · bass clef':'')+(caret?' · ✎ writing here':''),34,base+14);
+    if(k===0){/* the sections named at their bars, on the system's head line */
+     ctx.fillStyle='#4f7a5c';ctx.font='bold 9px system-ui';
+     for(const sc of secs){if(!sc||!isFinite(sc.start))continue;const tk=Math.round(sc.start*NOT_TPB);if(tk>=r.tk0&&tk<r.tk0+r.ticks){let lbl=String(sc.name||'');try{lbl+=' · '+sectionKeyLabel(sc);}catch(e){}ctx.fillText(lbl,r.x0+(tk-r.tk0)*r.px+2,y0+11);}}
+    }
+    geoms.push({t,base,h,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks});
+    _notPage.last.items+=r.items;_notPage.last.syms+=r.syms||0;_notPage.last.dyns+=r.dyns||0;_notPage.last.tab+=r.tab||0;if(r.caret)_notPage.last.caret=true;
+    base+=h;
+   });
+   _notPage.systems.push({y0,h:sysH,from:sy.from,to:sy.to,geoms});
+  });
+  if(!parts.length){ctx.fillStyle='#8a8577';ctx.font='12px system-ui';ctx.fillText('Notation — nothing to notate yet: write some notes on the grid, or ✎ Write here',48,60);}
+ }
+ updatePlayheadLine();
+ try{if(typeof wqInputChip==='function')wqInputChip('');}catch(e){}
+}
+function notPageSystemAt(tick){
+ const ss=_notPage.systems;if(!ss.length)return null;
+ for(const s of ss){const g=s.geoms[0];if(g&&tick>=g.tk0&&tick<g.tk0+g.ticks)return s;}
+ return tick<0?ss[0]:ss[ss.length-1];
+}
+function notPagePlayhead(ph,beat){
+ const tk=Math.max(0,+beat||0)*NOT_TPB,s=notPageSystemAt(tk);
+ if(!s||!s.geoms.length){ph.setAttribute('opacity','0');return;}
+ const g=s.geoms[0],x=g.x0+(Math.min(tk,g.tk0+g.ticks)-g.tk0)*g.px;
+ ph.setAttribute('x1',x);ph.setAttribute('x2',x);ph.setAttribute('y1',s.y0);ph.setAttribute('y2',s.y0+s.h-NOT_PAGE_GAP);
+ ph.setAttribute('opacity',playing?'.9':playheadBeat>0?'.45':'0');
+}
+function notPageMouseDown(e){
+ if(e.target&&e.target.id==='paperAdd'){setSongBars(LOOP/4+PAPER_BARS);return;}
+ const r=svg.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+ const s=_notPage.systems.find(z=>y>=z.y0&&y<z.y0+z.h);if(!s||!s.geoms.length)return;
+ let g=s.geoms[0];for(const z of s.geoms){if(y>=z.base)g=z;}
+ const tk=g.tk0+(x-g.x0)/g.px;
+ const snapped=Math.max(g.tk0,Math.min(g.tk0+g.ticks-1,Math.round(tk/12)*12));
+ const b=Math.max(0,Math.min(LOOP,snapped/NOT_TPB));
+ if(wqInput.on&&g.t!==wqState.part){wqState.part=g.t;wqInput.last=null;}
+ selNotes.clear();selChordSet.clear();selChord=null;
+ setPlayheadBeat(b);refresh(false);
+}
+function setNotationView(on){
+ /* the 𝄞 Notation checkbox: on = the paper view in its score mode; off = back to whatever the 📄 box says */
+ const pp=document.getElementById('chkPaper'),nn=document.getElementById('chkNotation');
+ if(on){paperMode='score';paperView=true;if(pp)pp.checked=false;}   /* the two boxes are two views of one page: 𝄞 unticks 📄 */
+ else{paperMode='roll';paperView=!!(pp&&pp.checked);if(wqInput.on&&!(typeof uiWinShown==='function'&&uiWinShown('wqPanel'))){wqInput.on=false;wqInput.last=null;}}
+ if(nn)nn.checked=!!on;
+ if(cdrag&&cdrag.ghost)cdrag.ghost.remove();
+ const laneClean=document.getElementById('chordlane');if(laneClean)laneClean.style.outline='';
+ drag=null;cdrag=null;rb=null;try{closePalette();hideSelMenu();hideChordMenu();closeSectionEditor();closeVoicingEditor();}catch(e){}
+ refresh(false);
+ try{wqInputChip('');}catch(e){}
 }
 /* ==== /PAPER VIEW ==== */
 /* ==== CHORD LANE MINIMIZE + ACTING CHORD LANE (client spec, July 26 evening) ====
@@ -14517,6 +14639,7 @@ function gridControlsMenu(e){
  const items=[
   [on(chk('chkGhosts'))+'👥 All tracks',()=>flip('chkGhosts')],
   [on(chk('chkPaper'))+'📄 Paper view',()=>flip('chkPaper')],
+  [on(chk('chkNotation'))+'𝄞 Notation view',()=>flip('chkNotation')],
   [on(chk('chkTrip'))+'Triplets',()=>flip('chkTrip')],
   [on(chk('chkSwing'))+'Swing',()=>flip('chkSwing')],
   [on(SETTINGS.showSecLane===true)+'Sections lane',()=>{SETTINGS.showSecLane=!(SETTINGS.showSecLane===true);persistSettings();try{drawSectionLane();}catch(e2){}try{refresh(false);}catch(e2){}}],
@@ -30917,10 +31040,14 @@ document.getElementById('chkGhosts').onchange=e=>{ghostScope=e.target.checked?'a
 })();
 document.getElementById('chkPaper').onchange=e=>{
  paperView=e.target.checked;
+ paperMode='roll';const _nn=document.getElementById('chkNotation');if(_nn)_nn.checked=false;   /* E5: the 📄 box is the roll page; 𝄞 is its own box */
+ if(wqInput.on&&!(typeof uiWinShown==='function'&&uiWinShown('wqPanel'))){wqInput.on=false;wqInput.last=null;}
  if(cdrag&&cdrag.ghost)cdrag.ghost.remove();
  const laneClean=document.getElementById('chordlane');if(laneClean)laneClean.style.outline='';
  drag=null;cdrag=null;rb=null;closePalette();hideSelMenu();hideChordMenu();closeSectionEditor();closeVoicingEditor();
  refresh(false);e.target.blur();};
+document.getElementById('chkNotation').onchange=e=>{setNotationView(!!e.target.checked);e.target.blur();};   /* E5 */
+(function(){const c=document.getElementById('paperWriteChip');if(c)c.onclick=()=>wqInputToggle();})();
 /* 2.3: Vel control — live velocity for the selection (one undo snapshot per drag) */
 let velGestureArmed=false;
 const velRangeEl=document.getElementById('velRange'),velValEl=document.getElementById('velVal');
@@ -35145,7 +35272,8 @@ function navSyncFromFocus(){
    const b=q('barsInp');if(b)b.value=String(Math.round(LOOP/4));
    const tr=q('chkTrip');if(tr)tr.checked=!!gridTriplets;
    const sw=q('chkSwing');if(sw)sw.checked=!!swingOn;
-   const pp=q('chkPaper');if(pp)pp.checked=!!paperView;
+   const pp=q('chkPaper');if(pp)pp.checked=!!(paperView&&paperMode!=='score');
+   const nn=q('chkNotation');if(nn)nn.checked=!!(paperView&&paperMode==='score');
    const cc=q('chkCont');if(cc&&typeof contView!=='undefined')cc.checked=!!contView;
   };
   const g=(typeof gridFocus==='string'&&gridFocus!=='main'&&gridFocus!=='mod'&&GRID_WORLDS[gridFocus])?gridFocus:null;
