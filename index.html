@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05f</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -25778,16 +25778,41 @@ function wanHallScale(z){
 function wanHallLayout(chords,cam,depth){
  /* the chord lane as books ahead of the camera → [{i,t,d,z1,z2,lbl,r,iv,inside}] in time order: z = beats ahead; a chord the
     camera stands in starts at 0 (inside); nothing behind the camera, nothing past `depth` beats. Pure. */
- const out=[];let t=0;const D=(+depth>0)?+depth:HALL_DEPTH,c0=+cam||0;
- let flat=[];try{flat=flatChords(Array.isArray(chords)?chords:[]);}catch(e){flat=[];}
- flat.forEach((c,i)=>{const d=+c.d||0;const z1=t-c0,z2=t+d-c0;t+=d;if(d<=0||z2<=0||z1>=D)return;
-  out.push({i,t:t-d,d,z1:Math.max(0,z1),z2:Math.min(D,z2),lbl:String(c.lbl||''),r:c.r,iv:c.iv,inside:z1<=0});});   /* inside = the camera stands in it, its start at or behind the camera */
+ const out=[];let t=0,i=0;const D=(+depth>0)?+depth:HALL_DEPTH,c0=+cam||0;
+ /* the lane walked as flatChords walks it, but each book also knows its SOURCE chord (ci) and whether it is a piece of a consolidated run (sub) — the exchange needs both */
+ (Array.isArray(chords)?chords:[]).forEach((c,ci)=>{
+  if(!c)return;
+  const pieces=(Array.isArray(c.sub)&&c.sub.length)?(()=>{const tot=c.sub.reduce((a,s)=>a+(+s.d||0),0)||1;return c.sub.map(s=>({d:(+s.d||0)*(+c.d||0)/tot,r:s.r,iv:s.iv,lbl:s.lbl,sub:true}));})():[{d:c.d,r:c.r,iv:c.iv,lbl:c.lbl,sub:false}];
+  for(const p of pieces){const d=+p.d||0;const z1=t-c0,z2=t+d-c0;const k=i++;t+=d;if(d<=0||z2<=0||z1>=D)continue;
+   out.push({i:k,ci,sub:!!p.sub,t:t-d,d,z1:Math.max(0,z1),z2:Math.min(D,z2),lbl:String(p.lbl||''),r:p.r,iv:p.iv,inside:z1<=0});}   /* inside = the camera stands in it */
+ });
  return out;
 }
-var wanHall={cam:0,ahead:0,sel:null,books:[],hits:[],iv:null,last:null};
+function wanHallExchange(chord,step){
+ /* the double-click EXCHANGE (his INTERACTIONS row: "DOUBLE-CLICK upcoming object = EXCHANGE for another candidate"): a plain
+    triad's neo-Riemannian neighbours in turn — P (parallel) · L (leading-tone exchange) · R (relative) — and back to itself;
+    anything but a major or minor triad has no candidate here (null). Pure: {r,iv,op}. */
+ if(!chord||!Array.isArray(chord.iv)||chord.iv.length!==3||chord.iv[0]!==0||chord.iv[2]!==7)return null;
+ const r=((Math.round(+chord.r)||0)%12+12)%12,minor=chord.iv[1]===3;
+ if(!minor&&chord.iv[1]!==4)return null;
+ const MAJ=[0,4,7],MIN=[0,3,7];
+ const cands=minor?[{op:'P',r,iv:MAJ},{op:'L',r:(r+8)%12,iv:MAJ},{op:'R',r:(r+3)%12,iv:MAJ}]
+                  :[{op:'P',r,iv:MIN},{op:'L',r:(r+4)%12,iv:MIN},{op:'R',r:(r+9)%12,iv:MIN}];
+ const k=((Math.round(+step)||0)%4+4)%4;
+ if(k===0)return {op:'',r,iv:(minor?MIN:MAJ).slice()};
+ const c=cands[k-1];return {op:c.op,r:c.r,iv:c.iv.slice()};
+}
+function wanHallSnap(cam,mode){
+ /* the motion cadence (his SCROLL / FOCUS TIMING row): smooth = the camera as it is · beat = the beat it is in · bar = the bar */
+ const c=Math.max(0,+cam||0);
+ if(mode==='beat')return Math.floor(c+1e-6);
+ if(mode==='bar')return Math.floor(c/4+1e-6)*4;
+ return c;
+}
+var wanHall={cam:0,ahead:0,sel:null,books:[],hits:[],iv:null,last:null,skin:'books',motion:'smooth',look:{dx:0,dy:0},steps:{},drag:null};
 function wanHallCam(){
  let b=0;try{b=notPlayheadBeat();}catch(e){b=(typeof playheadBeat==='number')?playheadBeat:0;}
- return Math.max(0,b+(wanHall.ahead||0));
+ return wanHallSnap(b+(wanHall.ahead||0),wanHall.motion);
 }
 function wanHallChordColor(c){
  /* the chord's paint, the paper view's law: chromatic grey, else the degree colour in the key at its beat */
@@ -25800,10 +25825,22 @@ function wanHallDraw(host){
    +'<span class="cpchip" id="wanHallPlay" title="Play the progression from where you stand">▶ Play from here</span>'
    +'<span class="cpchip" id="wanHallBack" title="Stand at the song\'s start">⇤</span>'
    +'<span id="wanHallStatus" style="font-size:10.5px;color:#6b4f28;"></span>'
-   +'<span style="flex:1"></span><span style="font-size:9.5px;color:#6b4f28;">time = space · click a book to hear it · wheel to look ahead</span></div>'
+   +'<span style="flex:1"></span>'
+   +'<span class="cpchip wanHallSkin" data-skin="books" title="Books on the shelves">📚</span><span class="cpchip wanHallSkin" data-skin="cubes" title="Cube blocks on the shelves">🧊</span><span class="cpchip wanHallSkin" data-skin="puzzle" title="Puzzle geometry on the walls, the ceiling and the floor">🧩</span>'
+   +'<select id="wanHallMotion" title="Motion — how the camera advances: smoothly with the transport, or snapping to the beat or the bar" style="font-size:10px;"><option value="smooth">smooth</option><option value="beat">by the beat</option><option value="bar">by the bar</option></select>'
+   +'<span class="cpchip" id="wanHallReset" title="Look straight ahead again">↺</span>'
+   +'<span style="font-size:9.5px;color:#6b4f28;">click = hear · double-click = exchange · drag = look around · wheel = look ahead</span></div>'
    +'<canvas id="wanHallCanvas" width="640" height="280" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;"></canvas>';
   const c=document.getElementById('wanHallCanvas');
-  c.onclick=wanHallClick;
+  c.onclick=e=>{if(wanHall.drag&&wanHall.drag.moved){wanHall.drag=null;return;}wanHall.drag=null;wanHallClick(e);};
+  c.ondblclick=wanHallDblClick;
+  c.onmousedown=e=>{wanHall.drag={x:e.clientX,y:e.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,moved:false};};
+  c.onmousemove=e=>{const d=wanHall.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
+   wanHall.look={dx:Math.max(-c.width*.25,Math.min(c.width*.25,d.dx+mx)),dy:Math.max(-c.height*.2,Math.min(c.height*.2,d.dy+my))};wanHallDraw();};
+  c.onmouseup=()=>{if(wanHall.drag&&!wanHall.drag.moved)wanHall.drag=null;};
+  host.querySelectorAll('.wanHallSkin').forEach(el=>{el.onclick=()=>{wanHall.skin=el.getAttribute('data-skin')||'books';wanHallDraw();};});
+  const mo=document.getElementById('wanHallMotion');if(mo){mo.value=wanHall.motion;mo.onchange=()=>{wanHall.motion=mo.value;wanHallDraw();};}
+  const rs=document.getElementById('wanHallReset');if(rs)rs.onclick=()=>{wanHall.look={dx:0,dy:0};wanHall.ahead=0;wanHallDraw();};
   c.onwheel=e=>{e.preventDefault();wanHall.ahead=Math.max(0,Math.min(HALL_DEPTH,(wanHall.ahead||0)+(e.deltaY>0?1:-1)));wanHallDraw();};
   const pb=document.getElementById('wanHallPlay');if(pb)pb.onclick=()=>wanHallPlay();
   const bb=document.getElementById('wanHallBack');if(bb)bb.onclick=()=>{wanHall.ahead=0;try{setPlayheadBeat(0);}catch(e){}wanHallDraw();};
@@ -25813,7 +25850,8 @@ function wanHallDraw(host){
  const ctx=c.getContext('2d'),W=c.width,H=c.height;
  const cam=wanHallCam();wanHall.cam=cam;
  const books=wanHallLayout(project.chords,cam,HALL_DEPTH);wanHall.books=books;
- const cx=W/2,cy=H*.42,halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17;
+ const cx=W/2+(wanHall.look.dx||0),cy=H*.42+(wanHall.look.dy||0),halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17,ceilH=H*.3;
+ host.querySelectorAll('.wanHallSkin').forEach(el=>el.classList.toggle('on',el.getAttribute('data-skin')===wanHall.skin));
  const xw=(side,s)=>cx+(side<0?-1:1)*halfW*s, yFloor=s=>cy+floorH*s, yShelf=s=>cy+shelfH*s;
  /* the hall: ceiling · walls · floor, from the vanishing point out */
  ctx.clearRect(0,0,W,H);
@@ -25830,14 +25868,23 @@ function wanHallDraw(host){
  /* the books, far to near, alternating walls */
  const hits=[];
  books.slice().sort((a,b)=>b.z1-a.z1).forEach(bk=>{
-  const side=bk.i%2?1:-1,s1=wanHallScale(bk.z1),s2=wanHallScale(bk.z2);
-  const xa=xw(side,s1),xb=xw(side,s2),ya=yShelf(s1),yb=yShelf(s2),ha=bookH*s1,hb=bookH*s2;
-  const pts=[[xa,ya],[xb,yb],[xb,yb-hb],[xa,ya-ha]];
+  const skin=wanHall.skin||'books';
+  const s1=wanHallScale(bk.z1),s2=wanHallScale(bk.z2);
+  const surf=skin==='puzzle'?(bk.i%4):(bk.i%2?2:0);   /* 0 left wall · 1 ceiling · 2 right wall · 3 floor — the puzzle uses all four (his View 5) */
+  let pts;
+  if(surf===1||surf===3){const tw=W*.12;const y1=surf===1?cy-ceilH*s1:yFloor(s1)-1,y2=surf===1?cy-ceilH*s2:yFloor(s2)-1;pts=[[cx-tw*s1,y1],[cx-tw*s2,y2],[cx+tw*s2,y2],[cx+tw*s1,y1]];}
+  else{const side=surf===2?1:-1;const xa=xw(side,s1),xb=xw(side,s2),ya=yShelf(s1),yb=yShelf(s2),ha=(skin==='cubes'?bookH*.8:bookH)*s1,hb=(skin==='cubes'?bookH*.8:bookH)*s2;pts=[[xa,ya],[xb,yb],[xb,yb-hb],[xa,ya-ha]];}
   const col=wanHallChordColor(bk),sel=wanHall.sel===bk.i;
   ctx.fillStyle=col;ctx.globalAlpha=bk.inside?1:.92;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
-  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2:1;ctx.stroke();
+  if(skin==='cubes'&&(surf===0||surf===2)){/* a top face toward the corridor's centre — the block reads as a cube */
+   const side=surf===2?1:-1,dep=bookH*.35;ctx.fillStyle='rgba(255,255,255,.22)';ctx.beginPath();ctx.moveTo(pts[3][0],pts[3][1]);ctx.lineTo(pts[2][0],pts[2][1]);ctx.lineTo(pts[2][0]-side*dep*s2,pts[2][1]-dep*.4*s2);ctx.lineTo(pts[3][0]-side*dep*s1,pts[3][1]-dep*.4*s1);ctx.closePath();ctx.fill();}
+  if(skin==='puzzle'){/* the piece's knob and socket — an inset line and a notch */
+   ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo((pts[0][0]*3+pts[1][0])/4,(pts[0][1]*3+pts[1][1])/4);ctx.lineTo((pts[3][0]*3+pts[2][0])/4,(pts[3][1]*3+pts[2][1])/4);ctx.stroke();
+   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.arc((pts[1][0]+pts[2][0])/2,(pts[1][1]+pts[2][1])/2,Math.max(1.5,4*s2),0,7);ctx.fill();}
+  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2:1;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.stroke();
+  const xa=pts[0][0],xb=pts[1][0],ya=pts[0][1],yb=pts[1][1],ha=pts[0][1]-pts[3][1],hb=pts[1][1]-pts[2][1];
   /* the spine's title, upright, sized by nearness */
-  if(s1>.14){ctx.fillStyle='#fff';ctx.font='bold '+Math.max(8,Math.round(12*s1))+'px system-ui';ctx.textAlign='center';let lbl=bk.lbl;try{lbl=dispLbl(bk.lbl);}catch(e){}ctx.fillText(lbl,(xa+xb)/2,(ya+yb)/2-(ha+hb)/4+4);ctx.textAlign='left';}
+  if(s1>.14){ctx.fillStyle='#fff';ctx.font='bold '+Math.max(8,Math.round(12*s1))+'px system-ui';ctx.textAlign='center';let lbl=bk.lbl;try{lbl=dispLbl(bk.lbl);}catch(e){}const st=wanHall.steps[bk.ci];ctx.fillText(lbl+(st?' ·'+(wanHallExchange(bk,st)||{}).op:''),(xa+xb)/2,(surf===1||surf===3)?((ya+yb)/2+4):((ya+yb)/2-(ha+hb)/4+4));ctx.textAlign='left';}
   hits.push({i:bk.i,pts,z:bk.z1});
  });
  wanHall.hits=hits.sort((a,b)=>a.z-b.z);   /* nearest first for the click */
@@ -25863,6 +25910,27 @@ function wanHallClick(e){
  const bk=wanHall.books.find(b=>b.i===h.i);
  if(bk)wanHallAudition([bk]);
  wanHallDraw();
+}
+function wanHallDblClick(e){
+ const c=document.getElementById('wanHallCanvas');if(!c)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ const h=wanHallHit(x,y);if(!h)return;
+ const bk=wanHall.books.find(b=>b.i===h.i);if(!bk)return;
+ const st=document.getElementById('wanHallStatus');
+ if(bk.sub){if(st)st.textContent='that one is a piece of a consolidated run — open the clip to change its harmony';return;}
+ const src=project.chords[bk.ci];if(!src)return;
+ const base=wanHall.orig&&wanHall.orig[bk.ci]?wanHall.orig[bk.ci]:{r:src.r,iv:src.iv.slice()};
+ const step=((wanHall.steps[bk.ci]||0)+1)%4;
+ const x2=wanHallExchange(base,step);
+ if(!x2){if(st)st.textContent='only a plain major or minor triad exchanges here (P · L · R)';return;}
+ wanHall.orig=wanHall.orig||{};wanHall.orig[bk.ci]=base;wanHall.steps[bk.ci]=step;
+ let lbl='';try{lbl=withKeyAt(bk.t,()=>romanFor(x2.r,x2.iv));}catch(err){lbl=PCN[x2.r]+(x2.iv[1]===3?'m':'');}
+ applyPanelChord(bk.ci,{r:x2.r,iv:x2.iv,lbl});   /* the palette's seam: one undo, the clip's name/colour kept */
+ wanHall.sel=bk.i;
+ const nb=wanHallLayout(project.chords,wanHall.cam,HALL_DEPTH).find(b=>b.i===bk.i);
+ if(nb)wanHallAudition([nb]);
+ wanHallDraw();
+ if(st)st.textContent+=' · exchanged'+(x2.op?' by '+x2.op:' back');
 }
 function wanHallAudition(list){
  /* click = audition, the audition voicing law (audVoice); ▶ = the strip in sequence at the song's rate */
