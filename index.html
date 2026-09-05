@@ -803,7 +803,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05m</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05n</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -26133,6 +26133,54 @@ function wanHallExchange(chord,step){
  if(k===0)return {op:'',r,iv:(minor?MIN:MAJ).slice()};
  const c=cands[k-1];return {op:c.op,r:c.r,iv:c.iv.slice()};
 }
+/* ==== R17 (build 2026-09-05n, the 96th, Fable) — HIS [40]: FIRST-PERSON CORRIDOR CONTROLS ====
+   His words (CAGED-INSTRUMENT-RAW-2026-09-04.md [40]): "the user needs some keyboard shortcuts to navigate through the
+   hallways - or just the arrow keys... and clicking the screen and dragging should let the user rotate 360 degrees, and
+   spacebar should propel the user forward… Think of controls from a 1st person… game where you're sliding through
+   hallways" · "floors and floors and floors below… hallways upon hallways of objects".
+   Labelled readings: a full turn shows the corridor BEHIND the camera (the song's past) once the heading passes a quarter
+   turn; the FLOORS are the four object streams (chords · melody · drums · key map) and the bamboo elevator moves between
+   them; SPACE glides while held; the keys act only while the corridor has the focus (a click or the pointer over it). */
+function wanHallYawNorm(y){
+ /* pure: a heading in degrees folded into (-180, 180] */
+ const v=((((+y||0)+180)%360)+360)%360-180;
+ return v===-180?180:v;
+}
+function wanHallYawView(yaw,W){
+ /* pure: what a heading shows — 'ahead' within ±90° (the vanishing point slides with the sine of the turn, to the left
+    for a right turn), 'behind' past it (the corridor behind the camera, the point sliding the mirrored way). {facing,dx,off,yaw} */
+ const y=wanHallYawNorm(yaw),w=(+W>0)?+W:640;
+ const behind=Math.abs(y)>90;
+ const a=behind?(y>0?180-y:-180-y):y;
+ return {facing:behind?'behind':'ahead',dx:-Math.sin(a*Math.PI/180)*w*.35,off:a,yaw:y};
+}
+function wanHallLayoutBehind(items,cam,depth){
+ /* pure: the objects BEHIND the camera mirrored into the corridor's own z (z = beats behind): an object the camera stands
+    in starts at 0 (inside); nothing ahead of the camera, nothing past `depth`. Nearest first. */
+ const D=(+depth>0)?+depth:HALL_DEPTH,c0=+cam||0,out=[];
+ (items||[]).forEach((o,k)=>{const z1=c0-(o.t+o.d),z2=c0-o.t;if(z2<=0||z1>=D)return;out.push(Object.assign({},o,{i:(o.i!=null?o.i:k),z1:Math.max(0,z1),z2:Math.min(D,z2),inside:z1<=0,behind:true}));});
+ return out.sort((a,b)=>a.z1-b.z1);
+}
+function wanHallNav(st,key,opts){
+ /* pure: his [40] controls → the next camera state, or null when the key is not ours. ↑/W = a beat forward · ↓/S = a beat
+    back · ←/→ = turn 15° · A/D = a step sideways · Q/E (PgUp/PgDn) = the floor above/below (the streams; `lift`) ·
+    SPACE = glide (`glide`, held) · R/Home = ↺ (`reset`). Every figure clamped: 0..HALL_DEPTH beats, ±W/4 sideways. */
+ const s={ahead:+st.ahead||0,yaw:+st.yaw||0,floor:Math.max(0,Math.min(HALL_SRCS.length-1,Math.round(+st.floor)||0)),dx:+st.dx||0};
+ const W=(opts&&+opts.W>0)?+opts.W:640,step=(opts&&+opts.step>0)?+opts.step:1,turn=(opts&&+opts.turn>0)?+opts.turn:15;
+ const k=String(key||''),kl=k.toLowerCase();
+ const clampA=v=>Math.max(0,Math.min(HALL_DEPTH,v)),clampX=v=>Math.max(-W*.25,Math.min(W*.25,v));
+ if(k==='ArrowUp'||kl==='w')return Object.assign(s,{ahead:clampA(s.ahead+step)});
+ if(k==='ArrowDown'||kl==='s')return Object.assign(s,{ahead:clampA(s.ahead-step)});
+ if(k==='ArrowLeft')return Object.assign(s,{yaw:wanHallYawNorm(s.yaw-turn)});
+ if(k==='ArrowRight')return Object.assign(s,{yaw:wanHallYawNorm(s.yaw+turn)});
+ if(kl==='a')return Object.assign(s,{dx:clampX(s.dx-W*.06)});
+ if(kl==='d')return Object.assign(s,{dx:clampX(s.dx+W*.06)});
+ if(k==='PageUp'||kl==='q')return Object.assign(s,{floor:Math.max(0,s.floor-1),lift:true});
+ if(k==='PageDown'||kl==='e')return Object.assign(s,{floor:Math.min(HALL_SRCS.length-1,s.floor+1),lift:true});
+ if(k===' '||k==='Spacebar')return Object.assign(s,{glide:true});
+ if(k==='Home'||kl==='r')return Object.assign(s,{ahead:0,yaw:0,dx:0,reset:true});
+ return null;
+}
 function wanHallSnap(cam,mode){
  /* the motion cadence (his SCROLL / FOCUS TIMING row): smooth = the camera as it is · beat = the beat it is in · bar = the bar */
  const c=Math.max(0,+cam||0);
@@ -26178,7 +26226,7 @@ function wanHallLayoutItems(items,cam,depth){
  (items||[]).forEach((o,k)=>{const z1=o.t-c0,z2=o.t+o.d-c0;if(z2<=0||z1>=D)return;out.push(Object.assign({},o,{i:(o.i!=null?o.i:k),z1:Math.max(0,z1),z2:Math.min(D,z2),inside:z1<=0}));});
  return out;
 }
-var wanHall={cam:0,ahead:0,sel:null,books:[],hits:[],iv:null,last:null,skin:'books',motion:'smooth',look:{dx:0,dy:0},steps:{},drag:null,src:'chords'};
+var wanHall={cam:0,ahead:0,sel:null,books:[],hits:[],iv:null,last:null,skin:'books',motion:'smooth',look:{dx:0,dy:0},steps:{},drag:null,src:'chords',yaw:0,glide:false,facing:'ahead'};   /* R17 [40]: yaw = the heading in degrees (a full 360°) · glide = SPACE held · facing = what the heading shows */
 function wanHallData(src){
  /* the app's own data for a stream: the chord lane · the melody track · the drums (the stored kit or the style's rendering) · the sections */
  try{
@@ -26191,6 +26239,18 @@ function wanHallData(src){
 function wanHallCam(){
  let b=0;try{b=notPlayheadBeat();}catch(e){b=(typeof playheadBeat==='number')?playheadBeat:0;}
  return wanHallSnap(b+(wanHall.ahead||0),wanHall.motion);
+}
+function wanHallApplyNav(r){
+ /* R17 [40]: a wanHallNav result onto the live corridor — the floor change rides the bamboo elevator, the select follows */
+ if(!r)return;
+ const cur=Math.max(0,HALL_SRCS.indexOf(wanHall.src));
+ wanHall.ahead=r.ahead;wanHall.yaw=r.yaw;wanHall.look={dx:r.dx,dy:r.reset?0:(wanHall.look.dy||0)};
+ if(r.lift&&r.floor!==cur){
+  wanHall.src=HALL_SRCS[r.floor];wanHall.sel=null;
+  const so=document.getElementById('wanHallSrc');if(so)so.value=wanHall.src;
+  wanHall.elev={t0:performance.now(),dur:650,label:'floor '+(r.floor+1)+' — the '+({chords:'chords',melody:'melody',drums:'drums',keys:'key map'}[wanHall.src]||wanHall.src)};
+ }
+ wanHallDraw();
 }
 function wanHallChordColor(c){
  /* the object's paint: a chord by the paper view's law (chromatic grey, else the degree colour in the key at its beat); a
@@ -26215,23 +26275,34 @@ function wanHallDraw(host){
    +'<select id="wanHallSrc" title="Objects on the shelves — whatever is selected: the chords (the default), the melody\'s notes, the drums\' hits, or the key map (one object per section)" style="font-size:10px;">'+HALL_SRCS.map(s=>'<option value="'+s+'">'+({chords:'the chords',melody:'the melody',drums:'the drums',keys:'the key map'})[s]+'</option>').join('')+'</select>'
    +'<span class="cpchip" id="wanHallReset" title="Look straight ahead again">↺</span>'
    +'<span class="cpchip'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?' on':'')+'" id="wanHallElev" title="The bamboo elevator — the thatched shelter that sinks you into the hallway when the view opens. Off = skip it (remembered in this browser, as his text says)">🎋</span>'
-   +'<span style="font-size:9.5px;color:#6b4f28;">click = hear · double-click = exchange · drag = look around · wheel = look ahead</span></div>'
-   +'<canvas id="wanHallCanvas" width="640" height="280" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;"></canvas>';
+   +'<span style="font-size:9.5px;color:#6b4f28;">click = hear · double-click = exchange · drag = turn (a full 360° — past a quarter turn you face the past) · ↑↓ W S = walk · ←→ = turn · A D = sidestep · SPACE held = glide · Q E = the elevator between the floors · wheel = look ahead · R = ↺</span></div>'
+   +'<canvas id="wanHallCanvas" width="640" height="280" tabindex="0" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;outline:none;"></canvas>';
   const c=document.getElementById('wanHallCanvas');
   c.onclick=e=>{if(wanHall.drag&&wanHall.drag.moved){wanHall.drag=null;return;}wanHall.drag=null;wanHallClick(e);};
   c.ondblclick=wanHallDblClick;
   c.onmousedown=e=>{
    if(e.button!==0)return;
+   try{c.focus({preventScroll:true});}catch(err){}   /* R17: the corridor takes the keys */
+   wanHall.drag=null;   /* R17: a fresh press — no earlier look-drag rides a chord's drag to the lane */
    const rr=c.getBoundingClientRect();const h=wanHallHit((e.clientX-rr.left)*c.width/rr.width,(e.clientY-rr.top)*c.height/rr.height);
    if(h){wanHallChordDrag(e,h);return;}   /* R9: a book drags its chord to the chord lane */
-   wanHall.drag={x:e.clientX,y:e.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,moved:false};};
+   wanHall.drag={x:e.clientX,y:e.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,yaw:wanHall.yaw||0,moved:false};};
   c.onmousemove=e=>{const d=wanHall.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
-   wanHall.look={dx:Math.max(-c.width*.25,Math.min(c.width*.25,d.dx+mx)),dy:Math.max(-c.height*.2,Math.min(c.height*.2,d.dy+my))};wanHallDraw();};
+   /* R17 [40]: a horizontal drag TURNS the heading (0.6° a pixel, unclamped — a full 360°); a vertical one tilts the look as before */
+   wanHall.yaw=wanHallYawNorm((d.yaw||0)+mx*0.6);wanHall.look={dx:d.dx,dy:Math.max(-c.height*.2,Math.min(c.height*.2,d.dy+my))};wanHallDraw();};
+  /* R17 [40]: the keys — only while the corridor has the focus (a press or the pointer over it gives it); SPACE glides while held and never reaches the transport (`_cnvOwned`, the Canvas window's own precedent) */
+  c.onmouseenter=()=>{try{c.focus({preventScroll:true});}catch(err){}};
+  c.onkeydown=e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;const r=wanHallNav({ahead:wanHall.ahead||0,yaw:wanHall.yaw||0,floor:Math.max(0,HALL_SRCS.indexOf(wanHall.src)),dx:wanHall.look.dx||0},e.key,{W:c.width});if(!r)return;
+   e._cnvOwned=true;e.preventDefault();e.stopPropagation();
+   if(r.glide){if(!wanHall.glide){wanHall.glide=true;wanHallDraw();}return;}
+   wanHallApplyNav(r);};
+  c.onkeyup=e=>{if(e.key===' '||e.code==='Space'){if(wanHall.glide){wanHall.glide=false;wanHallDraw();}e._cnvOwned=true;e.preventDefault();}};
+  c.onblur=()=>{wanHall.glide=false;};
   c.onmouseup=()=>{if(wanHall.drag&&!wanHall.drag.moved)wanHall.drag=null;};
   host.querySelectorAll('.wanHallSkin').forEach(el=>{el.onclick=()=>{wanHall.skin=el.getAttribute('data-skin')||'books';wanHallDraw();};});
   const mo=document.getElementById('wanHallMotion');if(mo){mo.value=wanHall.motion;mo.onchange=()=>{wanHall.motion=mo.value;wanHallDraw();};}
   const so=document.getElementById('wanHallSrc');if(so){so.value=wanHall.src||'chords';so.onchange=()=>{wanHall.src=HALL_SRCS.indexOf(so.value)>=0?so.value:'chords';wanHall.sel=null;wanHallDraw();};}
-  const rs=document.getElementById('wanHallReset');if(rs)rs.onclick=()=>{wanHall.look={dx:0,dy:0};wanHall.ahead=0;wanHallDraw();};
+  const rs=document.getElementById('wanHallReset');if(rs)rs.onclick=()=>{wanHall.look={dx:0,dy:0};wanHall.ahead=0;wanHall.yaw=0;wanHallDraw();};   /* R17: ↺ faces ahead again */
   const el=document.getElementById('wanHallElev');if(el)el.onclick=()=>{try{SETTINGS.hallElevator=!(SETTINGS.hallElevator!==false);persistSettings();}catch(e){}el.classList.toggle('on',!!(SETTINGS&&SETTINGS.hallElevator!==false));};
   /* the entry: the shelter sinks like an elevator into the hallway — once per opening of the view, unless skipped */
   wanHall.elev=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?{t0:performance.now(),dur:1400}:null;
@@ -26244,8 +26315,11 @@ function wanHallDraw(host){
  const ctx=c.getContext('2d'),W=c.width,H=c.height;
  const cam=wanHallCam();wanHall.cam=cam;
  const src=HALL_SRCS.indexOf(wanHall.src)>=0?wanHall.src:'chords';
- const books=wanHallLayoutItems(wanHallItems(src,wanHallData(src)),cam,HALL_DEPTH);wanHall.books=books;
- const cx=W/2+(wanHall.look.dx||0),cy=H*.42+(wanHall.look.dy||0),halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17,ceilH=H*.3;
+ /* R17 [40]: the heading — within a quarter turn the corridor ahead; past it the corridor BEHIND (the song's past, mirrored into z) */
+ const view=wanHallYawView(wanHall.yaw||0,W);wanHall.facing=view.facing;
+ const items=wanHallItems(src,wanHallData(src));
+ const books=view.facing==='behind'?wanHallLayoutBehind(items,cam,HALL_DEPTH):wanHallLayoutItems(items,cam,HALL_DEPTH);wanHall.books=books;
+ const cx=W/2+(wanHall.look.dx||0)+view.dx,cy=H*.42+(wanHall.look.dy||0),halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17,ceilH=H*.3;
  host.querySelectorAll('.wanHallSkin').forEach(el=>el.classList.toggle('on',el.getAttribute('data-skin')===wanHall.skin));
  const xw=(side,s)=>cx+(side<0?-1:1)*halfW*s, yFloor=s=>cy+floorH*s, yShelf=s=>cy+shelfH*s;
  /* the hall: ceiling · walls · floor, from the vanishing point out */
@@ -26255,8 +26329,8 @@ function wanHallDraw(host){
  ctx.fillStyle='#6b5a44';ctx.beginPath();ctx.moveTo(xw(-1,s0),yFloor(s0));ctx.lineTo(xw(1,s0),yFloor(s0));ctx.lineTo(xw(1,sFar),yFloor(sFar));ctx.lineTo(xw(-1,sFar),yFloor(sFar));ctx.closePath();ctx.fill();
  for(const side of [-1,1]){ctx.fillStyle=side<0?'#4a3d31':'#54463a';ctx.beginPath();ctx.moveTo(xw(side,s0),0);ctx.lineTo(xw(side,s0),yFloor(s0));ctx.lineTo(xw(side,sFar),yFloor(sFar));ctx.lineTo(xw(side,sFar),cy-floorH*sFar*.6);ctx.closePath();ctx.fill();}
  /* the floor's bars and beats — the empty space IS the time */
- const first=Math.ceil(cam-1e-6);
- for(let b=first;b<=cam+HALL_DEPTH;b++){const z=b-cam,s=wanHallScale(z);const bar=b%4===0;ctx.strokeStyle=bar?'rgba(255,230,180,.55)':'rgba(255,230,180,.18)';ctx.lineWidth=bar?1.2:.8;ctx.beginPath();ctx.moveTo(xw(-1,s),yFloor(s)+.5);ctx.lineTo(xw(1,s),yFloor(s)+.5);ctx.stroke();
+ const behindV=view.facing==='behind';const first=behindV?Math.floor(cam+1e-6):Math.ceil(cam-1e-6);
+ for(let kk=0;kk<=HALL_DEPTH+1;kk++){const b=behindV?first-kk:first+kk;if(b<0)break;const z=behindV?cam-b:b-cam;if(z<0||z>HALL_DEPTH)continue;const s=wanHallScale(z);const bar=b%4===0;ctx.strokeStyle=bar?'rgba(255,230,180,.55)':'rgba(255,230,180,.18)';ctx.lineWidth=bar?1.2:.8;ctx.beginPath();ctx.moveTo(xw(-1,s),yFloor(s)+.5);ctx.lineTo(xw(1,s),yFloor(s)+.5);ctx.stroke();
   if(bar&&s>.2){ctx.fillStyle='rgba(255,230,180,.6)';ctx.font=Math.max(8,Math.round(11*s))+'px system-ui';ctx.fillText(String(b/4+1),cx-8*s,yFloor(s)-3);}}
  /* the shelves */
  for(const side of [-1,1]){ctx.strokeStyle='#a8895f';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xw(side,s0),yShelf(s0));ctx.lineTo(xw(side,sFar),yShelf(sFar));ctx.stroke();}
@@ -26287,6 +26361,7 @@ function wanHallDraw(host){
  ctx.strokeStyle=paintOf('--playhead','#e8a33d');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xw(-1,1),yFloor(1)-1);ctx.lineTo(xw(1,1),yFloor(1)-1);ctx.stroke();
  const st=document.getElementById('wanHallStatus');
  if(st){const bar=Math.floor(cam/4)+1,beat=Math.floor(cam%4)+1;const word={chords:'chord',melody:'note',drums:'hit',keys:'key'}[src]||'object';st.textContent='bar '+bar+' · beat '+beat+' · '+books.length+' '+word+(books.length===1?'':'s')+' ahead'+(wanHall.ahead?' · looking '+wanHall.ahead+' beat'+(wanHall.ahead===1?'':'s')+' ahead':'');}
+ if(st){st.textContent+=' · floor '+(Math.max(0,HALL_SRCS.indexOf(src))+1)+' of '+HALL_SRCS.length+(view.facing==='behind'?' · facing the past':'')+(wanHall.glide?' · gliding':'');}   /* R17 */
  const elevOn=wanHallElevDraw(ctx,W,H);
  wanHall.last={cam,books:books.length,hits:hits.length,W,H,elev:elevOn};
  return wanHall.last;
@@ -26295,7 +26370,7 @@ function wanHallChordDrag(e3,h){
  /* his INTERACTIONS row: "Drag selected/colored items → … Chord Lane" — the chain's own seam (cadFillBack ending AT the drop
     cell, the slot's duration kept, one undo). A press without a move stays a click (select + audition). */
  const bk=wanHall.books.find(b=>b.i===h.i);if(!bk)return;
- if(bk.kind&&bk.kind!=='chords'){wanHall.drag={x:e3.clientX,y:e3.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,moved:false};return;}   /* only a chord drags to the lane; the rest look around */
+ if(bk.kind&&bk.kind!=='chords'){wanHall.drag={x:e3.clientX,y:e3.clientY,dx:wanHall.look.dx,dy:wanHall.look.dy,yaw:wanHall.yaw||0,moved:false};return;}   /* only a chord drags to the lane; the rest look around */
  e3.preventDefault();
  let ghost=null,went=false;
  const mv=ev=>{
@@ -26342,7 +26417,7 @@ function wanHallElevDraw(ctx,W,H){
  ctx.strokeStyle='#8a6a3a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx-rw*.7,y+rh);ctx.lineTo(cx-rw*.7,y+rh*3.2);ctx.moveTo(cx+rw*.7,y+rh);ctx.lineTo(cx+rw*.7,y+rh*3.2);ctx.stroke();
  ctx.fillStyle='#b8985a';ctx.beginPath();ctx.moveTo(cx-rw,y+rh);ctx.lineTo(cx,y);ctx.lineTo(cx+rw,y+rh);ctx.lineTo(cx+rw*.85,y+rh*1.25);ctx.lineTo(cx-rw*.85,y+rh*1.25);ctx.closePath();ctx.fill();
  ctx.strokeStyle='#7a5a2a';ctx.lineWidth=1;for(let k=1;k<7;k++){ctx.beginPath();ctx.moveTo(cx-rw+k*rw*2/7,y+rh*1.25);ctx.lineTo(cx-rw*.6+k*rw*1.2/7,y+rh*.3);ctx.stroke();}
- ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('descending into the hallway…',cx,y+rh*3.6);ctx.textAlign='left';
+ ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(ev.label||'descending into the hallway…',cx,y+rh*3.6);ctx.textAlign='left';
  try{requestAnimationFrame(()=>{if(wanHall.elev)wanHallDraw();});}catch(e){}
  return true;
 }
@@ -26402,6 +26477,7 @@ function wanHallTick(){
  const c=document.getElementById('wanHallCanvas');
  const shown=(typeof uiWinShown==='function')&&uiWinShown('wanPanel');
  if(!c||!shown||wanWeb2State().view!=='hallway'){clearInterval(wanHall.iv);wanHall.iv=null;return;}
+ if(wanHall.glide){wanHall.ahead=Math.min(HALL_DEPTH,(wanHall.ahead||0)+0.5);wanHallDraw();return;}   /* R17 [40]: SPACE held = five beats a second down the corridor */
  const cam=wanHallCam();
  if(cam!==wanHall.cam)wanHallDraw();
 }
