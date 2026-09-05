@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4877,13 +4877,43 @@ function notSpell(rows,opts){
    });
   }
   items.sort((a,b)=>a.t-b.t||a.notes[0].midi-b.notes[0].midi);
-  /* rests fill the gaps (overlapping stacks of different length are voices E3 will split; V1 skips their overlap) */
-  const rests=[];let cursor=0;
-  for(const it of items){if(it.t>cursor){for(const part of notSplitTicks(cursor,it.t-cursor,meter)){rests.push({t:cursor,d:part.ticks,kind:'rest',value:part.value,dots:part.dots,tuplet:part.tuplet,tie:null,notes:[],beam:null});cursor+=part.ticks;}}cursor=Math.max(cursor,it.t+it.d);}
+  /* E7 (build 2026-09-05d): VOICES — stacks that overlap in time without sharing onset AND length are two voices. Each
+     overlapping PAIR decides: its higher stack is voice 1 (stems up), its lower voice 2 (stems down); a stack already
+     voiced by an earlier pair keeps its voice and its partner takes the other; a stack overlapping nothing joins the
+     voice its pitch sits nearer. A measure without overlap is one voice (0, stems by the middle line, as E1). */
+  items.forEach(it=>{it.voice=0;});
+  const midOf=it=>it.notes[Math.floor(it.notes.length/2)].midi;
+  let overlaps=false;
+  for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+   const A=items[i],B=items[j];
+   if(!(A.t<B.t+B.d&&B.t<A.t+A.d&&!(A.t===B.t&&A.d===B.d)))continue;
+   overlaps=true;
+   const hi=midOf(A)>=midOf(B)?A:B,lo=hi===A?B:A;
+   if(!hi.voice&&!lo.voice){hi.voice=1;lo.voice=2;}
+   else if(hi.voice&&!lo.voice)lo.voice=hi.voice===1?2:1;
+   else if(!hi.voice&&lo.voice)hi.voice=lo.voice===1?2:1;
+  }
   const M=m.end-m.start;
-  if(cursor<M){if(cursor===0)rests.push({t:0,d:M,kind:'rest',value:'measure',dots:0,tuplet:null,tie:null,notes:[],beam:null});
-   else for(const part of notSplitTicks(cursor,M-cursor,meter)){rests.push({t:cursor,d:part.ticks,kind:'rest',value:part.value,dots:part.dots,tuplet:part.tuplet,tie:null,notes:[],beam:null});cursor+=part.ticks;}}
-  m.items=items.concat(rests).sort((a,b)=>a.t-b.t||(a.kind==='rest'?1:0)-(b.kind==='rest'?1:0));
+  const rests=[];
+  const fill=(from,to,voice)=>{let c=from;for(const part of notSplitTicks(c,to-c,meter)){rests.push({t:c,d:part.ticks,kind:'rest',value:part.value,dots:part.dots,tuplet:part.tuplet,tie:null,notes:[],beam:null,voice});c+=part.ticks;}};
+  if(overlaps){
+   const v1=items.filter(it=>it.voice===1).map(midOf),v2=items.filter(it=>it.voice===2).map(midOf);
+   const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,split=(mean(v1)+mean(v2))/2;
+   items.forEach(it=>{if(!it.voice)it.voice=midOf(it)>=split?1:2;});
+   /* voice 1 rests over the whole measure; voice 2 rests only between its own first and last stack */
+   for(const v of [1,2]){
+    const vi=items.filter(it=>it.voice===v);if(!vi.length)continue;
+    let cursor=(v===1)?0:vi[0].t;const end=(v===1)?M:Math.max.apply(null,vi.map(it=>it.t+it.d));
+    for(const it of vi){if(it.t>cursor)fill(cursor,it.t,v);cursor=Math.max(cursor,it.t+it.d);}
+    if(cursor<end)fill(cursor,end,v);
+   }
+  }else{
+   /* rests fill the gaps (a same-voice overlap — two stacks of equal pitch — is skipped) */
+   let cursor=0;
+   for(const it of items){if(it.t>cursor)fill(cursor,it.t,0);cursor=Math.max(cursor,it.t+it.d);}
+   if(cursor<M){if(cursor===0)rests.push({t:0,d:M,kind:'rest',value:'measure',dots:0,tuplet:null,tie:null,notes:[],beam:null,voice:0});else fill(cursor,M,0);}
+  }
+  m.items=items.concat(rests).sort((a,b)=>a.t-b.t||(a.voice||0)-(b.voice||0)||(a.kind==='rest'?1:0)-(b.kind==='rest'?1:0));
   /* accidentals: shown when the letter+octave's state differs from the key signature (or the bar's last alteration); a
      courtesy natural when a letter returns to the signature after an alteration */
   const state={};
@@ -4895,15 +4925,16 @@ function notSpell(rows,opts){
    n.accShow=(n.acc===cur)?'':(n.acc===0?'♮':n.acc===1?'♯':n.acc===-1?'♭':n.acc===2?'𝄪':'𝄫');
    state[k]=n.acc;
   }}
-  /* beams: 8ths and shorter, by group, broken at rests */
-  const G=notBeatGroup(meter);let bid=0;
+  /* beams: 8ths and shorter, by group, broken at rests — per voice (E7) */
+  const G=notBeatGroup(meter);let bid=0;const lastOf={};
   for(let i=0;i<m.items.length;i++){
-   const it=m.items[i];
-   if(it.kind!=='note'||!(it.value==='8'||it.value==='16'||it.value==='32')){continue;}
+   const it=m.items[i];const v=it.voice||0;
+   if(it.kind!=='note'||!(it.value==='8'||it.value==='16'||it.value==='32')){lastOf[v]=it;continue;}
    const grp=Math.floor(it.t/G);
-   const prev=m.items[i-1];
+   const prev=lastOf[v];
    if(prev&&prev.kind==='note'&&prev.beam!==null&&Math.floor(prev.t/G)===grp&&prev.t+prev.d===it.t)it.beam=prev.beam;
    else it.beam=++bid;
+   lastOf[v]=it;
   }
   for(let i=0;i<m.items.length;i++){const it=m.items[i];if(it.beam!==null&&!m.items.some((o,j)=>j!==i&&o.beam===it.beam))it.beam=null;}   /* a lone 8th has no beam */
  }
@@ -5894,7 +5925,7 @@ function notDrawStaff(ctx,sp,from,to,geom){
  const tab=g.tab||null;
  if(tab){ctx.fillStyle=INK;ctx.font='9px system-ui';ctx.fillText('TAB',8,tab.top+3*tab.gap+3);ctx.strokeStyle='#777';for(let i=0;i<6;i++){const y=tab.top+i*tab.gap;ctx.beginPath();ctx.moveTo(30,y+.5);ctx.lineTo(W-8,y+.5);ctx.stroke();}}
  const px=(W-x0-10)/ticks, tk0=shown[0].start, xAt=tk=>x0+(tk-tk0)*px;
- let drawn=0,tabN=0,ties=[],syms=0,dyns=0,accN=0,hairN=0;
+ let drawn=0,tabN=0,ties=[],syms=0,dyns=0,accN=0,hairN=0,v2N=0;
  const accSet=Array.isArray(g.acc)?new Set(g.acc.map(a=>Math.round(a.tick))):null;
  const headY=n=>yOf(n.step);
  for(const m of shown){
@@ -5907,14 +5938,16 @@ function notDrawStaff(ctx,sp,from,to,geom){
    const x=xAt(m.start+it.t)+6;
    if(it.kind==='rest'){
     ctx.fillStyle=INK;
-    if(it.value==='measure'||it.value==='w'){ctx.fillRect(x+(it.value==='measure'?(m.end-m.start)*px/2-6:0),staffBottom-3*GAP,12,3);}
-    else if(it.value==='h'){ctx.fillRect(x,staffBottom-2*GAP-3,12,3);}
-    else{ctx.font='18px Georgia,serif';ctx.fillText(it.value==='q'?'𝄽':it.value==='8'?'𝄾':'𝄿',x,staffBottom-GAP+2);}
-    if(it.dots){ctx.beginPath();ctx.arc(x+15,staffBottom-2*GAP-1,1.3,0,7);ctx.fill();}
+    const rv=it.voice===1?-GAP:it.voice===2?GAP*1.5:0;   /* E7: a voice's rests sit high (1) or low (2) */
+    if(it.value==='measure'||it.value==='w'){ctx.fillRect(x+(it.value==='measure'?(m.end-m.start)*px/2-6:0),staffBottom-3*GAP+rv,12,3);}
+    else if(it.value==='h'){ctx.fillRect(x,staffBottom-2*GAP-3+rv,12,3);}
+    else{ctx.font='18px Georgia,serif';ctx.fillText(it.value==='q'?'𝄽':it.value==='8'?'𝄾':'𝄿',x,staffBottom-GAP+2+rv);}
+    if(it.dots){ctx.beginPath();ctx.arc(x+15,staffBottom-2*GAP-1+rv,1.3,0,7);ctx.fill();}
     continue;
    }
    const ys=it.notes.map(headY), yTop=Math.min.apply(null,ys), yBot=Math.max.apply(null,ys);
-   const mid=(yTop+yBot)/2, stemUp=mid>staffBottom-2*GAP;
+   const mid=(yTop+yBot)/2, stemUp=it.voice===1?true:it.voice===2?false:(mid>staffBottom-2*GAP);   /* E7: a voiced stack's stem is its voice's */
+   if(it.voice===2)v2N++;
    const hollow=(it.value==='w'||it.value==='h');
    for(const y of ys){for(let ly=staffBottom+GAP;ly<=y+.1;ly+=GAP){ctx.strokeStyle='#444';ctx.beginPath();ctx.moveTo(x-6,ly+.5);ctx.lineTo(x+6,ly+.5);ctx.stroke();}
     for(let ly=staffTop-GAP;ly>=y-.1;ly-=GAP){ctx.strokeStyle='#444';ctx.beginPath();ctx.moveTo(x-6,ly+.5);ctx.lineTo(x+6,ly+.5);ctx.stroke();}}
@@ -5959,7 +5992,7 @@ function notDrawStaff(ctx,sp,from,to,geom){
  if(g.caret&&isFinite(g.caret.tick)&&g.caret.tick>=tk0&&g.caret.tick<=tk0+ticks){const xc=xAt(g.caret.tick)+6;ctx.strokeStyle='#2f6fd6';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xc,staffTop-12);ctx.lineTo(xc,(tab?tab.top+5*tab.gap:staffBottom)+8);ctx.stroke();
   ctx.fillStyle='#2f6fd6';ctx.beginPath();ctx.moveTo(xc-5,staffTop-16);ctx.lineTo(xc+5,staffTop-16);ctx.lineTo(xc,staffTop-10);ctx.closePath();ctx.fill();
   if(g.caret.label){ctx.font='bold 9px system-ui';ctx.fillText(String(g.caret.label),xc+8,staffTop-12);}caretDrawn=true;}
- return {items:drawn,tab:tabN,ties:ties.length,syms,dyns,acc:accN,hair:hairN,key:sharps,meter:shown[0].num+'/'+shown[0].den,from,to,x0,px,tk0,ticks,caret:caretDrawn};
+ return {items:drawn,tab:tabN,ties:ties.length,syms,dyns,acc:accN,hair:hairN,v2:v2N,key:sharps,meter:shown[0].num+'/'+shown[0].den,from,to,x0,px,tk0,ticks,caret:caretDrawn};
 }
 function notPlayheadBeat(){
  try{if(typeof playing!=='undefined'&&playing)return transportBeat();}catch(e){}
@@ -6043,7 +6076,7 @@ function wqDrawInto(canvas,partIds,opts){
  const ctx=canvas.getContext('2d'); const W=canvas.width;
  const per=opts.per||150, H=Math.max(per,per*partIds.length)+10; if(canvas.height!==H)canvas.height=H;
  ctx.clearRect(0,0,W,H); ctx.fillStyle='#f7f3ea'; ctx.fillRect(0,0,W,H);
- const at=(opts.at!=null&&isFinite(+opts.at))?+opts.at:notPlayheadBeat(), out={parts:0,items:0,syms:0,dyns:0,from:0,to:0,tab:0,caret:false,geoms:[],hair:0,acc:0,bars:opts.bars||wqState.bars||4};
+ const at=(opts.at!=null&&isFinite(+opts.at))?+opts.at:notPlayheadBeat(), out={parts:0,items:0,syms:0,dyns:0,from:0,to:0,tab:0,caret:false,geoms:[],hair:0,acc:0,v2:0,bars:opts.bars||wqState.bars||4};
  partIds.forEach((t,k)=>{
   const rows=wqPartRows(t);
   let sp=null;try{sp=notSpellTrack(rows.map(n=>[n[0],n[1],n[2]]));}catch(e){sp=null;}
@@ -6060,7 +6093,7 @@ function wqDrawInto(canvas,partIds,opts){
   const hair=notHairpins(rows);
   const r=notDrawStaff(ctx,sp,win.from,win.to,{W,staffBottom:base+62,GAP:7,clef,shift:gtr?7:0,tab,chords,dyn:notDynamics(rows,hair),hair,acc:notAccents(rows,hair),playheadTick:at*NOT_TPB,caret});
   ctx.fillStyle='#8a8577';ctx.font='9px system-ui';ctx.fillText((typeof trackLabel==='function'?trackLabel(t):t)+(gtr?' · guitar, written 8vb':clef==='bass'?' · bass clef':'')+(caret?' · ✎ writing here':''),34,base+14);
-  out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.hair+=r.hair||0;out.acc+=r.acc||0;out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
+  out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.hair+=r.hair||0;out.acc+=r.acc||0;out.v2+=r.v2||0;out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
   out.geoms.push({t,base,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks});
  });
  return out;
@@ -10040,7 +10073,7 @@ function drawNotationPage(){
  out+=`<line id="ph" x1="${GUT}" y1="0" x2="${GUT}" y2="${sysH-NOT_PAGE_GAP}" stroke="${paintOf('--playhead','#e8a33d')}" stroke-width="1.6" opacity="0"/>`;
  if(canAdd)out+=`<g style="cursor:pointer"><rect id="paperAdd" x="0" y="${H+4}" width="${W}" height="22" rx="6" fill="rgba(255,255,255,.02)" stroke="#5a6178" stroke-dasharray="6 5"><title>Add 4 more bars — the page grows as your music approaches the end</title></rect><text x="${W/2}" y="${H+19}" text-anchor="middle" font-size="10.5" fill="#98a0b2" pointer-events="none">+ 4 bars</text></g>`;
  svg.innerHTML=out;
- _notPage.systems=[];_notPage.last={systems:systems.length,parts:parts.length,items:0,syms:0,dyns:0,tab:0,hair:0,acc:0,caret:false,W,H};
+ _notPage.systems=[];_notPage.last={systems:systems.length,parts:parts.length,items:0,syms:0,dyns:0,tab:0,hair:0,acc:0,v2:0,caret:false,W,H};
  const c=document.getElementById('notPageCanvas');
  if(c){
   const ctx=c.getContext('2d');ctx.fillStyle='#f7f3ea';ctx.fillRect(0,0,W,H);
@@ -10063,7 +10096,7 @@ function drawNotationPage(){
      for(const sc of secs){if(!sc||!isFinite(sc.start))continue;const tk=Math.round(sc.start*NOT_TPB);if(tk>=r.tk0&&tk<r.tk0+r.ticks){let lbl=String(sc.name||'');try{lbl+=' · '+sectionKeyLabel(sc);}catch(e){}ctx.fillText(lbl,r.x0+(tk-r.tk0)*r.px+2,y0+11);}}
     }
     geoms.push({t,base,h,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks});
-    _notPage.last.items+=r.items;_notPage.last.syms+=r.syms||0;_notPage.last.dyns+=r.dyns||0;_notPage.last.tab+=r.tab||0;_notPage.last.hair+=r.hair||0;_notPage.last.acc+=r.acc||0;if(r.caret)_notPage.last.caret=true;
+    _notPage.last.items+=r.items;_notPage.last.syms+=r.syms||0;_notPage.last.dyns+=r.dyns||0;_notPage.last.tab+=r.tab||0;_notPage.last.hair+=r.hair||0;_notPage.last.acc+=r.acc||0;_notPage.last.v2+=r.v2||0;if(r.caret)_notPage.last.caret=true;
     base+=h;
    });
    _notPage.systems.push({y0,h:sysH,from:sy.from,to:sy.to,geoms});
