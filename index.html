@@ -300,6 +300,11 @@
   #wanRoadDlg .wanPopStrip{margin:0 -10px 8px;}
   #wanWebMenu{position:fixed;z-index:130;background:#f2e7cb;border:2px double #6b4f28;border-radius:8px;padding:6px;box-shadow:0 8px 26px rgba(0,0,0,.45);font-size:12px;min-width:210px;display:none;font-family:Georgia,serif;color:#3a2c18;}
   #wanWebMenu .wmit{padding:5px 9px;border-radius:5px;cursor:pointer;}
+  #curCert{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:131;background:#f7efd8;color:#3a2c18;border:3px double #6b4f28;border-radius:10px;padding:16px 22px;width:min(460px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.5);font-family:Georgia,serif;font-size:12.5px;line-height:1.45;}   /* R16 [38]: the certificate of a new way to think about music */
+  #curCert .cchd{font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center;margin-bottom:8px;}
+  #curCert .ccid{font-family:ui-monospace,Menlo,monospace;font-size:13px;text-align:center;letter-spacing:.08em;margin:8px 0;padding:6px;border:1px dashed #6b4f28;border-radius:6px;}
+  #curCert .ccb{display:inline-block;margin:8px 6px 0 0;padding:4px 10px;border:1px solid #6b4f28;border-radius:6px;cursor:pointer;background:#efe2c0;}
+  .orbAst.sel circle{filter:drop-shadow(0 0 4px var(--accent));}
   #wanWebMenu .wmit:hover{background:#e5d5ab;}
   #wanWebMenu .wmit.dis{color:#9a7f5d;cursor:default;}
   #wanWebMenu .wmhd{padding:5px 9px 2px;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#6b4f28;border-top:1px solid #c9b085;margin-top:4px;}
@@ -798,7 +803,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05l</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05m</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -17931,6 +17936,136 @@ function przKeepForm(){
    events re-realized over the chords) or change the chords (the lane re-rooted under the notes).
    The pure layer sits with strandTrackRows (relMelChord · relCollapse · relRealizeMelody ·
    relRerootChords · validRelationData). */
+/* ==== R16 (build 2026-09-05m, the 96th, Fable) — HIS [38]: THE CURIOSITIES REGISTRY ====
+   His words (CAGED-INSTRUMENT-RAW-2026-09-04.md [38]): "all these small essence inter-relationships need to be logged and
+   stored as the user asks for them, and made available to everyone who uses the app as 'A new way to think about music'
+   … the app should have a certificate with a unique identifier … The Orbits screen can show or hide these … as asteroids
+   in an asteroid belt around the planet when the view is 'Curiosities' … a drop down menu list when the user
+   control+clicks on the planet when 'All Curiosities' are selected."
+   THE LAW: a curiosity is a KEPT RELATION OBJECT (the 'relation' strand — notes ↔ chords, strikes ↔ drums), identified by
+   its fingerprint; the registry holds NO notes, chords or hits (validRelationData already refuses content), only the
+   relationship's events, its name, the song it came from, the day, and its certificate id. Round 1 = a DEVICE registry
+   (localStorage 'cp_curiosities') with export/import; "everyone" needs a shared store the static site does not have —
+   that is a backend round, named in the record, not faked here. */
+function curCertId(fp,when){
+ /* pure: the certificate's unique identifier — the relationship's fingerprint and the day it was FIRST kept */
+ const day=String(when||'').slice(0,10).replace(/-/g,'')||'00000000';
+ const h=prismHash(String(fp)+'|'+day).toUpperCase();
+ return 'CUR-'+day+'-'+('0000000'+h).slice(-7);
+}
+function curFromShelf(o,ctx){
+ /* pure: a Shelf relation object → a curiosity record; null for anything that is not a well-formed relation */
+ if(!o||typeof o!=='object'||o.strand!=='relation'||!validRelationData(o.data))return null;
+ const when=String((ctx&&ctx.when)||new Date().toISOString());
+ const fp=String(o.fp||prismHash(o.data.events.map(e=>e.join(':')).join(',')));
+ return {id:'c'+fp,fp,name:String(o.name||'relationship').slice(0,60),rel:String(o.data.rel||'?'),n:o.data.events.length,
+         song:String((ctx&&ctx.song)||'').slice(0,60),when,cert:curCertId(fp,when)};
+}
+function validCuriosities(a){
+ /* the guard IS the gate: a list of records, each with a string id/fp/cert/name, a count, a day — and no content fields */
+ if(!Array.isArray(a)||a.length>2000)return false;
+ return a.every(c=>c&&typeof c==='object'&&!Array.isArray(c)&&typeof c.id==='string'&&typeof c.fp==='string'&&typeof c.cert==='string'
+  &&typeof c.name==='string'&&isFinite(c.n)&&typeof c.when==='string'&&c.rows===undefined&&c.notes===undefined&&c.events===undefined&&c.chords===undefined);
+}
+function curRegistryMerge(list,rec){
+ /* pure: the registry with rec folded in — ONE entry per fingerprint; the first keep's certificate stands. {list,added} */
+ const base=validCuriosities(list)?list.slice():[];
+ if(!rec||typeof rec.fp!=='string'||!validCuriosities([rec]))return {list:base,added:false};
+ if(base.some(c=>c.fp===rec.fp))return {list:base,added:false};
+ base.push(rec);return {list:base,added:true};
+}
+function curBeltLayout(list,cx,cy,r){
+ /* pure: each curiosity's resting place on the belt — angle and radial jitter from its FINGERPRINT (the same curiosity
+    sits at the same place every render, whatever its index), size from its event count. [{i,id,a,rr,sz}] */
+ return (Array.isArray(list)?list:[]).map((c,i)=>{
+  const h=(parseInt(String(c.fp||'').slice(-6),36)||0)+i*0;
+  const a=-Math.PI/2+((h%3600)/3600)*Math.PI*2;
+  const rr=r+((Math.floor(h/3600)%17)-8);
+  const sz=Math.min(5.5,2.6+Math.sqrt(Math.max(1,+c.n||1))*.45);
+  return {i,id:c.id,a,rr,sz};
+ });
+}
+const CUR_KEY='cp_curiosities';
+function curLoad(){try{const a=JSON.parse(localStorage.getItem(CUR_KEY)||'[]');return validCuriosities(a)?a:[];}catch(e){return [];}}
+function curSave(list){try{localStorage.setItem(CUR_KEY,JSON.stringify(validCuriosities(list)?list:[]));}catch(e){}}
+function curExportText(){return JSON.stringify({app:'crosspollinate',kind:'curiosities',v:1,list:curLoad()},null,1);}
+function curImportText(txt){
+ /* a registry file (or a bare list) folded into this device's registry — returns how many were new */
+ let obj=null;try{obj=JSON.parse(txt);}catch(e){return -1;}
+ const list=Array.isArray(obj)?obj:(obj&&Array.isArray(obj.list)?obj.list:null);
+ if(!validCuriosities(list))return -1;
+ let cur=curLoad(),added=0;
+ for(const c of list){const m=curRegistryMerge(cur,c);cur=m.list;if(m.added)added++;}
+ curSave(cur);return added;
+}
+function curExport(){
+ const blob=new Blob([curExportText()],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='curiosities.json';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function curImport(){
+ const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
+ inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const n=curImportText(String(rd.result||''));
+  if(typeof setOrbStatus==='function')setOrbStatus(n<0?'☄ That file is not a curiosities registry.':'☄ '+n+' new curiosit'+(n===1?'y':'ies')+' joined this device\'s registry ('+curLoad().length+' kept).');
+  if(typeof uiWinShown==='function'&&uiWinShown('orbPanel'))renderOrb();};rd.readAsText(f);};
+ inp.click();
+}
+function curLog(o){
+ /* the keep's hook: a relation object just kept → the registry; a NEW fingerprint earns its certificate */
+ const rec=curFromShelf(o,{song:(project.song&&project.song.name)?String(project.song.name).split(' — ')[0]:'',when:new Date().toISOString()});
+ if(!rec)return null;
+ const m=curRegistryMerge(curLoad(),rec);
+ curSave(m.list);
+ if(!m.added)return null;
+ curCertShow(rec,true);
+ if(typeof uiWinShown==='function'&&uiWinShown('orbPanel')&&orbState.curios)renderOrb();
+ return rec;
+}
+function curRelWords(rel){return rel==='melchord'?'the notes against the chords beneath them':rel==='strikedrums'?'the chord strikes against the drums':'a relationship between two parts';}
+function curCertText(rec){
+ return 'A NEW WAY TO THINK ABOUT MUSIC\nCertificate '+rec.cert+'\n\nThis certifies that on '+rec.when.slice(0,10)+' an original relationship between two parts of a song was kept: "'+rec.name+'" — '
+  +curRelWords(rec.rel)+', '+rec.n+' events'+(rec.song?', in "'+rec.song+'"':'')+'.\nNo notes, chords or hits travel with it — only the relationship. Fingerprint '+rec.fp+'.\n';
+}
+function curCertShow(rec,fresh){
+ const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+ let d=document.getElementById('curCert');if(d)d.remove();
+ d=document.createElement('div');d.id='curCert';
+ d.innerHTML='<div class="cchd">☄ '+(fresh?'A new way to think about music':'Certificate')+'</div>'
+  +'<div style="text-align:center;">'+(fresh?'You kept a relationship nobody on this device had kept before — an original way of hearing two parts of a song together.':'')+'</div>'
+  +'<div class="ccid" id="curCertId">'+esc(rec.cert)+'</div>'
+  +'<div><b>'+esc(rec.name)+'</b> — '+curRelWords(rec.rel)+', '+rec.n+' events'+(rec.song?', in <i>'+esc(rec.song)+'</i>':'')+' · kept '+esc(rec.when.slice(0,10))+'.<br>No notes, chords or hits travel with it — only the relationship. Fingerprint <code>'+esc(rec.fp)+'</code>.</div>'
+  +'<div><span class="ccb" id="curCertDl">⬇ Download the certificate</span><span class="ccb" id="curCertOrb">🪐 See it in Orbits</span><span class="ccb" id="curCertX">✕ Close</span></div>';
+ document.body.appendChild(d);
+ d.querySelector('#curCertX').onclick=()=>d.remove();
+ d.querySelector('#curCertDl').onclick=()=>{
+  const html='<!doctype html><meta charset="utf-8"><title>'+esc(rec.cert)+'</title><pre style="font:14px/1.5 Georgia,serif;max-width:640px;margin:40px auto;padding:24px;border:3px double #6b4f28;white-space:pre-wrap;">'+esc(curCertText(rec))+'</pre>';
+  const blob=new Blob([html],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=rec.cert+'.html';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);};
+ d.querySelector('#curCertOrb').onclick=()=>{d.remove();orbState.curios=true;orbState.curSel=rec.id;if(orbState.view==='circles')orbState.view='solar';
+  if(typeof uiWinShown==='function'&&!uiWinShown('orbPanel'))uiDispatch({type:'toggle',id:'orbPanel'});else renderOrb();orbCurFocus(rec.id);};
+}
+function orbCurFocus(id){
+ orbState.curSel=id;orbState.curios=true;renderOrb();
+ const c=curLoad().find(x=>x.id===id);
+ if(c)setOrbStatus('☄ '+c.name+' — certificate '+c.cert+(c.song?' · from "'+c.song+'"':'')+' · '+c.n+' events, kept '+c.when.slice(0,10)+'. Ctrl+click the planet for the list.');
+}
+function orbCurMenu(ev){
+ /* the planet's ctrl+click: the Curiosities drop-down — show/hide the belt · All Curiosities (then every one listed) · the registry */
+ const list=curLoad();const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+ const rows=[{hd:'☄ Curiosities — '+list.length+' kept on this device'},
+  {label:(orbState.curios?'Hide':'Show')+' the asteroid belt',cur:orbState.curios,fn:()=>{orbState.curios=!orbState.curios;renderOrb();setOrbStatus(orbState.curios?'☄ The belt is shown — every relationship you have kept, an asteroid each.':'☄ The belt is hidden — the curiosities stay kept.');}},
+  {label:'All Curiosities',cur:orbState.curAll,fn:()=>{orbState.curAll=!orbState.curAll;if(orbState.curAll)orbState.curios=true;renderOrb();
+   setOrbStatus(orbState.curAll?'☄ All Curiosities — ctrl+click the planet again and every curiosity is listed; the belt shows them all.':'☄ All Curiosities off.');}}];
+ if(orbState.curAll){
+  if(!list.length)rows.push({label:'(none kept yet — ★ Keep a notes ↔ chords or strikes ↔ drums relationship in the Prism)',dis:true});
+  list.slice().sort((a,b)=>a.when<b.when?1:-1).forEach(c=>rows.push({label:'☄ '+esc(c.name)+' <span style="opacity:.62;font-size:10.5px;">'+esc(c.cert)+'</span>',cur:orbState.curSel===c.id,fn:()=>orbCurFocus(c.id)}));
+ }
+ rows.push({hd:'The registry (this device)'});
+ rows.push({label:'📜 Certificate of the selected curiosity',dis:!list.some(c=>c.id===orbState.curSel),fn:()=>{const c=list.find(x=>x.id===orbState.curSel);if(c)curCertShow(c,false);}});
+ rows.push({label:'⬇ Export the registry (JSON)',dis:!list.length,fn:curExport});
+ rows.push({label:'⬆ Import a registry…',fn:curImport});
+ wanFloatMenu(ev,rows);
+}
 function przKeepRelation(){
  const tr=przState.track;
  const notes=(project.tracks[tr]||[]).map(n=>[n[0],n[1],n[2]]).sort((a,b)=>a[0]-b[0]);
@@ -17944,6 +18079,7 @@ function przKeepRelation(){
  const name=('notes ↔ chords · '+tl+' · '+((project.song&&project.song.name)?project.song.name.split(' — ')[0]:'untitled')).slice(0,60);
  const fp=prismHash(rec.events.map(e=>e.join(':')).join(','));
  project.shelf.push({id:shelfNextId(project.shelf),strand:'relation',name,level:'L1',data:rec,fp,org:'prism'});
+ curLog(project.shelf[project.shelf.length-1]);   /* R16 [38]: the registry — a new fingerprint earns its certificate */
  autosaveSoon();
  buildPrism();
  setPrzStatus('The relationship is on the Essence Shelf — '+rec.events.length+' notes read against the chords · mostly the '+(col[0]?col[0].label:'—')+' · no notes travel with it · ⌘Z undoes.');
@@ -17999,6 +18135,7 @@ function przKeepStrikeDrums(){
  const name=('strikes ↔ drums · '+tl+' · '+relStrikePattern(rec.events)).slice(0,60);
  const fp=prismHash(rec.events.map(e=>e.join(':')).join(','));
  project.shelf.push({id:shelfNextId(project.shelf),strand:'relation',name,level:'L1',data:rec,fp,org:'prism'});
+ curLog(project.shelf[project.shelf.length-1]);   /* R16 [38]: the registry — a new fingerprint earns its certificate */
  autosaveSoon();
  buildPrism();
  const withHit=rec.events.filter(e=>e[2]).length;
@@ -27716,6 +27853,7 @@ var orbState={q:4,sel:0,auto:false,shape:'drunkard',midi:true,
  view:'deep',orbitMode:'orbit',rotate:true,rotDeg:0,   /* 80th (his fourteenth message): 🌌 Deep Space is the DEFAULT view */
  varMoons:false,ecoSrc:'own',djMute:false,
  chromOn:false,bridgeKinds:{},hoverFar:null,
+ curios:false,curAll:false,curSel:null,   /* R16 [38]: the Curiosities belt shown · All Curiosities selected in the planet's drop-down · the selected curiosity */
  fit:true,cam:{x:0,y:0,s:1},
  moonLay:'ring',keepAll:false,   /* R7 [45] (20k): the moon layout — ring · rings · free · 20l [60]: keep every far world framed */
  lim:{open:false,on:{},scale:{home:1,rel:1}},   /* R6 (20j): LIMITATION = CREATIVITY — which scale degrees grow a moon (7 booleans per scale, all on) and a MASTER switch per scale (client, Aug 21: "default to both scales having an ON toggle switch to the right of the scale name. If it is turned off then that scale no longer generates moons") */
@@ -29054,6 +29192,7 @@ function orbSunApply(){
 }
 function orbFarApplyRot(){
  const geo=orbState.geo||{cx:350,cy:282};
+ const bg=document.getElementById('orbBeltG');if(bg)bg.setAttribute('transform',orb3dOn()?'':'rotate('+(-(orbState.rotDeg||0)*0.35).toFixed(2)+' '+geo.cx+' '+geo.cy+')');   /* R16 [38]: the belt drifts */
  const sunP=orbSunApply()||{x:geo.cx,y:geo.cy};   /* R6: the far worlds orbit the SUN */
  const d=orbState.farOrbit?(orbState.farDeg||0):0;
  document.querySelectorAll('#orbFarG .orbFar').forEach(f=>{
@@ -29439,6 +29578,20 @@ function renderOrb(){
  const cx=solar?350:280,cy=solar?282:262,R=solar?118:152;
  const bodyR=58,sunX=112,sunY=100,sunR=40;
  orbState.geo={cx,cy,r:R};orbState.bodyR=bodyR;
+ /* R16 [38]: THE ASTEROID BELT — between the relative ring (R+30) and the far worlds (210): every kept relationship an asteroid */
+ let beltS='';
+ if(solar&&orbState.curios){
+  const curL=curLoad(),BR=R+60,ky=d3?ORB_3D_KY:1,escB=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const lay=curBeltLayout(curL,cx,cy,BR);
+  beltS='<g id="orbBeltG" data-n="'+curL.length+'"><ellipse cx="'+cx+'" cy="'+cy+'" rx="'+BR+'" ry="'+(BR*ky).toFixed(1)+'" fill="none" stroke="rgba(200,190,170,.22)" stroke-width="16" stroke-dasharray="1 5"/>';
+  if(!curL.length)beltS+='<text x="'+cx+'" y="'+(cy-BR*ky-12).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="#8b93a7">no curiosities kept yet — ★ Keep a notes ↔ chords or strikes ↔ drums relationship in the Prism and it lands on this belt</text>';
+  lay.forEach(p=>{const c=curL[p.i];let x,y,sc=1,op=1;
+   if(d3){const q=orbDepthPos(p.a,0,cx,cy,p.rr,ORB_3D_KY);x=q.x;y=q.y;sc=q.s;op=q.o;}else{x=cx+Math.cos(p.a)*p.rr;y=cy+Math.sin(p.a)*p.rr;}
+   const sel=orbState.curSel===c.id;
+   beltS+='<g class="orbAst'+(sel?' sel':'')+'" data-cur="'+escB(c.id)+'" data-x="'+x.toFixed(1)+'" data-y="'+y.toFixed(1)+'" opacity="'+op.toFixed(2)+'" style="cursor:pointer;"><title>☄ '+escB(c.name)+' — '+escB(c.cert)+(c.song?' · '+escB(c.song):'')+' · '+c.n+' events. Click = name it (the certificate in the status); ctrl+click the planet for the list.</title>'
+    +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(p.sz*sc).toFixed(1)+'" fill="'+(sel?'var(--accent)':'#b8ad96')+'" stroke="'+(sel?'#fff':'rgba(0,0,0,.35)')+'" stroke-width="'+(sel?1.6:.8)+'"/></g>';});
+  beltS+='</g>';
+ }
  orbState.shown={tonic:cur.tonic,minor:cur.minor};   /* ORBIT FEEDBACK R2: what the map shows — orbKeyTick() compares the playhead's key against it */
  const clicks=[];let lines='',nodes='',sunS='',moonS='',laneS='',capS='',farG='';const chordMoonAt=[];   /* 20m [73]: every chord moon's rest place + root, for the roads that have no doorway */
  const chipLbl=(root,iv)=>PCN[T(root)]+(iv[1]===3?(iv[2]===6?'°':'m'):(iv[2]===8?'+':''));
@@ -29579,7 +29732,7 @@ function renderOrb(){
  /* ============ CHORD LEVEL (GEMS R2 ④) — the moon became the planet ============ */
  const zr=frame.r,ziv=frame.iv&&frame.iv.length?frame.iv:[0,4,7];
  const zlbl=frame.lbl||chipLbl(zr,ziv);
- nodes+='<g'+(equal||d3?'':' opacity=".72"')+'><title>'+PCN[zr]+' — '+zlbl+' of '+PCN[cur.tonic]+(cur.minor?' minor':' major')+', zoomed to be the planet (the fractal law: every level is a solar system). Its tones are the moons, dashed moons are the key&#8217;s colors, and the worlds beyond share its tones. ⬅ Back returns.</title>'
+ nodes+='<g'+(equal||d3?'':' opacity=".72"')+' id="orbPlanetN"><title>'+PCN[zr]+' — '+zlbl+' of '+PCN[cur.tonic]+(cur.minor?' minor':' major')+', zoomed to be the planet (the fractal law: every level is a solar system). Its tones are the moons, dashed moons are the key&#8217;s colors, and the worlds beyond share its tones. ⬅ Back returns.</title>'
   +'<circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="'+(planetFill||('rgba(232,163,61,'+(equal?'.09':'.05')+')'))+'" stroke="var(--accent)" stroke-width="2.2"/>'
   +'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+zlbl+'</text>'
   +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+PCN[zr]+' — a chord of '+PCN[cur.tonic]+(cur.minor?'m':'')+'</text></g>';
@@ -29693,7 +29846,7 @@ function renderOrb(){
  const planetLbl=bothOn
   ?'<text x="'+cx+'" y="'+(cy-7)+'" text-anchor="middle" font-size="12.5" font-weight="800" fill="var(--accent)">'+limNames[0]+' /</text><text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-size="12.5" font-weight="800" fill="var(--accent)">'+limNames[1]+'</text>'
   :'<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="21" font-weight="800" fill="var(--accent)">'+PCN[cur.tonic]+(cur.minor?'m':'')+'</text>';
- nodes+=ringBack+'<g'+(equal||d3?'':' opacity=".72"')+'><title>The planet is the CURRENT OBJECT — the key the song is in right now. Its diatonic chords orbit as moons'+(d3?' — back to front on the 3D skin, passing behind it and in front':'')+'; its parts ride the planet lane below.</title>'
+ nodes+=ringBack+'<g'+(equal||d3?'':' opacity=".72"')+' id="orbPlanetN"><title>Ctrl+click = the Curiosities drop-down (R16). The planet is the CURRENT OBJECT — the key the song is in right now. Its diatonic chords orbit as moons'+(d3?' — back to front on the 3D skin, passing behind it and in front':'')+'; its parts ride the planet lane below.</title>'
   +'<circle cx="'+cx+'" cy="'+cy+'" r="'+bodyR+'" fill="'+(planetFill||('rgba(232,163,61,'+(equal?'.09':'.05')+')'))+'" stroke="'+(deep?'rgba(232,163,61,.55)':'var(--accent)')+'" stroke-width="'+(deep?1.6:2.2)+'"/>'
   +planetLbl
   +'<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-size="9" fill="#8b93a7">'+(bothOn?'both scales':(cur.minor?'minor':'major'))+' — you are here</text></g>';
@@ -29975,6 +30128,7 @@ function renderOrb(){
   +'<span class="cpchip'+(solar?' on':'')+'" id="orbView" title="Two views of the same worlds — 🪐 Solar System (GEMS: the sun is the essence, the planet the current object, the moons its parts; the 🌐 3D chip beside it is its depth skin) ↔ ⭕ the Circles wheel, exactly as it shipped. Nothing is thrown away; switching is free.">'+(solar?'🪐 Solar':'⭕ Circles')+'</span>'
   +(solar?'<span class="cpchip'+(orbState.view==='3d'?' on':'')+'" id="orb3d" title="🌐 3D — the Solar System as a different skin (ORBIT FEEDBACK R3, the 20f skin, kept as it shipped): the moons circle the planet back to front. Passing IN FRONT only their tops overlap the planet&#8217;s bottom; passing BEHIND only their bottoms hide under its top — and every moon stays clickable either way. Click again for the flat Solar view.">🌐 3D</span>'
    +'<span class="cpchip'+(orbState.view==='deep'?' on':'')+'" id="orbDeep" title="🌌 Deep space — the same 3D orbit as a PAINTED skin (ORBIT FEEDBACK R5, from the client&#8217;s reference pictures): shaded spheres lit from one side, a ringed planet, a starfield, tilted orbit rings, the far worlds as blue worlds. Same functionality, different skin. Click again for the flat Solar view.">🌌 Deep space</span>':'')
+  +(solar?'<span class="cpchip'+(orbState.curios?' on':'')+'" id="orbCur" title="☄ Curiosities (his [38]) — show or hide the ASTEROID BELT: every relationship you have kept in the Prism (notes ↔ chords · strikes ↔ drums) rides the belt around the planet as an asteroid, each with its certificate. Click an asteroid to name it; ctrl+click the planet for the drop-down (All Curiosities lists them; export/import the registry).">☄ Curiosities</span>':'')
   +(solar?'<span class="cpchip" id="orbBack" style="'+(orbNav.pos>0?'':'opacity:.4;')+'" title="⬅ Back — return to the previous granularity of the fractal history (double-clicking a moon zooms in; Back keeps Forward alive, the browser law).">⬅</span>'
    +'<span class="cpchip" id="orbFwd" style="'+(orbNav.pos<orbNav.stack.length-1?'':'opacity:.4;')+'" title="➡ Forward — re-enter the level you came Back from. A new zoom from here starts a fresh forward path.">➡</span>'
    +'<span id="orbCrumb" style="font-size:10px;color:var(--dim);">'+orbNav.stack.slice(0,orbNav.pos+1).map(f2=>f2.kind==='key'?(PCN[cur.tonic]+(cur.minor?'m':'')):(f2.lbl||'chord')).join(' › ')+(orbNav.pos<orbNav.stack.length-1?' ⋯':'')+'</span>':'')
@@ -30007,7 +30161,7 @@ function renderOrb(){
   +'<div id="orbMapIn" style="transition:transform .9s ease;transform-origin:'+cx+'px '+cy+'px;position:relative;">'
   +'<div id="orbCam" style="position:relative;transform-origin:0 0;transform:'+orbCamCss()+';">'
   +'<svg viewBox="0 0 '+W+' '+H+'" width="100%" class="'+(solar&&!orbState.rotate?'orbRoadsFlow':'')+'" style="display:block;max-width:'+W+'px;overflow:visible;">'
-  +(solar?'<g class="orbFurn">'+sunS+'</g>'+farG+lines+nodes+'<g id="orbMoonG">'+moonS+'</g>'+capS+'<g class="orbFurn">'+laneS+'</g>':lines+nodes)
+  +(solar?'<g class="orbFurn">'+sunS+'</g>'+farG+lines+nodes+beltS+'<g id="orbMoonG">'+moonS+'</g>'+capS+'<g class="orbFurn">'+laneS+'</g>':lines+nodes)
   +'</svg>'
   +'<div id="orbShip" style="position:absolute;z-index:3;left:'+(cx-11)+'px;top:'+(cy-R+18)+'px;width:22px;height:26px;pointer-events:none;transition:left .35s,top .35s;transform-origin:50% 50%;filter:drop-shadow(0 0 6px rgba(232,163,61,.75));">'+ORB_SHIP_SVG+'</div>'
   +'</div>'
@@ -30103,6 +30257,11 @@ function renderOrb(){
   const g2=document.getElementById('orbGoKey');if(g2){g2.value='';g2.blur();}
  });
  /* wiring */
+ /* R16 [38]: the planet's ctrl+click = the Curiosities drop-down (on a Mac a ctrl+click arrives as contextmenu; elsewhere as a click with ctrlKey) */
+ const plN=B.querySelector('#orbPlanetN');
+ if(plN){plN.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();orbCurMenu(ev);});
+  plN.addEventListener('click',ev=>{if(ev.ctrlKey||ev.metaKey){ev.preventDefault();ev.stopPropagation();orbCurMenu(ev);}});}
+ B.querySelectorAll('.orbAst').forEach(el=>{el.addEventListener('mousedown',ev=>ev.stopPropagation());el.addEventListener('click',ev=>{ev.stopPropagation();orbCurFocus(el.getAttribute('data-cur'));});});
  B.querySelectorAll('.orbNode').forEach(el=>{
   el.style.cursor='pointer';
   el.addEventListener('mousedown',ev=>{
@@ -30249,6 +30408,7 @@ function renderOrb(){
  /* GEMS R1 controls */
  const vB=document.getElementById('orbView');if(vB)vB.onclick=()=>{orbState.view=solar?'circles':'solar';renderOrb();};
  const d3B=document.getElementById('orb3d');if(d3B)d3B.onclick=()=>{orbState.view=orbState.view==='3d'?'solar':'3d';renderOrb();};   /* ORBIT FEEDBACK R3: the depth skin, a toggle beside the view chip */
+ const cuB=document.getElementById('orbCur');if(cuB)cuB.onclick=()=>{orbState.curios=!orbState.curios;renderOrb();setOrbStatus(orbState.curios?'☄ Curiosities — every relationship you have kept rides the belt around the planet; click an asteroid to name it, ctrl+click the planet for the list.':'☄ The asteroid belt is hidden — the curiosities stay kept.');};   /* R16 [38] */
  const dpB=document.getElementById('orbDeep');if(dpB)dpB.onclick=()=>{orbState.view=orbState.view==='deep'?'solar':'deep';renderOrb();};   /* ORBIT FEEDBACK R5: the painted 3D skin — "these things are skins of the same functionality" */
  const eB=document.getElementById('orbEq');if(eB)eB.onclick=()=>{orbState.orbitMode=equal?'orbit':'equal';renderOrb();};   /* R5: sizes only — the sky keeps turning */
  const rC=document.getElementById('orbRotate');if(rC)rC.onchange=e=>{orbState.rotate=!!e.target.checked;if(orbState.rotate&&!(orbRotSpeed()>0))orbState.speed=ORB_ROT_SPEEDS.normal;const sl=document.getElementById('orbRotSpeed');if(sl)sl.value=orbState.rotate?orbRotSpeed().toFixed(1):'0';orbRoadsFlowSync();};
