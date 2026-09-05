@@ -798,7 +798,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05k</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05l</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4839,8 +4839,12 @@ function notSpell(rows,opts){
  opts=opts||{};
  const meterAt=typeof opts.meterAt==='function'?opts.meterAt:()=>({num:4,den:4});
  const keyAt=typeof opts.keyAt==='function'?opts.keyAt:()=>({tonic:0,pcs:[0,2,4,5,7,9,11]});
- const clean=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0&&isFinite(r[2]))
+ const clean0=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0&&isFinite(r[2]))
   .map(r=>({t:Math.round(r[0]*NOT_TPB),d:Math.max(1,Math.round(r[1]*NOT_TPB)),midi:Math.round(r[2])})).sort((a,b)=>a.t-b.t||a.midi-b.midi);
+ /* E8 (his [36]): two notes of ONE pitch that overlap are one note — a held note and its repeat inside it are not two
+    voices (they drew as one head wearing two stems); the later one is absorbed, the sound's end kept */
+ const clean=[];
+ for(const n of clean0){let p=null;for(let i=clean.length-1;i>=0;i--){const q=clean[i];if(q.midi===n.midi&&q.t+q.d>n.t){p=q;break;}}if(p){p.d=Math.max(p.d,n.t+n.d-p.t);continue;}clean.push(n);}
  const endT=Math.max(clean.reduce((a,n)=>Math.max(a,n.t+n.d),0),Math.round(((+opts.loop>0)?+opts.loop:4)*NOT_TPB));
  /* the measures, walking the meter map */
  const measures=[];let b=0,idx=0;
@@ -5903,6 +5907,20 @@ function notChordSymbols(chords,fromTick,toTick){
  for(const c of flatChords(Array.isArray(chords)?chords:[])){const tk=Math.round(t*NOT_TPB);if(tk>=fromTick&&tk<toTick&&c.lbl)out.push({tick:tk,lbl:String(c.lbl)});t+=(+c.d||0);}
  return out;
 }
+function notDrawRest(ctx,x,yMid,value,GAP,ink){
+ /* the quarter rest (a zigzag), the 8th (a slanted stem with one flag-dot), the 16th/32nd (two/three) — drawn, so no
+    font can turn them into boxes. yMid = the staff's middle line. */
+ ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=1.8;ctx.lineJoin='round';
+ if(value==='q'){
+  ctx.beginPath();ctx.moveTo(x-1,yMid-1.6*GAP);ctx.lineTo(x+3,yMid-0.6*GAP);ctx.lineTo(x-1,yMid+0.3*GAP);ctx.lineTo(x+3,yMid+1.2*GAP);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+3,yMid+1.2*GAP);ctx.quadraticCurveTo(x-3,yMid+0.9*GAP,x+1,yMid+1.9*GAP);ctx.stroke();
+  return;
+ }
+ const n=value==='8'?1:value==='16'?2:3;
+ ctx.lineWidth=1.4;
+ ctx.beginPath();ctx.moveTo(x+4,yMid-0.9*GAP);ctx.lineTo(x-1,yMid+(0.9+0.6*(n-1))*GAP);ctx.stroke();
+ for(let k=0;k<n;k++){const yy=yMid-0.9*GAP+k*0.6*GAP;const xx=x+4-k*0.9;ctx.beginPath();ctx.moveTo(xx,yy);ctx.quadraticCurveTo(xx-3,yy+2.5,xx-5,yy+0.5);ctx.stroke();ctx.beginPath();ctx.arc(xx-5,yy+0.5,1.4,0,7);ctx.fill();}
+}
 function notDrawStaff(ctx,sp,from,to,geom){
  const g=geom||{}, GAP=g.GAP||7, staffBottom=g.staffBottom||50, staffTop=staffBottom-4*GAP;
  const INK=g.ink||'#222', DIM=g.dim||'#8a8577', PAPER=g.paper||'#f7f3ea', W=g.W||900;
@@ -5924,16 +5942,28 @@ function notDrawStaff(ctx,sp,from,to,geom){
  for(let i=0;i<5;i++){const y=staffBottom-i*GAP;ctx.beginPath();ctx.moveTo(30,y+.5);ctx.lineTo(W-8,y+.5);ctx.stroke();}
  const tab=g.tab||null;
  if(tab){ctx.fillStyle=INK;ctx.font='9px system-ui';ctx.fillText('TAB',8,tab.top+3*tab.gap+3);ctx.strokeStyle='#777';for(let i=0;i<6;i++){const y=tab.top+i*tab.gap;ctx.beginPath();ctx.moveTo(30,y+.5);ctx.lineTo(W-8,y+.5);ctx.stroke();}}
- const px=(W-x0-10)/ticks, tk0=shown[0].start, xAt=tk=>x0+(tk-tk0)*px;
- let drawn=0,tabN=0,ties=[],syms=0,dyns=0,accN=0,hairN=0,v2N=0;
+ /* E8 (his [36]): every measure opens with a leading GAP so its first head never sits on the bar line — the bar line at
+    xBar, the heads PAD after it; xAt(tick) carries the pads of every measure up to the tick */
+ const PAD=(g.pad!=null&&isFinite(+g.pad))?+g.pad:14;
+ const px=(W-x0-10-PAD*shown.length)/ticks, tk0=shown[0].start;
+ const padsTo=tk=>{let k=0;for(const m of shown){if(tk>=m.start-1e-9)k++;}return k;};
+ const xAt=tk=>x0+(tk-tk0)*px+PAD*padsTo(tk);
+ const xBar=m=>x0+(m.start-tk0)*px+PAD*(shown.indexOf(m));
+ const bars=shown.map(m=>({start:m.start,end:m.end,x:xBar(m)}));
+ let drawn=0,tabN=0,ties=[],syms=0,dyns=0,accN=0,hairN=0,v2N=0,restN=0;const stems=[];
  const accSet=Array.isArray(g.acc)?new Set(g.acc.map(a=>Math.round(a.tick))):null;
  const headY=n=>yOf(n.step);
  for(const m of shown){
-  const mx=xAt(m.start);
+  const mx=xBar(m);
   ctx.strokeStyle='#333'; ctx.beginPath(); ctx.moveTo(mx+.5,staffTop); ctx.lineTo(mx+.5,staffBottom); ctx.stroke();
   if(tab){ctx.beginPath();ctx.moveTo(mx+.5,tab.top);ctx.lineTo(mx+.5,tab.top+5*tab.gap);ctx.stroke();}
   if(g.barNumbers!==false){ctx.fillStyle=DIM;ctx.font='8px system-ui';ctx.fillText(String(m.index+1),mx+2,staffTop-14);}
   const beams={};
+  /* E8 (his [36]): a beamed group shares ONE stem direction — the majority of its notes' own (ties go up) — and every
+     stem in it attaches on that side (down-stems on the left). Decided before any stem is drawn. */
+  const dirOf=it=>{if(it.voice===1)return true;if(it.voice===2)return false;const ys=it.notes.map(headY);return (Math.min.apply(null,ys)+Math.max.apply(null,ys))/2>staffBottom-2*GAP;};
+  const grpDirs={};for(const it of m.items){if(it.kind==='note'&&it.beam!==null)(grpDirs[it.beam]=grpDirs[it.beam]||[]).push(dirOf(it));}
+  const beamUp={};for(const id in grpDirs){const a=grpDirs[id];beamUp[id]=a.filter(Boolean).length*2>=a.length;}
   for(const it of m.items){
    const x=xAt(m.start+it.t)+6;
    if(it.kind==='rest'){
@@ -5941,12 +5971,14 @@ function notDrawStaff(ctx,sp,from,to,geom){
     const rv=it.voice===1?-GAP:it.voice===2?GAP*1.5:0;   /* E7: a voice's rests sit high (1) or low (2) */
     if(it.value==='measure'||it.value==='w'){ctx.fillRect(x+(it.value==='measure'?(m.end-m.start)*px/2-6:0),staffBottom-3*GAP+rv,12,3);}
     else if(it.value==='h'){ctx.fillRect(x,staffBottom-2*GAP-3+rv,12,3);}
-    else{ctx.font='18px Georgia,serif';ctx.fillText(it.value==='q'?'𝄽':it.value==='8'?'𝄾':'𝄿',x,staffBottom-GAP+2+rv);}
+    else notDrawRest(ctx,x,staffBottom-2*GAP+rv,it.value,GAP,INK);   /* E8 (his [36]): the quarter, 8th and 16th rests are DRAWN — the font had no glyph and painted boxes */
+    restN++;
     if(it.dots){ctx.beginPath();ctx.arc(x+15,staffBottom-2*GAP-1+rv,1.3,0,7);ctx.fill();}
     continue;
    }
    const ys=it.notes.map(headY), yTop=Math.min.apply(null,ys), yBot=Math.max.apply(null,ys);
-   const mid=(yTop+yBot)/2, stemUp=it.voice===1?true:it.voice===2?false:(mid>staffBottom-2*GAP);   /* E7: a voiced stack's stem is its voice's */
+   const stemUp=(it.beam!==null&&beamUp[it.beam]!==undefined)?beamUp[it.beam]:dirOf(it);   /* E7: a voiced stack's stem is its voice's · E8: a beamed one its group's */
+   if(it.value!=='w')stems.push({tick:m.start+it.t,up:stemUp,beam:it.beam});
    if(it.voice===2)v2N++;
    const hollow=(it.value==='w'||it.value==='h');
    for(const y of ys){for(let ly=staffBottom+GAP;ly<=y+.1;ly+=GAP){ctx.strokeStyle='#444';ctx.beginPath();ctx.moveTo(x-6,ly+.5);ctx.lineTo(x+6,ly+.5);ctx.stroke();}
@@ -5980,7 +6012,8 @@ function notDrawStaff(ctx,sp,from,to,geom){
  }
  for(const t of ties){const x2=xAt(t.toTick)+6;ctx.strokeStyle=INK;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(t.x+4,t.y);ctx.quadraticCurveTo((t.x+x2)/2,t.y+7,x2-4,t.y);ctx.stroke();}
  /* chord symbols above · dynamics below */
- if(Array.isArray(g.chords)){ctx.fillStyle=INK;ctx.font='bold 11px system-ui';for(const c of g.chords){if(c.tick>=tk0&&c.tick<tk0+ticks){ctx.fillText(c.lbl,xAt(c.tick)+2,staffTop-24);syms++;}}}
+ const symX=[];
+ if(Array.isArray(g.chords)){ctx.fillStyle=INK;ctx.font='bold 11px system-ui';ctx.textAlign='center';for(const c of g.chords){if(c.tick>=tk0&&c.tick<tk0+ticks){const sx2=xAt(c.tick)+6;ctx.fillText(c.lbl,sx2,staffTop-24);symX.push({tick:c.tick,x:sx2});syms++;}}ctx.textAlign='left';}   /* E8: over the beat's head, not the bar line */
  if(Array.isArray(g.dyn)){ctx.fillStyle=INK;ctx.font='italic bold 12px Georgia,serif';for(const d of g.dyn){if(d.tick>=tk0&&d.tick<tk0+ticks){ctx.fillText(d.word,xAt(d.tick)+1,(tab?tab.top+5*tab.gap:staffBottom)+16);dyns++;}}}
  /* E6: hairpins under the dynamics line — clipped to the window, so a long one shows its part */
  if(Array.isArray(g.hair)){const hy=(tab?tab.top+5*tab.gap:staffBottom)+24;ctx.strokeStyle=INK;ctx.lineWidth=1.1;
@@ -5992,7 +6025,15 @@ function notDrawStaff(ctx,sp,from,to,geom){
  if(g.caret&&isFinite(g.caret.tick)&&g.caret.tick>=tk0&&g.caret.tick<=tk0+ticks){const xc=xAt(g.caret.tick)+6;ctx.strokeStyle='#2f6fd6';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xc,staffTop-12);ctx.lineTo(xc,(tab?tab.top+5*tab.gap:staffBottom)+8);ctx.stroke();
   ctx.fillStyle='#2f6fd6';ctx.beginPath();ctx.moveTo(xc-5,staffTop-16);ctx.lineTo(xc+5,staffTop-16);ctx.lineTo(xc,staffTop-10);ctx.closePath();ctx.fill();
   if(g.caret.label){ctx.font='bold 9px system-ui';ctx.fillText(String(g.caret.label),xc+8,staffTop-12);}caretDrawn=true;}
- return {items:drawn,tab:tabN,ties:ties.length,syms,dyns,acc:accN,hair:hairN,v2:v2N,key:sharps,meter:shown[0].num+'/'+shown[0].den,from,to,x0,px,tk0,ticks,caret:caretDrawn};
+ return {items:drawn,tab:tabN,ties:ties.length,syms,dyns,acc:accN,hair:hairN,v2:v2N,rests:restN,stems,symX,bars,pad:PAD,key:sharps,meter:shown[0].num+'/'+shown[0].den,from,to,x0,px,tk0,ticks,caret:caretDrawn};
+}
+function notTickAtX(g,x){
+ /* the inverse of the drawer's x law: which measure the x falls in (its bar line and pad), then the ticks past the pad. Pure over the returned geometry. */
+ const bars=Array.isArray(g.bars)?g.bars:null;
+ if(!bars||!bars.length)return g.tk0+(x-g.x0)/g.px;
+ let b=bars[0];for(const z of bars){if(x>=z.x)b=z;}
+ const pad=(g.pad!=null)?+g.pad:0;
+ return b.start+Math.max(0,x-b.x-pad)/g.px;
 }
 function notPlayheadBeat(){
  try{if(typeof playing!=='undefined'&&playing)return transportBeat();}catch(e){}
@@ -6076,7 +6117,7 @@ function wqDrawInto(canvas,partIds,opts){
  const ctx=canvas.getContext('2d'); const W=canvas.width;
  const per=opts.per||150, H=Math.max(per,per*partIds.length)+10; if(canvas.height!==H)canvas.height=H;
  ctx.clearRect(0,0,W,H); ctx.fillStyle='#f7f3ea'; ctx.fillRect(0,0,W,H);
- const at=(opts.at!=null&&isFinite(+opts.at))?+opts.at:notPlayheadBeat(), out={parts:0,items:0,syms:0,dyns:0,from:0,to:0,tab:0,caret:false,geoms:[],hair:0,acc:0,v2:0,bars:opts.bars||wqState.bars||4};
+ const at=(opts.at!=null&&isFinite(+opts.at))?+opts.at:notPlayheadBeat(), out={parts:0,items:0,syms:0,dyns:0,from:0,to:0,tab:0,caret:false,geoms:[],hair:0,acc:0,v2:0,rests:0,stems:[],symX:[],bars:opts.bars||wqState.bars||4};
  partIds.forEach((t,k)=>{
   const rows=wqPartRows(t);
   let sp=null;try{sp=notSpellTrack(rows.map(n=>[n[0],n[1],n[2]]));}catch(e){sp=null;}
@@ -6093,8 +6134,8 @@ function wqDrawInto(canvas,partIds,opts){
   const hair=notHairpins(rows);
   const r=notDrawStaff(ctx,sp,win.from,win.to,{W,staffBottom:base+62,GAP:7,clef,shift:gtr?7:0,tab,chords,dyn:notDynamics(rows,hair),hair,acc:notAccents(rows,hair),playheadTick:at*NOT_TPB,caret});
   ctx.fillStyle='#8a8577';ctx.font='9px system-ui';ctx.fillText((typeof trackLabel==='function'?trackLabel(t):t)+(gtr?' · guitar, written 8vb':clef==='bass'?' · bass clef':'')+(caret?' · ✎ writing here':''),34,base+14);
-  out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.hair+=r.hair||0;out.acc+=r.acc||0;out.v2+=r.v2||0;out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
-  out.geoms.push({t,base,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks});
+  out.parts++;out.items+=r.items;out.syms+=r.syms;out.dyns+=r.dyns;out.tab+=r.tab;out.hair+=r.hair||0;out.acc+=r.acc||0;out.v2+=r.v2||0;out.rests+=r.rests||0;out.stems=out.stems.concat(r.stems||[]);out.symX=out.symX.concat(r.symX||[]);out.from=win.from;out.to=win.to;if(r.caret)out.caret=true;
+  out.geoms.push({t,base,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks,bars:r.bars,pad:r.pad});
  });
  return out;
 }
@@ -6260,7 +6301,7 @@ function wqInputClick(e){
  const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
  let g=geoms[0];for(const z of geoms){if(y>=z.base)g=z;}
  if(g.t!==wqState.part){wqState.part=g.t;const ps=document.getElementById('wqPart');if(ps)ps.value=g.t;}
- const tk=g.tk0+(x-g.x0)/g.px;
+ const tk=notTickAtX(g,x);
  const snapped=Math.max(g.tk0,Math.min(g.tk0+g.ticks-1,Math.round(tk/12)*12));
  wqInput.last=null;setPlayheadBeat(snapped/NOT_TPB);
  wqInputChip('');wqDraw();
@@ -10095,7 +10136,7 @@ function drawNotationPage(){
      ctx.fillStyle='#4f7a5c';ctx.font='bold 9px system-ui';
      for(const sc of secs){if(!sc||!isFinite(sc.start))continue;const tk=Math.round(sc.start*NOT_TPB);if(tk>=r.tk0&&tk<r.tk0+r.ticks){let lbl=String(sc.name||'');try{lbl+=' · '+sectionKeyLabel(sc);}catch(e){}ctx.fillText(lbl,r.x0+(tk-r.tk0)*r.px+2,y0+11);}}
     }
-    geoms.push({t,base,h,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks});
+    geoms.push({t,base,h,x0:r.x0,px:r.px,tk0:r.tk0,ticks:r.ticks,bars:r.bars,pad:r.pad});
     _notPage.last.items+=r.items;_notPage.last.syms+=r.syms||0;_notPage.last.dyns+=r.dyns||0;_notPage.last.tab+=r.tab||0;_notPage.last.hair+=r.hair||0;_notPage.last.acc+=r.acc||0;_notPage.last.v2+=r.v2||0;if(r.caret)_notPage.last.caret=true;
     base+=h;
    });
@@ -10114,7 +10155,7 @@ function notPageSystemAt(tick){
 function notPagePlayhead(ph,beat){
  const tk=Math.max(0,+beat||0)*NOT_TPB,s=notPageSystemAt(tk);
  if(!s||!s.geoms.length){ph.setAttribute('opacity','0');return;}
- const g=s.geoms[0],x=g.x0+(Math.min(tk,g.tk0+g.ticks)-g.tk0)*g.px;
+ const g=s.geoms[0];const bx=(g.bars||[]).slice().reverse().find(z=>tk>=z.start-1e-9);const x=bx?(bx.x+(g.pad||0)+(Math.min(tk,g.tk0+g.ticks)-bx.start)*g.px):(g.x0+(Math.min(tk,g.tk0+g.ticks)-g.tk0)*g.px);
  ph.setAttribute('x1',x);ph.setAttribute('x2',x);ph.setAttribute('y1',s.y0);ph.setAttribute('y2',s.y0+s.h-NOT_PAGE_GAP);
  ph.setAttribute('opacity',playing?'.9':playheadBeat>0?'.45':'0');
 }
@@ -10123,7 +10164,7 @@ function notPageMouseDown(e){
  const r=svg.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
  const s=_notPage.systems.find(z=>y>=z.y0&&y<z.y0+z.h);if(!s||!s.geoms.length)return;
  let g=s.geoms[0];for(const z of s.geoms){if(y>=z.base)g=z;}
- const tk=g.tk0+(x-g.x0)/g.px;
+ const tk=notTickAtX(g,x);
  const snapped=Math.max(g.tk0,Math.min(g.tk0+g.ticks-1,Math.round(tk/12)*12));
  const b=Math.max(0,Math.min(LOOP,snapped/NOT_TPB));
  if(wqInput.on&&g.t!==wqState.part){wqState.part=g.t;wqInput.last=null;}
