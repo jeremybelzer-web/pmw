@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4571,6 +4571,26 @@ function cageSetNoteGtr(n,gtr){
  }else delete base.gtr;
  n[7]=Object.keys(base).length?base:null;
 }
+function cageHexOf(col){
+ /* pure enough: a CSS colour → #rrggbb for the colour input (rgb() and #rgb forms; anything else stays) */
+ const c=String(col||'').trim();
+ let m=/^#([0-9a-f]{6})$/i.exec(c);if(m)return '#'+m[1].toLowerCase();
+ m=/^#([0-9a-f]{3})$/i.exec(c);if(m)return '#'+m[1].split('').map(ch=>ch+ch).join('').toLowerCase();
+ m=/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(c);if(m)return '#'+[m[1],m[2],m[3]].map(v=>('0'+Math.max(0,Math.min(255,+v)).toString(16)).slice(-2)).join('');
+ return '#888888';
+}
+function cageFingerColorSet(f,hex){
+ /* R29 [55]: a finger's colour, chosen by the user — the CSS var the dots and the hand read, remembered on the device */
+ const i=Math.max(0,Math.min(4,Math.round(+f)||0));const c=cageHexOf(hex);
+ try{document.documentElement.style.setProperty(i===0?'--cage-f0':'--cage-f'+i,c);}catch(e){}
+ try{const arr=(SETTINGS.fingerColors&&SETTINGS.fingerColors.length===5)?SETTINGS.fingerColors.slice():[0,1,2,3,4].map(k=>cageHexOf(cageFingerColor(k)));arr[i]=c;SETTINGS.fingerColors=arr;persistSettings();}catch(e){}
+ try{cageHandLegendDraw();cageLinkRedraw();}catch(e){}
+ try{if(typeof cageDraw==='function')cageDraw();}catch(e){}
+}
+function cageFingerColorsApply(){
+ /* at load: the remembered colours onto the CSS vars */
+ try{const arr=SETTINGS.fingerColors;if(Array.isArray(arr)&&arr.length===5)arr.forEach((c,i)=>document.documentElement.style.setProperty(i===0?'--cage-f0':'--cage-f'+i,cageHexOf(c)));}catch(e){}
+}
 function cageFingerColor(finger){
  const f=(finger==null||finger==='')?1:+finger;
  const key=(f===0)?'--cage-f0':'--cage-f'+Math.max(1,Math.min(4,f));
@@ -5243,20 +5263,26 @@ function cageLinkWriteBack(tgt,rows){
 function cageLinkWorldRows(wid,face){
  return withGridWorld(wid,()=>cageCloneNotes(project.tracks[face]||[]));
 }
+function cageNeckSizes(){
+ /* pure: the linked neck's sizes — his [55]: "the actual numbers on the fretboard need to be twice as big at least. Let's say
+    2.5 times as big" — the finger numbers 27px (from 11), the dots grown to hold them, the fret labels 15px (from 10) */
+ return {font:27,fretFont:15,rad:{current:24,approaching:21,other:18},height:300};
+}
 function cageLinkNeckDraw(rows){
  const c=document.getElementById('cageLinkBoard'); if(!c)return;
  const ctx=c.getContext('2d'); const W=c.width,H=c.height;
  ctx.clearRect(0,0,W,H);
  ctx.fillStyle=cageCss('--cage-wood','#1e1a14'); ctx.fillRect(0,0,W,H);
- const padL=28,padR=12,padT=18,padB=20, frets=12, strings=6;
+ const padL=28,padR=12,padT=30,padB=26, frets=12, strings=6;   /* R29: room for the grown dots */
  const x0=padL,x1=W-padR,y0=padT,y1=H-padB;
  const fretW=(x1-x0)/frets, strGap=(y1-y0)/(strings-1);
  ctx.strokeStyle=cageCss('--cage-fret','#c8b48c'); ctx.globalAlpha=0.55; ctx.lineWidth=1;
  for(let i=0;i<=frets;i++){const x=x0+i*fretW; ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();}
  ctx.strokeStyle=cageCss('--cage-string','#d7cbb0');
  for(let s=0;s<strings;s++){const y=y0+s*strGap; ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();}
- ctx.globalAlpha=1; ctx.fillStyle=cageCss('--cage-fret','#c8b48c'); ctx.globalAlpha=0.7; ctx.font='10px system-ui,sans-serif';
- for(let i=1;i<=frets;i++)ctx.fillText(String(i),x0+i*fretW-fretW/2-3,y1+14);
+ const NS=cageNeckSizes();   /* R29 [55]: 2.5× */
+ ctx.globalAlpha=1; ctx.fillStyle=cageCss('--cage-fret','#c8b48c'); ctx.globalAlpha=0.7; ctx.font=NS.fretFont+'px system-ui,sans-serif';
+ for(let i=1;i<=frets;i++)ctx.fillText(String(i),x0+i*fretW-fretW/2-4,y1+16);
  ctx.globalAlpha=1;
  const beat=cageBeatNow();
  const rootPc=(typeof cageState==='object'&&cageState)?(+cageState.chordRootPc||0):0;
@@ -5283,14 +5309,14 @@ function cageLinkNeckDraw(rows){
   const st=cageNotePlayState(n,beat);
   const cx=x0+(g.f===0?0:g.f-0.5)*fretW, cy=y0+g.s*strGap;
   pts.push({g,st,cx,cy,t:+n[0],d:+n[1]||0});
-  const rad=st==='current'?12:st==='approaching'?10:8;
+  const rad=st==='current'?NS.rad.current:st==='approaching'?NS.rad.approaching:NS.rad.other;   /* R29: the dots hold the 2.5× numbers */
   const alpha=st==='played'?0.28:st==='upcoming'?0.55:1;
   ctx.globalAlpha=alpha;
   if(st==='current'){ctx.beginPath();ctx.arc(cx,cy,rad+4,0,Math.PI*2);ctx.strokeStyle=cageCss('--cage-ring','#fff');ctx.lineWidth=2;ctx.stroke();}
   ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2);
   ctx.fillStyle=cageFingerColor(g.finger); ctx.fill();
-  ctx.fillStyle=cageCss('--cage-ink','#1a1208'); ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(String(g.finger),cx,cy+0.5);
+  ctx.fillStyle=cageCss('--cage-ink','#1a1208'); ctx.font='bold '+NS.font+'px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(String(g.finger),cx,cy+1);
   if(g.pick||g.pima){ctx.fillStyle='rgba(233,234,239,.9)';ctx.font='9px system-ui,sans-serif';
    ctx.fillText(g.pick==='down'?'↓':g.pick==='up'?'↑':(g.pima||'').toUpperCase(),cx,cy-rad-4);}
   ctx.globalAlpha=1;
@@ -5320,16 +5346,21 @@ function cageLinkNeckDraw(rows){
 function cageHandLegendDraw(){
  const host=document.getElementById('cageFingerLegend'); if(!host)return;
  if(!host.dataset.built){
-  host.innerHTML='<span style="color:var(--dim);margin-right:6px;">Fretting hand</span>'
+  host.innerHTML='<label style="display:inline-flex;gap:4px;align-items:center;cursor:pointer;margin-right:6px;" title="Fret-hand colours (his [55], default ON) — the fretting hand below the neck, each finger a colour; the same colours fill the chord dots. Click a finger&#8217;s swatch to choose its colour."><input type="checkbox" id="cageHandOn"'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.fretHand===false)?'':' checked')+'/> Fret-hand colours</label>'
+   +'<span id="cageHandWrap" style="display:'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.fretHand===false)?'none':'inline-flex')+';align-items:center;gap:6px;">'
    +'<svg id="cageHandSvg" width="72" height="56" viewBox="0 0 72 56" aria-label="Fretting hand legend" style="vertical-align:middle;">'
    +'<path d="M28 54 C18 48 14 36 16 28 C18 22 24 20 28 24 L28 12 C28 8 32 6 34 10 L36 24 L38 8 C38 4 42 4 43 9 L44 26 L47 10 C48 5 52 6 52 12 L50 28 L54 16 C56 11 60 14 58 20 L52 34 C58 36 62 42 60 48 C56 54 40 56 28 54Z" fill="rgba(233,234,239,.12)" stroke="rgba(233,234,239,.35)" stroke-width="1"/>'
    +'<circle data-f="1" cx="34" cy="10" r="4"/><circle data-f="2" cx="43" cy="9" r="4"/><circle data-f="3" cx="52" cy="12" r="4"/><circle data-f="4" cx="58" cy="20" r="4"/><circle data-f="0" cx="22" cy="30" r="4"/>'
    +'</svg>'
+   +[0,1,2,3,4].map(f=>'<input type="color" class="cageFingerPick" data-f="'+f+'" value="'+cageHexOf(cageFingerColor(f))+'" title="'+(f===0?'the thumb / open':'finger '+f)+' — choose its colour" style="width:22px;height:18px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;">').join('')
+   +'</span>'
    +'<label style="margin-left:10px;font-size:10px;color:var(--dim);display:inline-flex;gap:4px;align-items:center;cursor:pointer;">'
    +'<input type="checkbox" id="cageBallOn" checked/> Bouncing ball</label>';
   host.dataset.built='1';
   const ball=document.getElementById('cageBallOn');
   if(ball)ball.onchange=()=>{try{cageLinkRedraw();}catch(e){};};
+  const hon=document.getElementById('cageHandOn');if(hon)hon.onchange=()=>{try{SETTINGS.fretHand=!!hon.checked;persistSettings();}catch(e){}const w=document.getElementById('cageHandWrap');if(w)w.style.display=hon.checked?'inline-flex':'none';};   /* R29 [55] */
+  host.querySelectorAll('.cageFingerPick').forEach(inp=>{inp.oninput=()=>{cageFingerColorSet(+inp.getAttribute('data-f'),inp.value);};});
  }
  const svg=document.getElementById('cageHandSvg'); if(!svg)return;
  svg.querySelectorAll('circle[data-f]').forEach(cir=>{
@@ -6897,6 +6928,7 @@ function cageLinkAttach(w){
   +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px;flex-wrap:wrap;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck</span>'
   +'<label style="font-size:10px;color:var(--dim);display:flex;align-items:center;gap:4px;">View'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]) — CAGED today; the slanted neck, the bouncing ball and the ball with notation are next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="slant" disabled>Slanted neck (soon)</option><option value="ball" disabled>Bouncing ball (soon)</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
   +'<select id="cageLayoutView" style="padding:3px 6px;font-size:11px;">'
   +'<option value="midi">MIDI + neck</option>'
   +'<option value="notation">Notation + neck</option>'
@@ -6908,7 +6940,7 @@ function cageLinkAttach(w){
   +'<canvas id="cageNotationCanvas" width="920" height="72" style="display:block;width:100%;height:auto;"></canvas></div>'
   +'<div id="cageMiniMidi" style="display:none;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;">'
   +'<canvas id="cageMiniMidiCanvas" width="920" height="48" style="display:block;width:100%;height:auto;"></canvas></div>'
-  +'<canvas id="cageLinkBoard" width="920" height="160" style="display:block;width:100%;height:auto;max-height:28vh;"></canvas>'
+  +'<canvas id="cageLinkBoard" width="920" height="300" style="display:block;width:100%;height:auto;max-height:44vh;"></canvas>'
   +'<div id="cageRomanStrip" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center;"></div>'
   +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">'
   +'<div id="cageFingerLegend" style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--dim);align-items:center;"></div>'
@@ -34971,7 +35003,8 @@ function parseSettings(str){
  fixedGrid:false,
  rmPrompts:true,
  hallElevator:true,
- keyset:'live'};   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ keyset:'live',
+ fretHand:true,fingerColors:null};   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -34985,7 +35018,9 @@ function parseSettings(str){
    if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
    if(o.rmPrompts===false)def.rmPrompts=false;   /* F3: an explicit false skips the guided question */
    if(o.hallElevator===false)def.hallElevator=false;   /* R9: skip the hallway's elevator entry */
-   if(o.keyset==='ours'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||o.keyset==='live'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
+   if(o.keyset==='ours'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||o.keyset==='live'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;
+   if(o.fretHand===false)def.fretHand=false;   /* R29 */
+   if(Array.isArray(o.fingerColors)&&o.fingerColors.length===5&&o.fingerColors.every(c=>/^#[0-9a-f]{6}$/i.test(String(c))))def.fingerColors=o.fingerColors.map(c=>String(c).toLowerCase());   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -35059,6 +35094,7 @@ function parseProjectFile(str){
   return o;
  }catch(e){return null;}}
 let SETTINGS=parseSettings(null);
+try{cageFingerColorsApply();}catch(e){}   /* R29 [55]: the chosen finger colours at load */
 try{SETTINGS=parseSettings(localStorage.getItem('cp_settings'));}catch(e){}
 (function(){const cc=document.getElementById('chkCont');if(cc)cc.checked=SETTINGS.continuous===true;})();   /* 2.5 ⑧: the toggle reads its stored state here, past the TDZ */
 function persistSettings(){try{localStorage.setItem('cp_settings',JSON.stringify(SETTINGS));}catch(e){}}
@@ -35267,7 +35303,7 @@ const WINDOW_DEFS=[
  {id:'hubPanel',   name:'Samples', icon:'≈', tip:'Sample hub — route tracks to real audio · synth patches · Freesound & open libraries'},
  {id:'importPanel',name:'Import',  icon:'⇪', tip:'Import & cross-pollination sources — import music so we can take it apart into bite-sized building blocks: unlimited source songs, every track auditionable and draggable (4.4) · full-song split, drum-kit zips, voice memos (local backend)'},
  {id:'melPanel',   name:'Melisma', icon:'➿', tip:'Melody Melisma Machine — the universal vocal-ornament engine: runs, turns, scoops, gamakas — organized by tradition and era, never by artist'},
- {id:'cagePanel',  name:'CAGED',  icon:'🎸', title:'CAGED Guitar',tip:'CAGED Guitar Engine — linked 1-track MIDI mirrors the selected multi-track lane(s) · large neck shows MIDI dots (layout + fingering) · Absolute (IV → 4·6·1) / Relative (1·3·5) · square = scale root · diamond = chord root · Setup · 4/5/6 frets'},
+ {id:'cagePanel',  name:'Guitar',  icon:'🎸', title:'Guitar',tip:'Guitar (his [55]: the window is Guitar and CAGED is its first VIEW — more views to come: the slanted neck, the bouncing ball, the ball with notation) — CAGED Guitar Engine — linked 1-track MIDI mirrors the selected multi-track lane(s) · large neck shows MIDI dots (layout + fingering) · Absolute (IV → 4·6·1) / Relative (1·3·5) · square = scale root · diamond = chord root · Setup · 4/5/6 frets'},
  {id:'ragaPanel',  name:'Scales',  icon:'⌕', title:'Choose Your Own Sound-Adventure',tip:'Scale/Raga Browser — the Omnisphere-style scale environment: 72 melakartas · 107 janyas · every Western mode. Filter, audition, apply (3.5) — the window title is the family motto.'},
  {id:'wanPanel',   name:'Weber’s Wanderer',icon:'🧭',tip:'Weber’s Wanderer — CHOOSE YOUR OWN ADVENTURE through related key centers on Weber\'s table (4.6), drawn as the old aged map: arrow keys walk the chords of your scale and its parallel relative, every landing plays, ✓ writes it to the lane'},
  {id:'orbPanel',   name:'Orbits',  icon:'🪐',tip:'Interplanetary Orbits (4.7 rework) — the planet is the key you are in: diatonic chords ring it clockwise, a 🚀 rides the playing chord, Ghost Song pivots open dotted roads to new planets. Click any chord to land it on the next boundary · Psych-out worlds wear Psych! · ⏺ records the journey to the Essence Shelf'},
