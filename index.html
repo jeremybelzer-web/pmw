@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06k</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4381,13 +4381,34 @@ const CAGED_OPEN={
  E:{rootPc:4,frets:[0,2,2,1,0,0],color:'#2f8f5b'},
  D:{rootPc:2,frets:[-1,-1,0,2,3,2],color:'#2aa4a4'}
 };
+/* R32 [58]: "Really there are 5 major and 5 minor CAGED system chords." The open minor forms, same colours as their majors;
+   a minor chord (min · min7 · dim) takes these and says "E minor shape". */
+const CAGED_OPEN_MIN={
+ C:{rootPc:0,frets:[-1,3,1,0,1,-1],color:'#c23b2a'},
+ A:{rootPc:9,frets:[-1,0,2,2,1,0],color:'#5b9bd5'},
+ G:{rootPc:7,frets:[3,1,0,0,3,3],color:'#d4a017'},
+ E:{rootPc:4,frets:[0,2,2,0,0,0],color:'#2f8f5b'},
+ D:{rootPc:2,frets:[-1,-1,0,2,3,1],color:'#2aa4a4'}
+};
 const CAGED_SHAPE_ORDER=['C','A','G','E','D'];
+function cageIsMinorQ(quality){return quality==='min'||quality==='min7'||quality==='dim';}
+function cageQualNow(q){
+ /* the quality a shape is asked for: the caller's, else the window's chord */
+ if(q!=null)return q;
+ try{if(typeof cageState==='object'&&cageState&&cageState.quality)return cageState.quality;}catch(e){}
+ return 'maj';
+}
+function cageShapeLabel(shape,quality){
+ /* pure: "E shape" for a major chord, "E minor shape" for a minor one — his [58] */
+ return String(shape||'')+(cageIsMinorQ(quality)?' minor':'')+' shape';
+}
 const CAGED_DEG={0:'1',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'b5',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
 const CAGED_TUNING=[40,45,50,55,59,64];
 const CAGED_STR=['E','A','D','G','B','e'];
 let cageState={
  mode:'setup', numberView:'absolute',
  scaleRootPc:0, chordText:'C', chordRootPc:0, quality:'maj',
+ layers:{chord:false,fullArp:false,penta:false,pentaMode:'maj',blues:false,bluesMode:'maj'},   /* R32 [58]: the layered views */
  layer:'scale', soloView:'scale', splitNeck:false, layoutView:'midi', moveArmed:false, moveIx:0, shapePref:'auto', window:5, startFret:0,
  upcoming:{text:'',rootPc:0,quality:'maj'},
  selected:new Set(), flash:new Map(),
@@ -4468,21 +4489,22 @@ function cageDegreeSet(quality,layer){
  if(quality==='dom7')return new Set([0,2,4,5,7,9,10]);
  return new Set([0,2,4,5,7,9,11]);
 }
-function cageTransposeForm(shapeName,rootPc){
- const open=CAGED_OPEN[shapeName];
+function cageTransposeForm(shapeName,rootPc,quality){
+ const q=cageQualNow(quality); const minor=cageIsMinorQ(q);
+ const open=(minor&&typeof CAGED_OPEN_MIN!=='undefined'?CAGED_OPEN_MIN:CAGED_OPEN)[shapeName];   /* R32 [58]: the minor forms */
  let shift=(rootPc-open.rootPc+12)%12;
  let frets=open.frets.map(f=>f<0?-1:f+shift);
  while(Math.max(...frets.filter(f=>f>=0),0)>19){shift+=12;frets=open.frets.map(f=>f<0?-1:f+shift);}
- return {shape:shapeName,frets,color:open.color};
+ return {shape:shapeName,frets,color:open.color,minor,label:cageShapeLabel(shapeName,q)};
 }
 function cageShapeSpan(frets){
  const all=frets.filter(f=>f>=0); if(!all.length)return {lo:0,hi:0};
  return {lo:Math.min(...all),hi:Math.max(...all)};
 }
-function cageBestShape(rootPc,startFret,window){
+function cageBestShape(rootPc,startFret,window,quality){
  const end=startFret+window-1; let best=null;
  for(const name of CAGED_SHAPE_ORDER){
-  const x=cageTransposeForm(name,rootPc); const {lo,hi}=cageShapeSpan(x.frets);
+  const x=cageTransposeForm(name,rootPc,quality); const {lo,hi}=cageShapeSpan(x.frets);
   const fits=lo>=startFret&&hi<=end; const score=(fits?0:1000)+Math.abs((lo+hi)/2-(startFret+(window-1)/2))+(hi-lo);
   if(!best||score<best.score)best={...x,score,fits};
  }
@@ -4625,11 +4647,11 @@ function cageCss(key, fallback){
 }
 /* P4 [17] — CAGED box order ascending the neck (chart rows E→D→C→A→G). Shift only when the current 5-fret window cannot host the pitch. */
 const CAGED_NECK_ORDER=['E','D','C','A','G'];
-function cageBoxForRoot(shapeName, rootPc){
- const x=cageTransposeForm(shapeName, rootPc==null?0:+rootPc);
+function cageBoxForRoot(shapeName, rootPc, quality){
+ const x=cageTransposeForm(shapeName, rootPc==null?0:+rootPc, quality);
  const {lo,hi}=cageShapeSpan(x.frets);
  const start=Math.max(0, Math.min(lo, Math.max(0, hi-4)));
- return {shape:shapeName, startFret:start, window:5, frets:x.frets, color:x.color, lo, hi};
+ return {shape:shapeName, startFret:start, window:5, frets:x.frets, color:x.color, lo, hi, minor:!!x.minor, label:x.label};
 }
 function cagePosInBox(midi, box){
  if(!box)return null;
@@ -5387,10 +5409,10 @@ function cageNeckBoardDraw(ctx,G){
  for(let k=Math.max(1,k0);k<=k1;k++){const x=xAt(k)-fretW/2; if(x>x0&&x<x1)ctx.fillText(String(k),x,y1+42);}
  ctx.textAlign='left'; ctx.globalAlpha=1; ctx.restore();
 }
-function cageMiniRoots(rootPc){
- /* pure: the five CAGED boxes for this root along the neck, each with its root notes {s,f} — sorted along the neck */
- const root=((Math.round(+rootPc)||0)%12+12)%12;
- return CAGED_SHAPE_ORDER.map(name=>{const b=cageBoxForRoot(name,root);const roots=[];b.frets.forEach((f,s)=>{if(f>=0&&((CAGED_TUNING[s]+f)%12)===root)roots.push({s,f});});return {shape:name,startFret:b.startFret,lo:b.lo,hi:b.hi,color:b.color,roots};}).sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
+function cageMiniRoots(rootPc,quality){
+ /* pure: the five CAGED boxes for this root (major or minor forms — his [58]) along the neck, each with its root notes {s,f} — sorted along the neck */
+ const root=((Math.round(+rootPc)||0)%12+12)%12; const q=cageQualNow(quality);
+ return CAGED_SHAPE_ORDER.map(name=>{const b=cageBoxForRoot(name,root,q);const roots=[];b.frets.forEach((f,s)=>{if(f>=0&&((CAGED_TUNING[s]+f)%12)===root)roots.push({s,f});});return {shape:name,label:name+(b.minor?'m':''),minor:!!b.minor,startFret:b.startFret,lo:b.lo,hi:b.hi,color:b.color,roots};}).sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
 }
 function cageMiniGeom(c){
  const W=c.width,H=c.height,padL=12,padR=10,cw=(W-padL-padR)/(CAGE_MAX_FRET+2);   /* a head cell, then frets 0..19 */
@@ -5409,11 +5431,11 @@ function cageMiniDraw(rootPc,V){
  for(let s=0;s<6;s++){const y=G.yTop+s*gap;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-G.padR,y);ctx.stroke();}
  ctx.globalAlpha=.6; ctx.fillStyle=cageCss('--cage-fret','#c8b48c'); ctx.font='9px system-ui,sans-serif'; ctx.textAlign='center';
  for(const k of [1,3,5,7,9,12,15,17,19])ctx.fillText(String(k),xm(k)-cw/2,H-3);
- const shapes=cageMiniRoots(rootPc);
+ const shapes=cageMiniRoots(rootPc,cageQualNow());
  shapes.forEach(sh=>{
   const xa=xm(sh.lo-1),xb=xm(sh.hi);   /* lo=0: the band takes the nut's cell */
   ctx.globalAlpha=.16; ctx.fillStyle=sh.color; ctx.fillRect(xa,G.yTop-6,xb-xa,G.yBot-G.yTop+12);
-  ctx.globalAlpha=.95; ctx.font='bold 10px system-ui,sans-serif'; ctx.fillStyle=sh.color; ctx.textAlign='center'; ctx.fillText(sh.shape,(xa+xb)/2,G.yTop-2);
+  ctx.globalAlpha=.95; ctx.font='bold 10px system-ui,sans-serif'; ctx.fillStyle=sh.color; ctx.textAlign='center'; ctx.fillText(sh.label||sh.shape,(xa+xb)/2,G.yTop-2);
   sh.roots.forEach(r=>{const x=r.f===0?xm(0):xm(r.f)-cw/2,y=G.yTop+r.s*gap;ctx.globalAlpha=1;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=sh.color;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.85)';ctx.stroke();});
  });
  ctx.globalAlpha=1; ctx.textAlign='left';
@@ -5441,7 +5463,7 @@ function cageMiniBind(c){
   }
   const k=Math.round(v); let best=null;
   for(const sh of M.shapes){const inside=k>=sh.lo-1&&k<=sh.hi;const d=Math.abs((sh.lo+sh.hi)/2-k);if(!best||(inside&&!best.inside)||(inside===best.inside&&d<best.d))best={sh,inside,d};}
-  if(best)cageViewCommit(best.sh.startFret,best.sh.shape);
+  if(best)cageViewCommit(best.sh.startFret,best.sh.label||best.sh.shape);
  });
 }
 function cageNeckSizes(){
@@ -7239,7 +7261,9 @@ function cagePickShape(){
   ?cageBestShape(cageState.chordRootPc,cageState.startFret,cageState.window)
   :cageTransposeForm(cageState.shapePref,cageState.chordRootPc);
  cageState.activeShape=x.shape; cageState._shapeFrets=x.frets; cageState._shapeColor=x.color;
- const sb=document.getElementById('cageShapeBig'); if(sb)sb.textContent=x.shape+' shape';
+ const sb=document.getElementById('cageShapeBig'); if(sb)sb.textContent=x.label||cageShapeLabel(x.shape,cageState.quality);   /* R32 [58]: "E minor shape" */
+ const ap=document.getElementById('cageLayArpPos'); if(ap)ap.textContent=x.shape+(x.minor?' minor':'');
+ try{const minor=cageIsMinorQ(cageState.quality);['cageLayPentaMode','cageLayBluesMode'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=minor?'none':'inline-block';});}catch(e){}
  const cb=document.getElementById('cageChordBig'); if(cb)cb.textContent=cageState.chordText;
  const km=document.getElementById('cageKeyMeta'); if(km)km.textContent='Scale root: '+(typeof PCN!=='undefined'?PCN[cageState.scaleRootPc]:cageState.scaleRootPc);
  const tones=[...cageDegreeSet(cageState.quality,'arp')].sort((a,b)=>a-b)
@@ -7302,6 +7326,15 @@ function buildCageWindow(){
    +'<span id="cageChordBig">C</span><span id="cageShapeBig" style="font-size:1rem;color:var(--accent);">E shape</span>'
    +'<span id="cageNumMeta" style="font-size:.78rem;color:var(--dim);font-family:system-ui,sans-serif;"></span>'
    +'<span id="cageKeyMeta" style="font-size:.78rem;color:var(--dim);font-family:system-ui,sans-serif;"></span></div>'
+   +'<div id="cageLayerRow" style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:11px;color:var(--text);margin-bottom:8px;" title="Layers (his [58]) — tick views to lay them over the board, each its own colour; the wider systems draw larger and behind, the playable chord smallest and in front">'
+   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Layers</span>'
+   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageLayChord"/><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#e8c547;"></span>Playable chord</label>'
+   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageLayArp"/><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#e07a2f;"></span>Full CAGED arpeggio in <b id="cageLayArpPos">E</b>&nbsp;position</label>'
+   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageLayPenta"/><span style="display:inline-block;width:14px;height:14px;background:linear-gradient(90deg,#7fbfe0 50%,#1f3d6b 50%);"></span>Pentatonic scale</label>'
+   +'<select id="cageLayPentaMode" style="font-size:11px;padding:2px 4px;" title="A major chord takes the major pentatonic, the minor, or both (one ticked = major); a minor chord takes the minor only"><option value="maj">major</option><option value="min">minor</option><option value="both">both</option></select>'
+   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageLayBlues"/><span style="display:inline-block;width:14px;height:14px;background:linear-gradient(90deg,#2aa4a4 50%,#7b6cf0 50%);clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);"></span>Blues scale</label>'
+   +'<select id="cageLayBluesMode" style="font-size:11px;padding:2px 4px;" title="A major chord takes the major blues, the minor, or both; a minor chord takes the minor only"><option value="maj">major</option><option value="min">minor</option><option value="both">both</option></select>'
+   +'</div>'
    +'<div id="cageBoardHosts" style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;">'
    +'<div id="cageNeckCurWrap" style="flex:1 1 280px;min-width:0;">'
    +'<div id="cageCurLbl" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:0 0 4px;">CURRENT CHORD</div>'
@@ -7353,6 +7386,9 @@ function buildCageWindow(){
   };
   on('cageSplitNeck').onchange=e=>{cageState.splitNeck=e.target.value==='split';cageDraw();};
   on('cageShape').onchange=e=>{cageState.shapePref=e.target.value;cageDraw();};
+  /* R32 [58]: the layer chips */
+  [['cageLayChord','chord'],['cageLayArp','fullArp'],['cageLayPenta','penta'],['cageLayBlues','blues']].forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.checked=!!cageState.layers[key];el.onchange=()=>{cageState.layers[key]=!!el.checked;cageDraw();};}});
+  [['cageLayPentaMode','pentaMode'],['cageLayBluesMode','bluesMode']].forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.value=cageState.layers[key]||'maj';el.onchange=()=>{cageState.layers[key]=el.value;cageDraw();};}});
   on('cageStartFret').oninput=e=>{cageState.startFret=+e.target.value;on('cageStartLbl').textContent=cageState.startFret;cageDraw();};
   document.querySelectorAll('#cageFretChips button').forEach(btn=>{
    btn.onclick=()=>{
@@ -7470,6 +7506,31 @@ function cageEventCell(ev){
  else{const i=Math.max(0,Math.min(g.frets-1,Math.floor((x-g.x0)/g.fretW))); fret=cageState.startFret+i;}
  return {s,f:fret};
 }
+/* ==== R32 (build 2026-09-06k, the 96th, Fable) — HIS [58]: LAYERED VIEWS ON THE SHAPE BOARD ====
+   "There should be the option to toggle on and layer on multiple views - but with different colors... playable chords
+   notes, and add on 'Full CAGED Arpeggio in _____ position'... 'Pentatonic Scale' and 'Blues scale'. There will be 2
+   pentatonic scales that work for a major chord (major and minor), and just 1 for minor (minor). For major if just 1
+   pentatonic scale is selected it will be major... The larger more complete system could have bigger notes, maybe of a
+   different shape that engulf the smaller notes in front of them." */
+const CAGE_LAYER_STYLE={
+ chord:{color:'#e8c547',kind:'cir',r:9,ink:'#1a1208'},
+ fullArp:{color:'#e07a2f',kind:'cir',r:12},
+ pentaMaj:{color:'#7fbfe0',kind:'sq',r:14,ink:'#10233a'},
+ pentaMin:{color:'#1f3d6b',kind:'sq',r:14},
+ bluesMaj:{color:'#2aa4a4',kind:'hex',r:16},
+ bluesMin:{color:'#7b6cf0',kind:'hex',r:16}
+};
+function cageLayerList(layers,quality){
+ /* pure: the extra layers to paint, BACK TO FRONT (the widest system first, the playable chord last) — his rule: a major
+    chord may show major and/or minor pentatonic (one ticked = major), a minor chord shows the minor only; blues the same */
+ const L=layers||{}; const minor=cageIsMinorQ(quality); const out=[];
+ const mode=(m)=>minor?'min':(m==='min'||m==='both'?m:'maj');
+ if(L.blues){const m=mode(L.bluesMode);if(m==='maj'||m==='both')out.push({id:'bluesMaj',name:'Major blues',degs:[0,2,3,4,7,9]});if(m==='min'||m==='both')out.push({id:'bluesMin',name:'Minor blues',degs:[0,3,5,6,7,10]});}
+ if(L.penta){const m=mode(L.pentaMode);if(m==='maj'||m==='both')out.push({id:'pentaMaj',name:'Major pentatonic',degs:[0,2,4,7,9]});if(m==='min'||m==='both')out.push({id:'pentaMin',name:'Minor pentatonic',degs:[0,3,5,7,10]});}
+ if(L.fullArp){const q=quality||'maj';const degs=(q==='dom7'||q==='maj7'||q==='min7')?[...cageDegreeSet(q,'seventh')]:[...cageDegreeSet(q,'shape')];out.push({id:'fullArp',name:'Full CAGED arpeggio',degs});}
+ if(L.chord)out.push({id:'chord',name:'Playable chord',degs:null});   /* the shape's own notes — one a string */
+ return out.map(o=>Object.assign({},CAGE_LAYER_STYLE[o.id],o));
+}
 function cageBoardPaint(canvas, opts){
  if(!canvas||!opts)return;
  const wrap=canvas.parentElement;
@@ -7543,6 +7604,22 @@ function cageBoardPaint(canvas, opts){
   ctx.fill(); ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui,sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lab,x,y+0.5);
  };
+ /* R32 [58]: the extra layers BEHIND the primary marks — the widest system first; the playable chord goes on top after */
+ const markL=(x,y,kind,r,lab,color,ink,a)=>{
+  ctx.globalAlpha=a==null?1:a; ctx.fillStyle=color; ctx.beginPath();
+  if(kind==='sq'){ctx.rect(x-r,y-r,r*2,r*2);}
+  else if(kind==='hex'){for(let k=0;k<6;k++){const ang=Math.PI/6+k*Math.PI/3;const px=x+r*Math.cos(ang),py=y+r*Math.sin(ang);if(k)ctx.lineTo(px,py);else ctx.moveTo(px,py);}ctx.closePath();}
+  else ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fill(); ctx.globalAlpha=1; ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1; ctx.stroke();
+  if(lab!=null){ctx.fillStyle=ink||'#fff'; ctx.font='bold '+(r>=14?12:11)+'px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lab,x,y+0.5);}
+ };
+ const layersL=Array.isArray(opts.layers)?opts.layers:[]; const drawn=[];
+ layersL.filter(L=>L.id!=='chord').forEach(L=>{
+  const degs=new Set(L.degs||[]); let n=0;
+  for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){const f=startFret+i,pc=cageMidi(s,f)%12,degC=(pc-chordRoot+12)%12;if(!degs.has(degC))continue;const p=xy(s,f);markL(p.x,p.y,L.kind,L.r,labelOf(pc),L.color,L.ink,0.92);n++;}
+  drawn.push({id:L.id,name:L.name,color:L.color,kind:L.kind,r:L.r,count:n});
+ });
+ const chordLayer=layersL.find(L=>L.id==='chord');
  const selected=opts.selected||new Set();
  for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){
   const f=startFret+i, pc=cageMidi(s,f)%12;
@@ -7564,6 +7641,11 @@ function cageBoardPaint(canvas, opts){
   else if(inLayer)mark(p.x,p.y,'cir',lab,chordDegs.has(degC)?'#2f8f5b':'#8a9bb0',alpha);
   if(selected.has(k)){ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.strokeStyle='#4a8fd4';ctx.lineWidth=2.5;ctx.stroke();}
  }
+ if(chordLayer){   /* R32: the playable chord — the shape's notes, one a string, in front of everything */
+  let n=0; shapeFrets.forEach((f,s2)=>{if(f==null||f<0||f<startFret||f>startFret+g.frets)return;const p=xy(s2,f);markL(p.x,p.y,chordLayer.kind,chordLayer.r,labelOf(cageMidi(s2,f)%12),chordLayer.color,chordLayer.ink,1);n++;});
+  drawn.push({id:'chord',name:chordLayer.name,color:chordLayer.color,kind:chordLayer.kind,r:chordLayer.r,count:n});
+ }
+ if(opts.interactive)try{cageState._layersDrawn=drawn;}catch(e){}
  if(opts.mode==='setup'&&opts.interactive){
   for(let s=0;s<6;s++)for(let i=0;i<g.frets;i++){
    const f=startFret+i,k=cageKey(s,f); if(selected.has(k))continue;
@@ -7593,7 +7675,8 @@ function cageDraw(){
   window:cageState.window, startFret:cageState.startFret,
   scaleRootPc:cageState.scaleRootPc, numberView:cageState.numberView,
   shapeFrets:cageState._shapeFrets, shapeColor:cageState._shapeColor,
-  selected:cageState.selected, mode:cageState.mode, interactive:true
+  selected:cageState.selected, mode:cageState.mode, interactive:true,
+  layers:cageLayerList(cageState.layers,cageState.quality)   /* R32 [58] */
  };
  cageState._geom=cageBoardPaint(canvas, Object.assign({}, base, {
   chordRootPc:cageState.chordRootPc, quality:cageState.quality,
@@ -7611,8 +7694,8 @@ function cageDraw(){
   const upRoot=up.rootPc!=null?up.rootPc:cageState.chordRootPc;
   const upQ=up.quality||cageState.quality;
   const upShape=cageState.shapePref==='auto'
-   ?cageBestShape(upRoot,cageState.startFret,cageState.window)
-   :cageTransposeForm(cageState.shapePref,upRoot);
+   ?cageBestShape(upRoot,cageState.startFret,cageState.window,upQ)
+   :cageTransposeForm(cageState.shapePref,upRoot,upQ);
   const cu=document.getElementById('cageBoardUp');
   const upBluesDual=solo==='blues'&&cageBluesNeckCount(upQ)>1;
   if(b2u)b2u.style.display=upBluesDual?'block':'none';
@@ -7620,6 +7703,7 @@ function cageDraw(){
    chordRootPc:upRoot, quality:upQ,
    shapeFrets:upShape.frets, shapeColor:upShape.color,
    layer:solo==='blues'?(upBluesDual?'bluesMaj':'bluesMin'):layer,
+   layers:cageLayerList(cageState.layers,upQ),
    interactive:false, selected:new Set(), compact:false
   }));
   if(upBluesDual){
