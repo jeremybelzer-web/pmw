@@ -851,7 +851,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06v</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06w</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16018,8 +16018,8 @@ function swLayoutRepack(){
    ⛔ SKIN_DEFS is harness-extracted: no semicolon inside it (the grabConst rule). ==== */
 const SKIN_DEFS=[
  ['shelf','Essence Shelf','GV-1 — today’s view: the column, or one of the four swipe layouts below.'],
- ['gv2','GV-2 · Arranger','GV-2 — the arranger view: a browser on the left, the grid in the centre, the Essence Shelf on the right, the open windows in a lane below, the info view lower-left. Drag any border. Drag it to the edge to tuck a pane away — the edge keeps a strip that brings it back.'],
- ['dv12','DV-12 · Rack','DV-12 — the rack view: a toolbar line with the window keys (F5 the playlist · F6 the rack · F7 the piano roll · F8 the browser · F9 the mixer · F10 setup · F11 song info · F12 close all), every window floating on a desktop with its place remembered, the typing-keypad piano on ⌃T.']];
+ ['gv2','Everything In It’s Own Window','GV-2 — his name for it (Sept 6): Everything In It’s Own Window — a browser on the left, the grid in the centre, the Essence Shelf on the right, the open windows in a lane below, the info view lower-left. Drag any border. Drag it to the edge to tuck a pane away — the edge keeps a strip that brings it back.'],
+ ['dv12','Piano Roll-Centric','DV-12 — his name for it (Sept 6): Piano Roll-Centric — a toolbar line with the window keys (F5 the playlist · F6 the rack · F7 the piano roll · F8 the browser · F9 the mixer · F10 setup · F11 song info · F12 close all), every window floating on a desktop with its place remembered, the typing-keypad piano on ⌃T.']];
 const SKIN_PANES_DEF={l:18,r:22,b:24,lc:0,rc:0,bc:0,info:1};
 function skinNorm(raw){
  /* pure — the view guard: a layout carrying skin:'gv2' with its panes clamped (l 8–40 · r 8–45 ·
@@ -16177,7 +16177,7 @@ function skinKbdDraw(){
  const oct=skinKbd.oct;
  const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
  const keys='awsedftgyhujkolp;'.split('');
- let html='<div class="winHead" id="skKbdHead" style="margin:0 0 6px 0;cursor:grab;"><span class="picon">⌨</span><span class="wtitle">Keyboard (GV-2)</span>'
+ let html='<div class="winHead" id="skKbdHead" style="margin:0 0 6px 0;cursor:grab;"><span class="picon">⌨</span><span class="wtitle">Keyboard — Everything In It’s Own Window</span>'
   +'<span style="margin-left:auto;font-size:10.5px;color:var(--dim);">octave <b style="color:var(--text);">'+oct+'</b> (z / x) · velocity <b style="color:var(--text);">'+skinKbd.vel+'</b> (c / v)</span>'
   +'<span class="wbtn" id="skKbdX" title="Close the keyboard window (⌘K)">✕</span></div>'
   +'<div style="display:flex;align-items:flex-start;">';
@@ -16626,7 +16626,7 @@ function skinKbdDrawFl(k){
   for(let i=0;i<keys.length;i++){const m=base+i,nm=names[i%12],blk=nm.length>1;const on=Object.values(skinKbd.down).indexOf(m)>=0;
    h+='<div class="skKey'+(blk?' blk':'')+(on?' on':'')+'" data-midi="'+m+'"><span style="font-weight:700;">'+keys[i].toUpperCase()+'</span><span style="font-size:9px;">'+nm+(blk?'':(Math.floor(m/12)-1))+'</span></div>';}
   return h+'</div>';};
- let html='<div class="winHead" id="skKbdHead" style="margin:0 0 6px 0;cursor:grab;"><span class="picon">⌨</span><span class="wtitle">Typing piano (DV-12)</span>'
+ let html='<div class="winHead" id="skKbdHead" style="margin:0 0 6px 0;cursor:grab;"><span class="picon">⌨</span><span class="wtitle">Typing piano — Piano Roll-Centric</span>'
   +'<span style="margin-left:auto;font-size:10.5px;color:var(--dim);">octave <span class="cpchip" id="skKbdOctDn" title="An octave down">◀</span> <b style="color:var(--text);">'+oct+'</b> <span class="cpchip" id="skKbdOctUp" title="An octave up">▶</span> (⌥2–⌥6)</span>'
   +'<span class="wbtn" id="skKbdX" title="Close the typing piano (⌃T)">✕</span></div>'
   +rowHtml(hi,12*(oct+2))+rowHtml(lo,12*(oct+1))
