@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06k</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06l</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4391,16 +4391,53 @@ const CAGED_OPEN_MIN={
  D:{rootPc:2,frets:[-1,-1,0,2,3,1],color:'#2aa4a4'}
 };
 const CAGED_SHAPE_ORDER=['C','A','G','E','D'];
-function cageIsMinorQ(quality){return quality==='min'||quality==='min7'||quality==='dim';}
+function cageIsMinorQ(quality){return quality==='min'||quality==='min7';}   /* R33: dim has its own forms now */
 function cageQualNow(q){
  /* the quality a shape is asked for: the caller's, else the window's chord */
  if(q!=null)return q;
  try{if(typeof cageState==='object'&&cageState&&cageState.quality)return cageState.quality;}catch(e){}
  return 'maj';
 }
-function cageShapeLabel(shape,quality){
- /* pure: "E shape" for a major chord, "E minor shape" for a minor one — his [58] */
- return String(shape||'')+(cageIsMinorQ(quality)?' minor':'')+' shape';
+function cageShapeLabel(shape,quality,rootPc){
+ /* pure: "E shape" for a major chord, "E minor shape" for a minor one — his [58]; a diminished chord is the one
+    diminished chord that fits that shape's position — "B° in the C shape" — his [59] */
+ const sh=String(shape||'');
+ if(quality==='dim'){const N=(typeof PCN!=='undefined')?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];return N[((Math.round(+rootPc)||0)%12+12)%12]+'° in the '+sh+' shape';}
+ return sh+(quality==='min'||quality==='min7'?' minor':'')+' shape';
+}
+function cageDimForm(shapeName,dimRootPc){
+ /* pure — his [59]: "There is exactly 1 diminished chord that fits in each major/minor shape." The diminished chord is
+    the vii° of the major key whose shape this is (B° in C), so the form is the shape's position with only the diminished
+    tones (1 · b3 · b5) kept, one a string, each nearest the major form's own fret; a string with none is muted. */
+ const root=((Math.round(+dimRootPc)||0)%12+12)%12; const keyRoot=(root+1)%12;
+ const M=cageTransposeForm(shapeName,keyRoot,'maj'); const {lo,hi}=cageShapeSpan(M.frets);
+ const tones=[root,(root+3)%12,(root+6)%12];
+ /* on the major form's own strings: every diminished tone within reach of that string's fret, cheapest first */
+ const cands=M.frets.map((mf,s)=>{if(mf<0)return [];const out=[];for(let f=Math.max(0,lo-1);f<=Math.min(19,hi+1);f++){const pc=(CAGED_TUNING[s]+f)%12;if(tones.indexOf(pc)<0)continue;out.push({f,pc,cost:Math.abs(f-mf)});}return out.sort((p,q)=>p.cost-q.cost);});
+ const pick=cands.map(c=>c.length?c[0]:null);
+ /* the chord must hold all three tones: swap the cheapest string whose tone is held elsewhere for the missing one */
+ for(let guard=0;guard<3;guard++){
+  const have=new Set(pick.filter(Boolean).map(p=>p.pc)); const missing=tones.filter(t=>!have.has(t)); if(!missing.length)break;
+  let best=null;
+  for(let s=0;s<6;s++){const cur=pick[s];if(!cur)continue;const dup=pick.filter(p=>p&&p.pc===cur.pc).length>1;if(!dup)continue;
+   for(const c of cands[s]){if(missing.indexOf(c.pc)<0)continue;const extra=c.cost-cur.cost;if(!best||extra<best.extra)best={s,c,extra};}}
+  if(!best)break; pick[best.s]=best.c;
+ }
+ const frets=pick.map(p=>p?p.f:-1);
+ return {shape:shapeName,frets,color:M.color,minor:false,dim:true,keyRoot,label:cageShapeLabel(shapeName,'dim',root)};
+}
+function cageRelativeForm(x,rootPc,quality){
+ /* pure — his [59]: the relative major and minor share one scale shape; the OTHER chord shape in that position — the
+    minor form whose span sits nearest a major form's (a minor third down), or the major form's for a minor chord */
+ if(!x||!x.frets)return null;
+ const root=((Math.round(+rootPc)||0)%12+12)%12; const minor=cageIsMinorQ(quality);
+ const relRoot=minor?(root+3)%12:(root+9)%12; const relQ=minor?'maj':'min';
+ const span=cageShapeSpan(x.frets); const c=(span.lo+span.hi)/2; let best=null;
+ for(const name of CAGED_SHAPE_ORDER){
+  const y=cageTransposeForm(name,relRoot,relQ); const sp=cageShapeSpan(y.frets); const d=Math.abs((sp.lo+sp.hi)/2-c)+Math.max(0,Math.abs(sp.hi-sp.lo)-(span.hi-span.lo))*0.1;
+  if(!best||d<best.d)best={d,y};
+ }
+ return best?Object.assign({},best.y,{relRoot,relQ}):null;
 }
 const CAGED_DEG={0:'1',1:'b2',2:'2',3:'b3',4:'3',5:'4',6:'b5',7:'5',8:'b6',9:'6',10:'b7',11:'7'};
 const CAGED_TUNING=[40,45,50,55,59,64];
@@ -4409,6 +4446,7 @@ let cageState={
  mode:'setup', numberView:'absolute',
  scaleRootPc:0, chordText:'C', chordRootPc:0, quality:'maj',
  layers:{chord:false,fullArp:false,penta:false,pentaMode:'maj',blues:false,bluesMode:'maj'},   /* R32 [58]: the layered views */
+ pairShapes:true,   /* R33 [59]: the relative major + minor listed together as one shape */
  layer:'scale', soloView:'scale', splitNeck:false, layoutView:'midi', moveArmed:false, moveIx:0, shapePref:'auto', window:5, startFret:0,
  upcoming:{text:'',rootPc:0,quality:'maj'},
  selected:new Set(), flash:new Map(),
@@ -4491,11 +4529,12 @@ function cageDegreeSet(quality,layer){
 }
 function cageTransposeForm(shapeName,rootPc,quality){
  const q=cageQualNow(quality); const minor=cageIsMinorQ(q);
+ if(q==='dim')return cageDimForm(shapeName,rootPc);   /* R33 [59]: the diminished chord of that shape's position */
  const open=(minor&&typeof CAGED_OPEN_MIN!=='undefined'?CAGED_OPEN_MIN:CAGED_OPEN)[shapeName];   /* R32 [58]: the minor forms */
  let shift=(rootPc-open.rootPc+12)%12;
  let frets=open.frets.map(f=>f<0?-1:f+shift);
  while(Math.max(...frets.filter(f=>f>=0),0)>19){shift+=12;frets=open.frets.map(f=>f<0?-1:f+shift);}
- return {shape:shapeName,frets,color:open.color,minor,label:cageShapeLabel(shapeName,q)};
+ return {shape:shapeName,frets,color:open.color,minor,label:cageShapeLabel(shapeName,q,rootPc)};
 }
 function cageShapeSpan(frets){
  const all=frets.filter(f=>f>=0); if(!all.length)return {lo:0,hi:0};
@@ -4651,7 +4690,7 @@ function cageBoxForRoot(shapeName, rootPc, quality){
  const x=cageTransposeForm(shapeName, rootPc==null?0:+rootPc, quality);
  const {lo,hi}=cageShapeSpan(x.frets);
  const start=Math.max(0, Math.min(lo, Math.max(0, hi-4)));
- return {shape:shapeName, startFret:start, window:5, frets:x.frets, color:x.color, lo, hi, minor:!!x.minor, label:x.label};
+ return {shape:shapeName, startFret:start, window:5, frets:x.frets, color:x.color, lo, hi, minor:!!x.minor, dim:!!x.dim, label:x.label};
 }
 function cagePosInBox(midi, box){
  if(!box)return null;
@@ -5412,7 +5451,7 @@ function cageNeckBoardDraw(ctx,G){
 function cageMiniRoots(rootPc,quality){
  /* pure: the five CAGED boxes for this root (major or minor forms — his [58]) along the neck, each with its root notes {s,f} — sorted along the neck */
  const root=((Math.round(+rootPc)||0)%12+12)%12; const q=cageQualNow(quality);
- return CAGED_SHAPE_ORDER.map(name=>{const b=cageBoxForRoot(name,root,q);const roots=[];b.frets.forEach((f,s)=>{if(f>=0&&((CAGED_TUNING[s]+f)%12)===root)roots.push({s,f});});return {shape:name,label:name+(b.minor?'m':''),minor:!!b.minor,startFret:b.startFret,lo:b.lo,hi:b.hi,color:b.color,roots};}).sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
+ return CAGED_SHAPE_ORDER.map(name=>{const b=cageBoxForRoot(name,root,q);const roots=[];b.frets.forEach((f,s)=>{if(f>=0&&((CAGED_TUNING[s]+f)%12)===root)roots.push({s,f});});return {shape:name,label:name+(b.minor?'m':(b.dim?'°':'')),minor:!!b.minor,dim:!!b.dim,startFret:b.startFret,lo:b.lo,hi:b.hi,color:b.color,roots};}).sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
 }
 function cageMiniGeom(c){
  const W=c.width,H=c.height,padL=12,padR=10,cw=(W-padL-padR)/(CAGE_MAX_FRET+2);   /* a head cell, then frets 0..19 */
@@ -7261,7 +7300,11 @@ function cagePickShape(){
   ?cageBestShape(cageState.chordRootPc,cageState.startFret,cageState.window)
   :cageTransposeForm(cageState.shapePref,cageState.chordRootPc);
  cageState.activeShape=x.shape; cageState._shapeFrets=x.frets; cageState._shapeColor=x.color;
- const sb=document.getElementById('cageShapeBig'); if(sb)sb.textContent=x.label||cageShapeLabel(x.shape,cageState.quality);   /* R32 [58]: "E minor shape" */
+ /* R33 [59]: the relative pair — "C shape · A minor shape" (the minor first for a minor chord); a diminished chord names its shape's pair too */
+ const pairOn=!!cageState.pairShapes; let rel=null;
+ try{if(pairOn){if(cageState.quality==='dim'){const M=cageTransposeForm(x.shape,x.keyRoot!=null?x.keyRoot:(cageState.chordRootPc+1)%12,'maj');rel=cageRelativeForm(M,M.keyRoot!=null?M.keyRoot:(cageState.chordRootPc+1)%12,'maj');}else rel=cageRelativeForm(x,cageState.chordRootPc,cageState.quality);}}catch(e){rel=null;}
+ cageState._relFrets=rel?rel.frets:null; cageState._relColor=rel?rel.color:null; cageState._relLabel=rel?rel.label:null;
+ const sb=document.getElementById('cageShapeBig'); if(sb)sb.textContent=(x.label||cageShapeLabel(x.shape,cageState.quality,cageState.chordRootPc))+(rel?' · '+rel.label:'');
  const ap=document.getElementById('cageLayArpPos'); if(ap)ap.textContent=x.shape+(x.minor?' minor':'');
  try{const minor=cageIsMinorQ(cageState.quality);['cageLayPentaMode','cageLayBluesMode'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=minor?'none':'inline-block';});}catch(e){}
  const cb=document.getElementById('cageChordBig'); if(cb)cb.textContent=cageState.chordText;
@@ -7311,6 +7354,7 @@ function buildCageWindow(){
    +'<option value="split">CURRENT / UPCOMING</option></select></label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Shape<select id="cageShape" style="padding:5px 8px;">'
    +'<option value="auto">Auto</option><option value="C">C</option><option value="A">A</option><option value="G">G</option><option value="E">E</option><option value="D">D</option></select></label>'
+   +'<label style="font-size:10px;color:var(--dim);display:inline-flex;gap:4px;align-items:center;cursor:pointer;padding-bottom:6px;" title="Relative pair (his [59]) — the relative major and minor are one scale shape: list both chord shapes together in the label and draw the other one dashed on the board"><input type="checkbox" id="cagePairOn" checked/> Relative pair</label>'
    +'<label style="font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px;">Frets'
    +'<span style="display:inline-flex;gap:4px;" id="cageFretChips">'
    +'<button type="button" data-w="4" style="padding:5px 10px;">4</button>'
@@ -7386,6 +7430,7 @@ function buildCageWindow(){
   };
   on('cageSplitNeck').onchange=e=>{cageState.splitNeck=e.target.value==='split';cageDraw();};
   on('cageShape').onchange=e=>{cageState.shapePref=e.target.value;cageDraw();};
+  const _pair=document.getElementById('cagePairOn'); if(_pair){_pair.checked=!!cageState.pairShapes;_pair.onchange=()=>{cageState.pairShapes=!!_pair.checked;cageDraw();};}   /* R33 [59] */
   /* R32 [58]: the layer chips */
   [['cageLayChord','chord'],['cageLayArp','fullArp'],['cageLayPenta','penta'],['cageLayBlues','blues']].forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.checked=!!cageState.layers[key];el.onchange=()=>{cageState.layers[key]=!!el.checked;cageDraw();};}});
   [['cageLayPentaMode','pentaMode'],['cageLayBluesMode','bluesMode']].forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.value=cageState.layers[key]||'maj';el.onchange=()=>{cageState.layers[key]=el.value;cageDraw();};}});
@@ -7579,6 +7624,11 @@ function cageBoardPaint(canvas, opts){
  }
  const xy=(s,f)=>{const i=f-startFret; return {x:(f===0&&startFret===0)?g.x0-2:g.x0+(i+0.5)*g.fretW, y:g.y1-s*g.strH};};
  const labelOf=(pc)=>cageDegFrom(numberView==='absolute'?scaleRoot:chordRoot, pc);
+ if(Array.isArray(opts.relFrets)&&opts.relFrets.length){   /* R33 [59]: the relative major/minor chord shape, dashed, beneath the shape's own line */
+  ctx.save(); ctx.setLineDash([6,5]); ctx.strokeStyle=opts.relColor||'#8a9bb0'; ctx.lineWidth=2; ctx.globalAlpha=0.55; ctx.beginPath(); let st0=false;
+  for(let s=0;s<6;s++){const f=opts.relFrets[s]; if(f==null||f<0)continue; if(f<startFret||f>startFret+g.frets)continue; const p=xy(s,f); if(!st0){ctx.moveTo(p.x,p.y);st0=true;}else ctx.lineTo(p.x,p.y);}
+  ctx.stroke(); ctx.restore();
+ }
  ctx.strokeStyle=shapeColor; ctx.lineWidth=2; ctx.globalAlpha=0.5; ctx.beginPath(); let started=false;
  for(let s=0;s<6;s++){const f=shapeFrets[s]; if(f==null||f<0)continue;
   if(f<startFret||f>startFret+g.frets)continue; const p=xy(s,f);
@@ -7675,6 +7725,7 @@ function cageDraw(){
   window:cageState.window, startFret:cageState.startFret,
   scaleRootPc:cageState.scaleRootPc, numberView:cageState.numberView,
   shapeFrets:cageState._shapeFrets, shapeColor:cageState._shapeColor,
+  relFrets:cageState._relFrets, relColor:cageState._relColor,   /* R33 [59]: the relative chord shape, dashed */
   selected:cageState.selected, mode:cageState.mode, interactive:true,
   layers:cageLayerList(cageState.layers,cageState.quality)   /* R32 [58] */
  };
