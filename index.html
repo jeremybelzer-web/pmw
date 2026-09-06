@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -9781,6 +9781,63 @@ function gridStepForPPB(ppb,triplets){
  return triplets? st*2/3 : st;
 }
 function gridStep(){return gridStepForPPB(PPB,gridTriplets);}
+/* ==== R24 (build 2026-09-06c, the 96th, Fable) — HIS [52]: KEY-COMMAND SETS ====
+   His words (CAGED-INSTRUMENT-RAW-2026-09-04.md [52]): "4 sets of key commands the user can choose from" — three levels
+   kept apart, as his paste says: the GRID (how you draw and move) · the QUANTIZE SETTINGS (the window) · the QUANTIZE
+   COMMAND (apply the settings to the selection), plus a quick quantize to the current grid. Bindings are {key,mod,shift,alt}
+   (mod = ⌘ on a Mac, Ctrl elsewhere); a binding the browser reserves on a Mac (⌘Q quits, ⌘1…⌘5 switch tabs) carries
+   ctrl:true and is said so in the UI. The sets' product names stay OUT of this file (AGENTS §3) until his word — the
+   labels name the hallmark keys instead. */
+const KEYSETS={
+ ours:{label:'Our Default',note:'Q opens Quantize · ⇧Q applies its settings · ⌥Q quick-quantizes the starts to the grid · G / ⇧G narrow / widen the grid · T triplet grid',
+  open:{key:'q'},apply:{key:'q',shift:true},quickStart:{key:'q',alt:true},narrow:{key:'g'},widen:{key:'g',shift:true},triplet:{key:'t'}},
+ live:{label:'Set A — ⌘⇧U · ⌘U · ⌃1 ⌃2 ⌃3',note:'⌘⇧U opens Quantize · ⌘U applies its settings · ⌃1 narrows the grid · ⌃2 widens · ⌃3 triplet grid (the ⌘-number keys belong to the browser here)',
+  open:{key:'u',mod:true,shift:true},apply:{key:'u',mod:true},narrow:{key:'1',ctrl:true},widen:{key:'2',ctrl:true},triplet:{key:'3',ctrl:true}},
+ fl:{label:'Set B — ⌥Q · ⌃Q · ⇧Q',note:'⌥Q opens Quantize · ⌃Q quick-quantizes to the current grid (⌘Q quits the browser here) · ⇧Q quick-quantizes the starts only',
+  open:{key:'q',alt:true},quick:{key:'q',ctrl:true},quickStart:{key:'q',shift:true}},
+ pt:{label:'Set C — ⌥0 · F4',note:'⌥0 opens Quantize · F4 toggles the triplet grid (the rest of this set awaits his list)',
+  open:{key:'0',alt:true},triplet:{key:'F4'}}};
+function keysetMatch(b,e,mac){
+ /* pure: does the key event e (key, metaKey, ctrlKey, shiftKey, altKey) fit the binding b? mod = ⌘ on a Mac, Ctrl elsewhere;
+    a binding with ctrl:true wants Ctrl on either platform */
+ if(!b||!e)return false;
+ const k=String(e.key||'');
+ if(k.length===1?k.toLowerCase()!==String(b.key).toLowerCase():k!==String(b.key))return false;
+ const wantMod=!!b.mod,wantCtrl=!!b.ctrl,wantShift=!!b.shift,wantAlt=!!b.alt;
+ const modHeld=mac?!!e.metaKey:!!e.ctrlKey,otherMod=mac?!!e.ctrlKey:!!e.metaKey;
+ if(wantCtrl){if(!e.ctrlKey)return false;if(mac&&e.metaKey)return false;}
+ else{if(modHeld!==wantMod)return false;if(otherMod)return false;}
+ if(!!e.shiftKey!==wantShift)return false;
+ if(!!e.altKey!==wantAlt)return false;
+ return true;
+}
+function keysetAction(setId,e,mac){
+ /* pure: the action name the event fires in the set, or null */
+ const set=KEYSETS[setId]||KEYSETS.ours;
+ for(const act of ['open','apply','quick','quickStart','narrow','widen','triplet']){if(set[act]&&keysetMatch(set[act],e,mac))return act;}
+ return null;
+}
+function keysetNextPPB(ppb,dir){
+ /* pure: the next grid band — 34 (quarters) · 44 (8ths) · 72 (16ths) · 128 (32nds); dir +1 narrows, −1 widens; clamped */
+ const bands=[34,44,72,128];const p=+ppb||34;
+ let i=0;for(let k=0;k<bands.length;k++){if(p>=bands[k]-1e-9)i=k;}
+ const j=Math.max(0,Math.min(bands.length-1,i+(dir>0?1:-1)));
+ return bands[j];
+}
+var qzState={grid:'0.25',start:true,end:false,amt:1};   /* the Quantize window's settings, kept when the window is closed — the apply key uses them */
+function keysetRun(act){
+ /* the actions: open the window · apply its settings · quick-quantize (to the current grid) · the grid keys */
+ const sel=(typeof selNotes==='object'&&selNotes)?[...selNotes]:[];
+ const stepsOf=v=>{if(v==='grid'){let gs=.25;try{gs=gridStep();}catch(e){}return [gs];}if(/\+T$/.test(v)){const b=+v.replace('+T','');return [b,b*2/3];}if(/T$/.test(v))return [(+v.replace('T',''))*2/3];return [+v];};
+ const doQ=(steps,st,en,amt,word)=>{if(!sel.length){flashHint('Select some notes first — '+word+' pulls the selection to the grid.');return false;}snapshot();const out=quantizeRowsMulti(project.melody,sel,steps,amt,st,en);project.melody.length=0;for(const n of out)project.melody.push(n);noteEngine('quantize',{n:sel.length,grid:String(steps[0])});refresh(true);flashHint(word+' — '+sel.length+' note'+(sel.length===1?'':'s')+' · ⌘Z undoes');return true;};
+ if(act==='open'){try{if(typeof flyOpen!=='undefined'&&!flyOpen)openFlyCol();else if(typeof renderQuantWin==='function')renderQuantWin();}catch(e){}const w=document.getElementById('quantWin');if(w)w.scrollIntoView({block:'nearest'});flashHint('⊞ Quantize — the window is open on the grid\'s left');return true;}
+ if(act==='apply')return doQ(stepsOf(qzState.grid),qzState.start!==false,!!qzState.end,isFinite(+qzState.amt)?+qzState.amt:1,'Quantize (the window\'s settings)');
+ if(act==='quick')return doQ(stepsOf('grid'),true,true,1,'Quick quantize to the current grid');
+ if(act==='quickStart')return doQ(stepsOf('grid'),true,false,1,'Quick quantize (starts only)');
+ if(act==='narrow'||act==='widen'){PPB=keysetNextPPB(PPB,act==='narrow'?1:-1);window._swUserZoom=true;refresh(true);try{drawTrackSel();}catch(e){}flashHint((act==='narrow'?'Grid narrowed to ':'Grid widened to ')+({1:'quarters',.5:'8ths',.25:'16ths',.125:'32nds'})[gridStepForPPB(PPB,false)]);return true;}
+ if(act==='triplet'){const c=document.getElementById('chkTrip');if(c){c.checked=!c.checked;c.onchange({target:c});}else{gridTriplets=!gridTriplets;refresh(false);}flashHint('Triplet grid '+(gridTriplets?'on':'off'));return true;}
+ return false;
+}
 function barLaneTicks(ppb,loopBeats,gut,h,triplets){
  /* pure (unit-tested) — 2026-08-11a FIX 4 (client §3, bar/beat delineation): the tick
     lines that make the bar lane read as a beats-and-bars RULER. Bars: full height,
@@ -21676,6 +21733,7 @@ function renderQuantWin(){
  btn.onclick=()=>{
   if(!selNotes.size){flashHint('Select some notes first — Quantize pulls the selection to the grid.');return;}
   const g=document.getElementById('qzGrid'),am=document.getElementById('qzAmt'),st=document.getElementById('qzStart'),en=document.getElementById('qzEnd');
+  qzState={grid:g.value,start:st.classList.contains('on'),end:en.classList.contains('on'),amt:(+am.value)/100};   /* R24: the settings the apply key uses */
   const v=g.value;let steps;
   if(v==='grid'){let gs=.25;try{gs=gridStep();}catch(e){}steps=[gs];}
   else if(/\+T$/.test(v)){const b=+v.replace('+T','');steps=[b,b*2/3];}
@@ -21691,9 +21749,11 @@ function renderQuantWin(){
  };
  const cls=document.createElement('button');cls.id='qzClose';cls.textContent='Close';cls.style.cssText='flex:1;';cls.onclick=()=>{try{closeFlyCol();}catch(e){}};
  bar.appendChild(btn);bar.appendChild(cls);el.appendChild(bar);
- ['qzStart','qzEnd'].forEach(id=>{const b=el.querySelector('#'+id);if(b)b.onclick=()=>b.classList.toggle('on');});
+ ['qzStart','qzEnd'].forEach(id=>{const b=el.querySelector('#'+id);if(b){b.classList.toggle('on',id==='qzStart'?qzState.start!==false:!!qzState.end);b.onclick=()=>{b.classList.toggle('on');qzState[id==='qzStart'?'start':'end']=b.classList.contains('on');};}});
+ const gsel=el.querySelector('#qzGrid');if(gsel){if([...gsel.options].some(o=>o.value===qzState.grid)&&qzState.gridSet)gsel.value=qzState.grid;gsel.onchange=()=>{qzState.grid=gsel.value;qzState.gridSet=true;};}
+ if(el.querySelector('#qzAmt'))el.querySelector('#qzAmt').value=Math.round((isFinite(+qzState.amt)?+qzState.amt:1)*100);
  const amt=el.querySelector('#qzAmt'),amtV=el.querySelector('#qzAmtV');
- if(amt)amt.oninput=()=>{amtV.textContent=amt.value+' %';};
+ if(amt){amtV.textContent=amt.value+' %';amt.oninput=()=>{amtV.textContent=amt.value+' %';qzState.amt=(+amt.value)/100;};}
 }
 /* the ctrl+click dispatcher (§3 landmine ⑨: on macOS ctrl+click IS contextmenu — ONE
    handler owns the grid background's right-click and dispatches) */
@@ -32258,6 +32318,7 @@ window.addEventListener('keydown',e=>{
  /* input safety: no grid shortcut fires while typing (inputs/selects/textareas/contenteditable) */
  if(isTypingTarget(document.activeElement))return;
  if(e._cnvOwned)return;   /* the Canvas window handled this key (template delete / ⌘Z restore) — one owner per event, no propagation stopped */
+ { const ka=keysetAction((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.keyset)||'ours',e,/Mac|iPhone|iPad/.test(navigator.platform||''));if(ka){e.preventDefault();keysetRun(ka);return;} }   /* R24 [52]: the chosen key-command set */
  const mod=e.metaKey||e.ctrlKey;
  if(e.key===' '||e.code==='Space'){
   e.preventDefault();               /* keep the browser from page-scrolling on Space */
@@ -34603,7 +34664,8 @@ function parseSettings(str){
  delLinked:true,
  fixedGrid:false,
  rmPrompts:true,
- hallElevator:true};   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ hallElevator:true,
+ keyset:'ours'};   /* R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -34617,6 +34679,7 @@ function parseSettings(str){
    if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
    if(o.rmPrompts===false)def.rmPrompts=false;   /* F3: an explicit false skips the guided question */
    if(o.hallElevator===false)def.hallElevator=false;   /* R9: skip the hallway's elevator entry */
+   if(o.keyset==='live'||o.keyset==='fl'||o.keyset==='pt')def.keyset=o.keyset;   /* R24: the chosen key-command set */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -38069,6 +38132,7 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setAuto" ${SETTINGS.autosave?'checked':''}> Autosave the session in this browser (restores after a crash or an accidental close; with this off, closing with unsaved work asks first)</label></p>
  <p><label><input type="checkbox" id="setRmPrompts" ${SETTINGS.rmPrompts?'checked':''}> Prompts by Pro Music Workbench for Rhythmic Motif — the Embellisher opens with its guided question. Off: straight to the options pop-up.</label></p>
  <p><label><input type="checkbox" id="setHallElev" ${SETTINGS.hallElevator!==false?'checked':''}> The Wanderer's bamboo elevator — the thatched shelter that sinks you into the Hallway view when it opens. Off: skip straight to the corridor (the 🎋 chip in the hallway's header flips this too).</label></p>
+ <p><label>Key commands <select id="setKeyset">${['ours','live','fl','pt'].map(k=>`<option value="${k}" ${(SETTINGS.keyset||'ours')===k?'selected':''}>${KEYSETS[k].label}</option>`).join('')}</select></label> <span id="setKeysetNote" style="font-size:11px;color:var(--dim);">${KEYSETS[SETTINGS.keyset||'ours'].note}</span></p>
  <p><label><input type="checkbox" id="setRecOver" ${SETTINGS.recordOver?'checked':''}> Record over existing MIDI — while recording, incoming notes REPLACE the armed track's notes in the recorded span. Off (the default): new notes simply add to the MIDI that is already there.</label></p>
  <h3>Clips</h3>
  <p><b>Clip boundaries default to:</b><br>
@@ -38135,6 +38199,7 @@ function openSettings(){
  if(g('setRecOver'))g('setRecOver').onchange=e=>{SETTINGS.recordOver=e.target.checked;persistSettings();};
  if(g('setRmPrompts'))g('setRmPrompts').onchange=e=>{SETTINGS.rmPrompts=e.target.checked;persistSettings();};
  if(g('setHallElev'))g('setHallElev').onchange=e=>{SETTINGS.hallElevator=e.target.checked;persistSettings();};
+ if(g('setKeyset'))g('setKeyset').onchange=e=>{SETTINGS.keyset=KEYSETS[e.target.value]?e.target.value:'ours';persistSettings();const n=g('setKeysetNote');if(n)n.textContent=KEYSETS[SETTINGS.keyset].note;flashHint('Key commands: '+KEYSETS[SETTINGS.keyset].label);};   /* R24 [52] */
  if(g('setClipAlign'))g('setClipAlign').onchange=e=>{SETTINGS.clipAlign=e.target.value==='bars'?'bars':'chords';persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
  if(g('setClipDrop'))g('setClipDrop').onchange=e=>{SETTINGS.clipDrop=(e.target.value==='merge'||e.target.value==='replace')?e.target.value:'ask';persistSettings();};
  if(g('setClipNames'))g('setClipNames').onchange=e=>{SETTINGS.clipChordNames=!!e.target.checked;persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
