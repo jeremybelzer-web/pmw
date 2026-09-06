@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06j</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1040,8 +1040,9 @@
       <div class="ctl"><label>Kind</label><select id="impKind" style="min-width:250px;">
         <option value="mix" title="Upload a full song (audio). The backend splits it into a drums stem + an everything-else stem, then transcribes the notes it hears.">Full song (audio) → split drums / music + find the notes</option>
         <option value="drumkit" title="Upload a zip of individual drum sounds. Recognized pieces (kick, snare, hats…) load straight into the Sample hub.">Zip of drum sounds → load each drum into the hub</option>
-        <option value="voicememo" title="Hum or sing into a voice memo. The backend turns it into notes on a track, then offers tap-to-beat alignment.">Voice memo (hum/sing) → notes on a track</option></select></div>
-      <div class="ctl"><label>File</label><input type="file" id="impFile" accept="audio/*,.zip,.wav,.mp3,.m4a,.ogg,.flac,.aif,.aiff" style="font-size:12px;color:var(--dim);max-width:230px;"></div>
+        <option value="voicememo" title="Hum or sing into a voice memo. The backend turns it into notes on a track, then offers tap-to-beat alignment.">Voice memo (hum/sing) → notes on a track</option>
+        <option value="midifile" title="A Standard MIDI File (.mid) read right here in the browser — no backend. Its tracks land on melody, comping, bass and pad in file order (a drum channel is skipped); the tempo and the bar count come from the file (up to 64 bars).">MIDI file (.mid) → tracks (no backend needed)</option></select></div>
+      <div class="ctl"><label>File</label><input type="file" id="impFile" accept="audio/*,.zip,.wav,.mp3,.m4a,.ogg,.flac,.aif,.aiff,.mid,.midi,audio/midi" style="font-size:12px;color:var(--dim);max-width:230px;"></div>
       <div class="ctl"><label>BPM (beat-domain MIDI)</label><input type="text" id="impBpm" style="width:60px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;outline:none;"></div>
       <div class="ctl"><label>&nbsp;</label><label class="part" style="gap:5px;"><input type="checkbox" id="impQuant" checked style="accent-color:var(--accent);">quantize ¼</label></div>
       <div class="ctl"><label>MIDI / memo → track</label><select id="impTrack" style="min-width:110px;">
@@ -12825,11 +12826,94 @@ async function importVoiceMemo(p,base){
   impStatus(importSummary(p)+' → '+track+' — align now: tap along to set the anchors.');
   openAlign(track,clip);                       /* the “Align now?” prompt (Cancel = keep raw MIDI) */
  }catch(e){impStatus('Load failed: '+(e&&e.message||e),false);}}
+/* ==== R31 (build 2026-09-06j, the 96th, Fable) — HIS [57]: "import whatever song they want" ====
+   A Standard MIDI File read in the browser: MThd/MTrk, running status, note-on/off pairs (a velocity-0 on is an off),
+   the first Set Tempo, the first time signature. Beats are quarter notes (ticks / ppq). Routing: the file's melodic
+   tracks land on melody · comping · bass · pad in file order (extra tracks merge into the last), channel 10 is skipped
+   as drums, and the song's bars come from the last note (4 to 64 bars — the raster cap). Pure until importMidiFile. */
+function smfVlq(u8,i){let v=0,b;do{b=u8[i++];v=(v<<7)|(b&0x7f);}while(b&0x80&&i<u8.length);return {v,i};}
+function smfParse(bytes){
+ const u8=(bytes instanceof Uint8Array)?bytes:new Uint8Array(bytes);
+ const str=(i,n)=>String.fromCharCode.apply(null,Array.from(u8.slice(i,i+n)));
+ if(u8.length<14||str(0,4)!=='MThd')return null;
+ const format=(u8[8]<<8)|u8[9], nTracks=(u8[10]<<8)|u8[11], ppqRaw=(u8[12]<<8)|u8[13];
+ const ppq=(ppqRaw&0x8000)?480:Math.max(1,ppqRaw);   /* SMPTE timing is rare — treated as 480 */
+ let p=8+(((u8[4]<<24)|(u8[5]<<16)|(u8[6]<<8)|u8[7])>>>0);
+ const tracks=[]; let bpm=null, tsig=null;
+ for(let t=0;t<nTracks&&p+8<=u8.length;t++){
+  if(str(p,4)!=='MTrk'){break;}
+  const len=((u8[p+4]<<24)|(u8[p+5]<<16)|(u8[p+6]<<8)|u8[p+7])>>>0; let i=p+8; const end=Math.min(u8.length,i+len); p=end;
+  let tick=0, status=0, name=''; const open={}; const notes=[];
+  while(i<end){
+   const d=smfVlq(u8,i); tick+=d.v; i=d.i; if(i>=end)break;
+   let b=u8[i];
+   if(b===0xff){const type=u8[i+1]; const L=smfVlq(u8,i+2); const di=L.i; i=di+L.v;
+    if(type===0x03&&!name)name=str(di,L.v);
+    else if(type===0x51&&bpm==null&&L.v>=3){const us=(u8[di]<<16)|(u8[di+1]<<8)|u8[di+2]; if(us>0)bpm=Math.round(60000000/us*100)/100;}
+    else if(type===0x58&&!tsig&&L.v>=2)tsig={num:u8[di],den:Math.pow(2,u8[di+1])};
+    continue;}
+   if(b===0xf0||b===0xf7){const L=smfVlq(u8,i+1); i=L.i+L.v; continue;}
+   if(b&0x80){status=b;i++;} else if(!status){i++;continue;}
+   const hi=status&0xf0, ch=status&0x0f;
+   if(hi===0xc0||hi===0xd0){i+=1;continue;}
+   const d1=u8[i],d2=u8[i+1]; i+=2;
+   if(hi===0x90&&d2>0){const k=ch+':'+d1;(open[k]=open[k]||[]).push({t:tick,vel:d2});}
+   else if(hi===0x80||(hi===0x90&&d2===0)){const k=ch+':'+d1; const st=open[k]&&open[k].shift(); if(st)notes.push({t:st.t,d:Math.max(1,tick-st.t),midi:d1,vel:st.vel,ch});}
+  }
+  for(const k in open)for(const st of open[k]){const midi=+k.split(':')[1],ch=+k.split(':')[0];notes.push({t:st.t,d:ppq,midi,vel:st.vel,ch});}   /* an on with no off: a quarter */
+  notes.sort((a,b)=>a.t-b.t||a.midi-b.midi);
+  tracks.push({name,notes});
+ }
+ let out=tracks;
+ if(tracks.length===1&&tracks[0].notes.length){   /* format 0 (or one track for all): its channels are the tracks */
+  const byCh={}; tracks[0].notes.forEach(n=>{(byCh[n.ch]=byCh[n.ch]||[]).push(n);});
+  const chs=Object.keys(byCh).map(Number).sort((a,b)=>a-b);
+  if(chs.length>1)out=chs.map(c=>({name:(tracks[0].name?tracks[0].name+' ':'')+'ch '+(c+1),notes:byCh[c]}));
+ }
+ return {format,ppq,bpm:bpm==null?120:bpm,tsig:tsig||{num:4,den:4},tracks:out};
+}
+function smfRoute(parsed,targets,maxBeats){
+ /* pure: the file's tracks onto the app's — {assign:{track:rows}, bpm, bars, dropped, drums, used:[{name,target,count}]} */
+ const T=(targets&&targets.length)?targets.slice():['melody','comping','bass','pad']; const max=Math.max(4,+maxBeats||256);
+ const ppq=(parsed&&parsed.ppq)||480; const assign={}; const used=[]; let dropped=0,drums=0,maxEnd=0;
+ const melodic=((parsed&&parsed.tracks)||[]).map((tr,fi)=>({name:tr.name,fi,notes:(tr.notes||[]).filter(n=>{if(n.ch===9){drums++;return false;}return true;})})).filter(tr=>tr.notes.length);
+ melodic.forEach((tr,i)=>{
+  const target=T[Math.min(i,T.length-1)];
+  const rows=[]; tr.notes.forEach(n=>{const b=+(n.t/ppq).toFixed(4); if(b>=max){dropped++;return;} const d=Math.max(0.0625,+(Math.min(n.d/ppq,max-b)).toFixed(4)); const row=[b,d,n.midi]; if(n.vel>0)row[8]=+Math.max(.05,Math.min(1,n.vel/127)).toFixed(3); rows.push(row); maxEnd=Math.max(maxEnd,b+d);});
+  if(!rows.length)return;
+  assign[target]=(assign[target]||[]).concat(rows); used.push({name:tr.name||('track '+(tr.fi+1)),target,count:rows.length});
+ });
+ for(const k in assign)assign[k].sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ const num=(parsed&&parsed.tsig&&parsed.tsig.num)||4;
+ const bars=Math.max(4,Math.min(64,Math.ceil((maxEnd||1)/4)));
+ return {assign,bpm:Math.max(40,Math.min(220,Math.round((parsed&&parsed.bpm)||120))),bars,dropped,drums,used,tsigNum:num};
+}
+async function importMidiFile(f){
+ impStatus('Reading '+f.name+'…');
+ let buf; try{buf=await f.arrayBuffer();}catch(e){impStatus('Could not read '+f.name,false);return null;}
+ const parsed=smfParse(new Uint8Array(buf));
+ if(!parsed){impStatus(f.name+' is not a Standard MIDI File (no MThd header).',false);return null;}
+ const r=smfRoute(parsed,['melody','comping','bass','pad'],256);
+ const total=r.used.reduce((a,u)=>a+u.count,0);
+ if(!total){impStatus('No notes in '+f.name+(r.drums?' (only a drum channel, which the importer skips)':''),false);return null;}
+ try{if(typeof snapshot==='function')snapshot();}catch(e){}
+ try{setTempo(r.bpm);}catch(e){}
+ try{setSongBars(r.bars);}catch(e){}
+ for(const k in r.assign)project.tracks[k]=r.assign[k];
+ try{selNotes.clear();}catch(e){}
+ try{playheadBeat=0;}catch(e){}
+ try{refresh(true);}catch(e){}
+ try{if(typeof autosaveSoon==='function')autosaveSoon();}catch(e){}
+ const map=r.used.map(u=>u.name+' → '+u.target+' ('+u.count+')').join(' · ');
+ impStatus(f.name+': '+total+' notes on '+Object.keys(r.assign).length+' track'+(Object.keys(r.assign).length===1?'':'s')+' · '+r.bpm+' bpm · '+r.bars+' bars'+(r.drums?' · drum channel skipped ('+r.drums+')':'')+(r.dropped?' · '+r.dropped+' notes past bar 64 dropped':'')+' — '+map+'. Open 🎸 Guitar and select the track to watch the positions follow the song.');
+ return r;
+}
 async function runImport(){
  const kind=document.getElementById('impKind').value;
  const f=document.getElementById('impFile').files[0];
  if(!f){impStatus('Choose a file first.',false);return;}
  document.getElementById('impAssets').innerHTML='';
+ if(kind==='midifile'||/\.midi?$/i.test(f.name||'')){await importMidiFile(f);return;}   /* R31 [57]: a .mid needs no backend */
  impStatus('Uploading '+f.name+'…');
  const fd=new FormData();fd.append('file',f);
  for(const [k,v] of importParams(kind,{bpm:+document.getElementById('impBpm').value||null,
