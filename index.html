@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06p</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06q</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5569,14 +5569,14 @@ function cageViewFrame(shown,span,frame){
  return {lo:sh-2,cells:sp+2};
 }
 function cageFramePref(){try{return (typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.neckFrame==='head')?'head':'float';}catch(e){return 'float';}}
-const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball (coming)',on:false},{id:'angled',label:'Angled neck with globs (coming)',on:false},{id:'highway',label:'Strings from the bottom, foreshortened (coming)',on:false}];
+const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs (coming)',on:false},{id:'highway',label:'Strings from the bottom, foreshortened (coming)',on:false}];
 function cageGuitarMenu(e){
  /* the drop-down: the views, the toggles, Playback Behaviours… — rows run through wanFloatMenu (the map-menu shell) */
  const q=id=>document.getElementById(id);
  const flip=(id,setter)=>{const el=q(id);if(el){el.checked=!el.checked;if(el.onchange)el.onchange();}else if(setter)setter();};
  const view=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged';
  const rows=[{hd:'Guitar view'}];
- CAGE_VIEWS.forEach(v=>rows.push({label:v.label,cur:view===v.id,dis:!v.on,fn:()=>{cageState.viewName=v.id;const sel=q('cageViewSel');if(sel)sel.value=v.id;}}));
+ CAGE_VIEWS.forEach(v=>rows.push({label:v.label,cur:view===v.id,dis:!v.on,fn:()=>{cageState.viewName=v.id;const sel=q('cageViewSel');if(sel)sel.value=v.id;try{cageViewApply();cageLinkRedraw();}catch(e){}}}));
  rows.push({hd:'Toggles'});
  rows.push({label:'Fret-hand colours',cur:!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.fretHand===false),fn:()=>flip('cageHandOn',()=>{SETTINGS.fretHand=SETTINGS.fretHand===false;persistSettings();})});
  rows.push({label:'Use open strings whenever possible',cur:cageOpenPref(),fn:()=>flip('cageOpenOn',()=>{SETTINGS.openStrings=!cageOpenPref();persistSettings();})});
@@ -5610,6 +5610,103 @@ function cagePlaybackBehavioursOpen(){
  const op=document.getElementById('cagePbOpen'); if(op)op.onchange=()=>{const el=document.getElementById('cageOpenOn');if(el){el.checked=op.checked;if(el.onchange)el.onchange();}else{try{SETTINGS.openStrings=!!op.checked;persistSettings();}catch(e){}}};
  document.getElementById('cagePbClose').onclick=()=>d.remove();
  return d;
+}
+/* ==== R38 (build 2026-09-06q, the 96th, Fable) — HIS [66] (k) + [67]: THE BOUNCING-BALL VIEW ====
+   His picture ⑥: three horizontal strings, notes as rounded pills as long as they last (grey 0 open · orange 3 · blue 5),
+   a white ball arcing string to string along a dotted path, the playhead a vertical line, H = hammer-on and P = pull-off
+   badges on the slur between two pills on one string, a timeline of the coming pills below. His [67]: the slur between
+   a larger and a smaller number is a pull-off, rising is a hammer-on — write P / H as well; a diagonal in the slide's
+   direction is a slide. */
+function cageViewApply(){
+ /* which canvases show for the chosen view — the CAGED neck (with its overview) or the bouncing ball */
+ const view=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged';
+ const q=id=>document.getElementById(id); const ball=view==='ball';
+ [['cageMiniBoard',!ball],['cageLinkBoard',!ball],['cageBallBoard',ball],['cageBallLine',ball]].forEach(([id,on])=>{const el=q(id);if(el)el.style.display=on?'block':'none';});
+ const sel=q('cageViewSel'); if(sel&&sel.value!==view)sel.value=view;
+ if(ball)cageBallLoop();
+}
+function cageBallSlurs(notes){
+ /* pure — his [67]: consecutive notes on ONE string that touch (the next starts by the time the first ends, within a
+    small gap) are slurred: the number rising = H (hammer-on), falling = P (pull-off); a note marked tech 'slide' draws
+    the diagonal instead. notes: [{i,t,d,s,f,tech}] → [{from,to,kind}] by note index */
+ const N=(notes||[]).filter(n=>n&&isFinite(+n.t)&&n.s!=null&&n.f!=null).slice().sort((a,b)=>a.t-b.t||a.s-b.s);
+ const out=[]; const lastOn={};
+ for(const n of N){
+  const prev=lastOn[n.s];
+  if(prev&&n.t>prev.t){
+   const gap=n.t-(prev.t+Math.max(0,+prev.d||0));
+   if(n.tech==='slide')out.push({from:prev.i,to:n.i,kind:'slide',up:n.f>prev.f});   /* marked by the user — whatever the gap */
+   else if(gap<=0.13&&n.f!==prev.f&&!n.tech)out.push({from:prev.i,to:n.i,kind:n.f>prev.f?'H':'P'});
+  }
+  lastOn[n.s]=n;
+ }
+ return out;
+}
+function cageBallArc(a,b,beat){
+ /* pure: the ball between two onsets — u from a.t to b.t (0 on a, 1 on b), the height a bell (sin) — {u,lift} */
+ if(!a)return {u:0,lift:0};
+ if(!b||beat<=a.t)return {u:0,lift:0};
+ if(beat>=b.t)return {u:1,lift:0};
+ const u=(beat-a.t)/Math.max(1e-6,b.t-a.t);
+ return {u,lift:Math.sin(u*Math.PI)};
+}
+var _cageBall=null, _cageBallRaf=null;
+function cageBallLoop(){
+ /* smooth while the song plays: the 200ms tick is not enough for a ball */
+ if(_cageBallRaf)return;
+ const step=()=>{_cageBallRaf=null; const on=(typeof cageState==='object'&&cageState&&cageState.viewName==='ball')&&_cageLink&&_cageLink.wid&&document.getElementById('cageBallBoard');
+  if(!on)return; if(typeof playing!=='undefined'&&playing){try{cageBallDraw(cageLinkWorldRows(_cageLink.wid,cageSelTarget().face));}catch(e){}} _cageBallRaf=requestAnimationFrame(step);};
+ _cageBallRaf=requestAnimationFrame(step);
+}
+function cageBallDraw(rows){
+ const c=document.getElementById('cageBallBoard'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height; const beat=cageBeatNow();
+ const padL=16,padR=12,top=44,bottom=H-36; const gap=(bottom-top)/5; const ppb=110, px=Math.round(W*0.32);
+ const xAt=t=>px+(t-beat)*ppb; const yAt=s=>bottom-s*gap;   /* TAB orientation: the high e on top */
+ ctx.clearRect(0,0,W,H); ctx.fillStyle='#2b2a30'; ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='rgba(255,255,255,.04)'; for(let b=Math.floor(beat-3);b<beat+8;b++){if(((b%4)+4)%4===0){ctx.fillRect(xAt(b),top-16,2,bottom-top+32);}}
+ for(let s=0;s<6;s++){const y=yAt(s); ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.lineWidth=1+(5-s)*0.5; ctx.strokeStyle=s<3?'#b9a27a':'#d7d3c8'; ctx.globalAlpha=.9; ctx.stroke();}
+ ctx.globalAlpha=1;
+ const notes=[]; (rows||[]).forEach((n,i)=>{if(!n)return;const g=cageNoteGtr(n);if(!g||g.s==null)return;notes.push({i,t:+n[0],d:Math.max(0.05,+n[1]||0),s:+g.s,f:+g.f,finger:g.finger,tech:g.tech||null,midi:+n[2]});});
+ notes.sort((a,b)=>a.t-b.t||a.s-b.s);
+ const pills=[]; const ph=26;
+ for(const n of notes){
+  const x0=xAt(n.t), x1=xAt(n.t+n.d); if(x1<padL-40||x0>W+40)continue;
+  const st=cageNotePlayState([n.t,n.d,n.midi],beat); const y=yAt(n.s);
+  const col=n.f===0?'#8f8f95':cageFingerColor(n.finger); const alpha=st==='played'?0.35:st==='current'?1:0.85;
+  ctx.globalAlpha=alpha; ctx.fillStyle=col; ctx.beginPath(); const w=Math.max(ph,x1-x0-4); const r=ph/2; const xx=x0;
+  ctx.moveTo(xx+r,y-r); ctx.lineTo(xx+w-r,y-r); ctx.arc(xx+w-r,y,r,-Math.PI/2,Math.PI/2); ctx.lineTo(xx+r,y+r); ctx.arc(xx+r,y,r,Math.PI/2,Math.PI*1.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(n.f),xx+r+2,y+1);
+  ctx.globalAlpha=1; pills.push({i:n.i,x0:xx,x1:xx+w,y,f:n.f,s:n.s,st,t:n.t,d:n.d});
+ }
+ /* the slurs and slides — his [67] */
+ const slurs=cageBallSlurs(notes); const byI={}; pills.forEach(p=>{byI[p.i]=p;});
+ for(const sl of slurs){const a=byI[sl.from], b=byI[sl.to]; if(!a||!b)continue;
+  if(sl.kind==='slide'){ctx.strokeStyle='#fff'; ctx.globalAlpha=.9; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(a.x0+ph/2+12,a.y+(sl.up?6:-6)); ctx.lineTo(b.x0+ph/2-12,b.y+(sl.up?-6:6)); ctx.stroke(); ctx.globalAlpha=1; continue;}
+  const ax=a.x0+ph/2, bx=b.x0+ph/2, yy=a.y-ph/2-2; ctx.strokeStyle='#fff'; ctx.globalAlpha=.85; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ax+4,yy); ctx.quadraticCurveTo((ax+bx)/2,yy-16,bx-4,yy); ctx.stroke(); ctx.globalAlpha=1;
+  const mx=(ax+bx)/2, my=yy-16; ctx.beginPath(); ctx.arc(mx,my,9,0,Math.PI*2); ctx.fillStyle='#6b4a1e'; ctx.fill(); ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(sl.kind,mx,my+0.5);
+ }
+ /* the ball: from the note sounding (or the last one) to the next onset, arcing */
+ const onsets=[]; notes.forEach(n=>{if(!onsets.length||Math.abs(onsets[onsets.length-1].t-n.t)>0.08)onsets.push({t:n.t,d:n.d,s:n.s,i:n.i});});
+ let a=null,b=null; for(let k=0;k<onsets.length;k++){if(onsets[k].t<=beat+1e-6){a=onsets[k];b=onsets[k+1]||null;}else{if(!a){b=onsets[k];}break;}}
+ let ball=null;
+ if(a||b){
+  const A=a||b, B=a?b:null; const arc=cageBallArc(A,B,beat);
+  const xa=xAt(A.t)+ph/2, ya=yAt(A.s), xb=B?xAt(B.t)+ph/2:xa, yb=B?yAt(B.s):ya;
+  if(B){ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(xa,ya-ph/2); ctx.quadraticCurveTo((xa+xb)/2,Math.min(ya,yb)-ph/2-60,xb,yb-ph/2); ctx.stroke(); ctx.setLineDash([]);}
+  const bxp=a?px+ph/2:xa; const by=(ya+(yb-ya)*arc.u)-ph/2-arc.lift*60;
+  ctx.beginPath(); ctx.arc(bxp,by,11,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.shadowColor='#fff'; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+  ball={x:bxp,y:by,u:arc.u,lift:arc.lift,fromT:A.t,toT:B?B.t:null,fromS:A.s,toS:B?B.s:null};
+ }
+ /* the playhead */
+ ctx.strokeStyle='#ffe27a'; ctx.globalAlpha=.9; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(px,top-20); ctx.lineTo(px,bottom+20); ctx.stroke(); ctx.globalAlpha=1;
+ ctx.fillStyle='#98a0b2'; ctx.font='11px system-ui,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.fillText('e B G D A E',padL,top-24);
+ /* the timeline of the coming pills */
+ const L=document.getElementById('cageBallLine');
+ if(L){const lc=L.getContext('2d'); const LW=L.width,LH=L.height; lc.clearRect(0,0,LW,LH); lc.fillStyle='#232228'; lc.fillRect(0,0,LW,LH); const span=32, lx=t=>(t-beat)/span*LW; const lg=(LH-8)/5;
+  notes.forEach(n=>{if(n.t+n.d<beat||n.t>beat+span)return; const y=LH-4-n.s*lg; lc.fillStyle=n.f===0?'#8f8f95':cageFingerColor(n.finger); lc.globalAlpha=n.t<beat?.4:.9; lc.fillRect(Math.max(0,lx(n.t)),y-2,Math.max(3,lx(n.t+n.d)-lx(n.t)),4);});
+  lc.globalAlpha=1; lc.fillStyle='#ffe27a'; lc.fillRect(0,0,2,LH);}
+ _cageBall={pills,slurs,ball,beat,px,ppb,notes:notes.length};
 }
 function cageNeckSizes(){
  /* pure: the linked neck's sizes — his [55]: "the actual numbers on the fretboard need to be twice as big at least. Let's say
@@ -5692,6 +5789,7 @@ function cageLinkNeckDraw(rows){
  _cageNeck={x0,x1,y0,y1,fretW,strGap,viewLo,cells:V.cells,start:V.start,span:V.span,shown:V.shown,frame:V.frame,roman,anim:!!cageView.anim,pin:cageView.pin?cageView.pin.start:null,dots:pts.map(p=>({f:p.g.f,s:p.g.s,cx:p.cx,st:p.st}))};   /* R30: for the suites */
  try{cageMiniDraw(rootPc,V);}catch(e){}
  cageHandLegendDraw();
+ if(typeof cageState==='object'&&cageState&&cageState.viewName==='ball')try{cageBallDraw(rows);}catch(e){}   /* R38 [66]: the bouncing-ball view rides the same placements */
 }
 function cageHandLegendDraw(){
  const host=document.getElementById('cageFingerLegend'); if(!host)return;
@@ -7281,7 +7379,7 @@ function cageLinkAttach(w){
   +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px;flex-wrap:wrap;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck</span>'
   +'<label style="font-size:10px;color:var(--dim);display:flex;align-items:center;gap:4px;">'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]) — CAGED today; the slanted neck, the bouncing ball and the ball with notation are next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="slant" disabled>Slanted neck (soon)</option><option value="ball" disabled>Bouncing ball (soon)</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]) — CAGED today; the slanted neck, the bouncing ball and the ball with notation are next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="slant" disabled>Slanted neck (soon)</option><option value="ball">Bouncing ball</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
   +'Layout <select id="cageLayoutView" style="padding:3px 6px;font-size:11px;">'
   +'<option value="midi">MIDI + neck</option>'
   +'<option value="notation">Notation + neck</option>'
@@ -7294,6 +7392,8 @@ function cageLinkAttach(w){
   +'<div id="cageMiniMidi" style="display:none;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;">'
   +'<canvas id="cageMiniMidiCanvas" width="920" height="48" style="display:block;width:100%;height:auto;"></canvas></div>'
   +'<canvas id="cageMiniBoard" width="920" height="64" style="display:block;width:100%;height:auto;margin-bottom:4px;cursor:grab;border-radius:6px;" title="The whole neck (his [57]) — the five CAGED shapes for the chord in play with their root notes; the box is what the large neck shows. Drag the box, or click another shape, and the neck slides there."></canvas>'
+  +'<canvas id="cageBallBoard" width="920" height="340" style="display:none;width:100%;height:auto;max-height:46vh;border-radius:8px;" title="Bouncing ball (his [66]) — the strings across, the notes as pills as long as they last, the ball landing on each note as it sounds; H = hammer-on, P = pull-off, a diagonal = a slide"></canvas>'
+  +'<canvas id="cageBallLine" width="920" height="40" style="display:none;width:100%;height:auto;margin-top:4px;border-radius:6px;" title="The pills to come"></canvas>'
   +'<canvas id="cageLinkBoard" width="920" height="340" style="display:block;width:100%;height:auto;max-height:46vh;"></canvas>'
   +'<div id="cageRomanStrip" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center;"></div>'
   +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">'
@@ -7350,6 +7450,8 @@ function cageLinkAttach(w){
  const rt=document.getElementById('cageRhTap'); if(rt)rt.onclick=()=>cageRhTapArm();
  strip.querySelectorAll('.cageRhPima').forEach(b=>{b.onclick=()=>cageRhApplyPima(b.dataset.pima);});
  const mv=document.getElementById('cageMovePos'); if(mv)mv.onclick=()=>cageMoveArm(!cageState.moveArmed);
+ const vsel=document.getElementById('cageViewSel'); if(vsel){vsel.value=(cageState.viewName||'caged'); vsel.onchange=()=>{cageState.viewName=vsel.value;cageViewApply();try{cageLinkRedraw();}catch(e){}};}   /* R38: the View select lives in this strip */
+ try{cageViewApply();}catch(e){}
  const lv=document.getElementById('cageLayoutView');
  if(lv){lv.value=cageState.layoutView||'midi'; lv.onchange=e=>{cageState.layoutView=e.target.value; cageLayoutViewApply();};}
  cageLayoutViewApply();
@@ -7540,7 +7642,8 @@ function buildCageWindow(){
   };
   on('cageSplitNeck').onchange=e=>{cageState.splitNeck=e.target.value==='split';cageDraw();};
   on('cageShape').onchange=e=>{cageState.shapePref=e.target.value;cageDraw();};
-  const _vs=document.getElementById('cageViewSel'); if(_vs){_vs.value=(cageState.viewName||'caged'); _vs.onchange=()=>{cageState.viewName=_vs.value;};}   /* R37: the View select and the menu agree */
+  const _vs=document.getElementById('cageViewSel'); if(_vs){_vs.value=(cageState.viewName||'caged'); _vs.onchange=()=>{cageState.viewName=_vs.value;cageViewApply();try{cageLinkRedraw();}catch(e){}};}   /* R37: the View select and the menu agree · R38: the view applies */
+  try{cageViewApply();}catch(e){}
   const _pair=document.getElementById('cagePairOn'); if(_pair){_pair.checked=!!cageState.pairShapes;_pair.onchange=()=>{cageState.pairShapes=!!_pair.checked;cageDraw();};}   /* R33 [59] */
   /* R32 [58]: the layer chips */
   [['cageLayChord','chord'],['cageLayArp','fullArp'],['cageLayPenta','penta'],['cageLayBlues','blues']].forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.checked=!!cageState.layers[key];el.onchange=()=>{cageState.layers[key]=!!el.checked;cageDraw();};}});
