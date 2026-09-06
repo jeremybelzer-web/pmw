@@ -766,6 +766,26 @@
 #orbBody:fullscreen #orbMapWrap svg{max-width:min(94vw,150vh)!important;margin:0 auto;}
   /* ==== R1 (build 2026-09-06t, the 97th, Fable) — THE VIEWS (DV-10 · DV-14 · GV-3 · GV-6 · DV-13) ==== */
   body.skinOn #rail{display:none;}   /* the browser column carries the openers under a view */
+
+  /* ==== R4b (build 2026-09-06z, Cursor) — RAW [7]: track controls on the RIGHT under GV-2 ==== */
+  /* ==== R4c (build 2026-09-06aa, Cursor) — RAW [8]: right pane Shelf⇄engine · one centre grid · ▾/[+] ==== */
+  body.skinGv2 .trow,
+  body.skinGv2 #ovRow,
+  body.skinGv2 #modLaneRow,
+  body.skinGv2 #tempoLaneRow,
+  body.skinGv2 #sectionLaneRow,
+  body.skinGv2 #tsigLaneRow,
+  body.skinGv2 #chordRow,
+  body.skinGv2 #lowerRow,
+  body.skinGv2 #snapDock{flex-direction:row-reverse;}
+  body.skinGv2 #gridRow{display:flex;align-items:stretch;}
+  body.skinGv2 #gridRow #flyCol{order:0;}
+  body.skinGv2 #gridRow .gvwrap{order:1;}
+  body.skinGv2 #gridRow #gridHead{order:2;}
+  body.skinGv2 .thead{padding-right:0;padding-left:8px;}
+  body.skinGv2 #laneRows{padding-left:0;padding-right:var(--theadW,110px);}
+  body.skinGv2 .nboxWRz{left:0;right:auto;width:12px;}
+  body.skinGv2 .nboxWRz::after{left:3px;right:auto;}
   #skinLayer .skPane{min-width:0;min-height:0;position:relative;}
   #skinLayer .skSplit{flex:0 0 6px;background:var(--line);cursor:col-resize;position:relative;z-index:2;}
   #skinLayer .skSplit.h{cursor:row-resize;}
@@ -851,7 +871,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06x</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06aa</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -10607,6 +10627,41 @@ function boundsFromChords(chords,loop){
 function boundsFromBars(loop,barBeats){
  const out=[];for(let b=barBeats;b<loop-1e-6;b+=barBeats)out.push(+b.toFixed(6));
  return out;}
+function boundsFromSections(sections,loop){
+ /* RAW [6] / GV-2: cut points at every song-section start (MIDI never moves — only the clip edges) */
+ const out=[];
+ for(const s of sections||[]){
+  if(!s||typeof s.start!=='number'||!isFinite(s.start))continue;
+  if(s.start>1e-6&&s.start<loop-1e-6)out.push(+s.start.toFixed(6));
+ }
+ return out.sort((a,b)=>a-b);}
+function skinIsGv2(){return !!(typeof skinState!=='undefined'&&skinState&&skinState.skin==='gv2');}
+function skinTrackFloor(){
+ /* under GV-2 the MICRO row is the floor for EVERY track including the active/main one (RAW [6]) */
+ return skinIsGv2()?TRACK_MICRO_H:((typeof nboxNaturalH==='function')?nboxNaturalH():TRACK_MIN_H);
+}
+function clipApplyBoundsAll(bounds){
+ /* write the same cut list onto every pitched track that has notes (user cuts already in clipMap for a track stay if we only seed empty — RAW [6]: user edits stay).
+    Labelled: we overwrite only when the track has no clipMap yet OR the caller force-writes. Here force-write for the menu verbs. */
+ const map=project.clipMap||(project.clipMap={});
+ const ids=Object.keys(project.tracks||{});
+ if(ids.indexOf('melody')<0&&Array.isArray(project.melody))ids.push('melody');
+ for(const t of ids){
+  if(t==='drums')continue;
+  map[t]=bounds.slice();
+ }
+}
+function clipSplitBySections(){
+ snapshot();
+ clipApplyBoundsAll(boundsFromSections(project.sections,LOOP));
+ drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();
+}
+function clipSplitByChords(){
+ snapshot();
+ clipApplyBoundsAll(boundsFromChords(project.chords,LOOP));
+ drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();
+}
+
 function spansFromBounds(bounds,loop){
  const bs=[...(bounds||[])].filter(b=>b>1e-6&&b<loop-1e-6).sort((a,b)=>a-b);
  const out=[];let a=0;
@@ -16184,8 +16239,12 @@ function skinNorm(raw){
  }
  const fl=Array.isArray(p.fl)?p.fl.filter((x,i)=>typeof x==='string'&&x.length<=40&&p.fl.indexOf(x)===i).slice(0,32):[];
  const tree=(typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)});   /* seeded from the COERCED numbers */
+ const cid=(typeof p.centreId==='string'&&(p.centreId===''||p.centreId==='main'||/^g\d+$/.test(p.centreId)))?p.centreId:'main';
+ const rmode=(p.rightMode==='win')?'win':'shelf';
+ const rwin=(typeof p.rightWin==='string'&&p.rightWin.length&&p.rightWin.length<=40)?p.rightWin:'';
  return {preset:'gv2',skin:'gv2',panes:{l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),
-  lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1),tree,wins,fl}};
+  lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1),hideMain:flag(p.hideMain,0),
+  centreId:cid,rightMode:rmode,rightWin:(rmode==='win'?rwin:''),tree,wins,fl}};
 }
 function skinKbdNote(key,oct){
  /* pure — the GV-2 keyboard window's map (DV-13): the two typing rows a w s e d f t g y h u j k o l p ;
@@ -16215,7 +16274,152 @@ function skinKeyMatch(e,mac){
  if(k==='l')return 'lane';
  return null;
 }
-let skinState=null,_skSaved=null,_skPrevKeyset=null;
+let skinState=null,_skSaved=null,_skPrevKeyset=null,_skPrevCont=null,_skMicroSnap=null;
+var skinGv2Lane={mode:'engines',t:null,a:null,d:null};   /* RAW [6] / DV-17: the lower pane flips between engines and the clip magnifier */
+function skinGv2MicroAll(){
+ /* RAW [6]: every MIDI track defaults to the micro size under GV-2 — remember prior heights once so leaving the view can restore */
+ try{
+  if(!_skMicroSnap){
+   const strips={};for(const k in stripH)strips[k]=stripH[k];
+   _skMicroSnap={strips,main:(GRID_VIEWS.main&&GRID_VIEWS.main.px)||null,cont:!!(SETTINGS&&SETTINGS.continuous)};
+  }
+  const ids=new Set(Object.keys(project.tracks||{}));
+  ids.add('melody');
+  for(const t of ids){if(t==='drums')continue;stripH[t]=TRACK_MICRO_H;trackSmallH[t]=TRACK_MICRO_H;}
+  if(GRID_VIEWS.main){GRID_VIEWS.main.userPx=true;setViewPx(GRID_VIEWS.main,TRACK_MICRO_H);}
+  if(SETTINGS){SETTINGS.continuous=false;try{const cc=document.getElementById('chkCont');if(cc)cc.checked=false;}catch(e){}}
+  drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();if(!paperView&&typeof drawGrid==='function')drawGrid();
+ }catch(e){}
+}
+function skinGv2RestoreHeights(){
+ try{
+  if(!_skMicroSnap)return;
+  const s=_skMicroSnap;_skMicroSnap=null;
+  for(const k in (s.strips||{}))stripH[k]=s.strips[k];
+  if(typeof s.main==='number'&&GRID_VIEWS.main){GRID_VIEWS.main.userPx=true;setViewPx(GRID_VIEWS.main,s.main);}
+  if(SETTINGS){SETTINGS.continuous=!!s.cont;try{const cc=document.getElementById('chkCont');if(cc)cc.checked=!!s.cont;}catch(e){}}
+  drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();
+ }catch(e){}
+}
+function skinGv2MagOpen(t,a,d){
+ /* DV-17 / RAW [6]: double-click a MIDI clip → the LOWER pane becomes the magnifier; engines yield */
+ if(!skinIsGv2())return;
+ stripSel={t,i:null};selHead=t;selSurface='strip';
+ try{if(t&&t!=='drums'){activeTrack=t;}}catch(e){}
+ skinGv2Lane={mode:'mag',t,a:(typeof a==='number'?a:null),d:(typeof d==='number'?d:null)};
+ if(typeof a==='number'&&typeof d==='number'){
+  /* pin a region selection so magTarget prefers the clip span */
+  try{
+   const rows=(project.tracks[t]||(t==='melody'?project.melody:[])||[]);
+   selNotes=new Set();selOwner='main';
+   rows.forEach((n,i)=>{if(n&&n[0]>=a-1e-6&&n[0]<a+d-1e-6)selNotes.add(i);});
+  }catch(e){}
+ }
+ skinPersist();skinApply(skinState);
+}
+function skinGv2MagClose(){
+ skinGv2Lane={mode:'engines',t:null,a:null,d:null};
+ try{selNotes=new Set();}catch(e){}
+ if(skinState)skinApply(skinState);
+}
+function skinGv2GridIdOf(el){
+ if(!el)return null;
+ if(el.id==='gridRowWrap')return 'main';
+ const m=/^gridRowWrap_(g\d+)$/.exec(el.id||'');
+ return m?m[1]:null;
+}
+function skinGv2GridCatalog(){
+ /* RAW [8]: the multi-track windows the centre can show under GV-2 (hideMain drops Grid 1) */
+ const P=(skinState&&skinState.panes)||{};
+ const hideMain=!!P.hideMain;
+ const out=[];
+ for(const m of (typeof swRowMembers==='function'?swRowMembers('grids'):[])){
+  const id=skinGv2GridIdOf(m);if(!id)continue;
+  if(id==='main'&&hideMain)continue;
+  let label='Grid 1';
+  if(id!=='main'){
+   try{const t=(m.querySelector&&m.querySelector('.wtitle'));label=(t&&t.textContent.trim())||('Grid '+id.slice(1));}catch(e){label='Grid '+id.slice(1);}
+  }
+  out.push({id,el:m,label});
+ }
+ return out;
+}
+function skinGv2FocusShelf(){
+ if(!skinIsGv2()||!skinState)return;
+ const P=skinState.panes;if(P.rightMode==='shelf'&&!P.rightWin)return;
+ P.rightMode='shelf';P.rightWin='';skinPersist();skinApply(skinState);
+}
+function skinGv2FocusEngine(winId){
+ if(!skinIsGv2()||!skinState||!winId)return;
+ const P=skinState.panes;
+ if(P.rightMode==='win'&&P.rightWin===winId)return;
+ P.rightMode='win';P.rightWin=String(winId);skinPersist();skinApply(skinState);
+}
+function skinGv2ShowCentre(id){
+ if(!skinIsGv2()||!skinState)return;
+ const P=skinState.panes;
+ const cat=skinGv2GridCatalog();
+ if(id==='main')P.hideMain=0;
+ if(id&&cat.some(g=>g.id===id)){P.centreId=id;P.hideMain=(id==='main'?0:P.hideMain);}
+ else if(!cat.length){P.centreId='';}
+ else{P.centreId=cat[0].id;}
+ skinPersist();skinApply(skinState);
+}
+function skinGv2CentreCycle(dir){
+ /* swipe L→R (dir +1) reveals the next multi-track; R→L the previous */
+ const cat=skinGv2GridCatalog();if(cat.length<2||!skinState)return;
+ const P=skinState.panes;
+ let i=cat.findIndex(g=>g.id===P.centreId);if(i<0)i=0;
+ i=(i+(dir>0?1:-1)+cat.length)%cat.length;
+ P.centreId=cat[i].id;skinPersist();skinApply(skinState);
+}
+function skinGv2PlusMenu(x,y){
+ /* RAW [8]: [+] (or the menu's add rows) — Load a song? · Blank multi-track grid */
+ const items=[
+  ['Load a song?',()=>{
+   try{
+    const list=(typeof SONGS!=='undefined'&&Array.isArray(SONGS))?SONGS:[];
+    if(typeof pcsMenuShow==='function'){
+     pcsMenuShow(x,y,list.map(sg=>[sg.name,()=>{
+      try{loadSong(sg.id);}catch(e){}
+      if(skinState){skinState.panes.hideMain=0;skinState.panes.centreId='main';skinPersist();skinApply(skinState);}
+     }]));
+    }
+   }catch(e){}
+  }],
+  ['Blank multi-track grid',()=>{
+   try{
+    if(!skinState)return;
+    const cat=skinGv2GridCatalog();
+    if(!cat.length){
+     /* no grids — seat Grid 1 again (a blank multi-track surface) */
+     skinState.panes.hideMain=0;skinState.panes.centreId='main';
+    }else{
+     const w=gridUserSpawn();
+     if(w){skinState.panes.hideMain=0;skinState.panes.centreId=w.id;}
+    }
+    skinPersist();skinApply(skinState);
+   }catch(e){}
+  }]
+ ];
+ try{pcsMenuShow(x,y,items);}catch(e){}
+}
+function skinGv2CentreMenu(anchor){
+ const cat=skinGv2GridCatalog();
+ const r=anchor.getBoundingClientRect();
+ const x=r.left,y=r.bottom+4;
+ if(!cat.length){skinGv2PlusMenu(x,y);return;}
+ const items=cat.map(g=>[g.label+(g.id===(skinState.panes.centreId)?' ✓':''),()=>skinGv2ShowCentre(g.id)]);
+ items.push(['＋ Blank multi-track grid',()=>{
+  const w=gridUserSpawn();
+  if(w&&skinState){skinState.panes.hideMain=0;skinState.panes.centreId=w.id;skinPersist();skinApply(skinState);}
+ }]);
+ items.push(['Load a song?',()=>{
+  const list=(typeof SONGS!=='undefined'&&Array.isArray(SONGS))?SONGS:[];
+  pcsMenuShow(x,y,list.map(sg=>[sg.name,()=>{try{loadSong(sg.id);}catch(e){}if(skinState){skinState.panes.hideMain=0;skinState.panes.centreId='main';skinPersist();skinApply(skinState);}}]));
+ }]);
+ try{pcsMenuShow(x,y,items);}catch(e){}
+}
 const skinKbd={on:false,oct:4,vel:100,down:{}};
 function skinPersist(){
  /* the panes ride canvasState.layout (the one slot) — persistCanvas writes cp_canvas */
@@ -16250,6 +16454,8 @@ function skinTeardown(keep){
  if(keep)return;   /* a re-apply keeps the view's key-command choice */
  try{if(_skPrevKeyset&&typeof SETTINGS==='object'&&SETTINGS&&KEYSETS[SETTINGS.keyset]){SETTINGS.keyset=_skPrevKeyset;persistSettings();}}catch(e){}
  _skPrevKeyset=null;
+ try{skinGv2RestoreHeights();}catch(e){}
+ skinGv2Lane={mode:'engines',t:null,a:null,d:null};
 }
 function skinRepack(){
  /* a window opening or closing under a view re-packs the lane (the 80th's repack law) */
@@ -16484,6 +16690,8 @@ function skinApply(sk){
  /* DV-11 ② (labelled): entering the view chooses its key-command set — Set A for GV-2 — unless a
     personal set is chosen; leaving gives the previous set back */
  try{const _ks=sk.skin==='dv12'?'fl':'live';if(!wasOn&&typeof SETTINGS==='object'&&SETTINGS&&KEYSETS[SETTINGS.keyset||'live']&&(SETTINGS.keyset||'live')!==_ks){_skPrevKeyset=SETTINGS.keyset||'live';SETTINGS.keyset=_ks;persistSettings();}}catch(e){}   /* R2: Set B for the rack view */
+ /* RAW [6]: under GV-2 every MIDI track is MICRO and the one-long-clip continuous mode stands down (other views untouched) */
+ try{if(sk.skin==='gv2'&&!wasOn)skinGv2MicroAll();}catch(e){}
  try{if(typeof fixedChromeApply==='function')fixedChromeApply();}catch(e){}
  const padT=parseFloat(document.body.style.paddingTop)||0;
  const padB=parseFloat(document.body.style.paddingBottom)||0;
@@ -16905,30 +17113,130 @@ function skinLeafMount(leaf,path,host,ctx){
  }else if(leaf.k==='grid'){
   el=document.createElement('div');el.id='skCentre';el.className='skPane skLeaf';
   el.style.cssText='overflow:auto;position:relative;';
-  for(const m of swRowMembers('grids')){cell(m,true);el.appendChild(m);}
+  /* RAW [8]: ONE multi-track at a time in the centre — swipe or the ▾ menu switches */
+  const cat=skinGv2GridCatalog();
+  if(P.centreId&&!cat.some(g=>g.id===P.centreId))P.centreId=cat.length?cat[0].id:'';
+  if(!P.centreId&&cat.length)P.centreId=cat[0].id;
+  const cur=cat.find(g=>g.id===P.centreId)||null;
+  if(cur){cell(cur.el,true);el.appendChild(cur.el);}
+  else{
+   const empty=document.createElement('div');
+   empty.style.cssText='padding:24px;text-align:center;color:var(--dim);font-size:12px;';
+   empty.textContent='No multi-track grid here — use ＋ to load a song or open a blank grid.';
+   el.appendChild(empty);
+  }
+  const bar=document.createElement('div');bar.className='skGv2Bar';
+  bar.style.cssText='position:sticky;top:0;z-index:5;display:flex;gap:6px;padding:4px 6px;background:var(--bg);border-bottom:1px solid var(--line);justify-content:flex-end;align-items:center;';
+  if(!cat.length){
+   const plus=document.createElement('span');plus.className='cpchip';plus.textContent='＋';
+   plus.title='Add a multi-track grid — load a song, or open a blank one';
+   plus.onclick=e=>{e.stopPropagation();skinGv2PlusMenu(e.clientX,e.clientY);};
+   bar.appendChild(plus);
+  }else{
+   const tri=document.createElement('span');tri.className='cpchip';tri.id='skGv2CentreTri';
+   tri.textContent='▾ '+(cur?cur.label:'Grids');
+   tri.title='Multi-track windows — pick one, or add another';
+   tri.onclick=e=>{e.stopPropagation();skinGv2CentreMenu(tri);};
+   bar.appendChild(tri);
+  }
+  el.insertBefore(bar,el.firstChild);
+  /* click in the multi-track → right pane becomes the Essence Shelf (DV-16 / RAW [8]) */
+  el.addEventListener('pointerdown',ev=>{
+   if(ev.button!==0)return;
+   if(ev.target.closest&&ev.target.closest('.skGv2Bar'))return;
+   try{skinGv2FocusShelf();}catch(e){}
+  },true);
+  /* swipe left→right reveals the next multi-track */
+  let _sx=null,_sy=null;
+  el.addEventListener('pointerdown',ev=>{
+   if(ev.button!==0||(ev.target.closest&&ev.target.closest('.skGv2Bar')))return;
+   _sx=ev.clientX;_sy=ev.clientY;
+  });
+  el.addEventListener('pointerup',ev=>{
+   if(_sx==null)return;const dx=ev.clientX-_sx,dy=ev.clientY-_sy;_sx=null;
+   if(Math.abs(dx)<64||Math.abs(dx)<Math.abs(dy)*1.2)return;
+   try{skinGv2CentreCycle(dx>0?1:-1);}catch(e){}
+  });
+  el.addEventListener('contextmenu',ev=>{
+   if(ev.target!==el&&!(ev.target.classList&&ev.target.classList.contains('skPane')))return;
+   ev.preventDefault();ev.stopPropagation();
+   skinGv2PlusMenu(ev.clientX,ev.clientY);
+  });
  }else if(leaf.k==='shelf'){
   el=document.createElement('div');el.id='skRight';el.className='skPane skLeaf';
   el.style.cssText='display:flex;flex-direction:column;border-left:1px solid var(--line);overflow:auto;';
-  if((P.fl||[]).indexOf('shelf')<0){
-   const d=swShelfBlock();remember(d);el.appendChild(d);
-   d.style.display='';d.style.height='100%';
-   try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
-   try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
-   try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
-  }else{
-   el.innerHTML='<div style="padding:12px;font-size:11px;color:var(--dim);">The Essence Shelf is floating — its ⤓ docks it back here.</div>';
+  /* RAW [8] / DV-16: Shelf when the centre is focused; the selected engine when a lane mini is clicked */
+  if(P.rightMode==='win'&&P.rightWin){
+   const winEl=document.getElementById(P.rightWin);
+   const open=winEl&&swRowMembers('engines').indexOf(winEl)>=0;
+   if(open){
+    cell(winEl,false);
+    winEl.style.width='100%';winEl.style.height='100%';winEl.style.maxHeight='100%';
+    winEl.style.scrollSnapAlign='';winEl.classList.add('skRightEng');
+    el.appendChild(winEl);
+   }else{
+    P.rightMode='shelf';P.rightWin='';
+   }
+  }
+  if(P.rightMode!=='win'||!P.rightWin){
+   if((P.fl||[]).indexOf('shelf')<0){
+    const d=swShelfBlock();remember(d);el.appendChild(d);
+    d.style.display='';d.style.height='100%';
+    try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
+    try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
+    try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+   }else{
+    el.innerHTML='<div style="padding:12px;font-size:11px;color:var(--dim);">The Essence Shelf is floating — its ⤓ docks it back here.</div>';
+   }
   }
  }else if(leaf.k==='lane'){
   el=document.createElement('div');el.id='skLane';el.className='skPane skLeaf swRow';el.dataset.cat='engines';
   el.style.cssText='border-top:1px solid var(--line);overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x mandatory;position:relative;background:var(--bg);';
-  const placed=skinTreeWinIds(P.tree),fl=P.fl||[];
-  const members=swRowMembers('engines').filter(m=>placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0);
-  for(const m of members){cell(m,false);el.appendChild(m);}
-  if(!members.length){
-   const hint=document.createElement('div');
-   hint.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);';
-   hint.textContent='No window open — pick one in the browser on the left.';
-   el.appendChild(hint);
+  if(skinGv2Lane&&skinGv2Lane.mode==='mag'){
+   /* DV-17 / RAW [6]: the lower pane holds the Track MIDI Magnifier while a clip is open */
+   el.style.whiteSpace='normal';el.style.overflow='hidden';
+   const bar=document.createElement('div');
+   bar.style.cssText='display:flex;gap:8px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2;';
+   const lab=document.createElement('span');
+   lab.style.cssText='font-size:11px;color:var(--text);font-weight:600;';
+   const tn=(typeof trackLabel==='function'&&skinGv2Lane.t)?trackLabel(skinGv2Lane.t):(skinGv2Lane.t||'clip');
+   lab.textContent='Magnifier · '+tn+(skinGv2Lane.a!=null?' · bars '+(Math.floor(skinGv2Lane.a/4)+1)+'–'+Math.ceil((skinGv2Lane.a+(skinGv2Lane.d||0))/4):'');
+   bar.appendChild(lab);
+   const back=document.createElement('span');back.className='cpchip';back.textContent='↩ Engines';
+   back.title='Return the lower pane to the miniature engine windows';
+   back.onclick=e=>{e.stopPropagation();skinGv2MagClose();};
+   bar.appendChild(back);
+   el.appendChild(bar);
+   const host=document.createElement('div');host.style.cssText='height:calc(100% - 28px);min-height:120px;';
+   el.appendChild(host);
+   try{magBandMount(host,'engines');}catch(e){}
+  }else{
+   const placed=skinTreeWinIds(P.tree),fl=P.fl||[];
+   const rightId=(P.rightMode==='win'&&P.rightWin)?P.rightWin:null;
+   const members=swRowMembers('engines').filter(m=>placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0&&m.id!==rightId);
+   for(const m of members){
+    cell(m,false);el.appendChild(m);
+    m.addEventListener('pointerdown',ev=>{
+     if(ev.button!==0)return;
+     if(ev.target.closest&&ev.target.closest('.wbtn,.cpchip,button,input,select,textarea,a'))return;
+     try{skinGv2FocusEngine(m.id);}catch(e){}
+    },true);
+   }
+   if(rightId){
+    const d=WINDOW_DEFS.find(x=>x.id===rightId);
+    const stub=document.createElement('div');stub.className='skLaneStub on';stub.dataset.win=rightId;
+    stub.style.cssText='display:inline-flex;align-items:center;gap:6px;margin:6px;padding:8px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--panel2);color:var(--accent);font-size:12px;cursor:pointer;vertical-align:top;scroll-snap-align:start;';
+    stub.textContent=(d?(d.icon||'')+' '+(d.name||rightId):rightId)+' · in detail';
+    stub.title='This engine fills the right pane — click another miniature to switch';
+    stub.onclick=e=>{e.stopPropagation();skinGv2FocusEngine(rightId);};
+    el.insertBefore(stub,el.firstChild);
+   }
+   if(!members.length&&!rightId){
+    const hint=document.createElement('div');
+    hint.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);';
+    hint.textContent='No window open — pick one in the browser on the left.';
+    el.appendChild(hint);
+   }
   }
  }else if(leaf.k==='win'){
   el=document.createElement('div');el.id='skWin_'+leaf.id;el.className='skPane skLeaf';
@@ -23999,6 +24307,10 @@ function gridCtxMenu(e){
  mk('＋ Chord Editor','Open the +Chord Editor flyout on the grid’s left — it pushes the grid right, floats over nothing',()=>{openFlyCol();});
  mk('⊞ Quantize','Open the Quantize window (below the +Chord Editor, same column)',()=>{openFlyCol();});
  if(flyOpen)mk('✕ Close the flyout column','The grid slides back left',closeFlyCol);
+ if(typeof skinIsGv2==='function'&&skinIsGv2()){   /* RAW [6]: his two split verbs — MIDI never moves, only the cut points */
+  mk('Split MIDI into song sections','Cut every pitched track’s clips at the song-section starts',()=>{clipSplitBySections();});
+  mk('Split MIDI by chord using the chord lane','Cut every pitched track’s clips at each chord-lane boundary',()=>{clipSplitByChords();});
+ }
  m.onmousedown=e2=>e2.stopPropagation();
  document.body.appendChild(m);gridBgMenuEl=m;
  setTimeout(()=>{document.addEventListener('mousedown',closeGridBgMenu,{once:true});},0);
@@ -34995,7 +35307,7 @@ function trackHead(t,inLane,microOv){
   wz.onmousedown=e=>{
    e.preventDefault();e.stopPropagation();
    const x0=e.clientX,w0=theadW||76;
-   const mv=ev=>{theadW=Math.max(40,Math.min(240,Math.round(w0+(ev.clientX-x0))));
+   const mv=ev=>{const dx=ev.clientX-x0;theadW=Math.max(40,Math.min(240,Math.round(w0+(skinIsGv2()?-dx:dx))));   /* RAW [7]: under GV-2 the handle is on the clip-facing edge — drag left widens */
     const root=document.getElementById('gridRowWrap');if(root)root.style.setProperty('--theadW',theadW+'px');};
    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
     autosaveSoon();drawTrackSel();if(typeof positionMainRz==='function')positionMainRz();};
@@ -35926,7 +36238,7 @@ function drawMainStrip(){
   wrap.insertBefore(el,rzEl||null);
  }
  el.dataset.trk=activeTrack;
- el.style.height=Math.max(nboxNaturalH(),Math.round(GRID_VIEWS.main.px))+'px';   /* July 30 fix 2: box floor */
+ el.style.height=Math.max(skinTrackFloor(),Math.round(GRID_VIEWS.main.px))+'px';   /* July 30 fix 2: box floor · RAW [6]: under GV-2 the active track reaches MICRO like its siblings */
  el.style.marginLeft=GUT+'px';el.style.width=(LOOP*PPB)+'px';
  buildStripContent(el,activeTrack);
 }
@@ -36029,6 +36341,8 @@ function stripCellDown(ev,t,i,a,d){
      2.5 ⑧: in CONTINUOUS view, double-click opens the TRACK ITSELF — no clip pop-up
      (the client's exact words). */
   stripClk={t:null,i:null,tm:0};
+  if(typeof skinIsGv2==='function'&&skinIsGv2()){   /* RAW [6] / DV-17: double-click opens the clip in the LOWER magnifier — never expand-to-edit in the multi-track */
+   skinGv2MagOpen(t,a,d);return;}
   if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.continuous===true&&typeof toggleTrackBig==='function')toggleTrackBig(t);
   else openClipEditor(t,a,d);
   return;
@@ -36039,7 +36353,7 @@ function stripCellDown(ev,t,i,a,d){
  selSurface='strip';   /* July 24: ⌘A now selects every cell of this strip */
  selChordSet.clear();selChord=null;
  drawTrackSel();drawMainStrip();drawChordLane();
- auditionTrackSpan(t,a,a+d);
+ if(!(typeof skinIsGv2==='function'&&skinIsGv2()))auditionTrackSpan(t,a,a+d);   /* RAW [6] ②: upper tracks are passive under GV-2 */
  /* multi-selection drags carry the WHOLE selected span (min→max) — a multi-clip body
     merges into / replaces every clip it engulfs at the drop (July 24 r2) */
  let da=a,dd=d;
@@ -36233,8 +36547,12 @@ function toggleTrackBig(t){
  const h=stripHeightOf(t);
  if(trackIsBig(t)){
   trackBigH[t]=h;
-  stripH[t]=Math.min(bnd,Math.max((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.classicHeads)?nboxNaturalH():TRACK_MICRO_H,Math.round(trackSmallH[t]||STRIP_DEF)));   /* 77th: the ▸ collapse lands at the standard's own floor */
+  stripH[t]=Math.min(bnd,Math.max((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.classicHeads&&!skinIsGv2())?nboxNaturalH():TRACK_MICRO_H,Math.round(trackSmallH[t]||STRIP_DEF)));   /* 77th: the ▸ collapse lands at the standard's own floor · RAW [6]: GV-2 collapses to MICRO */
  }else{
+  if(typeof skinIsGv2==='function'&&skinIsGv2()){   /* RAW [6]: no expand-to-edit in the multi-track under GV-2 — double-click a clip for the lower magnifier */
+   try{flashHint('In this view, double-click a MIDI clip to edit it in the lower window.');}catch(e){}
+   return;
+  }
   trackSmallH[t]=h;
   const big=trackExpandHeight(trackBigH[t],Math.max(h,nboxNaturalH()),bnd,GRIDVIEW_MAX);   /* Aug 25: drums expand like every track; 77th: the expand target stays ≈6× the BOX even from a MICRO row — the micro standard slims the minimized look, not the working size */
   stripH[t]=big;
@@ -36250,12 +36568,13 @@ function toggleMainBig(){
  const m=GRID_VIEWS.main;
  const bnd=stripBoundaryH();
  if(mainIsStrip()){
+  if(typeof skinIsGv2==='function'&&skinIsGv2()){try{flashHint('In this view, double-click a MIDI clip to edit it in the lower window.');}catch(e){}return;}
   trackSmallH['__main']=m.px;
   const big=trackExpandHeight(trackBigH['__main'],m.px,bnd,1200);
   m.userPx=true;setViewPx(m,Math.max(MAIN_MIN,big));
  }else{
   trackBigH['__main']=m.px;
-  m.userPx=true;setViewPx(m,Math.min(bnd,Math.max(nboxNaturalH(),Math.round(trackSmallH['__main']||bnd))));
+  m.userPx=true;setViewPx(m,Math.min(bnd,Math.max(skinTrackFloor(),Math.round(trackSmallH['__main']||(skinIsGv2()?TRACK_MICRO_H:bnd)))));
  }
  autosaveSoon();
  drawTrackSel();if(!paperView)drawGrid();drawMainStrip();positionMainRz();
@@ -37387,7 +37706,8 @@ function uiDispatch(action){
      no Chord Palette, spawn-linked through the ONE graph. (The palette's 3.3 search
      surface still joins when it ships.) */
   let _ag=null;
-  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='rhyPanel'||uiState.open==='cagePanel')&&typeof gridAuditionSpawn==='function')
+  if((uiState.open==='modPanel'||uiState.open==='melPanel'||uiState.open==='ragaPanel'||uiState.open==='rhyPanel'||uiState.open==='cagePanel')&&typeof gridAuditionSpawn==='function'
+   &&!(typeof skinIsGv2==='function'&&skinIsGv2()))   /* RAW [6] ①: under GV-2 engines populate the LOWER lane only — no audition grid in the centre */
    _ag=gridAuditionSpawn(uiState.open);
   if(uiState.open==='rhyPanel'){try{if(typeof buildRhyWindow==='function')buildRhyWindow();}catch(e){}}   /* 80th R2 — try/catch per landmine ⑪'s general defence: a fault inside the window must never take the toggle down */
   const p=(_ag&&_ag.els&&_ag.els.root)||document.getElementById(uiState.open);
@@ -38394,7 +38714,7 @@ function gridAddMenuShow(x,y){
   it.style.cssText='padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);';
   it.onmouseenter=()=>{it.style.background='var(--panel2)';};
   it.onmouseleave=()=>{it.style.background='';};
-  it.onclick=()=>{m.style.display='none';gridUserSpawn();};
+  it.onclick=()=>{m.style.display='none';gridUserSpawn();if(typeof skinState!=='undefined'&&skinState&&typeof skinRepack==='function')skinRepack();};
   m.appendChild(it);
   document.body.appendChild(m);
   document.addEventListener('mousedown',e=>{if(m.style.display!=='none'&&!m.contains(e.target))m.style.display='none';},true);
