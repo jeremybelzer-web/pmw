@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>CrossPollinate — Phase 0.5 Grid Editor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vexflow/4.2.3/vexflow-min.js" defer></script><!-- R19 (his [44]): VexFlow (MIT) paints the staff — the speller is ours; the house painter stays as a skin (Paint: house) -->
 <style>
   #gridWinHead .wtitle{flex:0 0 auto;}
   #gridWinHead #prov{flex:1 1 auto;min-width:0;margin:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;}   /* 79th R6 (his words): the song title + description sit RIGHT of the label — less vertical space */
@@ -803,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05o</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05p</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5954,7 +5955,141 @@ function notDrawRest(ctx,x,yMid,value,GAP,ink){
  ctx.beginPath();ctx.moveTo(x+4,yMid-0.9*GAP);ctx.lineTo(x-1,yMid+(0.9+0.6*(n-1))*GAP);ctx.stroke();
  for(let k=0;k<n;k++){const yy=yMid-0.9*GAP+k*0.6*GAP;const xx=x+4-k*0.9;ctx.beginPath();ctx.moveTo(xx,yy);ctx.quadraticCurveTo(xx-3,yy+2.5,xx-5,yy+0.5);ctx.stroke();ctx.beginPath();ctx.arc(xx-5,yy+0.5,1.4,0,7);ctx.fill();}
 }
+/* ==== R19 (build 2026-09-05p, the 96th, Fable) — HIS [44]: VEXFLOW AS THE PAINTER ====
+   His word (CAGED-INSTRUMENT-RAW-2026-09-04.md [44]): "our speller, VexFlow for the painting, one round … if we hit
+   limitations we should revisit the decision". The law: notSpell decides everything musical (values, dots, ties, beams,
+   tuplets, voices, rests, the key's spelling, the read-at rounding); VexFlow paints the glyphs, stems, flags, beams,
+   ties, tuplets, accidentals, clefs and signatures from that decision. The house painter (notDrawStaff below) stays as
+   a skin — Paint: house — so the revisit costs a toggle. The return shape is the house one, with the x law read back
+   from VexFlow's own note positions (bars carry their own px/pad, notTickAtX honours them). */
+function notVexKeyName(sharps){const k=Math.max(-7,Math.min(7,Math.round(+sharps)||0));return k>=0?['C','G','D','A','E','B','F#','C#'][k]:['C','F','Bb','Eb','Ab','Db','Gb','Cb'][-k];}
+function notVexDur(value,dots,rest){const m={w:'w',h:'h',q:'q','8':'8','16':'16','32':'32',measure:'w'};return (m[value]||'q')+(dots?'d':'')+(rest?'r':'');}
+function notVexKey(n){return String((n&&n.letter)||'c').toLowerCase()+'/'+((n&&isFinite(+n.octave))?+n.octave:4);}
+function notVexAcc(show){return show==='♯'?'#':show==='♭'?'b':show==='♮'?'n':show==='𝄪'?'##':show==='𝄫'?'bb':null;}
+function notPainter(){
+ /* which skin paints: Wig & Quill's choice, else VexFlow when it has loaded, else the house */
+ const w=(typeof wqState==='object'&&wqState)?wqState.painter:null;
+ if(w==='house')return 'house';
+ return ((typeof Vex==='function'||typeof Vex==='object')&&Vex&&Vex.Flow)?'vex':'house';   /* the UMD build hands the namespace over as a function */
+}
+function notDrawStaffVex(ctx,sp,from,to,geom){
+ const VF=Vex.Flow;
+ const g=geom||{}, GAP=g.GAP||7, staffBottom=g.staffBottom||50, staffTop=staffBottom-4*GAP;
+ const INK=g.ink||'#222', DIM=g.dim||'#8a8577', PAPER=g.paper||'#f7f3ea', W=g.W||900;
+ const clef=g.clef||'treble', shift=+g.shift||0;
+ const shown=sp.measures.slice(from,to); if(!shown.length)return {items:0};
+ const ticks=shown.reduce((a,m)=>a+(m.end-m.start),0)||1;
+ const km=notKeyMap(shown[0].key.tonic,(typeof melismaKeyAt==='function'?(melismaKeyAt(shown[0].start/NOT_TPB)||{}).pcs:null));
+ const sharps=(km&&km.sharps)||0;
+ const tab=g.tab||null;
+ const x0=g.x0||46, tk0=shown[0].start;
+ /* the staves: widths by ticks, the first wider for its clef, key and time */
+ const lead=54+Math.abs(sharps)*8;
+ const usable=W-10-x0-lead;
+ ctx.setLineDash([]);ctx.fillStyle=INK;ctx.strokeStyle=INK;ctx.lineWidth=1;ctx.globalAlpha=1;ctx.textAlign='left';   /* VexFlow paints with the canvas's current styles — hand it ink, not the paper's fill or the playhead's stroke */
+ const rend=new VF.Renderer(ctx.canvas,VF.Renderer.Backends.CANVAS); const vctx=rend.getContext();
+ try{vctx.setFillStyle(INK);vctx.setStrokeStyle(INK);vctx.setLineWidth(1);}catch(e){}
+ const staveY=staffTop-GAP*2.15;   /* VexFlow's stave origin sits above its top line */
+ const staves=[];let xs=x0;
+ shown.forEach((m,i)=>{
+  const w=(i===0?lead:0)+usable*(m.end-m.start)/ticks;
+  const st=new VF.Stave(xs,staveY,w,{space_above_staff_ln:0,space_below_staff_ln:0});
+  st.setStyle({strokeStyle:'#444'});
+  if(i===0){st.addClef(clef,'default',shift===7?'8vb':undefined);if(sharps)st.addKeySignature(notVexKeyName(sharps));st.addTimeSignature(m.num+'/'+m.den);}
+  st.setContext(vctx).draw();
+  staves.push(st);xs+=w;
+ });
+ if(tab){ctx.fillStyle=INK;ctx.font='9px system-ui';ctx.fillText('TAB',8,tab.top+3*tab.gap+3);ctx.strokeStyle='#777';for(let i=0;i<6;i++){const y=tab.top+i*tab.gap;ctx.beginPath();ctx.moveTo(30,y+.5);ctx.lineTo(W-8,y+.5);ctx.stroke();}}
+ /* the notes: every item a StaveNote from the speller's decision; voices, beams, tuplets and ties from ours */
+ let drawn=0,tabN=0,tieN=0,syms=0,dyns=0,accN=0,hairN=0,v2N=0,restN=0;const stems=[],xmap=[],bars=[],pend=[];
+ const accSet=Array.isArray(g.acc)?new Set(g.acc.map(a=>Math.round(a.tick))):null;
+ const restKey=clef==='bass'?'d/3':'b/4';
+ const midLine=staffBottom-2*GAP;
+ const headYOf=n=>notStaffY(n.step+shift-((clef==='bass'?-10:2)-2),staffBottom,GAP);
+ shown.forEach((m,mi)=>{
+  const st=staves[mi];
+  const dirOf=it=>{if(it.voice===1)return true;if(it.voice===2)return false;const ys=it.notes.map(headYOf);return (Math.min.apply(null,ys)+Math.max.apply(null,ys))/2>midLine;};
+  const grpDirs={};for(const it of m.items){if(it.kind==='note'&&it.beam!==null)(grpDirs[it.beam]=grpDirs[it.beam]||[]).push(dirOf(it));}
+  const beamUp={};for(const id in grpDirs){const a=grpDirs[id];beamUp[id]=a.filter(Boolean).length*2>=a.length;}
+  const byVoice={};const vnotes=[];
+  for(const it of m.items){
+   const rest=it.kind==='rest';
+   const dur=notVexDur(it.value,it.dots,rest);
+   let vn;
+   if(rest){vn=new VF.StaveNote({keys:[restKey],duration:dur,clef,align_center:it.value==='measure'});restN++;}
+   else{
+    const keys=it.notes.map(notVexKey);
+    const up=(it.beam!==null&&beamUp[it.beam]!==undefined)?beamUp[it.beam]:dirOf(it);
+    vn=new VF.StaveNote({keys,duration:dur,clef,stem_direction:up?1:-1});
+    it.notes.forEach((n,k)=>{const a=notVexAcc(n.accShow);if(a)vn.addAccidental(k,new VF.Accidental(a));});
+    if(it.value!=='w')stems.push({tick:m.start+it.t,up,beam:it.beam});
+    if(it.voice===2)v2N++;
+    if(accSet&&accSet.has(Math.round(m.start+it.t))){vn.addArticulation(0,new VF.Articulation('a>').setPosition(up?4:3));accN++;}
+    drawn+=it.notes.length;
+   }
+   if(it.dots)vn.addDotToAll();
+   vn._it=it;vn._tick=m.start+it.t;
+   (byVoice[it.voice||0]=byVoice[it.voice||0]||[]).push(vn);vnotes.push(vn);
+  }
+  const voices=Object.keys(byVoice).map(k=>new VF.Voice({num_beats:m.num,beat_value:m.den}).setStrict(false).addTickables(byVoice[k]));
+  const beams=[];const groups={};
+  for(const vn of vnotes){const it=vn._it;if(it.kind==='note'&&it.beam!==null&&(it.value==='8'||it.value==='16'||it.value==='32'))(groups[it.beam]=groups[it.beam]||[]).push(vn);}
+  for(const id in groups){if(groups[id].length>=2)beams.push(new VF.Beam(groups[id]));}
+  const tuplets=[];let run=[];
+  for(const vn of vnotes){if(vn._it.tuplet){run.push(vn);if(run.length===3){tuplets.push(new VF.Tuplet(run,{num_notes:3,notes_occupied:2}));run=[];}}else run=[];}
+  if(voices.length){new VF.Formatter().joinVoices(voices).format(voices,Math.max(20,st.getNoteEndX()-st.getNoteStartX()-12));voices.forEach(v=>v.draw(vctx,st));}
+  beams.forEach(b=>b.setContext(vctx).draw());tuplets.forEach(t=>t.setContext(vctx).draw());
+  /* the x law read back: every note's x, the bar's own px and pad */
+  for(const vn of vnotes){let x=0;try{x=vn.getAbsoluteX();}catch(e){x=st.getNoteStartX();}xmap.push({tick:vn._tick,x,vn});}
+  const nsx=st.getNoteStartX(),nex=st.getNoteEndX();
+  bars.push({start:m.start,end:m.end,x:st.getX(),pad:nsx-st.getX(),px:(nex-nsx)/(m.end-m.start)});
+  /* ties: ours — a start/mid piece ties to the next piece of the same pitch */
+  for(const vn of vnotes){const it=vn._it;if(it.kind!=='note'||!(it.tie==='start'||it.tie==='mid'))continue;pend.push({vn,tick:m.start+it.t+it.d,midis:it.notes.map(n=>n.midi)});}
+ });
+ /* the ties drawn once every note has a place */
+ ctx.setLineDash([]);ctx.fillStyle=INK;ctx.strokeStyle=INK;ctx.lineWidth=1;ctx.globalAlpha=1;ctx.textAlign='left';
+ const noteAt=tk=>xmap.filter(z=>z.tick===tk&&z.vn._it.kind==='note');
+ for(const p of pend){
+  const next=noteAt(p.tick).find(z=>z.vn._it.notes.some(n=>p.midis.indexOf(n.midi)>=0));
+  const fi=[],li=[];
+  if(next){p.midis.forEach((mm,k)=>{const j=next.vn._it.notes.findIndex(n=>n.midi===mm);if(j>=0){fi.push(k);li.push(j);}});}
+  else p.midis.forEach((mm,k)=>fi.push(k));
+  if(!fi.length)continue;
+  try{new VF.StaveTie({first_note:p.vn,last_note:next?next.vn:null,first_indices:fi,last_indices:next?li:fi}).setContext(vctx).draw();tieN++;}catch(e){}
+ }
+ ctx.setLineDash([]);ctx.fillStyle=INK;ctx.strokeStyle=INK;ctx.lineWidth=1;ctx.globalAlpha=1;ctx.textAlign='left';   /* back to the house pen for the TAB, the symbols, the dynamics, the caret */
+ /* xAt: a tick's x from the notes around it (the house law's shape, VexFlow's spacing) */
+ xmap.sort((a,b)=>a.tick-b.tick);
+ const xAt=tk=>{
+  const b=bars.slice().reverse().find(z=>tk>=z.start)||bars[0];
+  const inBar=xmap.filter(z=>z.tick>=b.start&&z.tick<b.end);
+  let lo=null,hi=null;for(const z of inBar){if(z.tick<=tk&&(!lo||z.tick>=lo.tick))lo=z;if(z.tick>=tk&&(!hi||z.tick<=hi.tick))hi=z;}
+  if(lo&&lo.tick===tk)return lo.x-5;
+  const x1=lo?lo.x-5:b.x+b.pad,t1=lo?lo.tick:b.start;
+  const x2=hi?hi.x-5:b.x+b.pad+(b.end-b.start)*b.px,t2=hi?hi.tick:b.end;
+  return t2>t1?x1+(x2-x1)*(tk-t1)/(t2-t1):x1;
+ };
+ /* the TAB (ours) under VexFlow's heads; the chord symbols; the dynamics; the hairpins; the playhead; the caret */
+ if(tab&&tab.gtrAt){for(const z of xmap){const it=z.vn._it;if(it.kind!=='note'||it.tie==='mid'||it.tie==='end')continue;const x=z.x;
+   for(const n of it.notes){const gg=tab.gtrAt[Math.round(z.tick)+':'+n.midi]||null;if(!gg)continue;const ty=tab.top+(5-gg.s)*tab.gap;ctx.fillStyle=PAPER;ctx.fillRect(x-5,ty-5,11,10);ctx.fillStyle=INK;ctx.font='bold 9.5px system-ui';ctx.fillText(String(gg.f),x-(gg.f>=10?5:2.5),ty+3.5);tabN++;}}}
+ for(const b of bars){if(tab){ctx.strokeStyle='#333';ctx.beginPath();ctx.moveTo(b.x+.5,tab.top);ctx.lineTo(b.x+.5,tab.top+5*tab.gap);ctx.stroke();}
+  if(g.barNumbers!==false){const m=shown.find(z=>z.start===b.start);ctx.fillStyle=DIM;ctx.font='8px system-ui';ctx.fillText(String(m?m.index+1:''),b.x+2,staffTop-14);}}
+ const symX=[];
+ if(Array.isArray(g.chords)){ctx.fillStyle=INK;ctx.font='bold 11px system-ui';ctx.textAlign='center';for(const c of g.chords){if(c.tick>=tk0&&c.tick<tk0+ticks){const sx2=xAt(c.tick)+6;ctx.fillText(c.lbl,sx2,staffTop-24);symX.push({tick:c.tick,x:sx2});syms++;}}ctx.textAlign='left';}
+ if(Array.isArray(g.dyn)){ctx.fillStyle=INK;ctx.font='italic bold 12px Georgia,serif';for(const d of g.dyn){if(d.tick>=tk0&&d.tick<tk0+ticks){ctx.fillText(d.word,xAt(d.tick)+1,(tab?tab.top+5*tab.gap:staffBottom)+16);dyns++;}}}
+ if(Array.isArray(g.hair)){const hy=(tab?tab.top+5*tab.gap:staffBottom)+24;ctx.strokeStyle=INK;ctx.lineWidth=1.1;
+  for(const h of g.hair){if(!(h.to>tk0&&h.from<tk0+ticks))continue;const a=Math.max(h.from,tk0),bq=Math.min(h.to,tk0+ticks);const x1=xAt(a)+(a===h.from?2:0),x2=xAt(bq)+(bq===h.to?10:0);if(x2-x1<6)continue;
+   ctx.beginPath();if(h.dir==='cresc'){ctx.moveTo(x2,hy-3.5);ctx.lineTo(x1,hy);ctx.lineTo(x2,hy+3.5);}else{ctx.moveTo(x1,hy-3.5);ctx.lineTo(x2,hy);ctx.lineTo(x1,hy+3.5);}ctx.stroke();hairN++;}}
+ if(g.playheadTick!=null&&isFinite(g.playheadTick)&&g.playheadTick>=tk0&&g.playheadTick<=tk0+ticks){const xp=xAt(g.playheadTick);ctx.strokeStyle=paintOf('--playhead','#e8a33d');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(xp,staffTop-8);ctx.lineTo(xp,(tab?tab.top+5*tab.gap:staffBottom)+4);ctx.stroke();}
+ let caretDrawn=false;
+ if(g.caret&&isFinite(g.caret.tick)&&g.caret.tick>=tk0&&g.caret.tick<=tk0+ticks){const xc=xAt(g.caret.tick)+6;ctx.strokeStyle='#2f6fd6';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xc,staffTop-12);ctx.lineTo(xc,(tab?tab.top+5*tab.gap:staffBottom)+8);ctx.stroke();
+  ctx.fillStyle='#2f6fd6';ctx.beginPath();ctx.moveTo(xc-5,staffTop-16);ctx.lineTo(xc+5,staffTop-16);ctx.lineTo(xc,staffTop-10);ctx.closePath();ctx.fill();
+  if(g.caret.label){ctx.font='bold 9px system-ui';ctx.fillText(String(g.caret.label),xc+8,staffTop-12);}caretDrawn=true;}
+ const pxMean=bars.reduce((a,b)=>a+b.px,0)/bars.length;
+ return {items:drawn,tab:tabN,ties:tieN,syms,dyns,acc:accN,hair:hairN,v2:v2N,rests:restN,stems,symX,bars,pad:bars[0]?bars[0].pad:14,key:sharps,meter:shown[0].num+'/'+shown[0].den,from,to,x0,px:pxMean,tk0,ticks,caret:caretDrawn,painter:'vex'};
+}
 function notDrawStaff(ctx,sp,from,to,geom){
+ if(notPainter()==='vex'&&geom&&geom.painter!=='house'){try{return notDrawStaffVex(ctx,sp,from,to,geom);}catch(e){try{console.warn('VexFlow painter fell back to the house skin:',e);}catch(e2){}}}   /* R19 [44]: VexFlow paints; the house skin stands behind it */
  const g=geom||{}, GAP=g.GAP||7, staffBottom=g.staffBottom||50, staffTop=staffBottom-4*GAP;
  const INK=g.ink||'#222', DIM=g.dim||'#8a8577', PAPER=g.paper||'#f7f3ea', W=g.W||900;
  const clef=g.clef||'treble', bottomStep=clef==='bass'?-10:2, shift=+g.shift||0;
@@ -6065,8 +6200,8 @@ function notTickAtX(g,x){
  const bars=Array.isArray(g.bars)?g.bars:null;
  if(!bars||!bars.length)return g.tk0+(x-g.x0)/g.px;
  let b=bars[0];for(const z of bars){if(x>=z.x)b=z;}
- const pad=(g.pad!=null)?+g.pad:0;
- return b.start+Math.max(0,x-b.x-pad)/g.px;
+ const pad=(b.pad!=null)?+b.pad:((g.pad!=null)?+g.pad:0),px=(b.px>0)?+b.px:g.px;   /* R19: a bar carries its own px/pad under the VexFlow painter; the house bars use the staff's */
+ return b.start+Math.max(0,x-b.x-pad)/px;
 }
 function notPlayheadBeat(){
  try{if(typeof playing!=='undefined'&&playing)return transportBeat();}catch(e){}
@@ -6101,7 +6236,7 @@ function cageNotationDraw(){
    (a part carrying guitar layouts is written 8vb over TAB) · Part = one track · chord symbols from the chord lane above
    the top staff · dynamics from velocity under each staff · 2 or 4 bars a line · follows the transport. The feature
    pass's E3, round 1 (Score/Part · symbols · dynamics); step input (E4) and the grid's view (E5) follow. */
-var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:24};   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
+var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:24,painter:null};   /* R19 [44]: painter = null (VexFlow when loaded) · 'vex' · 'house' */   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
 function wqParts(){
  /* the parts a score shows: pitched tracks that carry notes, in the app's own order */
  try{return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length);}catch(e){return [];}
@@ -6120,6 +6255,7 @@ function buildWqWindow(){
   +'<label id="wqPartLbl" style="font-size:11px;color:var(--text);display:'+((wqState.layout==='part'||wqInput.on)?'inline-flex':'none')+';gap:4px;align-items:center;">Track <select id="wqPart" style="font-size:11px;">'+parts.map(t=>'<option value="'+t+'"'+(t===wqState.part?' selected':'')+'>'+lbl(t)+'</option>').join('')+'</select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;">Bars a line <select id="wqBars" style="font-size:11px;"><option value="2"'+(wqState.bars===2?' selected':'')+'>2</option><option value="4"'+(wqState.bars===4?' selected':'')+'>4</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Read at — how the score reads the played lengths (E9, his words: the simplest notation). 8th (default): an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. 16th: finer. Exact: every tick as played — the second voice and the tied fragments come back. The notes themselves are never changed; the status counts what was rounded.">Read at <select id="wqRes" style="font-size:11px;"><option value="24"'+(wqState.res===24?' selected':'')+'>8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>16th</option><option value="0"'+(!(wqState.res>0)?' selected':'')+'>exact</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Paint — who draws the glyphs (R19, his word): VexFlow (the open engraving library, MIT; loads from the CDN as Tone.js does) or the house skin. The musical decisions are the app&#8217;s own either way — the values, ties, beams, voices, rests, the key&#8217;s spelling, the read-at rounding. If VexFlow hits a limitation, the house skin is one click away.">Paint <select id="wqPaint" style="font-size:11px;"><option value="vex"'+(notPainter()==='vex'?' selected':'')+'>VexFlow</option><option value="house"'+(notPainter()==='house'?' selected':'')+'>house</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="wqFollow"'+(wqState.follow?' checked':'')+'/> Follow the transport</label>'
   +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
   +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead): 1 whole · 2 half · 3 quarter · 4 8th · 5 16th · 6 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · R a rest · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves">✎ Write</span>'
@@ -6130,6 +6266,7 @@ function buildWqWindow(){
  on('wqLayPart',()=>{wqState.layout='part';buildWqWindow();});
  const ps=document.getElementById('wqPart');if(ps)ps.onchange=()=>{wqState.part=ps.value;wqDraw();};
  const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
+ const ptl=document.getElementById('wqPaint');if(ptl)ptl.onchange=()=>{wqState.painter=ptl.value==='house'?'house':'vex';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* R19 */
  const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=+rsl.value||0;wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
