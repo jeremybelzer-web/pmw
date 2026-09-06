@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06l</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06m</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4400,15 +4400,18 @@ function cageQualNow(q){
 }
 function cageShapeLabel(shape,quality,rootPc){
  /* pure: "E shape" for a major chord, "E minor shape" for a minor one — his [58]; a diminished chord is the one
-    diminished chord that fits that shape's position — "B° in the C shape" — his [59] */
+    diminished chord voiced inside that shape's position — "B° in the C shape" — his [59]; the shape itself stays the
+    major/minor one (his [61]) */
  const sh=String(shape||'');
  if(quality==='dim'){const N=(typeof PCN!=='undefined')?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];return N[((Math.round(+rootPc)||0)%12+12)%12]+'° in the '+sh+' shape';}
  return sh+(quality==='min'||quality==='min7'?' minor':'')+' shape';
 }
 function cageDimForm(shapeName,dimRootPc){
- /* pure — his [59]: "There is exactly 1 diminished chord that fits in each major/minor shape." The diminished chord is
-    the vii° of the major key whose shape this is (B° in C), so the form is the shape's position with only the diminished
-    tones (1 · b3 · b5) kept, one a string, each nearest the major form's own fret; a string with none is muted. */
+ /* pure — his [59]/[61]: "There is exactly 1 diminished chord that fits in each major/minor shape" — and it is NOT a
+    CAGED shape of its own ("the CAGED system chord shape is [not] a diminished chord shape because it isn't"). The shapes
+    stay the five major and five minor; this is the diminished CHORD voiced inside the shape's position: the vii° of the
+    major key whose shape this is (B° in C), on that form's strings, only 1 · b3 · b5, each nearest the form's own fret,
+    all three held; a string with none in reach is muted. */
  const root=((Math.round(+dimRootPc)||0)%12+12)%12; const keyRoot=(root+1)%12;
  const M=cageTransposeForm(shapeName,keyRoot,'maj'); const {lo,hi}=cageShapeSpan(M.frets);
  const tones=[root,(root+3)%12,(root+6)%12];
@@ -5451,7 +5454,7 @@ function cageNeckBoardDraw(ctx,G){
 function cageMiniRoots(rootPc,quality){
  /* pure: the five CAGED boxes for this root (major or minor forms — his [58]) along the neck, each with its root notes {s,f} — sorted along the neck */
  const root=((Math.round(+rootPc)||0)%12+12)%12; const q=cageQualNow(quality);
- return CAGED_SHAPE_ORDER.map(name=>{const b=cageBoxForRoot(name,root,q);const roots=[];b.frets.forEach((f,s)=>{if(f>=0&&((CAGED_TUNING[s]+f)%12)===root)roots.push({s,f});});return {shape:name,label:name+(b.minor?'m':(b.dim?'°':'')),minor:!!b.minor,dim:!!b.dim,startFret:b.startFret,lo:b.lo,hi:b.hi,color:b.color,roots};}).sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
+ return CAGED_SHAPE_ORDER.map(name=>{const b=cageBoxForRoot(name,root,q);const roots=[];b.frets.forEach((f,s)=>{if(f>=0&&((CAGED_TUNING[s]+f)%12)===root)roots.push({s,f});});return {shape:name,label:b.dim?(name+'/'+(cageRelativeForm(cageTransposeForm(name,(root+1)%12,'maj'),(root+1)%12,'maj')||{shape:'?'}).shape+'m'):(name+(b.minor?'m':'')),minor:!!b.minor,dim:!!b.dim,startFret:b.startFret,lo:b.lo,hi:b.hi,color:b.color,roots};}).sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
 }
 function cageMiniGeom(c){
  const W=c.width,H=c.height,padL=12,padR=10,cw=(W-padL-padR)/(CAGE_MAX_FRET+2);   /* a head cell, then frets 0..19 */
