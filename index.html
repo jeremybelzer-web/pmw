@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06m</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06n</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4404,7 +4404,7 @@ function cageShapeLabel(shape,quality,rootPc){
     major/minor one (his [61]) */
  const sh=String(shape||'');
  if(quality==='dim'){const N=(typeof PCN!=='undefined')?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];return N[((Math.round(+rootPc)||0)%12+12)%12]+'° in the '+sh+' shape';}
- return sh+(quality==='min'||quality==='min7'?' minor':'')+' shape';
+ return sh+(quality==='min'||quality==='min7'?'m':'')+' shape';   /* R35 [64]: written as the chord — "Am shape" */
 }
 function cageDimForm(shapeName,dimRootPc){
  /* pure — his [59]/[61]: "There is exactly 1 diminished chord that fits in each major/minor shape" — and it is NOT a
@@ -7308,7 +7308,7 @@ function cagePickShape(){
  try{if(pairOn){if(cageState.quality==='dim'){const M=cageTransposeForm(x.shape,x.keyRoot!=null?x.keyRoot:(cageState.chordRootPc+1)%12,'maj');rel=cageRelativeForm(M,M.keyRoot!=null?M.keyRoot:(cageState.chordRootPc+1)%12,'maj');}else rel=cageRelativeForm(x,cageState.chordRootPc,cageState.quality);}}catch(e){rel=null;}
  cageState._relFrets=rel?rel.frets:null; cageState._relColor=rel?rel.color:null; cageState._relLabel=rel?rel.label:null;
  const sb=document.getElementById('cageShapeBig'); if(sb)sb.textContent=(x.label||cageShapeLabel(x.shape,cageState.quality,cageState.chordRootPc))+(rel?' · '+rel.label:'');
- const ap=document.getElementById('cageLayArpPos'); if(ap)ap.textContent=x.shape+(x.minor?' minor':'');
+ const ap=document.getElementById('cageLayArpPos'); if(ap)ap.textContent=x.shape+(x.minor?'m':'');   /* R35: "in Am position" */
  try{const minor=cageIsMinorQ(cageState.quality);['cageLayPentaMode','cageLayBluesMode'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=minor?'none':'inline-block';});}catch(e){}
  const cb=document.getElementById('cageChordBig'); if(cb)cb.textContent=cageState.chordText;
  const km=document.getElementById('cageKeyMeta'); if(km)km.textContent='Scale root: '+(typeof PCN!=='undefined'?PCN[cageState.scaleRootPc]:cageState.scaleRootPc);
