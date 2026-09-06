@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06f</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06g</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6321,6 +6321,7 @@ function buildWqWindow(){
   +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
   +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead), the keypad way: 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · , or R a rest · SPACE advances · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves · the ⓘ beside this explains the method">✎ Write</span>'
   +'<span class="cpchip" id="wqInfo" title="How note entry works here — the method, in one card">ⓘ</span>'
+  +'<span class="cpchip" id="wqPageBtn" title="Page view (his [54]) — one instrument on a page: a title and composer field, the instrument named left of the clef, systems of bars; ⎙ Print prints the part">📄 Page view</span>'
   +'<span id="wqWriteChip" style="font-size:10.5px;color:var(--dim);"></span></div>'
   +'<div id="wqSimpCard" style="display:none;font-size:11.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:6px;max-width:420px;">'
   +'<div id="wqSimpFoundLine" style="font-size:10.5px;color:var(--dim);margin-bottom:6px;"></div>'
@@ -6338,6 +6339,7 @@ function buildWqWindow(){
  const ps=document.getElementById('wqPart');if(ps)ps.onchange=()=>{wqState.part=ps.value;wqDraw();};
  const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
  const ptl=document.getElementById('wqPaint');if(ptl)ptl.onchange=()=>{wqState.painter=ptl.value==='house'?'house':'vex';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* R19 */
+ const pgb=document.getElementById('wqPageBtn');if(pgb)pgb.onclick=()=>wqPageOpen();   /* R28 [54]: the Page view */
  const inf=document.getElementById('wqInfo');if(inf)inf.onclick=()=>{const cd=document.getElementById('wqInfoCard');if(cd){const on=cd.style.display==='none';cd.style.display=on?'block':'none';inf.classList.toggle('on',on);}};   /* R21 [48]: the ⓘ card */
  const smp=document.getElementById('wqSimp');if(smp)smp.onclick=()=>{const cd=document.getElementById('wqSimpCard');if(cd){const on=cd.style.display==='none';cd.style.display=on?'block':'none';smp.classList.toggle('on',on);if(on)wqSimpSync();}};   /* R23 [50] */
  const smpC=document.getElementById('wqSimpClose');if(smpC)smpC.onclick=()=>{const cd=document.getElementById('wqSimpCard');if(cd)cd.style.display='none';const c2=document.getElementById('wqSimp');if(c2)c2.classList.remove('on');};
@@ -6749,6 +6751,97 @@ function wqNoteMenu(e){
   {label:'✕ Delete this note',fn:()=>wqNoteApply(h.t,i,'delete')}];
  wanFloatMenu(e,rows);
  return true;
+}
+/* ==== R28 (build 2026-09-06g, the 96th, Fable) — HIS [54] part 3: THE PAGE VIEW ====
+   "There should be a 'Page view' so you can see what the notation would look like for 1 instrument with a title and
+   composer field... and the instrument labelled to the left of the clef (or clefs). You should be able to print a part
+   from that pop-up window." One instrument, one page: the title centred, the composer at the right, the instrument's
+   name left of the first system's clef (abbreviated after), systems of bars, the same painter as the window; ⎙ Print
+   hands the page to the browser's print dialog as an image. */
+var wqPageState={part:null,bars:4,last:null};
+function wqPageLayout(nMeasures,barsPerLine,partH,headH){
+ /* pure: the page's systems and height — a title block, then systems of barsPerLine measures, each partH tall plus a
+    head; {systems:[{from,to,y0}], H} */
+ const n=Math.max(1,Math.round(+barsPerLine)||4),N=Math.max(0,Math.round(+nMeasures)||0),ph=(+partH>0)?+partH:100,hh=(+headH>0)?+headH:110;
+ const systems=[];let y=hh;
+ for(let f=0;f<N;f+=n){systems.push({from:f,to:Math.min(N,f+n),y0:y});y+=ph+28;}
+ return {systems,H:Math.max(hh+ph,y+20)};
+}
+function wqPageAbbrev(name){
+ /* pure: the standard short form after the first system — the first three letters, a period */
+ const s=String(name||'').trim();if(!s)return '';const w=s.split(/\s+/)[0];return (w.length>4?w.slice(0,3)+'.':w);
+}
+function wqPageRender(){
+ const host=document.getElementById('wqPageCanvas');if(!host)return null;
+ const parts=wqParts();
+ let part=wqPageState.part;if(parts.indexOf(part)<0)part=wqState.part;if(parts.indexOf(part)<0)part=parts[0]||null;wqPageState.part=part;
+ const rows=part?wqPartRows(part):[];
+ let sp=null;try{sp=notSpellTrack(rows.map(n=>[n[0],n[1],n[2]]));}catch(e){sp=null;}
+ const loopTk=((typeof LOOP==='number'&&LOOP>0)?LOOP:32)*NOT_TPB;
+ const nM=sp?sp.measures.filter(m=>m.start<loopTk).length:0;
+ const gtr=wqHasGtr(rows);const per=notPagePartH(gtr)+10;
+ const lay=wqPageLayout(nM,wqPageState.bars||4,per,110);
+ const W=794;host.width=W;host.height=lay.H;
+ const ctx=host.getContext('2d');ctx.fillStyle='#fffdf7';ctx.fillRect(0,0,W,lay.H);
+ const song=project.song||{};const title=String(song.title||song.name||'Untitled').split(' — ')[0];const composer=String(song.composer||'');
+ ctx.fillStyle='#222';ctx.textAlign='center';ctx.font='bold 22px Georgia,serif';ctx.fillText(title,W/2,48);
+ ctx.textAlign='right';ctx.font='italic 12px Georgia,serif';if(composer)ctx.fillText(composer,W-40,74);
+ ctx.textAlign='left';
+ const name=part?(typeof trackLabel==='function'?trackLabel(part):part):'';
+ const hair=notHairpins(rows),clef=gtr?'treble':notClefFor(rows);
+ let items=0,syms=0;const geoms=[];
+ lay.systems.forEach((sy,si)=>{
+  const base=sy.y0+62;
+  const label=si===0?name:wqPageAbbrev(name);
+  ctx.fillStyle='#222';ctx.font=(si===0?'bold 12px':'11px')+' Georgia,serif';const lw=label?ctx.measureText(label).width:0;
+  if(label)ctx.fillText(label,24,base-12);   /* the instrument, left of the clef */
+  const x0=24+lw+18;
+  const tab=gtr?{top:base+96,gap:8,gtrAt:(()=>{const m={};rows.forEach(n=>{m[Math.round(n[0]*NOT_TPB)+':'+Math.round(n[2])]=cageNoteGtr(n)||cageDefaultPos(Math.round(n[2]),0,5)||null;});return m;})()}:null;
+  const chords=sp?notChordSymbols(project.chords,sp.measures[sy.from].start,sp.measures[sy.to-1].end):null;
+  const r=sp?notDrawStaff(ctx,sp,sy.from,sy.to,{W:W-40,x0,staffBottom:base,GAP:7,clef,shift:gtr?7:0,tab,chords,dyn:notDynamics(rows,hair),hair,acc:notAccents(rows,hair),playheadTick:null,barNumbers:true}):{items:0};
+  items+=r.items||0;syms+=r.syms||0;geoms.push({from:sy.from,to:sy.to,x0:r.x0,labelW:lw});
+ });
+ if(!nM){ctx.fillStyle='#8a8577';ctx.font='13px Georgia,serif';ctx.fillText('Nothing to notate on this part yet.',40,140);}
+ wqPageState.last={part,title,composer,systems:lay.systems.length,items,syms,W,H:lay.H,geoms,name};
+ return wqPageState.last;
+}
+function wqPageOpen(){
+ let d=document.getElementById('wqPage');if(d)d.remove();
+ const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+ const parts=wqParts();const song=project.song||{};
+ d=document.createElement('div');d.id='wqPage';
+ d.style.cssText='position:fixed;inset:24px;z-index:130;background:#2a2a2e;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 48px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;';
+ d.innerHTML='<div style="display:flex;gap:10px;align-items:center;padding:8px 12px;background:var(--panel2);border-bottom:1px solid var(--line);font-size:12px;color:var(--text);flex-wrap:wrap;">'
+  +'<b>📄 Page view</b>'
+  +'<label>Title <input id="wqPageTitle" value="'+esc(song.title||String(song.name||'').split(' — ')[0]||'')+'" placeholder="Untitled" style="width:220px;font-size:12px;"></label>'
+  +'<label>Composer <input id="wqPageComposer" value="'+esc(song.composer||'')+'" placeholder="composer" style="width:160px;font-size:12px;"></label>'
+  +'<label>Instrument <select id="wqPagePart" style="font-size:12px;">'+parts.map(t=>'<option value="'+esc(t)+'"'+((wqPageState.part||wqState.part)===t?' selected':'')+'>'+esc(typeof trackLabel==='function'?trackLabel(t):t)+'</option>').join('')+'</select></label>'
+  +'<label>Bars a line <select id="wqPageBars" style="font-size:12px;">'+[2,4,6,8].map(n=>'<option value="'+n+'"'+((wqPageState.bars||4)===n?' selected':'')+'>'+n+'</option>').join('')+'</select></label>'
+  +'<span style="flex:1"></span><span class="cpchip" id="wqPagePrint" title="Print this part — the page goes to the browser\'s print dialog">⎙ Print</span><span class="cpchip" id="wqPageClose">✕ Close</span></div>'
+  +'<div style="flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;background:#1b1b1e;"><canvas id="wqPageCanvas" width="794" height="400" style="background:#fffdf7;box-shadow:0 4px 24px rgba(0,0,0,.5);max-width:100%;"></canvas></div>';
+ document.body.appendChild(d);
+ const q=id=>document.getElementById(id);
+ q('wqPageTitle').oninput=e=>{project.song=project.song||{};project.song.title=e.target.value;autosaveSoon();wqPageRender();};
+ q('wqPageComposer').oninput=e=>{project.song=project.song||{};project.song.composer=e.target.value;autosaveSoon();wqPageRender();};
+ q('wqPagePart').onchange=e=>{wqPageState.part=e.target.value;wqPageRender();};
+ q('wqPageBars').onchange=e=>{wqPageState.bars=+e.target.value||4;wqPageRender();};
+ q('wqPagePrint').onclick=()=>wqPagePrint();
+ q('wqPageClose').onclick=()=>d.remove();
+ wqPageRender();
+ return d;
+}
+function wqPagePrint(opts){
+ /* the page as an image to the browser's print dialog; {dry:true} returns the image instead (the harness) */
+ const c=document.getElementById('wqPageCanvas');if(!c)return null;
+ const url=c.toDataURL('image/png');
+ if(opts&&opts.dry)return url;
+ const w=window.open('','_blank');
+ if(!w){flashHint('The browser blocked the print window — allow pop-ups for this page and press ⎙ Print again.');return null;}
+ const t=(wqPageState.last&&wqPageState.last.title)||'part';
+ w.document.write('<!doctype html><title>'+String(t).replace(/</g,'&lt;')+'</title><style>body{margin:0}img{width:100%;display:block}@page{margin:12mm}</style><img src="'+url+'">');
+ w.document.close();
+ try{w.focus();setTimeout(()=>{try{w.print();}catch(e){}},250);}catch(e){}
+ return url;
 }
 function wqSimpSync(){
  /* R23 [50]: Simplify notation's chip, select and found line follow the song — the value found is SHOWN, never the word auto */
