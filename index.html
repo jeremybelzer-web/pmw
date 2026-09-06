@@ -799,6 +799,15 @@
   .skFlBar .skFlT{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .skFlBody{flex:1 1 auto;min-height:0;overflow:auto;position:relative;}
   .skFlBody > .skCell{margin:0!important;width:100%!important;height:auto!important;}
+  #skinLayer .skNode{display:flex;min-width:0;min-height:0;position:relative;}
+  #skinLayer .skNode.skH{flex-direction:row;} #skinLayer .skNode.skV{flex-direction:column;}
+  #skinLayer .skEdge-t,#skinLayer .skEdge-b{position:relative;flex:0 0 14px;width:auto;}
+  #skinLayer .skLeaf{min-width:0;min-height:0;}
+  #skinLayer .skEmpty{border:2px dashed var(--line);border-radius:10px;margin:6px;display:flex;align-items:center;justify-content:center;overflow:auto;}
+  #skinLayer .skEmptyIn{padding:12px;max-width:520px;}
+  #skinLayer .skEmptyList{display:flex;flex-wrap:wrap;gap:4px;}
+  #skinLayer > .skFl{position:absolute;}
+  .skFlBar .skFlDock{margin-right:2px;}
   #cnvViews .cnvView{width:150px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid var(--line);}
   #cnvViews .cnvView.on{border-color:var(--accent);}
   #cnvViews .cnvView.soon{opacity:.5;cursor:default;}
@@ -842,7 +851,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06u</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06v</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16030,8 +16039,16 @@ function skinNorm(raw){
   }
   return {preset:'dv12',skin:'dv12',panes:{l:num(p.l,18,8,40),lc:flag(p.lc,0),pl:flag(p.pl,1),rack:flag(p.rack,0),si:flag(p.si,0),info:flag(p.info,1),wins}};
  }
+ /* R3: the split tree (GV-4) is the truth of the layout — the R1 numbers seed it when it is missing and follow it after */
+ const wins={};
+ if(p.wins&&typeof p.wins==='object'&&!Array.isArray(p.wins))for(const k of Object.keys(p.wins)){
+  const w=p.wins[k];if(!w||typeof w!=='object'||typeof k!=='string'||k.length>40)continue;
+  wins[k]={x:num(w.x,40,-2000,6000),y:num(w.y,28,0,6000),w:num(w.w,600,260,6000),h:num(w.h,380,120,6000)};
+ }
+ const fl=Array.isArray(p.fl)?p.fl.filter((x,i)=>typeof x==='string'&&x.length<=40&&p.fl.indexOf(x)===i).slice(0,32):[];
+ const tree=(typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)});   /* seeded from the COERCED numbers */
  return {preset:'gv2',skin:'gv2',panes:{l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),
-  lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1)}};
+  lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1),tree,wins,fl}};
 }
 function skinKbdNote(key,oct){
  /* pure — the GV-2 keyboard window's map (DV-13): the two typing rows a w s e d f t g y h u j k o l p ;
@@ -16214,10 +16231,10 @@ function skinKeyAction(e){
  e.preventDefault();
  if(act==='kbd'){skinKbdToggle();return true;}
  const P=skinState.panes;
- if(act==='browser')P.lc=P.lc?0:1;
- else if(act==='right')P.rc=P.rc?0:1;
- else if(act==='lane')P.bc=P.bc?0:1;
- else if(act==='info')P.info=P.info?0:1;
+ if(act==='browser')return skinCollapseKind('browser');   /* R3: wherever the tree put the pane */
+ if(act==='right')return skinCollapseKind('shelf');
+ if(act==='lane')return skinCollapseKind('lane');
+ if(act==='info')P.info=P.info?0:1;
  skinPersist();skinApply(skinState);
  return true;
 }
@@ -16354,82 +16371,8 @@ function skinApply(sk){
   if(_kbdWas){skinKbd.oct=_kbdOct;skinKbd.vel=_kbdVel;skinKbdToggle();}
   return;
  }
- /* the main row: browser | centre | right */
- const main=document.createElement('div');
- main.className='skMain';
- main.style.cssText='display:flex;flex:'+(P.bc?100:(100-P.b))+' 1 0%;min-height:0;position:relative;';
- layer.appendChild(main);
- const brw=document.createElement('div');
- brw.id='skBrowser';brw.className='skPane';
- brw.style.cssText='display:flex;flex-direction:column;flex:0 0 '+(P.lc?0:P.l)+'%;border-right:1px solid var(--line);background:var(--panel);';
- main.appendChild(brw);
- if(!P.lc){
-  skinBrowserBuild(brw);
-  let live=null;
-  main.appendChild(skinSplitter(true,ev=>{const r=main.getBoundingClientRect();live=Math.max(0,Math.min(40,100*(ev.clientX-r.left)/r.width));brw.style.flexBasis=live+'%';},
-   ()=>{if(live===null)return;if(live<8){P.lc=1;}else{P.l=live;}skinPersist();skinApply(skinState);}));
- }else main.appendChild(skinEdge('l','The browser is tucked away — click, or ⌘⌥B, to bring it back',()=>{P.lc=0;skinPersist();skinApply(skinState);}));
- const centre=document.createElement('div');
- centre.id='skCentre';centre.className='skPane';
- centre.style.cssText='flex:1 1 0%;overflow:auto;position:relative;';
- main.appendChild(centre);
- for(const m of swRowMembers('grids')){cell(m,true);centre.appendChild(m);}
- if(!P.rc){
-  let live=null;
-  main.appendChild(skinSplitter(true,ev=>{const r=main.getBoundingClientRect();live=Math.max(0,Math.min(45,100*(r.right-ev.clientX)/r.width));right.style.flexBasis=live+'%';},
-   ()=>{if(live===null)return;if(live<8){P.rc=1;}else{P.r=live;}skinPersist();skinApply(skinState);}));
- }
- const right=document.createElement('div');
- right.id='skRight';right.className='skPane';
- right.style.cssText='display:flex;flex-direction:column;flex:0 0 '+(P.rc?0:P.r)+'%;border-left:1px solid var(--line);overflow:auto;';
- main.appendChild(right);
- if(!P.rc){
-  const d=swShelfBlock();remember(d);right.appendChild(d);
-  d.style.display='';d.style.height='100%';
-  try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
-  try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
-  try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
- }else main.appendChild(skinEdge('r','The Essence Shelf is tucked away — click, or ⌘⌥H, to bring it back',()=>{P.rc=0;skinPersist();skinApply(skinState);}));
- /* the lane below (GV-8): the open windows in one row, scrolling left and right */
- if(!P.bc){
-  let live=null;
-  layer.appendChild(skinSplitter(false,ev=>{const r=layer.getBoundingClientRect();live=Math.max(0,Math.min(60,100*(r.bottom-ev.clientY)/r.height));lane.style.flex=live+' 1 0%';main.style.flex=(100-live)+' 1 0%';},
-   ()=>{if(live===null)return;if(live<8){P.bc=1;}else{P.b=live;}skinPersist();skinApply(skinState);}));
- }
- const lane=document.createElement('div');
- lane.id='skLane';lane.className='skPane swRow';lane.dataset.cat='engines';
- lane.style.cssText='flex:'+(P.bc?0:P.b)+' 1 0%;border-top:1px solid var(--line);overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x mandatory;position:relative;background:var(--bg);';
- layer.appendChild(lane);
- if(!P.bc){
-  const members=swRowMembers('engines');
-  for(const m of members){cell(m,false);lane.appendChild(m);}
-  if(!members.length){
-   const hint=document.createElement('div');
-   hint.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);';
-   hint.textContent='No window open — pick one in the browser on the left.';
-   lane.appendChild(hint);
-  }
- }else layer.appendChild(skinEdge('b','The lane is tucked away — click, or ⌘⌥L, to bring it back',()=>{P.bc=0;skinPersist();skinApply(skinState);}));
- /* GV-6: the little triangle in the lower-left corner shows and hides the info view */
- const tri=document.createElement('div');
- tri.id='skInfoTri';
- tri.title=P.info?'Hide the info view (⌃⌥I)':'Show the info view (⌃⌥I) — it describes whatever the pointer rests on';
- tri.textContent=P.info?'▾':'▸';
- tri.onclick=()=>{P.info=P.info?0:1;skinPersist();skinApply(skinState);};
- layer.appendChild(tri);
- /* the grid fills its pane (the 85th's fit-to-width law, grow-only, a hand zoom standing) */
- try{
-  const gsvg=document.querySelector('#gridWrap [id="grid"]');
-  const gcell=document.getElementById('gridRowWrap');
-  if(gsvg&&gcell&&gcell.closest('#skinLayer')&&typeof LOOP==='number'&&LOOP>0){
-   const cr=centre.getBoundingClientRect(),sr=gsvg.getBoundingClientRect();
-   const declW=+gsvg.getAttribute('width')||sr.width;
-   const z=(sr.width>0&&declW>0)?sr.width/declW:1;
-   const avail=Math.floor((cr.right-sr.left)/z)-GUT-24;
-   const fit=Math.floor(avail/LOOP);
-   if(!window._swUserZoom&&isFinite(fit)&&fit>PPB){PPB=Math.min(96,fit);refresh(true);drawTrackSel();}
-  }
- }catch(e){}
+ /* R3 (GV-4): the five regions are the leaves of the split tree now — one renderer, every border a splitter with his menu */
+ skinLayoutGv2(sk,layer,remember,cell);
  if(_kbdWas){skinKbd.oct=_kbdOct;skinKbd.vel=_kbdVel;skinKbdToggle();}
 }
 window.addEventListener('resize',(function(){let _t=null;return function(){clearTimeout(_t);_t=setTimeout(function(){try{if(skinState)skinApply(skinState);}catch(e){}},200);};})());
@@ -16707,6 +16650,296 @@ function skinKbdDrawFl(k){
   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   e.preventDefault();
  };
+}
+/* ==== R3 (build 2026-09-06v, the 97th, Fable) — GV-4 · GV-5 · GV-3: THE SPLIT TREE AND THE
+   BORDER MENU. GV-2's five regions become LEAVES of a split TREE (his GV-4: "create another split
+   window on any edge of any of the windows… so they can be infinitely split up"): an internal
+   node is a left/right or top/bottom split with its share and two tuck-away flags; a leaf is the
+   browser, the grid, the Shelf, the lane (the row of every open window not placed elsewhere), a
+   window of its own, or an empty pane waiting for one. Every border is a splitter (GV-3: dragged
+   to its edge it tucks the pane away and the strip brings it back) and ctrl+click on any border
+   opens HIS menu (GV-5): split the pane again either way · tuck it away · remove the split ·
+   "make into a floating window" · "paste all floating windows here" — the pane the menu means
+   is the one BELOW a horizontal border and to the RIGHT of a vertical one (his disambiguation
+   law, in his words). A floating window rides the R2 float frame with a ⤓ chip that docks it
+   back into the lane. ⛔ No product names. ==== */
+function skinTreeNorm(n,depth){
+ /* pure — the tree guard: an internal node {t:'h'|'v',pct 3–97,a,b,ca,cb} or a leaf {k} of the six
+    kinds (a 'win' leaf carries its window id); junk or too deep (8) answers null */
+ depth=depth||0;
+ if(!n||typeof n!=='object'||Array.isArray(n)||depth>8)return null;
+ if(typeof n.k==='string'){
+  if(['browser','grid','shelf','lane','empty'].indexOf(n.k)>=0)return {k:n.k};
+  if(n.k==='win'&&typeof n.id==='string'&&n.id.length&&n.id.length<=40)return {k:'win',id:n.id};
+  return null;
+ }
+ if(n.t!=='h'&&n.t!=='v')return null;
+ const a=skinTreeNorm(n.a,depth+1),b=skinTreeNorm(n.b,depth+1);
+ if(!a||!b)return null;
+ const pct=(typeof n.pct==='number'&&isFinite(n.pct))?Math.max(3,Math.min(97,n.pct)):50;
+ return {t:n.t,pct,a,b,ca:(n.ca===1||n.ca===true)?1:0,cb:(n.cb===1||n.cb===true)?1:0};
+}
+function skinTreeDefault(p){
+ /* pure — R1's five regions as a tree: [browser | [grid | shelf]] over the lane; the R1 numbers
+    (l · r · b and the three flags) carry over */
+ p=p||{};
+ const num=(v,d)=>(typeof v==='number'&&isFinite(v))?v:d;
+ const l=Math.max(8,Math.min(40,num(p.l,18))),r=Math.max(8,Math.min(45,num(p.r,22))),b=Math.max(8,Math.min(60,num(p.b,24)));
+ const inner=100-l;
+ const rr=Math.max(3,Math.min(97,100*r/inner));
+ return {t:'v',pct:Math.max(3,Math.min(97,100-b)),ca:0,cb:p.bc===1?1:0,
+  a:{t:'h',pct:l,ca:p.lc===1?1:0,cb:0,a:{k:'browser'},b:{t:'h',pct:Math.max(3,Math.min(97,100-rr)),ca:0,cb:p.rc===1?1:0,a:{k:'grid'},b:{k:'shelf'}}},
+  b:{k:'lane'}};
+}
+function skinTreeAt(root,path){
+ let n=root;for(const s of path){if(!n||!n[s])return null;n=n[s];}return n;
+}
+function skinTreeFindKind(node,kind,id,path){
+ /* the path to the first leaf of a kind (and id for a window), or null */
+ path=path||[];
+ if(!node)return null;
+ if(node.k){return (node.k===kind&&(kind!=='win'||node.id===id))?path:null;}
+ return skinTreeFindKind(node.a,kind,id,path.concat('a'))||skinTreeFindKind(node.b,kind,id,path.concat('b'));
+}
+function skinTreeWinIds(node,out){
+ out=out||[];if(!node)return out;
+ if(node.k==='win')out.push(node.id);else if(!node.k){skinTreeWinIds(node.a,out);skinTreeWinIds(node.b,out);}
+ return out;
+}
+function skinTreeLegacySync(P){
+ /* the R1 numbers follow the canonical tree so the R1 keys and suites keep reading them */
+ try{
+  const t=P.tree;
+  if(t&&t.t==='v'&&t.b&&t.b.k==='lane'&&t.a&&t.a.t==='h'&&t.a.a&&t.a.a.k==='browser'&&t.a.b&&t.a.b.t==='h'&&t.a.b.a&&t.a.b.a.k==='grid'&&t.a.b.b&&t.a.b.b.k==='shelf'){
+   P.l=t.a.pct;P.lc=t.a.ca;P.b=100-t.pct;P.bc=t.cb;P.rc=t.a.b.cb;P.r=Math.round((100-t.a.b.pct)*(100-t.a.pct))/100;
+  }
+ }catch(e){}
+}
+function skinCollapseKind(kind){
+ /* ⌘⌥B · ⌘⌥H · ⌘⌥L: tuck away (or bring back) the pane holding a kind, wherever the tree put it */
+ const P=skinState.panes;
+ const path=skinTreeFindKind(P.tree,kind);
+ if(!path||!path.length)return false;
+ const parent=skinTreeAt(P.tree,path.slice(0,-1)),side=path[path.length-1];
+ if(side==='a')parent.ca=parent.ca?0:1;else parent.cb=parent.cb?0:1;
+ skinTreeLegacySync(P);skinPersist();skinApply(skinState);
+ return true;
+}
+function skinBorderMenu(e,node,path){
+ /* GV-5 — his menu on a border; the pane it means: BELOW a horizontal border, to the RIGHT of a vertical one */
+ e.preventDefault();e.stopPropagation();
+ const P=skinState.panes;
+ const target=node.b,tpath=path.concat('b');
+ const kindName=n=>n.k==='browser'?'the browser':n.k==='grid'?'the grid':n.k==='shelf'?'the Essence Shelf':n.k==='lane'?'the lane':n.k==='empty'?'the empty pane':n.k==='win'?(function(){const d=WINDOW_DEFS.find(x=>x.id===n.id);return d?d.name:n.id;})():'the split';
+ const tname=kindName(target);
+ const again=()=>{skinTreeLegacySync(P);skinPersist();skinApply(skinState);};
+ const floats=Array.isArray(P.fl)?P.fl:[];
+ const canFloat=target.k==='win'||target.k==='shelf';
+ wanFloatMenu(e,[
+  {hd:(node.t==='h'?'This border — the pane to its right: ':'This border — the pane below it: ')+tname},
+  {label:'⊞ Split it left / right',fn:()=>{node.b={t:'h',pct:50,ca:0,cb:0,a:target,b:{k:'empty'}};again();}},
+  {label:'⊟ Split it top / bottom',fn:()=>{node.b={t:'v',pct:50,ca:0,cb:0,a:target,b:{k:'empty'}};again();}},
+  {label:node.cb?'Bring the pane back':'Tuck the pane away (drag the border to the edge does the same)',fn:()=>{node.cb=node.cb?0:1;again();}},
+  {label:'Remove this split — the pane on the other side takes the room',fn:()=>{
+    if(!path.length){P.tree=node.a;}else{const par=skinTreeAt(P.tree,path.slice(0,-1));par[path[path.length-1]]=node.a;}
+    again();}},
+  {hd:'Floating windows'},
+  {label:'Make into a floating window',dis:!canFloat,fn:()=>{
+    const id=target.k==='win'?target.id:'shelf';
+    if(floats.indexOf(id)<0)floats.push(id);P.fl=floats;
+    node.b={k:'empty'};again();}},
+  {label:'Paste all floating windows here'+(floats.length?' ('+floats.length+')':' — none are floating'),dis:!floats.length,fn:()=>{
+    /* the pane becomes THE lane — the row of every open window — and the old lane pane empties */
+    const oldLane=skinTreeFindKind(P.tree,'lane');
+    if(oldLane&&oldLane.length){const par=skinTreeAt(P.tree,oldLane.slice(0,-1));par[oldLane[oldLane.length-1]]={k:'empty'};}
+    else if(oldLane&&!oldLane.length)P.tree={k:'empty'};
+    P.fl=floats.filter(x=>x==='shelf');   /* the Shelf is a pane of its own, not a lane member — it keeps floating until docked from its frame */
+    node.b={k:'lane'};again();}}
+ ]);
+}
+function skinLeafMount(leaf,path,host,ctx){
+ /* a leaf's element inside its pane; ctx carries the layer, remember and cell */
+ const {remember,cell,P}=ctx;
+ let el;
+ if(leaf.k==='browser'){
+  el=document.createElement('div');el.id='skBrowser';el.className='skPane skLeaf';
+  el.style.cssText='display:flex;flex-direction:column;border-right:1px solid var(--line);background:var(--panel);';
+  skinBrowserBuild(el);
+ }else if(leaf.k==='grid'){
+  el=document.createElement('div');el.id='skCentre';el.className='skPane skLeaf';
+  el.style.cssText='overflow:auto;position:relative;';
+  for(const m of swRowMembers('grids')){cell(m,true);el.appendChild(m);}
+ }else if(leaf.k==='shelf'){
+  el=document.createElement('div');el.id='skRight';el.className='skPane skLeaf';
+  el.style.cssText='display:flex;flex-direction:column;border-left:1px solid var(--line);overflow:auto;';
+  if((P.fl||[]).indexOf('shelf')<0){
+   const d=swShelfBlock();remember(d);el.appendChild(d);
+   d.style.display='';d.style.height='100%';
+   try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
+   try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
+   try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+  }else{
+   el.innerHTML='<div style="padding:12px;font-size:11px;color:var(--dim);">The Essence Shelf is floating — its ⤓ docks it back here.</div>';
+  }
+ }else if(leaf.k==='lane'){
+  el=document.createElement('div');el.id='skLane';el.className='skPane skLeaf swRow';el.dataset.cat='engines';
+  el.style.cssText='border-top:1px solid var(--line);overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x mandatory;position:relative;background:var(--bg);';
+  const placed=skinTreeWinIds(P.tree),fl=P.fl||[];
+  const members=swRowMembers('engines').filter(m=>placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0);
+  for(const m of members){cell(m,false);el.appendChild(m);}
+  if(!members.length){
+   const hint=document.createElement('div');
+   hint.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);';
+   hint.textContent='No window open — pick one in the browser on the left.';
+   el.appendChild(hint);
+  }
+ }else if(leaf.k==='win'){
+  el=document.createElement('div');el.id='skWin_'+leaf.id;el.className='skPane skLeaf';
+  el.style.cssText='overflow:auto;position:relative;background:var(--bg);';
+  const m=document.getElementById(leaf.id);
+  const open=m&&swRowMembers('engines').indexOf(m)>=0;
+  if(open){cell(m,false);m.style.width='100%';m.style.height='';m.style.scrollSnapAlign='';el.appendChild(m);}
+  else skinEmptyFill(el,leaf,path,ctx,'That window is closed — pick one for this pane:');
+ }else{
+  el=document.createElement('div');el.id='skEmpty_'+path.join('');el.className='skPane skLeaf skEmpty';
+  skinEmptyFill(el,leaf,path,ctx,'An empty pane — pick a window for it, or ctrl+click a border to paste the floating windows here:');
+ }
+ host.appendChild(el);
+ return el;
+}
+function skinEmptyFill(el,leaf,path,ctx,text){
+ const P=ctx.P;
+ el.innerHTML='<div class="skEmptyIn"><div style="font-size:11px;color:var(--dim);margin-bottom:6px;">'+text+'</div><div class="skEmptyList"></div></div>';
+ const list=el.querySelector('.skEmptyList');
+ for(const d of WINDOW_DEFS){
+  if(d.id==='tripsPanel')continue;
+  const c=document.createElement('span');c.className='cpchip';c.textContent=(d.icon||'')+' '+d.name;c.title=d.tip||d.name;
+  c.onclick=()=>{
+   const node=skinTreeAt(P.tree,path);
+   if(node){node.k='win';node.id=d.id;}
+   if(!uiWinShown(d.id))uiDispatch({type:'toggle',id:d.id});
+   skinPersist();skinApply(skinState);
+  };
+  list.appendChild(c);
+ }
+}
+function skinTreeRender(node,path,host,ctx){
+ /* an internal node: a flex box with its two sides and the border between them */
+ if(node.k)return skinLeafMount(node,path,host,ctx);
+ const box=document.createElement('div');
+ box.className='skNode '+(node.t==='h'?'skH':'skV')+(path.length===1&&path[0]==='a'&&node.t==='h'?' skMain':'');
+ box.dataset.path=path.join('')||'root';
+ host.appendChild(box);
+ const P=ctx.P;
+ const again=()=>{skinTreeLegacySync(P);skinPersist();skinApply(skinState);};
+ const sideEl=(child,cpath,pct,collapsed)=>{
+  const el=skinTreeRender(child,cpath,box,ctx);
+  el.style.flex=collapsed?'0 0 0px':pct+' 1 0%';
+  if(collapsed){el.style.display='none';el.dataset.skTucked='1';}
+  return el;
+ };
+ const elA=sideEl(node.a,path.concat('a'),node.pct,!!node.ca);
+ if(node.ca){
+  box.appendChild(skinEdge(node.t==='h'?'l':'t','This pane is tucked away — click to bring it back',()=>{node.ca=0;again();}));
+ }
+ if(!node.ca&&!node.cb){
+  let live=null;
+  const sp=skinSplitter(node.t==='h',ev=>{
+   const r=box.getBoundingClientRect();
+   live=node.t==='h'?100*(ev.clientX-r.left)/r.width:100*(ev.clientY-r.top)/r.height;
+   live=Math.max(0,Math.min(100,live));
+   elA.style.flex=live+' 1 0%';elB.style.flex=(100-live)+' 1 0%';
+  },()=>{
+   if(live===null)return;
+   if(live<6)node.ca=1;else if(live>94)node.cb=1;else node.pct=live;
+   again();
+  });
+  sp.addEventListener('contextmenu',ev=>skinBorderMenu(ev,node,path));
+  sp.title+=' · ctrl+click: split · tuck away · float · paste the floating windows';
+  box.appendChild(sp);
+ }
+ const elB=sideEl(node.b,path.concat('b'),100-node.pct,!!node.cb);
+ if(node.cb){
+  box.appendChild(skinEdge(node.t==='h'?'r':'b','This pane is tucked away — click to bring it back',()=>{node.cb=0;again();}));
+ }
+ return box;
+}
+function skinTreeEnsureLane(P){
+ /* there is always somewhere for an open window to be: when no pane is the lane, the first empty
+    pane becomes it; with none, the windows not placed elsewhere float rather than vanish */
+ try{
+  if(skinTreeFindKind(P.tree,'lane'))return;
+  const empty=skinTreeFindKind(P.tree,'empty');
+  if(empty){const n=skinTreeAt(P.tree,empty);n.k='lane';delete n.id;return;}
+  const placed=skinTreeWinIds(P.tree),fl=P.fl||[];
+  for(const m of swRowMembers('engines')){if(placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0){const d=WINDOW_DEFS.find(x=>x.id===m.id);if(d)fl.push(m.id);}}
+  P.fl=fl;
+ }catch(e){}
+}
+function skinLayoutGv2(sk,layer,remember,cell){
+ const P=sk.panes;
+ skinTreeEnsureLane(P);
+ const ctx={layer,remember,cell,P};
+ /* the root renders its two sides straight into the layer (the top-level border is the layer's own child) */
+ const root=P.tree;
+ layer.style.flexDirection=(root.t==='h')?'row':'column';
+ if(root.k){skinLeafMount(root,[],layer,ctx).style.flex='1 1 0%';}
+ else{
+  const again=()=>{skinTreeLegacySync(P);skinPersist();skinApply(skinState);};
+  const elA=skinTreeRender(root.a,['a'],layer,ctx);
+  elA.style.flex=root.ca?'0 0 0px':root.pct+' 1 0%';if(root.ca){elA.style.display='none';}
+  if(root.ca)layer.appendChild(skinEdge(root.t==='h'?'l':'t','This pane is tucked away — click to bring it back',()=>{root.ca=0;again();}));
+  let elB=null;
+  if(!root.ca&&!root.cb){
+   let live=null;
+   const sp=skinSplitter(root.t==='h',ev=>{const r=layer.getBoundingClientRect();live=root.t==='h'?100*(ev.clientX-r.left)/r.width:100*(ev.clientY-r.top)/r.height;live=Math.max(0,Math.min(100,live));elA.style.flex=live+' 1 0%';if(elB)elB.style.flex=(100-live)+' 1 0%';},
+    ()=>{if(live===null)return;if(live<6)root.ca=1;else if(live>94)root.cb=1;else root.pct=live;again();});
+   sp.addEventListener('contextmenu',ev=>skinBorderMenu(ev,root,[]));
+   sp.title+=' · ctrl+click: split · tuck away · float · paste the floating windows';
+   layer.appendChild(sp);
+  }
+  elB=skinTreeRender(root.b,['b'],layer,ctx);
+  elB.style.flex=root.cb?'0 0 0px':(100-root.pct)+' 1 0%';if(root.cb){elB.style.display='none';}
+  if(root.cb)layer.appendChild(skinEdge(root.t==='h'?'r':'b','The lane is tucked away — click, or ⌘⌥L, to bring it back',()=>{root.cb=0;again();}));
+ }
+ /* the floating windows (GV-5's "make into a floating window") ride the R2 float frame, with a ⤓ to dock */
+ for(const id of (P.fl||[])){
+  let el=null,name='';
+  if(id==='shelf'){el=swShelfBlock();remember(el);name='🔷 Essence Shelf';
+   try{const mv=el.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
+   try{const b=el.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
+  }else{
+   const m=document.getElementById(id);
+   if(!m||swRowMembers('engines').indexOf(m)<0)continue;   /* a closed window floats nowhere */
+   el=m;const d=WINDOW_DEFS.find(x=>x.id===id);name=d?(d.icon||'')+' '+(d.title||d.name):id;
+  }
+  const fr=skinFloatMount(layer,id,name,el,P,id==='shelf'?null:remember,id==='shelf'?null:cell,id==='shelf'?null:(()=>uiDispatch({type:'toggle',id})));
+  if(id==='shelf'){el.style.display='';el.style.height='';try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:el}});}catch(e){}}
+  const dock=document.createElement('span');dock.className='wbtn skFlDock';dock.textContent='⤓';dock.title='Dock it back — into the lane (the Shelf into its pane)';
+  dock.onclick=ev=>{ev.stopPropagation();P.fl=(P.fl||[]).filter(x=>x!==id);skinPersist();skinApply(skinState);};
+  const bar=fr.querySelector('.skFlBar');bar.insertBefore(dock,bar.querySelector('.skFlX'));
+ }
+ /* GV-6: the little triangle in the lower-left corner shows and hides the info view */
+ const tri=document.createElement('div');
+ tri.id='skInfoTri';
+ tri.title=P.info?'Hide the info view (⌃⌥I)':'Show the info view (⌃⌥I) — it describes whatever the pointer rests on';
+ tri.textContent=P.info?'▾':'▸';
+ tri.onclick=()=>{P.info=P.info?0:1;skinPersist();skinApply(skinState);};
+ layer.appendChild(tri);
+ /* the grid fills its pane (the 85th's fit-to-width law, grow-only, a hand zoom standing) */
+ try{
+  const gsvg=document.querySelector('#gridWrap [id="grid"]');
+  const gcell=document.getElementById('gridRowWrap');
+  const centre=document.getElementById('skCentre');
+  if(centre&&gsvg&&gcell&&gcell.closest('#skinLayer')&&typeof LOOP==='number'&&LOOP>0){
+   const cr=centre.getBoundingClientRect(),sr=gsvg.getBoundingClientRect();
+   const declW=+gsvg.getAttribute('width')||sr.width;
+   const z=(sr.width>0&&declW>0)?sr.width/declW:1;
+   const avail=Math.floor((cr.right-sr.left)/z)-GUT-24;
+   const fit=Math.floor(avail/LOOP);
+   if(!window._swUserZoom&&isFinite(fit)&&fit>PPB){PPB=Math.min(96,fit);refresh(true);drawTrackSel();}
+  }
+ }catch(e){}
 }
 function swLayoutApply(layout){
  /* R1 (the 97th): a VIEW rides the same slot — route it to the view engine; a row layout tears any view down */
