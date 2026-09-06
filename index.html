@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05r</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4864,7 +4864,41 @@ function notBarsThatFit(measures,from,want,W,minW){
  while(n>1){const items=ms.slice(f,f+n).reduce((a,m)=>a+((m&&m.items)?m.items.length:0),0);if(items*mw<=room)break;n--;}
  return n;
 }
-function notReadRes(){return (typeof wqState==='object'&&wqState&&isFinite(+wqState.res))?+wqState.res:24;}
+/* ==== R22 (build 2026-09-06a, the 96th, Fable) — HIS [49]: SMART AND ADJUSTABLE ====
+   His words (CAGED-INSTRUMENT-RAW-2026-09-04.md [49]): "If the song uses 16th notes in melodies then the default switches to
+   16th notes. If the smallest subdivision is 8th then thats default. It should operate as a quantize that only affects the
+   standard notation. The actual quantize pop-up window should have the same smart feature first analyzing what the smallest
+   subdivision is." The analysis is one pure function shared by both. */
+function notSmallestGrid(rows,opts){
+ /* pure: the song's smallest subdivision — the COARSEST grid (8th · 16th · 32nd) that explains the notes' onsets, each
+    grid tolerating a quarter of itself of looseness (a played 8th-note line still reads as 8ths); never coarser than
+    the 8th (a song of quarters is read at the 8th). {res (ticks), word, coverage, n} — 24/'8th' for no notes. */
+ const need=(opts&&+opts.need>0)?+opts.need:.85;
+ const on=(Array.isArray(rows)?rows:[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0).map(r=>Math.round(r[0]*NOT_TPB));
+ if(!on.length)return {res:24,word:'8th',coverage:1,n:0};
+ const grids=[[24,'8th'],[12,'16th'],[6,'32nd']];
+ let last=null;
+ for(const [g,word] of grids){
+  const tol=Math.max(2,Math.round(g/4));
+  const hit=on.filter(t=>{const off=Math.abs(t-Math.round(t/g)*g);return off<=tol;}).length;
+  const coverage=hit/on.length;last={res:g,word,coverage,n:on.length};
+  if(coverage>=need)return last;
+ }
+ return last;
+}
+function notGridWord(res){return ({48:'quarter',24:'8th',12:'16th',6:'32nd'})[Math.round(+res)]||'8th';}
+function notAutoRes(){
+ /* the auto resolution over every pitched track that carries notes */
+ let rows=[];try{pitchedTrackIds(project.tracks).forEach(t=>{const a=project.tracks[t];if(Array.isArray(a))rows=rows.concat(a);});}catch(e){}
+ const f=notSmallestGrid(rows);
+ if(typeof wqState==='object'&&wqState)wqState.resFound=f;
+ return f.res;
+}
+function notReadRes(){
+ const w=(typeof wqState==='object'&&wqState)?wqState.res:'auto';
+ if(w==='auto'||w==null)return notAutoRes();   /* R22: smart by default */
+ return isFinite(+w)?+w:24;
+}
 function notSpell(rows,opts){
  /* rows [[beat,dur,midi],…] → measures of items. opts.meterAt(beat)→{num,den} · opts.keyAt(beat)→{tonic,pcs} ·
     opts.loop (beats). Items: {t,d (ticks in the measure), kind:'note'|'rest', value, dots, tuplet, tie:null|'start'|
@@ -6239,7 +6273,7 @@ function cageNotationDraw(){
    (a part carrying guitar layouts is written 8vb over TAB) · Part = one track · chord symbols from the chord lane above
    the top staff · dynamics from velocity under each staff · 2 or 4 bars a line · follows the transport. The feature
    pass's E3, round 1 (Score/Part · symbols · dynamics); step input (E4) and the grid's view (E5) follow. */
-var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:24,painter:null};   /* R19 [44]: painter = null (VexFlow when loaded) · 'vex' · 'house' */   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
+var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:'auto',resFound:null,painter:null};   /* R22 [49]: res 'auto' = the song's smallest subdivision (resFound), else 24 · 12 · 6 · 0 by hand */   /* R19 [44]: painter = null (VexFlow when loaded) · 'vex' · 'house' */   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
 function wqParts(){
  /* the parts a score shows: pitched tracks that carry notes, in the app's own order */
  try{return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length);}catch(e){return [];}
@@ -6257,7 +6291,7 @@ function buildWqWindow(){
   +'<span class="cpchip'+(wqState.layout==='part'?' on':'')+'" id="wqLayPart" title="One track on its own staff">Part</span>'
   +'<label id="wqPartLbl" style="font-size:11px;color:var(--text);display:'+((wqState.layout==='part'||wqInput.on)?'inline-flex':'none')+';gap:4px;align-items:center;">Track <select id="wqPart" style="font-size:11px;">'+parts.map(t=>'<option value="'+t+'"'+(t===wqState.part?' selected':'')+'>'+lbl(t)+'</option>').join('')+'</select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;">Bars a line <select id="wqBars" style="font-size:11px;"><option value="2"'+(wqState.bars===2?' selected':'')+'>2</option><option value="4"'+(wqState.bars===4?' selected':'')+'>4</option></select></label>'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Simplify notation (his [47]: extend notes to a cleaner end point and shift them to a cleaner entry point — but only on the standard notation, not in the MIDI, since most MIDI decisions are intentional for the sound). To the 8th (default): an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. To the 16th: finer. Off: every tick as played — the second voice and the tied fragments come back. The MIDI is never touched; the status counts what was simplified.">Simplify notation <select id="wqRes" style="font-size:11px;"><option value="24"'+(wqState.res===24?' selected':'')+'>to the 8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>to the 16th</option><option value="0"'+(!(wqState.res>0)?' selected':'')+'>off</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Simplify notation (his [47]: extend notes to a cleaner end point and shift them to a cleaner entry point — but only on the standard notation, not in the MIDI, since most MIDI decisions are intentional for the sound). Auto (default, his [49]): the song&#8217;s smallest subdivision — a 16th-note melody reads at the 16th, an 8th-note song at the 8th — shown beside the word; the choices after it set it by hand. To the 8th: an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. To the 16th: finer. Off: every tick as played — the second voice and the tied fragments come back. The MIDI is never touched; the status counts what was simplified.">Simplify notation <select id="wqRes" style="font-size:11px;"><option value="auto"'+(wqState.res==='auto'?' selected':'')+'>auto · '+notGridWord((wqState.res==='auto'?notAutoRes():((wqState.resFound&&wqState.resFound.res)||notAutoRes())))+'</option><option value="24"'+(wqState.res===24?' selected':'')+'>to the 8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>to the 16th</option><option value="6"'+(wqState.res===6?' selected':'')+'>to the 32nd</option><option value="0"'+(wqState.res===0?' selected':'')+'>off</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Paint — who draws the glyphs (R19, his word): VexFlow (the open engraving library, MIT; loads from the CDN as Tone.js does) or the house skin. The musical decisions are the app&#8217;s own either way — the values, ties, beams, voices, rests, the key&#8217;s spelling, the read-at rounding. If VexFlow hits a limitation, the house skin is one click away.">Paint <select id="wqPaint" style="font-size:11px;"><option value="vex"'+(notPainter()==='vex'?' selected':'')+'>VexFlow</option><option value="house"'+(notPainter()==='house'?' selected':'')+'>house</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="wqFollow"'+(wqState.follow?' checked':'')+'/> Follow the transport</label>'
   +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
@@ -6265,7 +6299,7 @@ function buildWqWindow(){
   +'<span class="cpchip" id="wqInfo" title="How note entry works here — the method, in one card">ⓘ</span>'
   +'<span id="wqWriteChip" style="font-size:10.5px;color:var(--dim);"></span></div>'
   +'<div id="wqInfoCard" style="display:none;font-size:11px;line-height:1.5;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
-  +'<b>Note entry — the keypad method professional engraving programs use, so the habit carries over.</b> ✎ Write puts the caret at the playhead; click the sheet to move it. <b>The numbers pick the value:</b> 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd — 6 is the quarter, larger is longer. <b>.</b> adds a dot (it stays on until pressed again) · <b>T</b> makes a triplet · <b>A–G</b> writes that pitch in the key at the caret, in the octave nearest the last note · <b>+ / −</b> sharpen or flatten the note just written · <b>↑ ↓</b> move it an octave · <b>⇧ + a letter</b> stacks a chord · <b>, or R</b> writes a rest · <b>SPACE</b> advances the caret by the value without writing · <b>⌫</b> takes the last note back · <b>← →</b> step the caret · <b>Esc</b> leaves. A new note replaces whatever started inside its span; every note is one undo. <b>Simplify notation</b> reads the played notes at a clean grid for the page only — the MIDI is never changed. <b>Ctrl+click a head</b> for its menu: dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo.</div>'
+  +'<b>Note entry — the keypad method professional engraving programs use, so the habit carries over.</b> ✎ Write puts the caret at the playhead; click the sheet to move it. <b>The numbers pick the value:</b> 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd — 6 is the quarter, larger is longer. <b>.</b> adds a dot (it stays on until pressed again) · <b>T</b> makes a triplet · <b>A–G</b> writes that pitch in the key at the caret, in the octave nearest the last note · <b>+ / −</b> sharpen or flatten the note just written · <b>↑ ↓</b> move it an octave · <b>⇧ + a letter</b> stacks a chord · <b>, or R</b> writes a rest · <b>SPACE</b> advances the caret by the value without writing · <b>⌫</b> takes the last note back · <b>← →</b> step the caret · <b>Esc</b> leaves. A new note replaces whatever started inside its span; every note is one undo. <b>Simplify notation</b> reads the played notes at a clean grid for the page only — auto finds the song&#8217;s smallest subdivision (a 16th-note melody reads at the 16th), the other choices set it by hand — the MIDI is never changed. <b>Ctrl+click a head</b> for its menu: dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo.</div>'
   +'<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;"><canvas id="wqCanvas" width="1100" height="180" style="display:block;width:100%;height:auto;"></canvas></div>';
  const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
  on('wqLayScore',()=>{wqState.layout='score';buildWqWindow();});
@@ -6274,7 +6308,7 @@ function buildWqWindow(){
  const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
  const ptl=document.getElementById('wqPaint');if(ptl)ptl.onchange=()=>{wqState.painter=ptl.value==='house'?'house':'vex';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* R19 */
  const inf=document.getElementById('wqInfo');if(inf)inf.onclick=()=>{const cd=document.getElementById('wqInfoCard');if(cd){const on=cd.style.display==='none';cd.style.display=on?'block':'none';inf.classList.toggle('on',on);}};   /* R21 [48]: the ⓘ card */
- const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=+rsl.value||0;wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
+ const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=rsl.value==='auto'?'auto':(+rsl.value||0);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
  const cv=document.getElementById('wqCanvas');if(cv){cv.onclick=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();wqNoteMenu(e);return;}wqInputClick(e);};cv.oncontextmenu=e=>{e.preventDefault();wqNoteMenu(e);};}   /* R20 [45]: ctrl+click a head = the note menu */
@@ -6326,7 +6360,8 @@ function wqDraw(){
  const o={bars:wqState.bars};
  if(wqInput.on){o.at=wqCaretBeat();o.caret={part:wqInputPart(),beat:wqCaretBeat(),label:wqInputValueWord()};if(wqState.last&&wqState.last.parts&&wqState.last.bars===(wqState.bars||4))o.keepFrom=wqState.last.from;}
  const r=wqDrawInto(c,ids.filter(t=>wqPartRows(t).length),o);
- const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' simplified for the score to the '+(wqState.res===12?'16th':'8th')+' — the MIDI untouched (Simplify notation: off shows them as played)':'')):'nothing to notate yet — write some notes on the grid';
+ const rsA=document.getElementById('wqRes');if(rsA&&rsA.options[0]&&rsA.options[0].value==='auto'){const f=wqState.resFound||{res:notAutoRes()};rsA.options[0].textContent='auto · '+notGridWord(f.res);}   /* R22: the auto label follows the song */
+ const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' simplified for the score to the '+notGridWord(notReadRes())+(wqState.res==='auto'?' (the song\'s smallest subdivision)':'')+' — the MIDI untouched (Simplify notation: off shows them as played)':'')):'nothing to notate yet — write some notes on the grid';
  wqState.last=r;return r;
 }
 /* the pop-up from the Guitar window (RAW [24]) — the linked part as a floating sheet, following the transport; Escape closes */
@@ -21589,10 +21624,13 @@ function renderQuantWin(){
  el.innerHTML='<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;">⊞ Quantize</div>';
  const row=document.createElement('div');
  row.style.cssText='display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--text);';
+ /* R22 [49]: the same smart reading first — the grid defaults to the melody's smallest subdivision */
+ const found=notSmallestGrid(project.melody||[]);const gv=found.res===6?'0.125':found.res===12?'0.25':'0.5';
  row.innerHTML=
-  '<label style="display:flex;gap:6px;align-items:center;" title="The grid the note starts pull toward">Grid <select id="qzGrid" style="flex:1;min-width:0;padding:2px 4px;font-size:11px;">'
+  '<div id="qzSmart" style="font-size:10.5px;color:var(--dim);" title="Read from the melody&#8217;s note starts: the coarsest grid that explains them (each grid tolerating a quarter of itself). The Grid below starts there; change it freely.">Smallest subdivision found: <b>1/'+({24:'8',12:'16',6:'32'})[found.res]+'</b> ('+found.n+' notes, '+Math.round(found.coverage*100)+'% on it)</div>'
+  +'<label style="display:flex;gap:6px;align-items:center;" title="The grid the note starts pull toward — it opens at the smallest subdivision found">Grid <select id="qzGrid" style="flex:1;min-width:0;padding:2px 4px;font-size:11px;">'
   +'<option value="4">1 bar</option><option value="2">1/2</option><option value="1">1/4</option>'
-  +'<option value="0.5">1/8</option><option value="0.25" selected>1/16</option><option value="0.125">1/32</option></select></label>'
+  +'<option value="0.5"'+(gv==='0.5'?' selected':'')+'>1/8</option><option value="0.25"'+(gv==='0.25'?' selected':'')+'>1/16</option><option value="0.125"'+(gv==='0.125'?' selected':'')+'>1/32</option></select></label>'
   +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Scale the grid by 2/3 — triplet feel"><input type="checkbox" id="qzTrip" style="accent-color:var(--accent);"> Triplet</label>'
   +'<label style="display:flex;gap:6px;align-items:center;" title="100% lands exactly on the grid; less pulls part-way">Amount <input type="range" id="qzAmt" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);"><span id="qzAmtV" style="min-width:30px;color:var(--dim);">100%</span></label>'
   +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Snap durations to the grid too (starts always quantize)"><input type="checkbox" id="qzDur" style="accent-color:var(--accent);"> Also durations</label>';
