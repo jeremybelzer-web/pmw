@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -9796,7 +9796,9 @@ const KEYSETS={
  fl:{label:'Set B — ⌥Q · ⌃Q · ⇧Q',note:'⌥Q opens Quantize · ⌃Q quick-quantizes to the current grid (⌘Q quits the browser here) · ⇧Q quick-quantizes the starts only',
   open:{key:'q',alt:true},quick:{key:'q',ctrl:true},quickStart:{key:'q',shift:true}},
  pt:{label:'Set C — ⌥0 · F4',note:'⌥0 opens Quantize · F4 toggles the triplet grid (the rest of this set awaits his list)',
-  open:{key:'0',alt:true},triplet:{key:'F4'}}};
+  open:{key:'0',alt:true},triplet:{key:'F4'}},
+ dor:{label:'Set D — ⌥[ ⌥] · the semicolon key',note:'⌥[ narrows the grid · ⌥] widens it · the semicolon key toggles the triplet grid (that program\'s tuplet key) · the note-entry numbers are already its (6 = the quarter) · it has no default quantize key, so open and apply are unbound here (awaits his list)',
+  narrow:{key:'[',alt:true},widen:{key:']',alt:true},triplet:{key:String.fromCharCode(59)}}};
 function keysetMatch(b,e,mac){
  /* pure: does the key event e (key, metaKey, ctrlKey, shiftKey, altKey) fit the binding b? mod = ⌘ on a Mac, Ctrl elsewhere;
     a binding with ctrl:true wants Ctrl on either platform */
@@ -9811,9 +9813,97 @@ function keysetMatch(b,e,mac){
  if(!!e.altKey!==wantAlt)return false;
  return true;
 }
+function keysetResolve(id,personal){
+ /* pure: a set id → its bindings. A preset id is its table row; a personal id ('my:…') is its base preset with its own
+    bindings laid over (a null binding unbinds); anything else is Our Default. */
+ const list=Array.isArray(personal)?personal:[];
+ if(KEYSETS[id])return KEYSETS[id];
+ const p=list.find(x=>x&&x.id===id);
+ if(!p)return KEYSETS.ours;
+ const base=KEYSETS[p.base]||KEYSETS.ours;
+ const out={label:String(p.name||'My set'),note:'a personal set on this device, from '+base.label,base:p.base||'ours',personal:true};
+ for(const act of ['open','apply','quick','quickStart','narrow','widen','triplet']){
+  if(p.bind&&Object.prototype.hasOwnProperty.call(p.bind,act)){if(p.bind[act])out[act]=p.bind[act];}
+  else if(base[act])out[act]=base[act];
+ }
+ return out;
+}
+function keysetBindText(b,mac){
+ /* pure: a binding as the keys a hand would press — ⌘⇧U on a Mac, Ctrl+Shift+U elsewhere; ⌃ where ctrl is asked for; '—' unbound */
+ if(!b||!b.key)return '—';
+ const k=String(b.key);const name=k===' '?'Space':k.length===1?k.toUpperCase():k;
+ if(mac)return (b.ctrl?'⌃':'')+(b.alt?'⌥':'')+(b.shift?'⇧':'')+(b.mod?'⌘':'')+name;
+ return (b.ctrl||b.mod?'Ctrl+':'')+(b.alt?'Alt+':'')+(b.shift?'Shift+':'')+name;
+}
+function validKeysets(list){
+ /* the guard IS the gate: a list of personal sets — string id starting my:, a name, a known base, bindings of {key,mod,ctrl,shift,alt} or null */
+ if(!Array.isArray(list)||list.length>64)return false;
+ const acts=['open','apply','quick','quickStart','narrow','widen','triplet'];
+ return list.every(p=>p&&typeof p==='object'&&typeof p.id==='string'&&/^my:/.test(p.id)&&typeof p.name==='string'&&(p.base==null||!!KEYSETS[p.base])
+  &&(p.bind==null||(typeof p.bind==='object'&&Object.keys(p.bind).every(a=>acts.indexOf(a)>=0&&(p.bind[a]===null||(p.bind[a]&&typeof p.bind[a].key==='string'&&p.bind[a].key.length>0))))));
+}
+const KEYSETS_KEY='cp_keysets';
+function keysetsLoad(){try{const o=JSON.parse(localStorage.getItem(KEYSETS_KEY)||'{}');const l=o&&Array.isArray(o.list)?o.list:[];return validKeysets(l)?l:[];}catch(e){return [];}}
+function keysetsSave(list){try{localStorage.setItem(KEYSETS_KEY,JSON.stringify({list:validKeysets(list)?list:[]}));}catch(e){}}
+function keysetGet(id){return keysetResolve(id,keysetsLoad());}
+function keysetsNewFrom(baseId,name){
+ /* "Add to template": a personal set from the CURRENT set — a preset's bindings copied, or a personal set duplicated */
+ const list=keysetsLoad();const src=keysetResolve(baseId,list);
+ const base=KEYSETS[baseId]?baseId:(src.base||'ours');
+ const bind={};for(const act of ['open','apply','quick','quickStart','narrow','widen','triplet'])bind[act]=src[act]?Object.assign({},src[act]):null;
+ const p={id:'my:'+prismHash(String(name||'')+':'+Date.now()+':'+list.length),name:String(name||('My set '+(list.length+1))).slice(0,40),base,bind};
+ list.push(p);keysetsSave(list);return p;
+}
+function keysetsBind(id,act,binding){
+ const list=keysetsLoad();const p=list.find(x=>x.id===id);if(!p)return false;
+ p.bind=p.bind||{};p.bind[act]=binding?{key:String(binding.key),mod:!!binding.mod,ctrl:!!binding.ctrl,shift:!!binding.shift,alt:!!binding.alt}:null;
+ keysetsSave(list);return true;
+}
+function keysetsRename(id,name){const list=keysetsLoad();const p=list.find(x=>x.id===id);if(!p)return false;p.name=String(name||p.name).slice(0,40);keysetsSave(list);return true;}
+function keysetsDelete(id){const list=keysetsLoad().filter(x=>x.id!==id);keysetsSave(list);if(SETTINGS.keyset===id){SETTINGS.keyset='ours';persistSettings();}return true;}
+function keysetsExportText(id){const p=keysetsLoad().find(x=>x.id===id);return JSON.stringify({app:'crosspollinate',kind:'keysets',v:1,list:p?[p]:[]},null,1);}
+function keysetsImportText(txt){
+ /* a friend's set file folded into this device's list — by id; returns how many were new, -1 for a file that is not a set */
+ let obj=null;try{obj=JSON.parse(txt);}catch(e){return -1;}
+ const list=Array.isArray(obj)?obj:(obj&&Array.isArray(obj.list)?obj.list:null);
+ if(!validKeysets(list))return -1;
+ const mine=keysetsLoad();let added=0;
+ for(const p of list){if(!mine.some(x=>x.id===p.id)){mine.push(p);added++;}}
+ keysetsSave(mine);return added;
+}
+function keysetsExport(id){const blob=new Blob([keysetsExportText(id)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const p=keysetsLoad().find(x=>x.id===id);a.download=((p&&p.name)||'key-commands').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')+'.keys.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
+function keysetsImport(after){const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const n=keysetsImportText(String(rd.result||''));flashHint(n<0?'That file is not a key-command set.':n+' set'+(n===1?'':'s')+' joined this device.');if(after)after(n);};rd.readAsText(f);};inp.click();}
+function keysetSelectRefresh(){
+ const sel=document.getElementById('setKeyset');if(!sel)return;
+ sel.innerHTML=['ours','live','fl','pt','dor'].map(k=>'<option value="'+k+'"'+((SETTINGS.keyset||'ours')===k?' selected':'')+'>'+KEYSETS[k].label+'</option>').join('')+keysetsLoad().map(p=>'<option value="'+p.id+'"'+(SETTINGS.keyset===p.id?' selected':'')+'>★ '+String(p.name).replace(/</g,'&lt;')+'</option>').join('');
+ const n=document.getElementById('setKeysetNote');if(n)n.textContent=keysetGet(SETTINGS.keyset||'ours').note;
+}
+function keysetCardRender(show){
+ /* the personal set's card: every action with its key, a "press a key" capture per row, rename · export · delete */
+ const cd=document.getElementById('setKeysetCard');if(!cd)return;
+ const id=SETTINGS.keyset||'ours';const p=keysetsLoad().find(x=>x.id===id);
+ if(!p){cd.style.display='none';return;}
+ const mac=/Mac|iPhone|iPad/.test(navigator.platform||'');const set=keysetGet(id);const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+ const acts=[['open','Open the Quantize window'],['apply','Apply its settings to the selection'],['quick','Quick-quantize to the current grid'],['quickStart','Quick-quantize the starts only'],['narrow','Narrow the grid'],['widen','Widen the grid'],['triplet','Triplet grid on / off']];
+ cd.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><b>★</b> <input id="ksName" value="'+esc(p.name)+'" style="font-size:12px;width:200px;"> <span style="font-size:10.5px;color:var(--dim);">from '+esc((KEYSETS[p.base]||KEYSETS.ours).label)+'</span></div>'
+  +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:5px 10px;align-items:center;">'+acts.map(a=>'<span>'+a[1]+'</span><b id="ksKey_'+a[0]+'">'+esc(keysetBindText(set[a[0]],mac))+'</b><span class="cpchip ksCap" data-act="'+a[0]+'" tabindex="0" title="Click, then press the keys you want (Backspace unbinds · Esc keeps it)">press a key…</span>').join('')+'</div>'
+  +'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><span class="cpchip" id="ksExport" title="Save this set as a file to share">⬇ Export</span><span class="cpchip" id="ksDelete">✕ Delete this set</span><span class="cpchip" id="ksClose">Close</span></div>';
+ cd.style.display=show===false?'none':'block';
+ const nm=cd.querySelector('#ksName');if(nm)nm.onchange=()=>{keysetsRename(id,nm.value);keysetSelectRefresh();};
+ cd.querySelectorAll('.ksCap').forEach(ch=>{ch.onclick=()=>{ch.focus();ch.textContent='press…';};ch.onblur=()=>{ch.textContent='press a key…';};
+  ch.onkeydown=ev=>{ev.preventDefault();ev.stopPropagation();const act=ch.getAttribute('data-act');
+   if(ev.key==='Escape'){ch.blur();return;}
+   if(ev.key==='Backspace'||ev.key==='Delete'){keysetsBind(id,act,null);}
+   else if(['Shift','Meta','Control','Alt'].indexOf(ev.key)>=0)return;
+   else keysetsBind(id,act,{key:ev.key,mod:mac?ev.metaKey:ev.ctrlKey,ctrl:mac?ev.ctrlKey:false,shift:ev.shiftKey,alt:ev.altKey});
+   const b=cd.querySelector('#ksKey_'+act);if(b)b.textContent=keysetBindText(keysetGet(id)[act],mac);ch.blur();flashHint(act+': '+keysetBindText(keysetGet(id)[act],mac));};});
+ const ex=cd.querySelector('#ksExport');if(ex)ex.onclick=()=>keysetsExport(id);
+ const dl=cd.querySelector('#ksDelete');if(dl)dl.onclick=()=>{keysetsDelete(id);keysetSelectRefresh();cd.style.display='none';flashHint('The set is gone — Our Default is back.');};
+ const cl=cd.querySelector('#ksClose');if(cl)cl.onclick=()=>{cd.style.display='none';};
+}
 function keysetAction(setId,e,mac){
- /* pure: the action name the event fires in the set, or null */
- const set=KEYSETS[setId]||KEYSETS.ours;
+ /* pure over a set object; a set id resolves through the presets and the device's personal sets */
+ const set=(setId&&typeof setId==='object')?setId:keysetGet(setId);
  for(const act of ['open','apply','quick','quickStart','narrow','widen','triplet']){if(set[act]&&keysetMatch(set[act],e,mac))return act;}
  return null;
 }
@@ -34679,7 +34769,7 @@ function parseSettings(str){
    if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
    if(o.rmPrompts===false)def.rmPrompts=false;   /* F3: an explicit false skips the guided question */
    if(o.hallElevator===false)def.hallElevator=false;   /* R9: skip the hallway's elevator entry */
-   if(o.keyset==='live'||o.keyset==='fl'||o.keyset==='pt')def.keyset=o.keyset;   /* R24: the chosen key-command set */
+   if(o.keyset==='live'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -38132,7 +38222,8 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setAuto" ${SETTINGS.autosave?'checked':''}> Autosave the session in this browser (restores after a crash or an accidental close; with this off, closing with unsaved work asks first)</label></p>
  <p><label><input type="checkbox" id="setRmPrompts" ${SETTINGS.rmPrompts?'checked':''}> Prompts by Pro Music Workbench for Rhythmic Motif — the Embellisher opens with its guided question. Off: straight to the options pop-up.</label></p>
  <p><label><input type="checkbox" id="setHallElev" ${SETTINGS.hallElevator!==false?'checked':''}> The Wanderer's bamboo elevator — the thatched shelter that sinks you into the Hallway view when it opens. Off: skip straight to the corridor (the 🎋 chip in the hallway's header flips this too).</label></p>
- <p><label>Key commands <select id="setKeyset">${['ours','live','fl','pt'].map(k=>`<option value="${k}" ${(SETTINGS.keyset||'ours')===k?'selected':''}>${KEYSETS[k].label}</option>`).join('')}</select></label> <span id="setKeysetNote" style="font-size:11px;color:var(--dim);">${KEYSETS[SETTINGS.keyset||'ours'].note}</span></p>
+ <p><label>Key commands <select id="setKeyset">${['ours','live','fl','pt','dor'].map(k=>`<option value="${k}" ${(SETTINGS.keyset||'ours')===k?'selected':''}>${KEYSETS[k].label}</option>`).join('')}${keysetsLoad().map(p=>`<option value="${p.id}" ${SETTINGS.keyset===p.id?'selected':''}>★ ${p.name.replace(/</g,'&lt;')}</option>`).join('')}</select></label> <span class="cpchip" id="setKeysetAdd" title="Add to template — a personal set built from the chosen set's keys, yours to change key by key, keep several, and share as a file">＋ Add to template</span> <span class="cpchip" id="setKeysetEdit" title="Change the keys of the chosen personal set">✎ Edit</span> <span class="cpchip" id="setKeysetImport" title="Bring in a friend's set (a .keys.json file)">⬆ Import</span><br><span id="setKeysetNote" style="font-size:11px;color:var(--dim);">${keysetGet(SETTINGS.keyset||'ours').note}</span></p>
+ <div id="setKeysetCard" style="display:none;font-size:11.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:0 0 8px;max-width:560px;"></div>
  <p><label><input type="checkbox" id="setRecOver" ${SETTINGS.recordOver?'checked':''}> Record over existing MIDI — while recording, incoming notes REPLACE the armed track's notes in the recorded span. Off (the default): new notes simply add to the MIDI that is already there.</label></p>
  <h3>Clips</h3>
  <p><b>Clip boundaries default to:</b><br>
@@ -38199,7 +38290,10 @@ function openSettings(){
  if(g('setRecOver'))g('setRecOver').onchange=e=>{SETTINGS.recordOver=e.target.checked;persistSettings();};
  if(g('setRmPrompts'))g('setRmPrompts').onchange=e=>{SETTINGS.rmPrompts=e.target.checked;persistSettings();};
  if(g('setHallElev'))g('setHallElev').onchange=e=>{SETTINGS.hallElevator=e.target.checked;persistSettings();};
- if(g('setKeyset'))g('setKeyset').onchange=e=>{SETTINGS.keyset=KEYSETS[e.target.value]?e.target.value:'ours';persistSettings();const n=g('setKeysetNote');if(n)n.textContent=KEYSETS[SETTINGS.keyset].note;flashHint('Key commands: '+KEYSETS[SETTINGS.keyset].label);};   /* R24 [52] */
+ if(g('setKeyset'))g('setKeyset').onchange=e=>{const v=e.target.value;SETTINGS.keyset=(KEYSETS[v]||keysetsLoad().some(p=>p.id===v))?v:'ours';persistSettings();const n=g('setKeysetNote');if(n)n.textContent=keysetGet(SETTINGS.keyset).note;flashHint('Key commands: '+keysetGet(SETTINGS.keyset).label);keysetCardRender();};   /* R24 [52] · R25 [53] */
+ if(g('setKeysetAdd'))g('setKeysetAdd').onclick=()=>{const cur=keysetGet(SETTINGS.keyset||'ours');const name=window.prompt('A name for your set (built from '+cur.label+'):','My set '+(keysetsLoad().length+1));if(name==null)return;const p=keysetsNewFrom(SETTINGS.keyset||'ours',name);SETTINGS.keyset=p.id;persistSettings();keysetSelectRefresh();keysetCardRender(true);flashHint('Your set "'+p.name+'" — change any key in the card, then use it anywhere.');};
+ if(g('setKeysetEdit'))g('setKeysetEdit').onclick=()=>{const cd=g('setKeysetCard');if(!cd)return;const on=cd.style.display==='none';if(on)keysetCardRender(true);else cd.style.display='none';};
+ if(g('setKeysetImport'))g('setKeysetImport').onclick=()=>keysetsImport(n=>{if(n>0){const l=keysetsLoad();SETTINGS.keyset=l[l.length-1].id;persistSettings();keysetSelectRefresh();keysetCardRender(true);}});
  if(g('setClipAlign'))g('setClipAlign').onchange=e=>{SETTINGS.clipAlign=e.target.value==='bars'?'bars':'chords';persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
  if(g('setClipDrop'))g('setClipDrop').onchange=e=>{SETTINGS.clipDrop=(e.target.value==='merge'||e.target.value==='replace')?e.target.value:'ask';persistSettings();};
  if(g('setClipNames'))g('setClipNames').onchange=e=>{SETTINGS.clipChordNames=!!e.target.checked;persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
