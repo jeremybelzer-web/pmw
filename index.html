@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06f</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -6098,7 +6098,8 @@ function notDrawStaffVex(ctx,sp,from,to,geom){
   beams.forEach(b=>b.setContext(vctx).draw());tuplets.forEach(t=>t.setContext(vctx).draw());
   /* the x law read back: every note's x, the bar's own px and pad */
   for(const vn of vnotes){let x=0;try{x=vn.getAbsoluteX();}catch(e){x=st.getNoteStartX();}xmap.push({tick:vn._tick,x,vn});
-   if(vn._it.kind==='note'){let ys=[];try{ys=vn.getYs()||[];}catch(e){ys=[];}vn._it.notes.forEach((n,k)=>heads.push({tick:vn._tick,x:x+5,y:(ys[k]!=null?ys[k]:staffBottom),midi:n.midi,tie:vn._it.tie||null,value:vn._it.value,dots:vn._it.dots||0}));}}   /* R20: the heads VexFlow placed */
+   if(vn._it.kind==='note'){let ys=[];try{ys=vn.getYs()||[];}catch(e){ys=[];}vn._it.notes.forEach((n,k)=>heads.push({tick:vn._tick,x:x+5,y:(ys[k]!=null?ys[k]:staffBottom),midi:n.midi,tie:vn._it.tie||null,value:vn._it.value,dots:vn._it.dots||0,kind:'note',d:vn._it.d}));}
+   else heads.push({tick:vn._tick,x:x+5,y:midLine,midi:null,kind:'rest',d:vn._it.d,value:vn._it.value,dots:vn._it.dots||0});}   /* R20: the heads VexFlow placed · R27: the rests too */
   const nsx=st.getNoteStartX(),nex=st.getNoteEndX();
   bars.push({start:m.start,end:m.end,x:st.getX(),pad:nsx-st.getX(),px:(nex-nsx)/(m.end-m.start)});
   /* ties: ours — a start/mid piece ties to the next piece of the same pitch */
@@ -6199,6 +6200,7 @@ function notDrawStaff(ctx,sp,from,to,geom){
     else if(it.value==='h'){ctx.fillRect(x,staffBottom-2*GAP-3+rv,12,3);}
     else notDrawRest(ctx,x,staffBottom-2*GAP+rv,it.value,GAP,INK);   /* E8 (his [36]): the quarter, 8th and 16th rests are DRAWN — the font had no glyph and painted boxes */
     restN++;
+    heads.push({tick:m.start+it.t,x:x+4,y:staffBottom-2*GAP+rv,midi:null,kind:'rest',d:it.d,value:it.value,dots:it.dots||0});   /* R27: a rest is draggable too */
     if(it.dots){ctx.beginPath();ctx.arc(x+15,staffBottom-2*GAP-1+rv,1.3,0,7);ctx.fill();}
     continue;
    }
@@ -6211,7 +6213,7 @@ function notDrawStaff(ctx,sp,from,to,geom){
     for(let ly=staffTop-GAP;ly>=y-.1;ly-=GAP){ctx.strokeStyle='#444';ctx.beginPath();ctx.moveTo(x-6,ly+.5);ctx.lineTo(x+6,ly+.5);ctx.stroke();}}
    it.notes.forEach((n,i)=>{
     const y=ys[i];
-    heads.push({tick:m.start+it.t,x,y,midi:n.midi,tie:it.tie||null,value:it.value,dots:it.dots||0});
+    heads.push({tick:m.start+it.t,x,y,midi:n.midi,tie:it.tie||null,value:it.value,dots:it.dots||0,kind:'note',d:it.d});
     ctx.fillStyle=INK;ctx.strokeStyle=INK;ctx.lineWidth=1.4;
     ctx.beginPath();ctx.ellipse(x,y,4.4,3,-0.35,0,Math.PI*2);
     if(hollow)ctx.stroke();else ctx.fill();
@@ -6307,7 +6309,7 @@ function buildWqWindow(){
  const parts=wqParts();
  if(parts.indexOf(wqState.part)<0&&parts.length)wqState.part=parts[0];
  const lbl=t=>{try{return (typeof trackLabel==='function'?trackLabel(t):t);}catch(e){return t;}};
- B.innerHTML='<div class="winProse" style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">Write the music on the grid — Wig &amp; Quill notates it: the values, ties and rests follow the meter, the accidentals follow the key, the chord symbols come from the chord lane, the dynamics from the notes’ velocity. Score stacks every part · Part shows one track · ctrl+click a note head for its menu (dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo).</div>'
+ B.innerHTML='<div class="winProse" style="font-size:10.5px;color:var(--dim);margin-bottom:6px;">Write the music on the grid — Wig &amp; Quill notates it: the values, ties and rests follow the meter, the accidentals follow the key, the chord symbols come from the chord lane, the dynamics from the notes’ velocity. Score stacks every part · Part shows one track · click a head to select it, ⇧-click adds, drag a box on the paper for several · drag a head to move it (sideways by the grid, up or down by staff steps) or a rest to move what follows · Delete removes the selection · ctrl+click a head for its menu (dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo).</div>'
   +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">'
   +'<span class="cpchip'+(wqState.layout==='score'?' on':'')+'" id="wqLayScore" title="Every note-carrying part, stacked">Score</span>'
   +'<span class="cpchip'+(wqState.layout==='part'?' on':'')+'" id="wqLayPart" title="One track on its own staff">Part</span>'
@@ -6344,7 +6346,44 @@ function buildWqWindow(){
  const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=/\+/.test(rsl.value)?rsl.value:(+rsl.value||0);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
- const cv=document.getElementById('wqCanvas');if(cv){cv.onclick=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();wqNoteMenu(e);return;}wqInputClick(e);};cv.oncontextmenu=e=>{e.preventDefault();wqNoteMenu(e);};}   /* R20 [45]: ctrl+click a head = the note menu */
+ const cv=document.getElementById('wqCanvas');if(cv){
+  cv.tabIndex=0;cv.style.outline='none';
+  cv.onclick=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();wqNoteMenu(e);return;}if(wqState.drag&&wqState.drag.moved){wqState.drag=null;return;}wqState.drag=null;
+   if(wqInput.on){wqInputClick(e);return;}
+   /* R27 [54]: a click selects a head (⇧ adds), empty paper clears */
+   const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;const h=wqHeadAt(x,y);
+   if(h&&h.kind==='note'){const k=wqSelKey(h);if(e.shiftKey){if(wqSel.has(k))wqSel.delete(k);else wqSel.add(k);}else{wqSel.clear();wqSel.add(k);}}
+   else if(!e.shiftKey)wqSel.clear();
+   wqDraw();};
+  cv.oncontextmenu=e=>{e.preventDefault();wqNoteMenu(e);};   /* R20 [45]: ctrl+click a head = the note menu */
+  cv.onmousedown=e=>{if(e.button!==0||e.ctrlKey||e.metaKey)return;try{cv.focus({preventScroll:true});}catch(err){}
+   const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;const h=wqHeadAt(x,y);
+   wqState.drag={x0:x,y0:y,x:x,y:y,head:h||null,moved:false,box:!h};};
+  cv.onmousemove=e=>{const d=wqState.drag;if(!d||!(e.buttons&1))return;const r=cv.getBoundingClientRect();d.x=(e.clientX-r.left)*cv.width/r.width;d.y=(e.clientY-r.top)*cv.height/r.height;
+   if(Math.abs(d.x-d.x0)+Math.abs(d.y-d.y0)>4)d.moved=true;if(!d.moved)return;
+   wqDraw();const ctx=cv.getContext('2d');ctx.save();ctx.strokeStyle=paintOf('--accent','#e8a33d');ctx.setLineDash([4,3]);ctx.lineWidth=1;
+   if(d.box){ctx.strokeRect(Math.min(d.x0,d.x),Math.min(d.y0,d.y),Math.abs(d.x-d.x0),Math.abs(d.y-d.y0));}
+   else{const g=wqGeomAt(d.y0);const dt=wqDragTicks(g,d.x0,d.x);const ds=d.head.kind==='note'?Math.round((d.y0-d.y)/3.5):0;ctx.beginPath();ctx.moveTo(d.x0,d.y0);ctx.lineTo(d.x,d.y);ctx.stroke();
+    const st=document.getElementById('wqStatus');if(st)st.textContent=(d.head.kind==='rest'?'the rest: what follows moves ':'move ')+(dt>=0?'+':'')+(dt/NOT_TPB)+' beat'+(Math.abs(dt)===NOT_TPB?'':'s')+(ds?(ds>0?' · up ':' · down ')+Math.abs(ds)+' step'+(Math.abs(ds)===1?'':'s'):'')+' — release to apply';}
+   ctx.restore();};
+  cv.onmouseup=e=>{const d=wqState.drag;if(!d)return;if(!d.moved){return;}
+   const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;
+   if(d.box){const x1=Math.min(d.x0,x),x2=Math.max(d.x0,x),y1=Math.min(d.y0,y),y2=Math.max(d.y0,y);if(!e.shiftKey)wqSel.clear();
+    for(const h of (wqState.last.heads||[])){if(h.kind==='note'&&h.x>=x1&&h.x<=x2&&h.y>=y1&&h.y<=y2)wqSel.add(wqSelKey(h));}wqDraw();return;}
+   const g=wqGeomAt(d.y0);const dt=wqDragTicks(g,d.x0,x);const ds=d.head.kind==='note'?Math.round((d.y0-y)/3.5):0;
+   if(!dt&&!ds){wqDraw();return;}
+   const t=d.head.t;const rows=project.tracks[t];if(!Array.isArray(rows))return;
+   let km=null;try{const k=melismaKeyAt(d.head.tick/NOT_TPB)||{};km=notKeyMap(k.tonic||0,k.pcs||null);}catch(err){km=notKeyMap(0,null);}
+   const res=notReadRes();let out;
+   if(d.head.kind==='rest')out=wqRestDrag(rows,d.head.tick+d.head.d,dt,res);
+   else{const inSel=wqSel.has(wqSelKey(d.head));const targets=inSel?(wqState.last.heads||[]).filter(h=>h.kind==='note'&&h.t===t&&wqSel.has(wqSelKey(h))).map(h=>({tick:h.tick,midi:h.midi})):[{tick:d.head.tick,midi:d.head.midi}];
+    out=wqDragEdit(rows,targets,dt,ds,km,res);
+    if(out.moved){const next=new Set();targets.forEach(tg=>next.add(t+':'+(tg.tick+dt)+':'+(ds?wqStepMidi(tg.midi,ds,km):tg.midi)));if(inSel)wqSel=next;}}
+   if(!out||!out.moved){wqDraw();return;}
+   snapshot();project.tracks[t]=out.rows;autosaveSoon();try{drawTrackSel();}catch(err){}try{refresh(true);}catch(err){}wqDraw();lastActionWasWinClose=false;
+   const st=document.getElementById('wqStatus');if(st)st.textContent+=' · moved '+out.moved+' note'+(out.moved===1?'':'s')+(dt?' by '+(dt>0?'+':'')+(dt/NOT_TPB)+' beat'+(Math.abs(dt)===NOT_TPB?'':'s'):'')+(ds?(ds>0?', up ':', down ')+Math.abs(ds)+' step'+(Math.abs(ds)===1?'':'s'):'')+' — the MIDI changed with the score · ⌘Z undoes';};
+  /* R27: Delete / Backspace on the selection — wqDeleteKey, a document capture listener armed while the canvas has the focus */
+ }
  wqInputChip('');
  wqDraw();
  if(!wqState.iv)wqState.iv=setInterval(wqTick,250);
@@ -6393,8 +6432,10 @@ function wqDraw(){
  const o={bars:wqState.bars};
  if(wqInput.on){o.at=wqCaretBeat();o.caret={part:wqInputPart(),beat:wqCaretBeat(),label:wqInputValueWord()};if(wqState.last&&wqState.last.parts&&wqState.last.bars===(wqState.bars||4))o.keepFrom=wqState.last.from;}
  const r=wqDrawInto(c,ids.filter(t=>wqPartRows(t).length),o);
+ wqSelDraw(c);   /* R27: the selection over the sheet */
  wqSimpSync();   /* R23: the chip, the card's select and its found line follow the song */
  const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' simplified for the score to the '+notGridWord(notReadRes())+(wqState.res==='auto'?' (found in the song)':'')+' — the MIDI untouched':'')):'nothing to notate yet — write some notes on the grid';
+ wqSelStatus();   /* R27 */
  wqState.last=r;return r;
 }
 /* the pop-up from the Guitar window (RAW [24]) — the linked part as a floating sheet, following the transport; Escape closes */
@@ -6542,6 +6583,21 @@ function wqInputKey(e){
  wqInputApply(a);
 }
 document.addEventListener('keydown',wqInputKey,true);
+function wqDeleteKey(e){
+ /* R27: Delete / Backspace on the selected heads — a document CAPTURE listener registered before the window law's
+    ("Delete closes the selected window", his 118th), armed only while the sheet's canvas has the focus and heads are
+    selected; stopImmediatePropagation keeps the window open — the notes go, not the window */
+ const cvEl=document.getElementById('wqCanvas');if(!cvEl||document.activeElement!==cvEl)return;
+if(wqInput.on||!(e.key==='Backspace'||e.key==='Delete')||!wqSel.size)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+   try{
+   const byPart={};for(const h of (wqState.last.heads||[])){if(h.kind==='note'&&wqSel.has(wqSelKey(h)))(byPart[h.t]=byPart[h.t]||[]).push(h);}
+   const res=notReadRes();const grids=(Array.isArray(res)?res:[res]).map(Number).filter(v=>v>0);let n=0;snapshot();
+   for(const t in byPart){const rows=project.tracks[t];if(!Array.isArray(rows))continue;const keep=rows.filter(r=>{if(!Array.isArray(r))return true;const q=notRoundNote(Math.round(r[0]*NOT_TPB),Math.max(1,Math.round(r[1]*NOT_TPB)),grids.length?grids:0);const hit=byPart[t].some(h=>h.tick===q.t&&h.midi===Math.round(r[2]));if(hit)n++;return !hit;});project.tracks[t]=keep;}
+   wqSel.clear();autosaveSoon();try{drawTrackSel();}catch(err){}try{refresh(true);}catch(err){}wqDraw();lastActionWasWinClose=false;   /* the edit outranks a standing window-close undo (his 118th) — the redraw can re-arm it */
+   const st=document.getElementById('wqStatus');if(st)st.textContent+=' · '+n+' note'+(n===1?'':'s')+' deleted · ⌘Z undoes';
+   }catch(err){const st=document.getElementById('wqStatus');if(st)st.textContent='the delete failed: '+err;try{console.warn('wq delete',err);}catch(e2){}}
+}
+document.addEventListener('keydown',wqDeleteKey,true);
 /* ==== R20 (build 2026-09-05q, the 96th, Fable) — HIS [45]: THE NOTE MENU ====
    His words (CAGED-INSTRUMENT-RAW-2026-09-04.md [45]): "control+click on a note and have a drop down menu turn it into a
    tuplet, etc. I want to be able to affect the midi notes with the notation view and vice versa." The law: the score is a
@@ -6578,6 +6634,69 @@ function wqNoteEdit(rows,idx,op,res){
   const e=src[j][0]+src[j][1];r[1]=snap(e-t);src.splice(j,1);return fin('tied to the next');
  }
  return null;
+}
+/* ==== R27 (build 2026-09-06f, the 96th, Fable) — HIS [54] part 2: SELECT AND DRAG ON THE SHEET ====
+   "you should be able to select a single note or groups of notes. You should be able to adjust note spacing by dragging a
+   note or a rest horizontally." A click selects a head, ⇧-click adds, a drag on empty paper boxes; a drag on a head moves
+   its MIDI row — horizontally by whole steps of the read-at grid (the spacing), vertically by staff steps in the key (the
+   pitch); a drag on a rest moves what starts at the rest's end. Every drag is one undo; the score re-reads. */
+function wqStepMidi(midi,dSteps,km){
+ /* pure: a midi moved dSteps diatonic staff steps in the key km (notKeyMap) — the letter walks the staff, the key's
+    signature gives the accidental. dSteps 0 → the same midi. */
+ const m=Math.round(+midi);const ds=Math.round(+dSteps)||0;if(!isFinite(m))return m;if(!ds)return m;
+ const sp=notSpellPitch(m,km);if(!sp)return m;
+ const step=sp.step+ds;
+ const L=((step%7)+7)%7,octave=4+Math.floor(step/7);
+ const letter=NOT_LETTERS[L];
+ let acc=0;try{acc=notSigAcc(km,letter);}catch(e){acc=0;}
+ return Math.max(0,Math.min(127,12*(octave+1)+NOT_LETTER_PC[L]+(acc||0)));
+}
+function wqDragEdit(rows,targets,dtTicks,dSteps,km,res){
+ /* pure: the rows of the targets ({tick,midi} by the read-at reading) moved dtTicks (already a whole number of grid steps)
+    and dSteps staff steps → {rows,moved}; a row never starts before 0 */
+ const src=(Array.isArray(rows)?rows:[]).map(r=>Array.isArray(r)?r.slice():r);
+ const grids=(Array.isArray(res)?res:[res]).map(Number).filter(g=>g>0);
+ const rd=(t,d)=>notRoundNote(Math.round(t*NOT_TPB),Math.max(1,Math.round(d*NOT_TPB)),grids.length?grids:0);
+ let moved=0;const dt=(Math.round(+dtTicks)||0)/NOT_TPB;
+ for(const tg of (targets||[])){
+  let idx=-1;for(let i=0;i<src.length;i++){const r=src[i];if(!Array.isArray(r)||Math.round(r[2])!==Math.round(tg.midi))continue;const q=rd(r[0],r[1]);if(q.t===tg.tick){idx=i;break;}}
+  if(idx<0)continue;
+  const r=src[idx];r[0]=Math.max(0,Math.round((r[0]+dt)*NOT_TPB)/NOT_TPB);
+  if(dSteps)r[2]=wqStepMidi(r[2],dSteps,km);
+  moved++;
+ }
+ src.sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ return {rows:src,moved};
+}
+function wqRestDrag(rows,endTick,dtTicks,res){
+ /* pure: a rest dragged — every row that STARTS at the rest's end (by the read-at reading) moves dtTicks; the rest grows or shrinks */
+ const src=(Array.isArray(rows)?rows:[]).map(r=>Array.isArray(r)?r.slice():r);
+ const grids=(Array.isArray(res)?res:[res]).map(Number).filter(g=>g>0);
+ const dt=(Math.round(+dtTicks)||0)/NOT_TPB;let moved=0;
+ for(const r of src){if(!Array.isArray(r))continue;const q=notRoundNote(Math.round(r[0]*NOT_TPB),Math.max(1,Math.round(r[1]*NOT_TPB)),grids.length?grids:0);if(q.t===Math.round(endTick)){r[0]=Math.max(0,Math.round((r[0]+dt)*NOT_TPB)/NOT_TPB);moved++;}}
+ src.sort((a,b)=>a[0]-b[0]||a[2]-b[2]);
+ return {rows:src,moved};
+}
+var wqSel=new Set();   /* the selected heads: 'part:tick:midi' */
+const wqSelKey=h=>h.t+':'+h.tick+':'+h.midi;
+function wqSelDraw(c){
+ /* the selection rings, over the painted sheet */
+ const hs=(wqState.last&&wqState.last.heads)||[];if(!wqSel.size)return;
+ const ctx=c.getContext('2d');ctx.save();ctx.strokeStyle=paintOf('--accent','#e8a33d');ctx.lineWidth=2;
+ for(const h of hs){if(h.kind!=='note'||!wqSel.has(wqSelKey(h)))continue;ctx.beginPath();ctx.ellipse(h.x,h.y,7.5,6,0,0,Math.PI*2);ctx.stroke();}
+ ctx.restore();
+}
+function wqSelStatus(){
+ const st=document.getElementById('wqStatus');if(!st)return;
+ if(wqSel.size)st.textContent+=' · '+wqSel.size+' selected (drag to move · ⇧-click adds · Delete removes)';
+}
+function wqGeomAt(y){const geoms=(wqState.last&&wqState.last.geoms)||[];let g=geoms[0];for(const z of geoms){if(y>=z.base)g=z;}return g;}
+function wqDragTicks(g,x0,x1){
+ /* a horizontal drag in whole steps of the finest read-at start grid */
+ const res=notReadRes();const grids=(Array.isArray(res)?res:[res]).map(Number).filter(v=>v>0);
+ const step=grids.length?Math.min.apply(null,grids.map(q=>(q%12===0)?Math.min(q,12):q)):12;
+ const dt=notTickAtX(g,x1)-notTickAtX(g,x0);
+ return Math.round(dt/step)*step;
 }
 function wqHeadAt(x,y){
  /* the nearest drawn head within 8px, or null */
