@@ -851,7 +851,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06w</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06x</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5379,8 +5379,45 @@ function cageLinkDetach(){
  if(_cageLink._onNote){try{document.removeEventListener('click',_cageLink._onNote,true);}catch(e){}_cageLink._onNote=null;}
  if(_cageLink._onKey){try{document.removeEventListener('keydown',_cageLink._onKey,true);}catch(e){}_cageLink._onKey=null;}
  cagePickOverlayClose();
+ /* his [77]: unwrap the layout stack before removing the strip — otherwise the panel stays trapped in a dead #cageStack */
+ try{
+  const st=document.getElementById('cageStack');
+  if(st&&st.parentNode){
+   while(st.firstChild)st.parentNode.insertBefore(st.firstChild,st);
+   st.parentNode.removeChild(st);
+  }
+ }catch(e){}
  if(_cageLink.strip&&_cageLink.strip.parentNode)try{_cageLink.strip.parentNode.removeChild(_cageLink.strip);}catch(e){}
  _cageLink={wid:null,iv:null,sig:'',lastMain:'',lastWorld:'',strip:null,rhOpen:true};
+}
+function cageStackSeat(){
+ /* his [77] (Sept 6): under a Canvas swipe layout the neck strip + audition rig sat as
+    loose siblings of cagePanel in the engines row; a short row clipped them to a hover-lit
+    splitter until he dragged it down. Fuse the Guitar STACK into ONE engines cell so the
+    neck is visible on open (scroll inside the pane if the row is short). No-op off-layout. */
+ try{
+  if(typeof swLayoutState!=='object'||!swLayoutState)return;
+  const panel=document.getElementById('cagePanel');
+  if(!panel||!panel.closest||!panel.closest('#swRows'))return;
+  const strip=document.getElementById('cageNeckStrip');
+  const w=(_cageLink.wid&&typeof GRID_WORLDS==='object')?GRID_WORLDS[_cageLink.wid]:null;
+  const root=w&&w.els&&w.els.root;
+  const ess=w&&w.els&&w.els.essWin;
+  const engines=panel.closest('.swRow')||document.querySelector('#swRows .swRow[data-cat="engines"]');
+  if(!engines)return;
+  let stack=document.getElementById('cageStack');
+  if(!stack){stack=document.createElement('div');stack.id='cageStack';}
+  stack.className='swCell';
+  stack.style.cssText='width:96%;height:94%;min-height:260px;overflow:auto;box-sizing:border-box;display:inline-block;vertical-align:top;white-space:normal;margin:8px;';
+  if(strip)stack.appendChild(strip);
+  if(root&&root.isConnected)stack.appendChild(root);
+  if(ess&&ess.isConnected)stack.appendChild(ess);
+  stack.appendChild(panel);
+  panel.classList.remove('swCell');
+  panel.style.width='';panel.style.height='';panel.style.overflow='';
+  if(root){root.classList.remove('swCell');root.style.width='';root.style.height='';root.style.overflow='';}
+  if(stack.parentNode!==engines)engines.insertBefore(stack,engines.firstChild);
+ }catch(e){}
 }
 function cageLinkRowsJson(tgt){
  return withGridWorld('main',()=>{
@@ -5617,7 +5654,7 @@ function cageViewFrame(shown,span,frame){
  return {lo:sh-2,cells:sp+2};
 }
 function cageFramePref(){try{return (typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.neckFrame==='head')?'head':'float';}catch(e){return 'float';}}
-const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs',on:true},{id:'highway',label:'Strings from the bottom, foreshortened (coming)',on:false}];
+const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs',on:true},{id:'highway',label:'Strings from the bottom, foreshortened',on:true}];
 function cageGuitarMenu(e){
  /* the drop-down: the views, the toggles, Playback Behaviours… — rows run through wanFloatMenu (the map-menu shell) */
  const q=id=>document.getElementById(id);
@@ -5668,13 +5705,13 @@ function cagePlaybackBehavioursOpen(){
    a larger and a smaller number is a pull-off, rising is a hammer-on — write P / H as well; a diagonal in the slide's
    direction is a slide. */
 function cageViewApply(){
- /* which canvases show for the chosen view — the CAGED neck (with its overview) or the bouncing ball */
+ /* which canvases show for the chosen view — the CAGED neck (with its overview) or a Guitar view canvas */
  const view=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged';
  const q=id=>document.getElementById(id); const ball=view==='ball';
- const angled=view==='angled';
- [['cageMiniBoard',!ball&&!angled],['cageLinkBoard',!ball&&!angled],['cageBallBoard',ball],['cageBallLine',ball],['cageAngledBoard',angled]].forEach(([id,on])=>{const el=q(id);if(el)el.style.display=on?'block':'none';});
+ const angled=view==='angled'; const highway=view==='highway';
+ [['cageMiniBoard',!ball&&!angled&&!highway],['cageLinkBoard',!ball&&!angled&&!highway],['cageBallBoard',ball],['cageBallLine',ball],['cageAngledBoard',angled],['cageHighwayBoard',highway]].forEach(([id,on])=>{const el=q(id);if(el)el.style.display=on?'block':'none';});
  const sel=q('cageViewSel'); if(sel&&sel.value!==view)sel.value=view;
- if(ball||angled)cageBallLoop();
+ if(ball||angled||highway)cageBallLoop();
 }
 function cageBallSlurs(notes){
  /* pure — his [67]: consecutive notes on ONE string that touch (the next starts by the time the first ends, within a
@@ -5706,10 +5743,10 @@ function cageBallArc(a,b,beat){
 }
 var _cageBall=null, _cageBallRaf=null;
 function cageBallLoop(){
- /* smooth while the song plays: the 200ms tick is not enough for a ball */
+ /* smooth while the song plays: the 200ms tick is not enough for a ball / descending glob / highway tube */
  if(_cageBallRaf)return;
- const step=()=>{_cageBallRaf=null; const vn=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged'; const on=(vn==='ball'||vn==='angled')&&_cageLink&&_cageLink.wid&&document.getElementById('cageBallBoard');
-  if(!on)return; if(typeof playing!=='undefined'&&playing){try{const rows=cageLinkWorldRows(_cageLink.wid,cageSelTarget().face); if(vn==='ball')cageBallDraw(rows); else cageAngledDraw(rows);}catch(e){}} _cageBallRaf=requestAnimationFrame(step);};
+ const step=()=>{_cageBallRaf=null; const vn=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged'; const on=(vn==='ball'||vn==='angled'||vn==='highway')&&_cageLink&&_cageLink.wid;
+  if(!on)return; if(typeof playing!=='undefined'&&playing){try{const rows=cageLinkWorldRows(_cageLink.wid,cageSelTarget().face); if(vn==='ball')cageBallDraw(rows); else if(vn==='angled')cageAngledDraw(rows); else if(vn==='highway')cageHighwayDraw(rows);}catch(e){}} _cageBallRaf=requestAnimationFrame(step);};
  _cageBallRaf=requestAnimationFrame(step);
 }
 function cageBallDraw(rows){
@@ -5867,6 +5904,98 @@ function cageAngledDraw(rows,V){
  ctx.fillStyle='#98a0b2'; ctx.font='11px system-ui,sans-serif'; ctx.fillText('Angled neck — the globs descend to the fret they land on; a sounding note lasts as long as it plays',14,18);
  _cageAngled={G,globs,beat,fL,fR};
 }
+/* ==== HIS [66] (m) + [68]/[69] (Cursor, the 96th) — STRINGS FROM THE BOTTOM, FORESHORTENED ====
+   His pictures ①–⑤ and his law: the six strings run from the player at the bottom up to a vanishing point;
+   a flat real neck across the bottom; NO fret lanes — only 3D rectangular tubes that appear while a note
+   (or notes) is approaching, each on its landing fret, the note travelling down its tube; a sounding note
+   sits on the hit line and lights the flat neck. Product names stay out of this file. */
+function cageHighwayDepth(t,beat,lookAhead){
+ /* pure: how far up the highway a note sits — 1 far (vanishing), 0 on the hit line; after its onset it stays at 0 */
+ const dt=(+t||0)-(+beat||0); if(dt<=0)return 0;
+ return Math.min(1,dt/Math.max(1e-6,+lookAhead||4));
+}
+function cageHighwayProject(f,s,depth,G){
+ /* pure: string · depth (0 near / 1 far) → canvas — low E left (s=0), high e right (s=5); f is the fret label the tube lands on (kept for callers) */
+ const d=Math.max(0,Math.min(1,+depth||0));
+ const scale=G.nearW+(G.farW-G.nearW)*d;
+ const y=G.yNear+(G.yFar-G.yNear)*d;
+ const half=scale/2;
+ const xL=G.cx-half, xR=G.cx+half;
+ const strGap=scale*0.78/5;
+ const str0=G.cx-scale*0.39;
+ const x=str0+(+s||0)*strGap;
+ return {x,y,scale,strGap,xL,xR,f:+f||0};
+}
+var _cageHighway=null;
+function cageHighwayDraw(rows,V){
+ const c=document.getElementById('cageHighwayBoard'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height; const beat=cageBeatNow();
+ const view=V||{lo:(cageView.shown!=null?cageView.shown:0)-2,cells:(cageView.span||5)+2};
+ const neckH=88; const hwyH=H-neckH-8;
+ const G={cx:W/2,yNear:hwyH-18,yFar:36,nearW:W*0.92,farW:W*0.18,viewLo:view.lo,cells:view.cells,lookAhead:4,fretW:0};
+ G.fretW=G.nearW/Math.max(1,G.cells);
+ ctx.clearRect(0,0,W,H); const sky=ctx.createLinearGradient(0,0,0,hwyH); sky.addColorStop(0,'#0a0b12'); sky.addColorStop(1,'#16131c'); ctx.fillStyle=sky; ctx.fillRect(0,0,W,hwyH);
+ /* song-progress strip (his pictures) — playhead mark over a rolling window */
+ const span=32; const prog=Math.max(0,Math.min(1,(beat%span)/span));
+ ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(40,10,W-80,4); ctx.fillStyle='#ffe27a'; ctx.fillRect(40,10,Math.max(2,(W-80)*prog),4);
+ /* the six foreshortened strings — no fret lanes ([68]/[69]) */
+ const P=(f,s,d)=>cageHighwayProject(f,s,d,G);
+ const fL=G.viewLo, fR=G.viewLo+G.cells;
+ const STR_COLS=['#c45a3a','#6a9a3a','#3a7ac4','#3ab0c4','#d4c23a','#c47a9a'];
+ for(let s=0;s<6;s++){const a=P(0,s,0),b=P(0,s,1); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineWidth=1.2+(5-s)*0.35; ctx.strokeStyle=STR_COLS[s]; ctx.globalAlpha=.85; ctx.stroke();}
+ ctx.globalAlpha=1;
+ /* hit line */
+ ctx.strokeStyle='rgba(255,226,122,.55)'; ctx.lineWidth=2; ctx.beginPath(); const hitL=P(0,0,0), hitR=P(0,5,0); ctx.moveTo(hitL.xL,G.yNear); ctx.lineTo(hitR.xR,G.yNear); ctx.stroke();
+ /* notes: tubes only while approaching; globs travel down the tube; sounding on the hit line */
+ const notes=[]; (rows||[]).forEach((n,i)=>{if(!n)return;const g=cageNoteGtr(n);if(!g||g.s==null)return;const t=+n[0],d=Math.max(0.05,+n[1]||0);if(t+d<beat-0.4||t>beat+G.lookAhead+0.5)return;notes.push({i,t,d,s:+g.s,f:+g.f,finger:g.finger,midi:+n[2]});});
+ notes.sort((a,b)=>b.t-a.t||a.s-b.s);
+ const globs=[], tubes=[];
+ for(const n of notes){
+  if(n.f<fL-0.5||n.f>fR+0.5)continue;
+  const col=n.f===0?'#8f8f95':(cageFingerColor(n.finger)||STR_COLS[n.s]||'#d4c23a');
+  const st=cageNotePlayState([n.t,n.d,n.midi],beat);
+  const depth=cageHighwayDepth(n.t,beat,G.lookAhead);
+  if(st==='played'){const p=P(n.f,n.s,0); ctx.globalAlpha=.22; ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(p.x,p.y,10,6,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; continue;}
+  if(depth>0){
+   /* the tube: 60% transparent glowing box on the landing fret's string, from the note down to the hit line — his [68]/[69] */
+   const top=P(n.f,n.s,depth), bot=P(n.f,n.s,0); const halfT=Math.max(6,top.strGap*0.38), halfB=Math.max(8,bot.strGap*0.42);
+   ctx.globalAlpha=.4; ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(top.x-halfT,top.y); ctx.lineTo(top.x+halfT,top.y); ctx.lineTo(bot.x+halfB,bot.y); ctx.lineTo(bot.x-halfB,bot.y); ctx.closePath(); ctx.fill();
+   ctx.globalAlpha=.9; ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.stroke(); ctx.globalAlpha=1;
+   tubes.push({i:n.i,f:n.f,s:n.s,depth,topY:top.y,botY:bot.y});
+   ctx.shadowColor=col; ctx.shadowBlur=14; ctx.fillStyle=col; const gw=Math.max(18,top.strGap*0.7), gh=14;
+   ctx.fillRect(top.x-gw/2,top.y-gh/2,gw,gh); ctx.shadowBlur=0; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.strokeRect(top.x-gw/2,top.y-gh/2,gw,gh);
+   ctx.fillStyle='#1a1208'; ctx.font='bold 13px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(n.f),top.x,top.y+1);
+   globs.push({i:n.i,x:top.x,y:top.y,depth,st,f:n.f,s:n.s});
+  }else{
+   const p=P(n.f,n.s,0); const remain=Math.max(0,n.t+n.d-beat); const len=Math.min(56,remain*40);
+   ctx.shadowColor=col; ctx.shadowBlur=16; ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(p.x-12,p.y-10); ctx.lineTo(p.x-12,p.y+10); ctx.lineTo(p.x+len,p.y+10); ctx.arc(p.x+len,p.y,10,-Math.PI/2,Math.PI/2,true); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0;
+   ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+   ctx.fillStyle='#1a1208'; ctx.font='bold 14px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(n.f),p.x,p.y+1);
+   globs.push({i:n.i,x:p.x,y:p.y,depth:0,st,f:n.f,s:n.s,len});
+  }
+ }
+ ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+ ctx.fillStyle='#98a0b2'; ctx.font='11px system-ui,sans-serif'; ctx.fillText('Strings from the bottom — tubes only while a note approaches; no fret lanes',14,28);
+ /* the flat real neck across the bottom (his pictures) */
+ const ny=H-neckH+4; ctx.fillStyle='#1e1a14'; ctx.fillRect(0,ny-4,W,neckH+4);
+ const padL=36,padR=16,y0=ny+10,y1=H-14; const strGap=(y1-y0)/5; const x0=padL,x1=W-padR; const cellW=(x1-x0)/Math.max(1,G.cells);
+ ctx.fillStyle='#2a2218'; ctx.fillRect(x0,y0-6,x1-x0,y1-y0+12);
+ for(let k=0;k<=G.cells;k++){const x=x0+k*cellW; ctx.beginPath(); ctx.moveTo(x,y0-6); ctx.lineTo(x,y1+6); ctx.strokeStyle=k===0&&G.viewLo<=0?'#c4b89a':'#8a7a62'; ctx.lineWidth=k===0&&G.viewLo<=0?4:1; ctx.globalAlpha=.75; ctx.stroke();}
+ ctx.globalAlpha=1;
+ for(let s=0;s<6;s++){const y=y0+s*strGap; ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.lineWidth=0.8+(5-s)*0.4; ctx.strokeStyle=STR_COLS[s]; ctx.globalAlpha=.9; ctx.stroke();}
+ ctx.globalAlpha=1;
+ for(let k=Math.max(1,Math.ceil(fL));k<=Math.floor(fR);k++){const x=x0+(k-0.5-G.viewLo)*cellW; if(x<x0||x>x1)continue; ctx.fillStyle='#c8b48c'; ctx.font='bold 12px system-ui,sans-serif'; ctx.textAlign='center'; ctx.fillText(String(k),x,H-4);}
+ /* light the flat neck for sounding / approaching notes in the window */
+ for(const n of notes){
+  if(n.f<fL-0.5||n.f>fR+0.5)continue; const st=cageNotePlayState([n.t,n.d,n.midi],beat); if(st==='played')continue;
+  const col=n.f===0?'#8f8f95':(cageFingerColor(n.finger)||STR_COLS[n.s]||'#d4c23a');
+  const fx=n.f===0?0:n.f-0.5; const x=x0+(fx-G.viewLo)*cellW; const y=y0+n.s*strGap;
+  ctx.globalAlpha=st==='current'?1:.55; ctx.shadowColor=col; ctx.shadowBlur=st==='current'?14:6; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,st==='current'?11:8,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle='#1a1208'; ctx.font='bold 12px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(n.f),x,y+1); ctx.globalAlpha=1;
+ }
+ ctx.textBaseline='alphabetic';
+ _cageHighway={G,globs,tubes,beat,fL,fR,neck:{y0,y1,x0,x1,cellW}};
+}
 function cageNeckSizes(){
  /* pure: the linked neck's sizes — his [55]: "the actual numbers on the fretboard need to be twice as big at least. Let's say
     2.5 times as big" — the finger numbers 27px (from 11), the dots grown to hold them, the fret labels 15px (from 10) */
@@ -5950,6 +6079,7 @@ function cageLinkNeckDraw(rows){
  cageHandLegendDraw();
  if(typeof cageState==='object'&&cageState&&cageState.viewName==='ball')try{cageBallDraw(rows);}catch(e){}   /* R38 [66]: the bouncing-ball view rides the same placements */
  if(typeof cageState==='object'&&cageState&&cageState.viewName==='angled')try{cageAngledDraw(rows,V);}catch(e){}   /* R40 [66]: the angled neck too */
+ if(typeof cageState==='object'&&cageState&&cageState.viewName==='highway')try{cageHighwayDraw(rows,V);}catch(e){}   /* [66] (m)+[68]/[69]: strings from the bottom */
 }
 function cageHandLegendDraw(){
  const host=document.getElementById('cageFingerLegend'); if(!host)return;
@@ -7539,7 +7669,7 @@ function cageLinkAttach(w){
   +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px;flex-wrap:wrap;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck</span>'
   +'<label style="font-size:10px;color:var(--dim);display:flex;align-items:center;gap:4px;">'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]) — CAGED today; the slanted neck, the bouncing ball and the ball with notation are next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="angled">Angled neck with globs</option><option value="ball">Bouncing ball</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]/[66]) — CAGED · Bouncing ball · Angled neck · Strings from the bottom · Ball + notation next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="angled">Angled neck with globs</option><option value="ball">Bouncing ball</option><option value="highway">Strings from the bottom, foreshortened</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
   +'Layout <select id="cageLayoutView" style="padding:3px 6px;font-size:11px;">'
   +'<option value="midi">MIDI + neck</option>'
   +'<option value="notation">Notation + neck</option>'
@@ -7553,6 +7683,7 @@ function cageLinkAttach(w){
   +'<canvas id="cageMiniMidiCanvas" width="920" height="48" style="display:block;width:100%;height:auto;"></canvas></div>'
   +'<canvas id="cageMiniBoard" width="920" height="64" style="display:block;width:100%;height:auto;margin-bottom:4px;cursor:grab;border-radius:6px;" title="The whole neck (his [57]) — the five CAGED shapes for the chord in play with their root notes; the box is what the large neck shows. Drag the box, or click another shape, and the neck slides there."></canvas>'
   +'<canvas id="cageAngledBoard" width="920" height="420" style="display:none;width:100%;height:auto;max-height:52vh;border-radius:8px;" title="Angled neck (his [66]) — the fretboard slanted away as if you were looking down at your hands; the notes to come descend as glowing globs on their tubes to the fret and string they land on; a sounding note lasts as long as it plays"></canvas>'
+  +'<canvas id="cageHighwayBoard" width="920" height="520" style="display:none;width:100%;height:auto;max-height:58vh;border-radius:8px;" title="Strings from the bottom (his [66] [68] [69]) — foreshortened strings to a vanishing point; 3D tubes only while a note approaches, each on its landing fret; a flat real neck across the bottom"></canvas>'
   +'<canvas id="cageBallBoard" width="920" height="340" style="display:none;width:100%;height:auto;max-height:46vh;border-radius:8px;" title="Bouncing ball (his [66]) — the strings across, the notes as pills as long as they last, the ball landing on each note as it sounds; H = hammer-on, P = pull-off, a diagonal = a slide"></canvas>'
   +'<canvas id="cageBallLine" width="920" height="40" style="display:none;width:100%;height:auto;margin-top:4px;border-radius:6px;" title="The pills to come"></canvas>'
   +'<canvas id="cageLinkBoard" width="920" height="340" style="display:block;width:100%;height:auto;max-height:46vh;"></canvas>'
@@ -7630,6 +7761,7 @@ function cageLinkAttach(w){
  _cageLink._onKey=e=>{if(e.key==='Escape'){cagePickOverlayClose(); if(cageState.moveArmed)cageMoveArm(false);} if(e.key==='Tab'&&_cageLink.wid&&uiWinShown('cagePanel')){e.preventDefault(); cageMoveCycleTab();}};
  document.addEventListener('keydown',_cageLink._onKey,true);
  _cageLink.iv=setInterval(cageLinkTick,200);
+ try{cageStackSeat();}catch(e){}   /* his [77]: under a swipe layout, seat the neck+rig+panel as one engines cell */
 }
 
 function cagePlayMidi(midi,dur){
@@ -15938,7 +16070,12 @@ function swRowMembers(cat){
      if(ids.indexOf(id)>=0&&isOpen(id)&&openIds.indexOf(id)<0)openIds.push(id);
   }catch(e){}
   for(const id of ids)if(isOpen(id)&&openIds.indexOf(id)<0)openIds.push(id);
-  const out=openIds.map(id=>document.getElementById(id)).filter(Boolean);
+  /* his [77]: when the Guitar stack is fused (#cageStack), the engines band mounts THAT
+     cell — not the bare cagePanel (which would orphan the neck again on every re-apply) */
+  const out=openIds.map(id=>{
+   if(id==='cagePanel'){const st=document.getElementById('cageStack');if(st)return st;}
+   return document.getElementById(id);
+  }).filter(Boolean);
   /* his 128th: when the layout carries the middle SHELF band, the per-stack shelf
      windows SKIP the engines row — one shelf serves, no duplicate riding below */
   if(!(swLayoutState&&swLayoutState.rows.some(r=>r.cat==='shelf')))
@@ -37205,8 +37342,9 @@ function uiDispatch(action){
     audition grid (it arrived with it; a lone audition grid over a closed window is clutter) */
  if(action&&action.type==='toggle'&&typeof action.id==='string'
   &&prevWins.indexOf(action.id)>=0&&(!Array.isArray(uiState.openWins)||uiState.openWins.indexOf(action.id)<0)
-  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel'||action.id==='ragaPanel'||action.id==='rhyPanel')
+  &&(action.id==='modPanel'||action.id==='melPanel'||action.id==='cadPanel'||action.id==='ragaPanel'||action.id==='rhyPanel'||action.id==='cagePanel')
   &&typeof gridWorldClose==='function'&&typeof linkedTo==='function'){
+  if(action.id==='cagePanel'&&typeof cageLinkDetach==='function')try{cageLinkDetach();}catch(e){}
   if(typeof GRID_WORLDS==='object')for(const _gid in GRID_WORLDS)
    if(_gid!=='main'&&GRID_WORLDS[_gid]&&GRID_WORLDS[_gid].pairFor===action.id)
     gridWorldClose(_gid);   /* 78th: close the OWNED rig only — a law-link to a foreign rig must not take it down */
@@ -37258,7 +37396,7 @@ function uiDispatch(action){
   if(uiState.open==='ragaPanel'&&typeof renderRagaResults==='function'){try{renderRagaResults();renderRagaInfo();}catch(e){}}   /* his 168th: the row tiles re-realize at open — the boot render predates the song's chords, so the ghosts were empty */
   if(uiState.open==='harmPanel'&&typeof buildHarmWindow==='function'){try{buildHarmWindow();}catch(e){}}   /* 5.5: the Harmonizer greets its selection */
   if(uiState.open==='wqPanel'&&typeof buildWqWindow==='function'){try{buildWqWindow();}catch(e){}}   /* E3: Wig & Quill greets the song */
-  if(uiState.open==='cagePanel'&&typeof buildCageWindow==='function'){try{buildCageWindow(); if(_ag&&typeof cageLinkAttach==='function')cageLinkAttach(_ag);}catch(e){}}   /* Guitar Engine: shape board + linked 1-track neck */
+  if(uiState.open==='cagePanel'&&typeof buildCageWindow==='function'){try{buildCageWindow(); if(_ag&&typeof cageLinkAttach==='function')cageLinkAttach(_ag); try{cageStackSeat();}catch(e2){}}catch(e){}}   /* Guitar Engine: shape board + linked 1-track neck · his [77] seat */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
   if(uiState.open==='importPanel'&&typeof buildSources==='function')buildSources();  /* 4.4: the source boxes greet the current song list */
   if(uiState.open==='prismPanel'&&typeof buildPrism==='function')buildPrism(true);   /* 5.1: the Prism re-splits the beam on open */
@@ -40394,11 +40532,24 @@ try{
    }
    if(typeof applyColOrder==='function')applyColOrder();   /* the saved order names the restored ids */
   }
-  for(const _aw of ['modPanel','melPanel','cadPanel','ragaPanel','rhyPanel'])
+  for(const _aw of ['modPanel','melPanel','cadPanel','ragaPanel','rhyPanel','cagePanel'])
    if(uiState.openWins.indexOf(_aw)>=0&&uiWinShown(_aw))gridAuditionSpawn(_aw);
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  }
 }catch(e){console.error('audition-grid respawn failed at boot',e);}
+/* 96th Cursor — his [76]/[77] blank Guitar: (1) buildCageWindow + cageLinkAttach only ran on
+   JUST-OPENED — landmine ⑪. (2) under a swipe layout the neck sat clipped until the splitter
+   grew the engines row — cageStackSeat fuses neck+rig+panel into one engines cell. AFTER the
+   audition respawn so links survive the stale-grid strip; wrapped per 20i. */
+try{
+ if(typeof uiWinShown==='function'&&uiWinShown('cagePanel')&&typeof buildCageWindow==='function'){
+  buildCageWindow();
+  let _cg=null;
+  if(typeof gridAuditionSpawn==='function')_cg=gridAuditionSpawn('cagePanel');
+  if(_cg&&typeof cageLinkAttach==='function')cageLinkAttach(_cg);
+  try{cageStackSeat();}catch(e2){}
+ }
+}catch(e){console.error('cage window boot failed',e);}
 /* 80th R2: the Rhythm SEARCH columns paint at boot too (a cp_ui-restored open window
    must not sit empty) — wrapped per landmine ⑪'s general defence: a fault inside a
    window's boot call must never take the boot down. */
