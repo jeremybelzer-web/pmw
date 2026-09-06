@@ -764,6 +764,32 @@
 .orbSw.on{background:var(--accent);}
 .orbSw.on::after{left:13px;background:#0a0c12;}
 #orbBody:fullscreen #orbMapWrap svg{max-width:min(94vw,150vh)!important;margin:0 auto;}
+  /* ==== R1 (build 2026-09-06t, the 97th, Fable) — THE VIEWS (DV-10 · DV-14 · GV-3 · GV-6 · DV-13) ==== */
+  body.skinOn #rail{display:none;}   /* the browser column carries the openers under a view */
+  #skinLayer .skPane{min-width:0;min-height:0;position:relative;}
+  #skinLayer .skSplit{flex:0 0 6px;background:var(--line);cursor:col-resize;position:relative;z-index:2;}
+  #skinLayer .skSplit.h{cursor:row-resize;}
+  #skinLayer .skSplit:hover{background:var(--accent);}
+  #skinLayer .skEdge{background:var(--panel2);opacity:.55;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--dim);border:1px solid var(--line);z-index:3;}
+  #skinLayer .skEdge:hover{opacity:1;color:var(--accent);border-color:var(--accent);}
+  #skinLayer .skEdge-l,#skinLayer .skEdge-r{position:absolute;top:0;bottom:0;width:14px;}
+  #skinLayer .skEdge-l{left:0;} #skinLayer .skEdge-r{right:0;}
+  #skinLayer .skEdge-b{position:relative;flex:0 0 14px;}
+  #skinLayer .skBrHead{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);padding:8px 8px 2px;}
+  #skinLayer .skBrItem{padding:3px 8px;font-size:11.5px;cursor:pointer;border-radius:5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #skinLayer .skBrItem:hover{background:var(--panel2);}
+  #skinLayer .skBrItem.on{background:var(--panel2);color:var(--accent);}
+  #skInfo{border-top:1px solid var(--line);padding:6px 8px;font-size:11px;color:var(--dim);min-height:64px;max-height:120px;overflow:auto;background:var(--panel);line-height:1.35;}
+  #skInfoTri{position:absolute;left:4px;bottom:2px;z-index:5;cursor:pointer;font-size:13px;color:var(--dim);padding:0 4px;}
+  #skInfoTri:hover{color:var(--accent);}
+  #skCentre .skCell{margin:8px;}
+  #skKbd{position:fixed;z-index:110;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 34px rgba(0,0,0,.5);padding:8px 10px;user-select:none;}
+  #skKbd .skKey{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:30px;height:46px;margin:1px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);font-size:10px;color:var(--text);cursor:pointer;}
+  #skKbd .skKey.blk{background:#1a1c22;color:var(--dim);height:32px;}
+  #skKbd .skKey.on{background:var(--accent);color:#08131f;}
+  #cnvViews .cnvView{width:150px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid var(--line);}
+  #cnvViews .cnvView.on{border-color:var(--accent);}
+  #cnvViews .cnvView.soon{opacity:.5;cursor:default;}
   /* ==== 76th R2 · THE FIXED CHROME (his words: the transport and the navigation
        section become fixed windows at the top; the left icon rail stops scrolling) ==== */
   #transportWin,#navWin,#engWin,#gcWin{position:fixed;left:0;right:0;z-index:90;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.35);}
@@ -804,7 +830,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06s</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06t</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15564,7 +15590,33 @@ function cnvBuild(){
  /* [C4b] the swipe LAYOUTS (his third message — by WINDOW COUNT, with his four
     shipped defaults; the old Box display retired the same day it shipped, on his
     own redesign) */
+ /* R1 (the 97th, his [1]/[2] in DUAL-SKINS-RAW): THE VIEWS strip — DV-10, the switch lives here */
+ {const vw=w.querySelector('#cnvViews');
+  if(vw){vw.innerHTML='';
+   const curSkin=(typeof skinState==='object'&&skinState)?skinState.skin:'shelf';
+   for(const [id,name,tip] of SKIN_DEFS){
+    const box=document.createElement('div');
+    box.className='cnvView'+(curSkin===id?' on':'')+(id==='dv12'?' soon':'');
+    box.dataset.view=id;
+    box.title=tip;
+    let dia='<div style="border:1px solid var(--line);border-radius:4px;height:56px;display:flex;overflow:hidden;font-size:8px;color:var(--dim);">';
+    if(id==='shelf')dia+='<div style="flex:1;display:flex;flex-direction:column;"><div style="flex:1;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line);">GRIDS</div><div style="flex:1;display:flex;align-items:center;justify-content:center;">SHELF · ENGINES</div></div>';
+    else if(id==='gv2')dia+='<div style="flex:0 0 18%;border-right:1px solid var(--line);display:flex;align-items:center;justify-content:center;">B</div><div style="flex:1;display:flex;flex-direction:column;"><div style="flex:3;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line);">GRID</div><div style="flex:1;display:flex;align-items:center;justify-content:center;">LANE ⇄</div></div><div style="flex:0 0 22%;border-left:1px solid var(--line);display:flex;align-items:center;justify-content:center;">SHELF</div>';
+    else dia+='<div style="flex:1;display:flex;flex-direction:column;"><div style="flex:0 0 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;">TOOLBAR</div><div style="flex:1;display:flex;align-items:center;justify-content:center;">F5 · F6 · F7 · F9</div></div>';
+    dia+='</div>';
+    box.innerHTML=dia+'<div style="font-size:9.5px;color:var(--dim);margin-top:2px;text-align:center;">'+name+'</div>';
+    if(id==='dv12')box.onclick=()=>{flashHint('DV-12 — the rack view — arrives with the next round.');};
+    else box.onclick=()=>{
+     if(id==='shelf'){if(!(typeof skinState==='object'&&skinState))return;canvasState.layout=null;}
+     else canvasState.layout={preset:'gv2',skin:'gv2',panes:Object.assign({},SKIN_PANES_DEF)};
+     persistCanvas();swLayoutApply(canvasState.layout);cnvBuild();cnvSaveSync();
+    };
+    vw.appendChild(box);
+   }
+  }}
  const sw=w.querySelector('#cnvSwipe');sw.innerHTML='';
+ /* the swipe layouts belong to the Essence Shelf view — they rest while another view is on */
+ {const _on=!!(typeof skinState==='object'&&skinState);sw.style.opacity=_on?'.45':'';sw.style.pointerEvents=_on?'none':'';sw.title=_on?'The swipe layouts belong to the Essence Shelf view — pick it above to use them':'';}
  const curPreset=(canvasState.layout&&canvasState.layout.preset)||'d1';
  for(const [id,name,rows,tip] of SW_DEFAULTS){
   const box=document.createElement('div');
@@ -15672,6 +15724,8 @@ function canvasWinToggle(){
   +'<div id="cnvSliders" style="max-height:240px;overflow:auto;padding-right:4px;"></div>'
   +'</div>'
   +'<div style="flex:0 0 auto;">'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;" title="The views (his Sept 6 direction): each is an organization of resizable windows — pick one here">Views</div>'
+  +'<div id="cnvViews" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>'
   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:4px;">Swipe</div>'
   +'<div id="cnvSwipe" style="display:flex;flex-direction:column;gap:8px;"></div>'
   +'<button id="cnvColBtn" title="Every app color — background, panels, borders, text, accent — in a floating window; paint templates with it." style="margin-top:10px;font-size:11px;padding:5px 10px;width:100%;">🎨 Color Palette</button>'
@@ -15928,8 +15982,420 @@ function swLayoutTeardown(){
    rows, so neighbors fill the hole. Deferred a tick so the close lands first. */
 function swLayoutRepack(){
  try{if(swLayoutState)setTimeout(()=>{try{if(swLayoutState)swLayoutApply(swLayoutState);}catch(e){}},0);}catch(e){}
+ try{if(typeof skinRepack==='function')skinRepack();}catch(e){}   /* R1: a view re-packs its lane the same way */
 }
+/* ==== R1 (build 2026-09-06t, the 97th, Fable) — DV-10 · DV-11 · DV-13 · DV-14: THE VIEWS.
+   The brief's §5 (DUAL-DAW-VIEWS-LEGAL-AND-DESIGN, his [1]/[2] in DUAL-SKINS-RAW): a VIEW is
+   an organization of resizable windows chosen in the Canvas window, riding the ONE layout
+   slot the row engine already persists (canvasState.layout) — so a view and a swipe layout
+   can never both be on (DV-1: one state, mutually exclusive views). GV-2 is the first view:
+   the browser left · the grid centre · the Shelf right · the open windows in a lane below
+   (GV-8) · the info view lower-left (GV-6) · three splitters, each collapsing at its edge
+   and recovering from the one-line-plus-triangle strip (GV-3) · its own key commands and
+   its own keyboard window (DV-13), which exists only while the view is on.
+   ⛔ No product names here — the views are cited by their decision numbers (AGENTS §3).
+   ⛔ SKIN_DEFS is harness-extracted: no semicolon inside it (the grabConst rule). ==== */
+const SKIN_DEFS=[
+ ['shelf','Essence Shelf','GV-1 — today’s view: the column, or one of the four swipe layouts below.'],
+ ['gv2','GV-2 · Arranger','GV-2 — the arranger view: a browser on the left, the grid in the centre, the Essence Shelf on the right, the open windows in a lane below, the info view lower-left. Drag any border. Drag it to the edge to tuck a pane away — the edge keeps a strip that brings it back.'],
+ ['dv12','DV-12 · Rack','DV-12 — the rack view: the toolbar line, floating windows on the F-keys, the typing-keypad piano. Coming in the next round.']];
+const SKIN_PANES_DEF={l:18,r:22,b:24,lc:0,rc:0,bc:0,info:1};
+function skinNorm(raw){
+ /* pure — the view guard: a layout carrying skin:'gv2' with its panes clamped (l 8–40 · r 8–45 ·
+    b 8–60 · the three collapsed flags · the info view flag). Anything else answers null — a row
+    layout, junk, or the Essence Shelf view itself, which is the row engine's business. */
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
+ if(raw.skin!=='gv2')return null;
+ const p=(raw.panes&&typeof raw.panes==='object'&&!Array.isArray(raw.panes))?raw.panes:{};
+ const num=(v,d,lo,hi)=>(typeof v==='number'&&isFinite(v))?Math.max(lo,Math.min(hi,v)):d;
+ const flag=(v,d)=>(v===1||v===true)?1:(v===0||v===false)?0:d;
+ return {preset:'gv2',skin:'gv2',panes:{l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),
+  lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1)}};
+}
+function skinKbdNote(key,oct){
+ /* pure — the GV-2 keyboard window's map (DV-13): the two typing rows a w s e d f t g y h u j k o l p ;
+    climb from C of the octave (oct 4 = MIDI 60) by semitones; z / x / c / v are the octave and
+    velocity keys and answer null here; anything else null. */
+ if(typeof key!=='string'||!key.length)return null;
+ const row='awsedftgyhujkolp;';
+ const i=row.indexOf(key.toLowerCase());
+ if(i<0)return null;
+ const o=(typeof oct==='number'&&isFinite(oct))?Math.max(0,Math.min(8,Math.round(oct))):4;
+ const m=12*(o+1)+i;
+ return (m>=0&&m<=127)?m:null;
+}
+function skinKeyMatch(e,mac){
+ /* pure — the GV-2 view's own key commands (DV-11 ②): ⌘K the keyboard window · ⌘⌥B the browser ·
+    ⌘⌥H the right pane · ⌘⌥L the lane · ⌃⌥I the info view (⌘⌥I belongs to the browser's
+    developer tools, so the info view carries ⌃ and says so). mod = ⌘ on a Mac, Ctrl elsewhere. */
+ if(!e||typeof e.key!=='string')return null;
+ const k=e.key.toLowerCase();
+ const mod=mac?!!e.metaKey:!!e.ctrlKey;
+ if(k==='i'&&e.ctrlKey&&e.altKey&&!e.shiftKey&&!(mac&&e.metaKey))return 'info';
+ if(!mod||e.shiftKey)return null;
+ if(k==='k'&&!e.altKey)return 'kbd';
+ if(!e.altKey)return null;
+ if(k==='b')return 'browser';
+ if(k==='h')return 'right';
+ if(k==='l')return 'lane';
+ return null;
+}
+let skinState=null,_skSaved=null,_skPrevKeyset=null;
+const skinKbd={on:false,oct:4,vel:100,down:{}};
+function skinPersist(){
+ /* the panes ride canvasState.layout (the one slot) — persistCanvas writes cp_canvas */
+ if(!skinState)return;
+ try{canvasState.layout={preset:skinState.preset,skin:skinState.skin,panes:Object.assign({},skinState.panes)};persistCanvas();}catch(e){}
+ try{if(typeof cnvSaveSync==='function')cnvSaveSync();}catch(e){}
+}
+function skinTeardown(keep){
+ const layer=document.getElementById('skinLayer');
+ skinKbdClose();
+ if(!layer){skinState=null;return;}
+ if(_skSaved){
+  for(const rec of _skSaved){
+   if(!rec.el)continue;
+   rec.el.classList.remove('skCell');rec.el.classList.remove('swCell');
+   if(rec.el.dataset&&rec.el.dataset.skW!==undefined){rec.el.style.width=rec.el.dataset.skW;rec.el.style.height=rec.el.dataset.skH;rec.el.style.overflow=rec.el.dataset.skO;rec.el.style.boxSizing='';rec.el.style.scrollSnapAlign='';delete rec.el.dataset.skW;delete rec.el.dataset.skH;delete rec.el.dataset.skO;}
+   if(!rec.parent||rec.el.id==='swShelf'){rec.el.remove();continue;}   /* a block minted for the view (the shelf block) goes away with it — swShelfBlock mints a fresh one on demand */
+   const nx=(rec.next&&rec.next.parentNode===document.body)?rec.next:null;
+   document.body.insertBefore(rec.el,nx);
+  }
+  _skSaved=null;
+ }
+ layer.remove();
+ document.body.classList.remove('skinOn','skinGv2');
+ try{const _rl=document.getElementById('rail');if(_rl&&_rl.dataset.skD!==undefined){_rl.style.display=_rl.dataset.skD;delete _rl.dataset.skD;}}catch(e){}
+ document.body.style.overflow='';
+ skinState=null;
+ try{const b=document.querySelector('#swShelf .essBody');if(b)b.style.flexWrap='nowrap';}catch(e){}
+ try{if(typeof applyColOrder==='function')applyColOrder();}catch(e){}
+ try{if(typeof fixedChromeApply==='function')fixedChromeApply();}catch(e){}
+ /* DV-11 ② (labelled): the key-command set the view chose gives way to the one before it */
+ if(keep)return;   /* a re-apply keeps the view's key-command choice */
+ try{if(_skPrevKeyset&&typeof SETTINGS==='object'&&SETTINGS&&KEYSETS[SETTINGS.keyset]){SETTINGS.keyset=_skPrevKeyset;persistSettings();}}catch(e){}
+ _skPrevKeyset=null;
+}
+function skinRepack(){
+ /* a window opening or closing under a view re-packs the lane (the 80th's repack law) */
+ try{if(skinState)setTimeout(()=>{try{if(skinState)skinApply(skinState);}catch(e){}},0);}catch(e){}
+}
+function skinKbdClose(){
+ const k=document.getElementById('skKbd');
+ for(const key of Object.keys(skinKbd.down)){try{skinKbdSend(0x80,skinKbd.down[key],0);}catch(e){}}
+ skinKbd.down={};
+ skinKbd.on=false;
+ if(k)k.remove();
+ try{const c=document.getElementById('skKbdChip');if(c)c.classList.remove('on');}catch(e){}
+}
+function skinKbdSend(cmd,note,vel){
+ /* DV-13: one path — a typed note is a hardware note. onMidiIn monitors it on the armed track and
+    records it into the take. With nothing armed it auditions on the edited track (labelled:
+    a fixed length, since the audition voice takes a duration, not a note-off). */
+ let armed=false;
+ try{armed=!!armedTrack;}catch(e){}
+ try{onMidiIn({data:[cmd,note&127,vel&127]});}catch(e){}
+ if(cmd===0x90&&vel>0&&!armed){
+  try{
+   const tr=(typeof edTrack==='function')?edTrack():'melody';
+   if(typeof audioReady!=='undefined'&&audioReady&&tr!=='drums')inst.note(tr,[note],.45,Tone.now(),Math.max(.15,vel/127));
+  }catch(e){}
+ }
+}
+function skinKbdKey(e,down){
+ if(!skinState||!skinKbd.on)return false;
+ if(typeof isTypingTarget==='function'&&isTypingTarget(document.activeElement))return false;
+ if(e.metaKey||e.ctrlKey||e.altKey)return false;
+ const k=String(e.key||'').toLowerCase();
+ if(k==='z'||k==='x'){if(down&&!e.repeat){skinKbd.oct=Math.max(0,Math.min(8,skinKbd.oct+(k==='z'?-1:1)));skinKbdDraw();}e.preventDefault();e._kbdOwned=true;return true;}
+ if(k==='c'||k==='v'){if(down&&!e.repeat){skinKbd.vel=Math.max(10,Math.min(127,skinKbd.vel+(k==='c'?-10:10)));skinKbdDraw();}e.preventDefault();e._kbdOwned=true;return true;}
+ const note=skinKbdNote(k,skinKbd.oct);
+ if(note===null)return false;
+ e.preventDefault();e._kbdOwned=true;
+ if(down){
+  if(e.repeat||skinKbd.down[k]!==undefined)return true;
+  skinKbd.down[k]=note;skinKbdSend(0x90,note,skinKbd.vel);
+ }else{
+  const n=skinKbd.down[k];if(n===undefined)return true;
+  delete skinKbd.down[k];skinKbdSend(0x80,n,0);
+ }
+ skinKbdDraw();
+ return true;
+}
+window.addEventListener('keydown',e=>{try{skinKbdKey(e,true);}catch(err){}},true);
+window.addEventListener('keyup',e=>{try{skinKbdKey(e,false);}catch(err){}},true);
+window.addEventListener('blur',()=>{try{for(const key of Object.keys(skinKbd.down))skinKbdSend(0x80,skinKbd.down[key],0);skinKbd.down={};skinKbdDraw();}catch(e){}});
+function skinKbdDraw(){
+ const k=document.getElementById('skKbd');if(!k)return;
+ const oct=skinKbd.oct;
+ const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+ const keys='awsedftgyhujkolp;'.split('');
+ let html='<div class="winHead" id="skKbdHead" style="margin:0 0 6px 0;cursor:grab;"><span class="picon">⌨</span><span class="wtitle">Keyboard (GV-2)</span>'
+  +'<span style="margin-left:auto;font-size:10.5px;color:var(--dim);">octave <b style="color:var(--text);">'+oct+'</b> (z / x) · velocity <b style="color:var(--text);">'+skinKbd.vel+'</b> (c / v)</span>'
+  +'<span class="wbtn" id="skKbdX" title="Close the keyboard window (⌘K)">✕</span></div>'
+  +'<div style="display:flex;align-items:flex-start;">';
+ for(let i=0;i<keys.length;i++){
+  const m=12*(oct+1)+i,nm=names[i%12],blk=nm.length>1;
+  const on=Object.values(skinKbd.down).indexOf(m)>=0;
+  html+='<div class="skKey'+(blk?' blk':'')+(on?' on':'')+'" data-midi="'+m+'"><span style="font-weight:700;">'+keys[i].toUpperCase()+'</span><span style="font-size:9px;">'+nm+(blk?'':(oct+Math.floor(i/12)))+'</span></div>';
+ }
+ html+='</div><div style="font-size:10px;color:var(--dim);margin-top:4px;">Type to play. The notes go where a MIDI keyboard’s would: the armed track records them, the Scales and Orbits windows hear them.</div>';
+ k.innerHTML=html;
+ k.querySelector('#skKbdX').onclick=e=>{e.stopPropagation();skinKbdClose();};
+ k.querySelectorAll('.skKey').forEach(el=>{
+  el.onmousedown=e=>{e.preventDefault();const m=+el.dataset.midi;skinKbdSend(0x90,m,skinKbd.vel);el.classList.add('on');
+   const up=()=>{skinKbdSend(0x80,m,0);el.classList.remove('on');document.removeEventListener('mouseup',up);};
+   document.addEventListener('mouseup',up);};
+ });
+ const head=k.querySelector('#skKbdHead');
+ head.onmousedown=e=>{
+  if(e.target.closest('.wbtn'))return;
+  const r=k.getBoundingClientRect(),x0=e.clientX,y0=e.clientY;
+  k.style.transform='none';k.style.left=r.left+'px';k.style.top=r.top+'px';k.style.bottom='auto';
+  const mv=ev=>{k.style.left=(r.left+ev.clientX-x0)+'px';k.style.top=(r.top+ev.clientY-y0)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  e.preventDefault();
+ };
+}
+function skinKbdToggle(){
+ if(!skinState)return false;   /* the window lives in the view only (his [75]) */
+ if(skinKbd.on){skinKbdClose();return true;}
+ let k=document.getElementById('skKbd');
+ if(!k){k=document.createElement('div');k.id='skKbd';document.body.appendChild(k);}
+ const padB=parseFloat(document.body.style.paddingBottom)||0;
+ k.style.bottom=(padB+18)+'px';k.style.top='auto';k.style.left='50%';k.style.transform='translateX(-50%)';
+ skinKbd.on=true;
+ skinKbdDraw();
+ try{const c=document.getElementById('skKbdChip');if(c)c.classList.add('on');}catch(e){}
+ return true;
+}
+function skinKeyAction(e){
+ /* DV-11 ②: the view's own key commands run FIRST, only while a view is on */
+ if(!skinState)return false;
+ const act=skinKeyMatch(e,/Mac|iPhone|iPad/.test(navigator.platform||''));
+ if(!act)return false;
+ e.preventDefault();
+ if(act==='kbd'){skinKbdToggle();return true;}
+ const P=skinState.panes;
+ if(act==='browser')P.lc=P.lc?0:1;
+ else if(act==='right')P.rc=P.rc?0:1;
+ else if(act==='lane')P.bc=P.bc?0:1;
+ else if(act==='info')P.info=P.info?0:1;
+ skinPersist();skinApply(skinState);
+ return true;
+}
+function skinInfoText(el){
+ /* GV-6: the info view reads the hovered element's title — the record's own hover-text habit */
+ try{
+  let n=el;
+  while(n&&n!==document.body){
+   if(n.getAttribute&&n.getAttribute('title'))return n.getAttribute('title');
+   n=n.parentNode;
+  }
+ }catch(e){}
+ return '';
+}
+function skinBrowserBuild(pane){
+ const P=skinState.panes;
+ pane.innerHTML='';
+ const top=document.createElement('div');
+ top.style.cssText='display:flex;gap:6px;align-items:center;padding:6px 8px 4px;';
+ top.innerHTML='<input id="skBrSearch" type="search" placeholder="Search" style="flex:1 1 auto;min-width:0;font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);">'
+  +'<span class="cpchip'+(skinKbd.on?' on':'')+'" id="skKbdChip" title="The keyboard window — play and record from the typing keys (⌘K)">⌨</span>';
+ pane.appendChild(top);
+ const list=document.createElement('div');
+ list.id='skBrList';
+ list.style.cssText='flex:1 1 auto;min-height:0;overflow:auto;padding:0 4px 6px;';
+ pane.appendChild(list);
+ const groups=[['Engines',['varPanel','modPanel','melPanel','cagePanel','ragaPanel','wanPanel','orbPanel','prismPanel','harmPanel','wqPanel','cadPanel','rhyPanel','tripsPanel']],
+  ['Places',['importPanel','hubPanel','setupPanel']]];
+ const draw=q=>{
+  list.innerHTML='';
+  const ql=String(q||'').toLowerCase();
+  for(const [gname,ids] of groups){
+   const items=[];
+   for(const id of ids){
+    const d=WINDOW_DEFS.find(x=>x.id===id);if(!d)continue;
+    const name=d.name;
+    if(ql&&name.toLowerCase().indexOf(ql)<0)continue;
+    const on=(id==='tripsPanel')?!!(uiState&&uiState.trips):uiWinShown(id);
+    items.push('<div class="skBrItem'+(on?' on':'')+'" data-win="'+id+'" title="'+String(d.tip||name).replace(/"/g,'&quot;')+'">'+(d.icon||'')+' '+name+'</div>');
+   }
+   if(gname==='Places'){
+    const palOpen=!(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
+    if(!ql||'chord palette'.indexOf(ql)>=0)items.push('<div class="skBrItem'+(palOpen?' on':'')+'" data-act="palette" title="The Chord Palette — the chords of the key laid out to press and drag">🎹 Chord Palette</div>');
+    if(!ql||'canvas'.indexOf(ql)>=0)items.push('<div class="skBrItem" data-act="canvas" title="The Canvas — zoom, the views and the swipe layouts, your templates">🖼 Canvas</div>');
+    if(!ql||'settings'.indexOf(ql)>=0)items.push('<div class="skBrItem" data-act="settings" title="Settings">⚙ Settings</div>');
+   }
+   if(!items.length)continue;
+   list.innerHTML+='<div class="skBrHead">'+gname+'</div>'+items.join('');
+  }
+  list.querySelectorAll('.skBrItem').forEach(el=>{
+   el.onclick=()=>{
+    const w=el.dataset.win,a=el.dataset.act;
+    if(w){uiDispatch({type:'toggle',id:w});return;}
+    if(a==='palette'){try{if(typeof palWinReopen==='function')palWinReopen();}catch(e){}skinRepack();}
+    else if(a==='canvas'){try{canvasWinToggle();}catch(e){}}
+    else if(a==='settings'){try{document.getElementById('setBtn').click();}catch(e){}}
+   };
+  });
+ };
+ draw('');
+ top.querySelector('#skBrSearch').oninput=e=>draw(e.target.value);
+ top.querySelector('#skKbdChip').onclick=()=>skinKbdToggle();
+ /* GV-6: the info view, lower-left */
+ const info=document.createElement('div');
+ info.id='skInfo';
+ info.style.display=P.info?'':'none';
+ info.innerHTML='<div id="skInfoT" style="font-weight:700;color:var(--text);margin-bottom:2px;">Info view</div><div id="skInfoB">Rest the pointer on anything and read what it does here.</div>';
+ pane.appendChild(info);
+}
+function skinInfoTick(e){
+ if(!skinState||!skinState.panes.info)return;
+ const b=document.getElementById('skInfoB');if(!b)return;
+ const t=skinInfoText(e.target);
+ if(t&&t!==b.dataset.last){b.dataset.last=t;b.textContent=t;}
+}
+document.addEventListener('mouseover',e=>{try{skinInfoTick(e);}catch(err){}});
+function skinSplitter(vert,onMove,onEnd){
+ const s=document.createElement('div');
+ s.className='skSplit'+(vert?'':' h');
+ s.title=vert?'Drag to re-portion the panes — drag to the edge to tuck the pane away':'Drag to re-portion — drag to the bottom to tuck the lane away';
+ s.onmousedown=e0=>{
+  if(e0.button!==0)return;
+  e0.preventDefault();
+  const mv=ev=>{try{onMove(ev);}catch(e){}};
+  const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);try{onEnd(ev);}catch(e){}};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
+ return s;
+}
+function skinEdge(side,label,onRecover){
+ /* GV-3: the tucked-away pane keeps a thin strip at its edge — one line and a triangle
+    pointing the way the border should be dragged to bring it back; a click brings it back */
+ const d=document.createElement('div');
+ d.className='skEdge skEdge-'+side;
+ d.title=label;
+ d.textContent=side==='l'?'▶':side==='r'?'◀':'▲';
+ d.onclick=onRecover;
+ return d;
+}
+function skinApply(sk){
+ sk=skinNorm(sk);if(!sk)return;
+ const wasOn=!!skinState;
+ const _kbdWas=skinKbd.on,_kbdOct=skinKbd.oct,_kbdVel=skinKbd.vel;
+ skinTeardown(true);
+ try{if(typeof swLayoutTeardown==='function')swLayoutTeardown();}catch(e){}
+ skinState=sk;
+ const P=sk.panes;
+ document.body.classList.add('skinOn','skinGv2');
+ try{const _rl=document.getElementById('rail');if(_rl&&_rl.dataset.skD===undefined){_rl.dataset.skD=_rl.style.display||'';_rl.style.display='none';}}catch(e){}   /* the rail rides inside #gridRowWrap with an inline display — the browser column carries its openers under a view */
+ /* DV-11 ② (labelled): entering the view chooses its key-command set — Set A for GV-2 — unless a
+    personal set is chosen; leaving gives the previous set back */
+ try{if(!wasOn&&typeof SETTINGS==='object'&&SETTINGS&&KEYSETS[SETTINGS.keyset||'live']&&(SETTINGS.keyset||'live')!=='live'){_skPrevKeyset=SETTINGS.keyset||'live';SETTINGS.keyset='live';persistSettings();}}catch(e){}
+ try{if(typeof fixedChromeApply==='function')fixedChromeApply();}catch(e){}
+ const padT=parseFloat(document.body.style.paddingTop)||0;
+ const padB=parseFloat(document.body.style.paddingBottom)||0;
+ const layer=document.createElement('div');
+ layer.id='skinLayer';
+ layer.style.cssText='position:fixed;left:0;right:0;top:'+padT+'px;bottom:'+padB+'px;display:flex;flex-direction:column;z-index:40;background:var(--bg);';
+ document.body.appendChild(layer);
+ document.body.style.overflow='hidden';
+ _skSaved=[];
+ const remember=el=>{_skSaved.push({el,next:el.nextSibling,parent:el.parentNode});};
+ const cell=(m,grid)=>{
+  remember(m);
+  m.dataset.skW=m.style.width||'';m.dataset.skH=m.style.height||'';m.dataset.skO=m.style.overflow||'';
+  m.style.display='';m.classList.add('skCell');
+  if(grid){m.style.width='98%';}
+  else{m.classList.add('swCell');   /* the row engine's own cell class — inline-block in the lane, inline-flex for the flex-native members */
+  m.style.width='96%';m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';m.style.scrollSnapAlign='start';}
+ };
+ /* the main row: browser | centre | right */
+ const main=document.createElement('div');
+ main.className='skMain';
+ main.style.cssText='display:flex;flex:'+(P.bc?100:(100-P.b))+' 1 0%;min-height:0;position:relative;';
+ layer.appendChild(main);
+ const brw=document.createElement('div');
+ brw.id='skBrowser';brw.className='skPane';
+ brw.style.cssText='display:flex;flex-direction:column;flex:0 0 '+(P.lc?0:P.l)+'%;border-right:1px solid var(--line);background:var(--panel);';
+ main.appendChild(brw);
+ if(!P.lc){
+  skinBrowserBuild(brw);
+  let live=null;
+  main.appendChild(skinSplitter(true,ev=>{const r=main.getBoundingClientRect();live=Math.max(0,Math.min(40,100*(ev.clientX-r.left)/r.width));brw.style.flexBasis=live+'%';},
+   ()=>{if(live===null)return;if(live<8){P.lc=1;}else{P.l=live;}skinPersist();skinApply(skinState);}));
+ }else main.appendChild(skinEdge('l','The browser is tucked away — click, or ⌘⌥B, to bring it back',()=>{P.lc=0;skinPersist();skinApply(skinState);}));
+ const centre=document.createElement('div');
+ centre.id='skCentre';centre.className='skPane';
+ centre.style.cssText='flex:1 1 0%;overflow:auto;position:relative;';
+ main.appendChild(centre);
+ for(const m of swRowMembers('grids')){cell(m,true);centre.appendChild(m);}
+ if(!P.rc){
+  let live=null;
+  main.appendChild(skinSplitter(true,ev=>{const r=main.getBoundingClientRect();live=Math.max(0,Math.min(45,100*(r.right-ev.clientX)/r.width));right.style.flexBasis=live+'%';},
+   ()=>{if(live===null)return;if(live<8){P.rc=1;}else{P.r=live;}skinPersist();skinApply(skinState);}));
+ }
+ const right=document.createElement('div');
+ right.id='skRight';right.className='skPane';
+ right.style.cssText='display:flex;flex-direction:column;flex:0 0 '+(P.rc?0:P.r)+'%;border-left:1px solid var(--line);overflow:auto;';
+ main.appendChild(right);
+ if(!P.rc){
+  const d=swShelfBlock();remember(d);right.appendChild(d);
+  d.style.display='';d.style.height='100%';
+  try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
+  try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
+  try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+ }else main.appendChild(skinEdge('r','The Essence Shelf is tucked away — click, or ⌘⌥H, to bring it back',()=>{P.rc=0;skinPersist();skinApply(skinState);}));
+ /* the lane below (GV-8): the open windows in one row, scrolling left and right */
+ if(!P.bc){
+  let live=null;
+  layer.appendChild(skinSplitter(false,ev=>{const r=layer.getBoundingClientRect();live=Math.max(0,Math.min(60,100*(r.bottom-ev.clientY)/r.height));lane.style.flex=live+' 1 0%';main.style.flex=(100-live)+' 1 0%';},
+   ()=>{if(live===null)return;if(live<8){P.bc=1;}else{P.b=live;}skinPersist();skinApply(skinState);}));
+ }
+ const lane=document.createElement('div');
+ lane.id='skLane';lane.className='skPane swRow';lane.dataset.cat='engines';
+ lane.style.cssText='flex:'+(P.bc?0:P.b)+' 1 0%;border-top:1px solid var(--line);overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x mandatory;position:relative;background:var(--bg);';
+ layer.appendChild(lane);
+ if(!P.bc){
+  const members=swRowMembers('engines');
+  for(const m of members){cell(m,false);lane.appendChild(m);}
+  if(!members.length){
+   const hint=document.createElement('div');
+   hint.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);';
+   hint.textContent='No window open — pick one in the browser on the left.';
+   lane.appendChild(hint);
+  }
+ }else layer.appendChild(skinEdge('b','The lane is tucked away — click, or ⌘⌥L, to bring it back',()=>{P.bc=0;skinPersist();skinApply(skinState);}));
+ /* GV-6: the little triangle in the lower-left corner shows and hides the info view */
+ const tri=document.createElement('div');
+ tri.id='skInfoTri';
+ tri.title=P.info?'Hide the info view (⌃⌥I)':'Show the info view (⌃⌥I) — it describes whatever the pointer rests on';
+ tri.textContent=P.info?'▾':'▸';
+ tri.onclick=()=>{P.info=P.info?0:1;skinPersist();skinApply(skinState);};
+ layer.appendChild(tri);
+ /* the grid fills its pane (the 85th's fit-to-width law, grow-only, a hand zoom standing) */
+ try{
+  const gsvg=document.querySelector('#gridWrap [id="grid"]');
+  const gcell=document.getElementById('gridRowWrap');
+  if(gsvg&&gcell&&gcell.closest('#skinLayer')&&typeof LOOP==='number'&&LOOP>0){
+   const cr=centre.getBoundingClientRect(),sr=gsvg.getBoundingClientRect();
+   const declW=+gsvg.getAttribute('width')||sr.width;
+   const z=(sr.width>0&&declW>0)?sr.width/declW:1;
+   const avail=Math.floor((cr.right-sr.left)/z)-GUT-24;
+   const fit=Math.floor(avail/LOOP);
+   if(!window._swUserZoom&&isFinite(fit)&&fit>PPB){PPB=Math.min(96,fit);refresh(true);drawTrackSel();}
+  }
+ }catch(e){}
+ if(_kbdWas){skinKbd.oct=_kbdOct;skinKbd.vel=_kbdVel;skinKbdToggle();}
+}
+window.addEventListener('resize',(function(){let _t=null;return function(){clearTimeout(_t);_t=setTimeout(function(){try{if(skinState)skinApply(skinState);}catch(e){}},200);};})());
 function swLayoutApply(layout){
+ /* R1 (the 97th): a VIEW rides the same slot — route it to the view engine; a row layout tears any view down */
+ {const _sk=(typeof skinNorm==='function')?skinNorm(layout):null;
+  if(_sk){swLayoutState=null;swLayoutTeardown();skinApply(_sk);return;}
+  if(typeof skinTeardown==='function'&&skinState)skinTeardown();}
  swLayoutState=swLayoutNorm(layout);
  swLayoutTeardown();
  if(!swLayoutState)return;   /* default 1 — today's column, no engine */
@@ -33385,6 +33851,8 @@ window.addEventListener('keydown',e=>{
  /* input safety: no grid shortcut fires while typing (inputs/selects/textareas/contenteditable) */
  if(isTypingTarget(document.activeElement))return;
  if(e._cnvOwned)return;   /* the Canvas window handled this key (template delete / ⌘Z restore) — one owner per event, no propagation stopped */
+ if(e._kbdOwned)return;   /* R1 (the 97th): the view's keyboard window played this key (DV-13) — the same one-owner idiom */
+ { if(typeof skinKeyAction==='function'&&skinKeyAction(e))return; }   /* R1: the view's own key commands run first (DV-11 ②) */
  { const ka=keysetAction((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.keyset)||'ours',e,/Mac|iPhone|iPad/.test(navigator.platform||''));if(ka){e.preventDefault();keysetRun(ka);return;} }   /* R24 [52]: the chosen key-command set */
  const mod=e.metaKey||e.ctrlKey;
  if(e.key===' '||e.code==='Space'){
@@ -36221,6 +36689,7 @@ function uiDispatch(action){
     }}
   }catch(e){}
  }
+ if(typeof skinState!=='undefined'&&skinState&&action&&action.type==='toggle'){try{skinRepack();}catch(e){}}   /* R1 (the 97th): under a view a toggle re-packs the lane */
  /* July 27a (client): the Melisma window opens AT THE TOP of the screen — it now lives
     right under the icon bar, and opening it scrolls it into view there. */
  if(action&&action.type==='toggle'&&action.id==='tripsPanel'&&uiState.trips){const tp=document.getElementById('tripsPanel');if(tp&&tp.scrollIntoView)try{tp.scrollIntoView({block:'nearest'});}catch(e){}if(typeof renderTrips==='function')renderTrips();}
