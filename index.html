@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06n</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06o</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4560,11 +4560,12 @@ function cagePositionsForMidi(midi,maxFret){
  for(let s=0;s<6;s++){const f=(+midi)-CAGED_TUNING[s]; if(f>=0&&f<=maxFret)out.push({s,f});}
  return out;
 }
-function cageDefaultPos(midi,startFret,window){
+function cageDefaultPos(midi,startFret,window,openOn){
  const opts=cagePositionsForMidi(midi); if(!opts.length)return null;
  const lo=(startFret==null?0:+startFret), hi=lo+Math.max(1,+(window||5))-1;
  const inWin=opts.filter(p=>p.f>=lo&&p.f<=hi);
- const pool=inWin.length?inWin:opts;
+ const pool=cageOpenFilter(inWin.length?inWin:opts,openOn);   /* R36 [55] (d): fret 0 by the toggle */
+ if(openOn&&pool[0]&&pool[0].f===0)return pool[0];
  return pool.slice().sort((a,b)=>a.f-b.f||a.s-b.s)[0];
 }
 /* A [23] — Change Where It’s Played: position candidates · roman frets · TAB cycle · soft-miss hint */
@@ -4576,14 +4577,17 @@ function cageRomanFret(f){
 }
 function cageMoveEvalAt(midis, startFret, window){
  const lo=+startFret||0, win=Math.max(1,+(window||5)), hi=lo+win-1;
+ const openOn=cageOpenPref();
+ const voiced=cageChordVoicing(midis,{startFret:lo,window:win},openOn);   /* R36 [55] (d): one note a string, opens by the toggle */
  const placements=[], missing=[];
  (midis||[]).forEach((midi,ix)=>{
-  const opts=cagePositionsForMidi(midi).filter(p=>p.f>=lo&&p.f<=hi);
+  if(voiced){placements.push(voiced[ix]);return;}
+  const opts=cageOpenFilter(cagePositionsForMidi(midi).filter(p=>p.f>=lo&&p.f<=hi),openOn);
   if(!opts.length){missing.push({ix,midi:+midi}); placements.push(null); return;}
   placements.push(opts.slice().sort((a,b)=>a.f-b.f||a.s-b.s)[0]);
  });
  const miss=missing.length, n=(midis||[]).length;
- return {startFret:lo, window:win, placements, missing, ok:miss===0&&n>0, soft:miss>0&&miss<=2&&miss<n};
+ return {startFret:lo, window:win, placements, missing, ok:miss===0&&n>0, soft:miss>0&&miss<=2&&miss<n, voiced:!!voiced};
 }
 function cageMoveCandidates(midis, window, maxStart){
  const win=Math.max(1,+(window||5)), maxS=(maxStart==null?12:+maxStart);
@@ -4693,40 +4697,77 @@ function cageBoxForRoot(shapeName, rootPc, quality){
  const x=cageTransposeForm(shapeName, rootPc==null?0:+rootPc, quality);
  const {lo,hi}=cageShapeSpan(x.frets);
  const start=Math.max(0, Math.min(lo, Math.max(0, hi-4)));
- return {shape:shapeName, startFret:start, window:5, frets:x.frets, color:x.color, lo, hi, minor:!!x.minor, dim:!!x.dim, label:x.label};
+ const win=Math.max(3,Math.round(+((typeof cageState==='object'&&cageState)?cageState.window:5))||5);   /* R36 [55] (d): the span, changeable (the Frets chips) */
+ return {shape:shapeName, startFret:start, window:win, frets:x.frets, color:x.color, lo, hi, minor:!!x.minor, dim:!!x.dim, label:x.label};
 }
-function cagePosInBox(midi, box){
+/* ==== R36 (build 2026-09-06o, the 96th, Fable) — HIS [55] (d): THE SPAN LAW ====
+   "The open strings should be treated as an additional fret: Fret 0. So if the rule is keep chords within 5 frets, and
+   those frets are 1,2,3,4,5... and the user hasn't turned the toggle on for 'Use open strings as much as possible' then
+   the 0 - open strings should be off limits for chords." And his [58]: "The one note per string is only true in the
+   'Playable Chord' view" — the chords the linked neck places are playable chords, so one note a string. */
+function cageOpenPref(){try{return !!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.openStrings);}catch(e){return false;}}
+function cageOpenFilter(opts,openOn){
+ /* pure: with the toggle OFF a fretted place wins whenever one exists (an open string only when nothing else is in
+    reach); ON, the open strings come first */
+ const all=opts||[]; const fr=all.filter(p=>p.f>0), op=all.filter(p=>p.f===0);
+ if(openOn)return op.concat(fr);
+ return fr.length?fr:all;
+}
+function cageChordVoicing(midis,box,openOn,usedStrings){
+ /* pure: one note per string inside the box — every note's places within the window (opens by the toggle), the
+    cheapest full assignment with no string shared (nearest the box's middle; an open string costs one more when the
+    toggle is off, one less when it is on); null when no such voicing exists */
+ const lo=+box.startFret||0, win=Math.max(1,+(box.window||5)), hi=lo+win-1, mid=(lo+hi)/2;
+ const cands=(midis||[]).map(m=>cageOpenFilter(cagePositionsForMidi(m).filter(p=>p.f>=lo&&p.f<=hi),openOn).map(p=>({s:p.s,f:p.f,cost:Math.abs(p.f-mid)+(p.f===0?(openOn?-1:1):0)})).sort((a,b)=>a.cost-b.cost));
+ if(!cands.length||cands.some(c=>!c.length))return null;
+ const n=cands.length; const used=new Set(usedStrings||[]); const pick=[]; let best=null;
+ (function go(i,cost){
+  if(best&&cost>=best.cost)return;
+  if(i===n){best={cost,pl:pick.slice()};return;}
+  for(const c of cands[i]){if(used.has(c.s))continue;used.add(c.s);pick.push({s:c.s,f:c.f});go(i+1,cost+c.cost);pick.pop();used.delete(c.s);}
+ })(0,0);
+ return best?best.pl:null;
+}
+function cagePosInBox(midi, box, openOn){
  if(!box)return null;
  const lo=+box.startFret, hi=lo+(+box.window||5)-1;
  const opts=cagePositionsForMidi(midi);
- const inWin=opts.filter(p=>p.f>=lo&&p.f<=hi);
- if(inWin.length)return inWin.slice().sort((a,b)=>Math.abs(a.f-(lo+hi)/2)-Math.abs(b.f-(lo+hi)/2)||a.s-b.s)[0];
+ const inWin=cageOpenFilter(opts.filter(p=>p.f>=lo&&p.f<=hi),openOn);   /* R36 [55] (d): fret 0 by the toggle */
+ if(inWin.length)return (openOn&&inWin[0].f===0)?inWin[0]:inWin.slice().sort((a,b)=>Math.abs(a.f-(lo+hi)/2)-Math.abs(b.f-(lo+hi)/2)||a.s-b.s)[0];
  return null;
 }
 function cagePassageLayout(rows, rootPc){
+ /* R36 [55] (d) / [58]: the notes are placed by ONSET GROUP — a chord gets one note per string inside the CAGED box
+    (`cageChordVoicing`), the open strings by the toggle; the box shifts to a neighbour only when no voicing fits here;
+    a group with no full voicing anywhere falls back to note-by-note. Locked notes (the move machinery, the user) keep
+    their place and their string. */
  const root=(rootPc==null&&typeof cageState==='object'&&cageState)?(+cageState.chordRootPc||0):(+rootPc||0);
+ const openOn=cageOpenPref();
  let box=cageBoxForRoot(CAGED_NECK_ORDER[0], root);
  const out=(rows||[]).map(()=>null);
  const order=(rows||[]).map((n,i)=>({n,i,t:n&&isFinite(+n[0])?+n[0]:1e15})).filter(x=>x.n).sort((a,b)=>a.t-b.t||a.i-b.i);
- for(const {n,i} of order){
-  let g=cageNoteGtr(n);
-  if(g&&g.s!=null&&g.f!=null&&g.locked){out[i]={s:g.s,f:g.f,shape:box.shape,startFret:box.startFret}; continue;}
-  let pos=cagePosInBox(n[2], box);
-  if(!pos){
-   /* shift only when absolutely necessary — try adjacent boxes on the neck */
-   let found=null;
+ const groups=[]; for(const it of order){const g=groups.length?groups[groups.length-1]:null; if(g&&Math.abs(it.t-g.t)<=0.08)g.items.push(it); else groups.push({t:it.t,items:[it]});}
+ for(const grp of groups){
+  const items=grp.items;
+  const locked=items.filter(({n})=>{const g=cageNoteGtr(n);return !!(g&&g.s!=null&&g.f!=null&&g.locked);});
+  locked.forEach(({n,i})=>{const g=cageNoteGtr(n);out[i]={s:g.s,f:g.f,shape:box.shape,startFret:box.startFret};});
+  const free=items.filter(x=>locked.indexOf(x)<0);
+  if(!free.length)continue;
+  const usedS=locked.map(({n})=>cageNoteGtr(n).s);
+  const midis=free.map(({n})=>+n[2]);
+  let pl=cageChordVoicing(midis,box,openOn,usedS), useBox=box;
+  if(!pl){
+   /* shift only when necessary — the neighbouring boxes on the neck, nearest first */
    const ix=CAGED_NECK_ORDER.indexOf(box.shape);
    for(const step of [1,-1,2,-2,3,-3,4]){
     const j=(ix+step+CAGED_NECK_ORDER.length*4)%CAGED_NECK_ORDER.length;
     const cand=cageBoxForRoot(CAGED_NECK_ORDER[j], root);
-    const p=cagePosInBox(n[2], cand);
-    if(p){found={box:cand,pos:p}; break;}
+    const p=cageChordVoicing(midis,cand,openOn,usedS);
+    if(p){pl=p;useBox=cand;break;}
    }
-   if(found){box=found.box; pos=found.pos;}
-   else{pos=cageDefaultPos(n[2], box.startFret, box.window);}
   }
-  if(!pos)continue;
-  out[i]={s:pos.s,f:pos.f,shape:box.shape,startFret:box.startFret};
+  if(pl){box=useBox; free.forEach(({i},k)=>{out[i]={s:pl[k].s,f:pl[k].f,shape:box.shape,startFret:box.startFret};}); continue;}
+  free.forEach(({n,i})=>{let pos=cagePosInBox(n[2], box, openOn); if(!pos)pos=cageDefaultPos(n[2], box.startFret, box.window, openOn); if(pos)out[i]={s:pos.s,f:pos.f,shape:box.shape,startFret:box.startFret};});
  }
  return {box, placements:out};
 }
@@ -5543,7 +5584,7 @@ function cageLinkNeckDraw(rows){
  for(let i=0;i<(rows||[]).length;i++){
   const n=rows[i]; if(!n)continue;
   let g=cageNoteGtr(n);
-  if(!g){g=cageDefaultPos(n[2],startF,12); if(g)cageSetNoteGtr(n,g);}
+  if(!g){g=cageDefaultPos(n[2],startF,12,cageOpenPref()); if(g)cageSetNoteGtr(n,g);}
   if(!g)continue;
   if(g.finger==null||g.finger===''){
    const ff=fingers[i]!=null?fingers[i]:cageFingerForFret(g.f,startF);
@@ -5601,10 +5642,13 @@ function cageHandLegendDraw(){
    +[0,1,2,3,4].map(f=>'<input type="color" class="cageFingerPick" data-f="'+f+'" value="'+cageHexOf(cageFingerColor(f))+'" title="'+(f===0?'the thumb / open':'finger '+f)+' — choose its colour" style="width:22px;height:18px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;">').join('')
    +'</span>'
    +'<label style="margin-left:10px;font-size:10px;color:var(--dim);display:inline-flex;gap:4px;align-items:center;cursor:pointer;">'
-   +'<input type="checkbox" id="cageBallOn" checked/> Bouncing ball</label>';
+   +'<input type="checkbox" id="cageBallOn" checked/> Bouncing ball</label>'
+   +'<label style="margin-left:10px;font-size:10px;color:var(--dim);display:inline-flex;gap:4px;align-items:center;cursor:pointer;" title="His [55] (d): fret 0 is a fret. Off (the default): a chord keeps to its fretted span and the open strings are off limits whenever a fretted place exists. On: the open strings come first whenever a note can be played open.">'
+   +'<input type="checkbox" id="cageOpenOn"'+(cageOpenPref()?' checked':'')+'/> Use open strings whenever possible</label>';
   host.dataset.built='1';
   const ball=document.getElementById('cageBallOn');
   if(ball)ball.onchange=()=>{try{cageLinkRedraw();}catch(e){};};
+  const oon=document.getElementById('cageOpenOn');if(oon)oon.onchange=()=>{try{SETTINGS.openStrings=!!oon.checked;persistSettings();}catch(e){}try{cageLinkRedraw();}catch(e){}};   /* R36 [55] (d) */
   const hon=document.getElementById('cageHandOn');if(hon)hon.onchange=()=>{try{SETTINGS.fretHand=!!hon.checked;persistSettings();}catch(e){}const w=document.getElementById('cageHandWrap');if(w)w.style.display=hon.checked?'inline-flex':'none';};   /* R29 [55] */
   host.querySelectorAll('.cageFingerPick').forEach(inp=>{inp.oninput=()=>{cageFingerColorSet(+inp.getAttribute('data-f'),inp.value);};});
  }
@@ -35408,7 +35452,8 @@ function parseSettings(str){
  rmPrompts:true,
  hallElevator:true,
  keyset:'live',
- fretHand:true,fingerColors:null};   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ fretHand:true,fingerColors:null,
+ openStrings:false};   /* R36 [55] (d): "Use open strings whenever possible" — default OFF */   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -35424,6 +35469,7 @@ function parseSettings(str){
    if(o.hallElevator===false)def.hallElevator=false;   /* R9: skip the hallway's elevator entry */
    if(o.keyset==='ours'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||o.keyset==='live'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;
    if(o.fretHand===false)def.fretHand=false;   /* R29 */
+   if(o.openStrings===true)def.openStrings=true;   /* R36 */
    if(Array.isArray(o.fingerColors)&&o.fingerColors.length===5&&o.fingerColors.every(c=>/^#[0-9a-f]{6}$/i.test(String(c))))def.fingerColors=o.fingerColors.map(c=>String(c).toLowerCase());   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
