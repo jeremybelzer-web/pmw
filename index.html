@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05q</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-05r</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4844,7 +4844,7 @@ function notSplitTicks(pos,len,meter){
    can ask" · "the notes currently look really squished together". The law: the score READS the played notes at a
    resolution (the notes themselves never change) — starts to the 16th, endings to the read-at value (an 8th by default:
    a note a 16th short of a half is written as the half; three notes struck together become one chord in ONE voice, so
-   E7's pair rule no longer fires on display noise). The ask is a standing choice (Read at: exact · 16th · 8th) with the
+   E7's pair rule no longer fires on display noise). The ask is a standing choice (Simplify notation: off · 16th · 8th — his [47] name) with the
    count of what was rounded in the status, not a modal. The width: bars a line fall until every head has room. */
 function notRoundNote(t,d,res){
  /* pure: one note in ticks read at `res` ticks — its start to the 16th (or finer when res is finer), its end to res, never
@@ -5011,14 +5011,15 @@ function notSpellTrack(rows,opts){
 }
 /* ==== E4 (build 2026-09-05a, the 96th) — WIG & QUILL STEP INPUT, the caret grammar of the feature pass §2. You pick a
    value and type letters; the caret is the grid's own playhead (it rides playheadBeat and advances by what you write).
-   1 whole · 2 half · 3 quarter · 4 8th · 5 16th · 6 32nd · . dotted · T triplet · A–G a pitch in the key at the caret
+   8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd (R21, the engraving keypad) · . dotted · T triplet · A–G a pitch in the key at the caret
    (the signature's accidental) in the octave nearest the previous note · + − sharpen/flatten the note just written (or
    arm the next) · ↑ ↓ an octave · ⇧+letter stacks a chord at the caret · R a rest (the caret moves, nothing is written)
    · ⌫ takes the last note back · ← → step the caret · Esc leaves. Overwrite only (pass §2): a note replaces what
    starts inside its span on that part. Pure below, the window's handler beneath it. 48 ticks a beat, as E1. */
 function wqStepValue(key){
  /* a duration key → the note value it names, or null */
- const m={'1':'w','2':'h','3':'q','4':'8','5':'16','6':'32'};
+ /* R21 (his [48]): the keypad convention professional engraving programs use — 6 is the quarter, larger longer, smaller shorter */
+ const m={'8':'w','7':'h','6':'q','5':'8','4':'16','3':'32'};
  return m[String(key)]||null;
 }
 function wqStepTicks(value,dots,tuplet){
@@ -5031,11 +5032,11 @@ function wqStepTicks(value,dots,tuplet){
 function wqStepAction(key,shift){
  /* one keystroke → the grammar's action, or null when the key is not the grammar's (so the app keeps it) */
  const k=String(key==null?'':key);
- if(/^[1-6]$/.test(k))return {kind:'dur',value:wqStepValue(k)};
+ if(/^[3-8]$/.test(k))return {kind:'dur',value:wqStepValue(k)};
  if(k==='.')return {kind:'dot'};
  if(k==='t'||k==='T')return {kind:'tuplet'};
  if(/^[a-gA-G]$/.test(k))return {kind:'note',letter:k.toUpperCase(),stack:!!shift};
- if(k==='r'||k==='R'||k==='0')return {kind:'rest'};
+ if(k==='r'||k==='R'||k===','||k===' ')return {kind:'rest'};   /* R21: , writes a rest and SPACE advances the caret by the value — both move on without a note */
  if(k==='+'||k==='=')return {kind:'acc',delta:1};
  if(k==='-'||k==='_')return {kind:'acc',delta:-1};
  if(k==='ArrowUp')return {kind:'octave',delta:1};
@@ -6256,12 +6257,15 @@ function buildWqWindow(){
   +'<span class="cpchip'+(wqState.layout==='part'?' on':'')+'" id="wqLayPart" title="One track on its own staff">Part</span>'
   +'<label id="wqPartLbl" style="font-size:11px;color:var(--text);display:'+((wqState.layout==='part'||wqInput.on)?'inline-flex':'none')+';gap:4px;align-items:center;">Track <select id="wqPart" style="font-size:11px;">'+parts.map(t=>'<option value="'+t+'"'+(t===wqState.part?' selected':'')+'>'+lbl(t)+'</option>').join('')+'</select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;">Bars a line <select id="wqBars" style="font-size:11px;"><option value="2"'+(wqState.bars===2?' selected':'')+'>2</option><option value="4"'+(wqState.bars===4?' selected':'')+'>4</option></select></label>'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Read at — how the score reads the played lengths (E9, his words: the simplest notation). 8th (default): an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. 16th: finer. Exact: every tick as played — the second voice and the tied fragments come back. The notes themselves are never changed; the status counts what was rounded.">Read at <select id="wqRes" style="font-size:11px;"><option value="24"'+(wqState.res===24?' selected':'')+'>8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>16th</option><option value="0"'+(!(wqState.res>0)?' selected':'')+'>exact</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Simplify notation (his [47]: extend notes to a cleaner end point and shift them to a cleaner entry point — but only on the standard notation, not in the MIDI, since most MIDI decisions are intentional for the sound). To the 8th (default): an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. To the 16th: finer. Off: every tick as played — the second voice and the tied fragments come back. The MIDI is never touched; the status counts what was simplified.">Simplify notation <select id="wqRes" style="font-size:11px;"><option value="24"'+(wqState.res===24?' selected':'')+'>to the 8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>to the 16th</option><option value="0"'+(!(wqState.res>0)?' selected':'')+'>off</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Paint — who draws the glyphs (R19, his word): VexFlow (the open engraving library, MIT; loads from the CDN as Tone.js does) or the house skin. The musical decisions are the app&#8217;s own either way — the values, ties, beams, voices, rests, the key&#8217;s spelling, the read-at rounding. If VexFlow hits a limitation, the house skin is one click away.">Paint <select id="wqPaint" style="font-size:11px;"><option value="vex"'+(notPainter()==='vex'?' selected':'')+'>VexFlow</option><option value="house"'+(notPainter()==='house'?' selected':'')+'>house</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="wqFollow"'+(wqState.follow?' checked':'')+'/> Follow the transport</label>'
   +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
-  +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead): 1 whole · 2 half · 3 quarter · 4 8th · 5 16th · 6 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · R a rest · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves">✎ Write</span>'
+  +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead), the keypad way: 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · , or R a rest · SPACE advances · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves · the ⓘ beside this explains the method">✎ Write</span>'
+  +'<span class="cpchip" id="wqInfo" title="How note entry works here — the method, in one card">ⓘ</span>'
   +'<span id="wqWriteChip" style="font-size:10.5px;color:var(--dim);"></span></div>'
+  +'<div id="wqInfoCard" style="display:none;font-size:11px;line-height:1.5;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
+  +'<b>Note entry — the keypad method professional engraving programs use, so the habit carries over.</b> ✎ Write puts the caret at the playhead; click the sheet to move it. <b>The numbers pick the value:</b> 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd — 6 is the quarter, larger is longer. <b>.</b> adds a dot (it stays on until pressed again) · <b>T</b> makes a triplet · <b>A–G</b> writes that pitch in the key at the caret, in the octave nearest the last note · <b>+ / −</b> sharpen or flatten the note just written · <b>↑ ↓</b> move it an octave · <b>⇧ + a letter</b> stacks a chord · <b>, or R</b> writes a rest · <b>SPACE</b> advances the caret by the value without writing · <b>⌫</b> takes the last note back · <b>← →</b> step the caret · <b>Esc</b> leaves. A new note replaces whatever started inside its span; every note is one undo. <b>Simplify notation</b> reads the played notes at a clean grid for the page only — the MIDI is never changed. <b>Ctrl+click a head</b> for its menu: dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo.</div>'
   +'<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;"><canvas id="wqCanvas" width="1100" height="180" style="display:block;width:100%;height:auto;"></canvas></div>';
  const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
  on('wqLayScore',()=>{wqState.layout='score';buildWqWindow();});
@@ -6269,6 +6273,7 @@ function buildWqWindow(){
  const ps=document.getElementById('wqPart');if(ps)ps.onchange=()=>{wqState.part=ps.value;wqDraw();};
  const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
  const ptl=document.getElementById('wqPaint');if(ptl)ptl.onchange=()=>{wqState.painter=ptl.value==='house'?'house':'vex';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* R19 */
+ const inf=document.getElementById('wqInfo');if(inf)inf.onclick=()=>{const cd=document.getElementById('wqInfoCard');if(cd){const on=cd.style.display==='none';cd.style.display=on?'block':'none';inf.classList.toggle('on',on);}};   /* R21 [48]: the ⓘ card */
  const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=+rsl.value||0;wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
@@ -6321,7 +6326,7 @@ function wqDraw(){
  const o={bars:wqState.bars};
  if(wqInput.on){o.at=wqCaretBeat();o.caret={part:wqInputPart(),beat:wqCaretBeat(),label:wqInputValueWord()};if(wqState.last&&wqState.last.parts&&wqState.last.bars===(wqState.bars||4))o.keepFrom=wqState.last.from;}
  const r=wqDrawInto(c,ids.filter(t=>wqPartRows(t).length),o);
- const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' read at the '+(wqState.res===12?'16th':'8th')+' (as played they are untouched — Read at: exact shows them)':'')):'nothing to notate yet — write some notes on the grid';
+ const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' simplified for the score to the '+(wqState.res===12?'16th':'8th')+' — the MIDI untouched (Simplify notation: off shows them as played)':'')):'nothing to notate yet — write some notes on the grid';
  wqState.last=r;return r;
 }
 /* the pop-up from the Guitar window (RAW [24]) — the linked part as a floating sheet, following the transport; Escape closes */
