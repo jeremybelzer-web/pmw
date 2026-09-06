@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06o</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06p</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5456,7 +5456,8 @@ function cageViewUpdate(rows,beat,boxStart){
  if(cageView.drag){cageView.start=Math.round(cageView.drag.shown);cageView.span=win.span;cageView.shown=cageView.drag.shown;cageView.anim=null;}
  else cageViewSet(start,win.span);
  const shown=cageView.drag?cageView.drag.shown:cageViewShown(cageViewNow());
- return {start:cageView.start,span:cageView.span,shown,lo:shown-1,cells:cageView.span+2,target:tg};
+ const fr=cageViewFrame(shown,cageView.span,cageFramePref());   /* R37 [55] (f): floating frets or everything to the head */
+ return {start:cageView.start,span:cageView.span,shown,lo:fr.lo,cells:fr.cells,frame:cageFramePref(),target:tg};
 }
 function cageViewCommit(start,shape){
  /* the user's position (a click on a shape, the box let go): the chord in play is re-placed there when it fits (the move
@@ -5490,7 +5491,9 @@ function cageNeckBoardDraw(ctx,G){
  for(let s=0;s<strings;s++){const y=y0+s*strGap; ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();}
  ctx.globalAlpha=0.7; ctx.font=NS.fretFont+'px system-ui,sans-serif'; ctx.textAlign='center';
  for(let k=Math.max(1,k0);k<=k1;k++){const x=xAt(k)-fretW/2; if(x>x0&&x<x1)ctx.fillText(String(k),x,y1+42);}
- ctx.textAlign='left'; ctx.globalAlpha=1; ctx.restore();
+ /* R37 [55] (f): in the floating frame the left-most fret shown is marked with a Roman numeral above the board */
+ let roman=null; if(G.frame!=='head'&&viewLo>=0){const first=Math.max(1,Math.floor(viewLo+1e-6)+1); roman=cageRomanFret(first); ctx.globalAlpha=.9; ctx.fillStyle=cageCss('--cage-ring','#fff'); ctx.font='bold 15px Georgia,serif'; ctx.textAlign='center'; ctx.fillText(roman,xAt(first)-fretW/2,y0-14);}
+ ctx.textAlign='left'; ctx.globalAlpha=1; ctx.restore(); return roman;
 }
 function cageMiniRoots(rootPc,quality){
  /* pure: the five CAGED boxes for this root (major or minor forms — his [58]) along the neck, each with its root notes {s,f} — sorted along the neck */
@@ -5537,8 +5540,9 @@ function cageMiniBind(c){
   if(!_cageMini)return; e.preventDefault(); e.stopPropagation();
   const v=vAt(e); const M=_cageMini;
   if(v>=M.lo&&v<=M.lo+M.cells){
-   const off=v-(M.lo+1);
-   cageView.drag={shown:M.lo+1,off}; c.style.cursor='grabbing';
+   const startNow=(cageView.shown!=null)?cageView.shown:(M.lo+2);   /* R37: the window's start, whatever the frame's left edge */
+   const off=v-startNow;
+   cageView.drag={shown:startNow,off}; c.style.cursor='grabbing';
    const mv=ev=>{if(!cageView.drag)return;const s=Math.max(0,Math.min(CAGE_MAX_FRET-(cageView.span||5)+1,vAt(ev)-cageView.drag.off));cageView.drag.shown=s;cageView.pin={start:Math.round(s),sig:cageView.sig};try{cageLinkRedraw();}catch(e){}};
    const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);if(!cageView.drag)return;const s=Math.round(cageView.drag.shown);cageView.drag=null;c.style.cursor='grab';cageViewCommit(s,null);};
    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
@@ -5548,6 +5552,64 @@ function cageMiniBind(c){
   for(const sh of M.shapes){const inside=k>=sh.lo-1&&k<=sh.hi;const d=Math.abs((sh.lo+sh.hi)/2-k);if(!best||(inside&&!best.inside)||(inside===best.inside&&d<best.d))best={sh,inside,d};}
   if(best)cageViewCommit(best.sh.startFret,best.sh.label||best.sh.shape);
  });
+}
+/* ==== R37 (build 2026-09-06p, the 96th, Fable) — HIS [55] (f) + [66] (j): THE GUITAR WINDOW'S DROP-DOWN AND PLAYBACK BEHAVIOURS ====
+   "The user should have a guitar window drop down menu when you control+click, which let's you select toggles off or on.
+   In there should be a 'Playback Behaviors Window' which opens a pop-up window letting you set: Whether the guitar neck
+   shows 1 empty fretboard space to the right and left of the notes being played + all the way to the head of the guitar.
+   Or just shows the viewer 1 fret on either side of what's played, and marks the left-most fret… underneath with a Roman
+   numeral… (If you hover the cursor over that you should be told it is marking the fret number.)" And [66]: "the drop
+   down menu can also be a place you can select the views." */
+function cageViewFrame(shown,span,frame){
+ /* pure: what the neck shows for a window at `shown` — 'float' (the default): one fret each side of the span (the
+    left edge two fret lines before the window's first fret, so the cell before it shows), the left-most marked with a
+    Roman numeral; 'head': from the head of the guitar to one fret past the span */
+ const sp=Math.max(3,Math.round(+span)||5); const sh=+shown||0;
+ if(frame==='head')return {lo:-1,cells:sh+sp+1};
+ return {lo:sh-2,cells:sp+2};
+}
+function cageFramePref(){try{return (typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.neckFrame==='head')?'head':'float';}catch(e){return 'float';}}
+const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball (coming)',on:false},{id:'angled',label:'Angled neck with globs (coming)',on:false},{id:'highway',label:'Strings from the bottom, foreshortened (coming)',on:false}];
+function cageGuitarMenu(e){
+ /* the drop-down: the views, the toggles, Playback Behaviours… — rows run through wanFloatMenu (the map-menu shell) */
+ const q=id=>document.getElementById(id);
+ const flip=(id,setter)=>{const el=q(id);if(el){el.checked=!el.checked;if(el.onchange)el.onchange();}else if(setter)setter();};
+ const view=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged';
+ const rows=[{hd:'Guitar view'}];
+ CAGE_VIEWS.forEach(v=>rows.push({label:v.label,cur:view===v.id,dis:!v.on,fn:()=>{cageState.viewName=v.id;const sel=q('cageViewSel');if(sel)sel.value=v.id;}}));
+ rows.push({hd:'Toggles'});
+ rows.push({label:'Fret-hand colours',cur:!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.fretHand===false),fn:()=>flip('cageHandOn',()=>{SETTINGS.fretHand=SETTINGS.fretHand===false;persistSettings();})});
+ rows.push({label:'Use open strings whenever possible',cur:cageOpenPref(),fn:()=>flip('cageOpenOn',()=>{SETTINGS.openStrings=!cageOpenPref();persistSettings();})});
+ rows.push({label:'Bouncing ball on the neck',cur:!!(q('cageBallOn')&&q('cageBallOn').checked),fn:()=>flip('cageBallOn',null)});
+ rows.push({label:'Relative pair (the co-shape in the label)',cur:!!(typeof cageState==='object'&&cageState&&cageState.pairShapes),fn:()=>flip('cagePairOn',()=>{cageState.pairShapes=!cageState.pairShapes;try{cageDraw();}catch(e){}})});
+ rows.push({hd:'Window'});
+ rows.push({label:'Playback Behaviours…',fn:()=>cagePlaybackBehavioursOpen()});
+ wanFloatMenu(e,rows);
+ const m=document.getElementById('wanWebMenu'); if(m)m.setAttribute('data-cage-menu','1');
+ return rows;
+}
+function cageGuitarMenuBind(){
+ /* ctrl+click (a contextmenu on the Mac) anywhere on the Guitar window */
+ if(document._cageMenuBound)return; document._cageMenuBound=true;
+ document.addEventListener('contextmenu',e=>{const t=e.target&&e.target.closest?e.target.closest('#cagePanel,#cageNeckStrip'):null;if(!t)return;if(typeof uiWinShown==='function'&&!uiWinShown('cagePanel'))return;e.preventDefault();e.stopPropagation();cageGuitarMenu(e);},true);   /* the window's panel AND its neck strip (the strip rides the audition pair) */
+}
+function cagePlaybackBehavioursOpen(){
+ let d=document.getElementById('cagePbPop'); if(d)d.remove();
+ const frame=cageFramePref();
+ d=document.createElement('div'); d.id='cagePbPop';
+ d.style.cssText='position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:140;width:min(560px,92vw);background:var(--panel2);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 48px rgba(0,0,0,.55);padding:14px 16px;font-size:12px;color:var(--text);';
+ d.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><b style="font-size:14px;">Playback Behaviours</b><span style="color:var(--dim);">the Guitar window while the song plays</span><span style="flex:1"></span><span class="cpchip" id="cagePbClose">✕ Close</span></div>'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:6px 0 4px;">The neck shows</div>'
+  +'<label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0;cursor:pointer;"><input type="radio" name="cagePbFrame" value="float"'+(frame==='float'?' checked':'')+'/><span><b>One floating fret each side</b> of what is played — the left-most fret marked with a Roman numeral above the board (hover the neck: it says which fret it marks).</span></label>'
+  +'<label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0;cursor:pointer;"><input type="radio" name="cagePbFrame" value="head"'+(frame==='head'?' checked':'')+'/><span><b>One empty fret each side</b> of what is played <b>and everything to the head</b> of the guitar.</span></label>'
+  +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin:10px 0 4px;">Chords</div>'
+  +'<label style="display:flex;gap:8px;align-items:center;margin:4px 0;cursor:pointer;"><input type="checkbox" id="cagePbOpen"'+(cageOpenPref()?' checked':'')+'/> Use open strings whenever possible <span style="color:var(--dim);">(off: the open strings are off limits to a chord whenever a fretted place exists)</span></label>'
+  +'<label style="display:flex;gap:8px;align-items:center;margin:4px 0;color:var(--dim);"><input type="checkbox" disabled/> Left-handed — mirror the neck <span>(coming)</span></label>';
+ document.body.appendChild(d);
+ d.querySelectorAll('input[name="cagePbFrame"]').forEach(r=>{r.onchange=()=>{try{SETTINGS.neckFrame=r.value==='head'?'head':'float';persistSettings();}catch(e){}try{cageLinkRedraw();}catch(e){}};});
+ const op=document.getElementById('cagePbOpen'); if(op)op.onchange=()=>{const el=document.getElementById('cageOpenOn');if(el){el.checked=op.checked;if(el.onchange)el.onchange();}else{try{SETTINGS.openStrings=!!op.checked;persistSettings();}catch(e){}}};
+ document.getElementById('cagePbClose').onclick=()=>d.remove();
+ return d;
 }
 function cageNeckSizes(){
  /* pure: the linked neck's sizes — his [55]: "the actual numbers on the fretboard need to be twice as big at least. Let's say
@@ -5578,7 +5640,8 @@ function cageLinkNeckDraw(rows){
  const V=cageViewUpdate(rows,beat,plan.box?plan.box.startFret:startF);   /* R30 [57]: the window the neck shows — his 5-fret span + one fret each side, eased */
  const fretW=(x1-x0)/V.cells, viewLo=V.lo;
  const fx=f=>x0+((f===0?0:f-0.5)-viewLo)*fretW;
- cageNeckBoardDraw(ctx,{x0,x1,y0,y1,strings,strGap,fretW,viewLo,cells:V.cells,NS});
+ const roman=cageNeckBoardDraw(ctx,{x0,x1,y0,y1,strings,strGap,fretW,viewLo,cells:V.cells,NS,frame:V.frame});
+ try{c.title=roman?('The Roman numeral '+roman+' marks the fret this floating view starts at — fret '+Math.max(1,Math.floor(viewLo+1e-6)+1)):'';}catch(e){}
  ctx.save(); ctx.beginPath(); ctx.rect(x0-NS.rad.current-2,0,x1-x0+NS.rad.current+4,H); ctx.clip();
  const pts=[];
  for(let i=0;i<(rows||[]).length;i++){
@@ -5626,7 +5689,7 @@ function cageLinkNeckDraw(rows){
  }
  ctx.restore();
  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
- _cageNeck={x0,x1,y0,y1,fretW,strGap,viewLo,cells:V.cells,start:V.start,span:V.span,shown:V.shown,anim:!!cageView.anim,pin:cageView.pin?cageView.pin.start:null,dots:pts.map(p=>({f:p.g.f,s:p.g.s,cx:p.cx,st:p.st}))};   /* R30: for the suites */
+ _cageNeck={x0,x1,y0,y1,fretW,strGap,viewLo,cells:V.cells,start:V.start,span:V.span,shown:V.shown,frame:V.frame,roman,anim:!!cageView.anim,pin:cageView.pin?cageView.pin.start:null,dots:pts.map(p=>({f:p.g.f,s:p.g.s,cx:p.cx,st:p.st}))};   /* R30: for the suites */
  try{cageMiniDraw(rootPc,V);}catch(e){}
  cageHandLegendDraw();
 }
@@ -7477,6 +7540,7 @@ function buildCageWindow(){
   };
   on('cageSplitNeck').onchange=e=>{cageState.splitNeck=e.target.value==='split';cageDraw();};
   on('cageShape').onchange=e=>{cageState.shapePref=e.target.value;cageDraw();};
+  const _vs=document.getElementById('cageViewSel'); if(_vs){_vs.value=(cageState.viewName||'caged'); _vs.onchange=()=>{cageState.viewName=_vs.value;};}   /* R37: the View select and the menu agree */
   const _pair=document.getElementById('cagePairOn'); if(_pair){_pair.checked=!!cageState.pairShapes;_pair.onchange=()=>{cageState.pairShapes=!!_pair.checked;cageDraw();};}   /* R33 [59] */
   /* R32 [58]: the layer chips */
   [['cageLayChord','chord'],['cageLayArp','fullArp'],['cageLayPenta','penta'],['cageLayBlues','blues']].forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.checked=!!cageState.layers[key];el.onchange=()=>{cageState.layers[key]=!!el.checked;cageDraw();};}});
@@ -35453,7 +35517,7 @@ function parseSettings(str){
  hallElevator:true,
  keyset:'live',
  fretHand:true,fingerColors:null,
- openStrings:false};   /* R36 [55] (d): "Use open strings whenever possible" — default OFF */   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ openStrings:false,neckFrame:'float'};   /* R36 [55] (d): "Use open strings whenever possible" — default OFF · R37 (f): the neck's frame, 'float' or 'head' */   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -35470,6 +35534,7 @@ function parseSettings(str){
    if(o.keyset==='ours'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||o.keyset==='live'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;
    if(o.fretHand===false)def.fretHand=false;   /* R29 */
    if(o.openStrings===true)def.openStrings=true;   /* R36 */
+   if(o.neckFrame==='head')def.neckFrame='head';   /* R37 */
    if(Array.isArray(o.fingerColors)&&o.fingerColors.length===5&&o.fingerColors.every(c=>/^#[0-9a-f]{6}$/i.test(String(c))))def.fingerColors=o.fingerColors.map(c=>String(c).toLowerCase());   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
@@ -35545,6 +35610,7 @@ function parseProjectFile(str){
  }catch(e){return null;}}
 let SETTINGS=parseSettings(null);
 try{cageFingerColorsApply();}catch(e){}   /* R29 [55]: the chosen finger colours at load */
+try{cageGuitarMenuBind();}catch(e){}   /* R37 [55] (f): ctrl+click on the Guitar window */
 try{SETTINGS=parseSettings(localStorage.getItem('cp_settings'));}catch(e){}
 (function(){const cc=document.getElementById('chkCont');if(cc)cc.checked=SETTINGS.continuous===true;})();   /* 2.5 ⑧: the toggle reads its stored state here, past the TDZ */
 function persistSettings(){try{localStorage.setItem('cp_settings',JSON.stringify(SETTINGS));}catch(e){}}
