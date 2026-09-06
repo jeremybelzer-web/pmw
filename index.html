@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06q</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06r</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4636,6 +4636,7 @@ function cageSetNoteGtr(n,gtr){
   if(pm==='p'||pm==='i'||pm==='m'||pm==='a')g.pima=pm;
   else if(gtr.pima===null){} else if(base.gtr&&base.gtr.pima)g.pima=base.gtr.pima;
   if(gtr.locked)g.locked=true; else if(base.gtr&&base.gtr.locked&&gtr.locked!==false)g.locked=true;
+  if(gtr.tech==='slide'||gtr.tech==='H'||gtr.tech==='P'||gtr.tech==='none')g.tech=gtr.tech; else if(gtr.tech===null){} else if(base.gtr&&base.gtr.tech)g.tech=base.gtr.tech;   /* R39 [70]: the pair's mark rides the second note */
   base.gtr=g;
  }else delete base.gtr;
  n[7]=Object.keys(base).length?base:null;
@@ -5591,7 +5592,9 @@ function cageGuitarMenu(e){
 function cageGuitarMenuBind(){
  /* ctrl+click (a contextmenu on the Mac) anywhere on the Guitar window */
  if(document._cageMenuBound)return; document._cageMenuBound=true;
- document.addEventListener('contextmenu',e=>{const t=e.target&&e.target.closest?e.target.closest('#cagePanel,#cageNeckStrip'):null;if(!t)return;if(typeof uiWinShown==='function'&&!uiWinShown('cagePanel'))return;e.preventDefault();e.stopPropagation();cageGuitarMenu(e);},true);   /* the window's panel AND its neck strip (the strip rides the audition pair) */
+ document.addEventListener('contextmenu',e=>{const t=e.target&&e.target.closest?e.target.closest('#cagePanel,#cageNeckStrip'):null;if(!t)return;if(typeof uiWinShown==='function'&&!uiWinShown('cagePanel'))return;e.preventDefault();e.stopPropagation();
+  if(e.target&&e.target.id==='cageBallBoard'){const p=cageBallPillAt(e);if(p){cageBallPairMenu(e,p);return;}}   /* R39 [70]: a pill → the pair's mark */
+  cageGuitarMenu(e);},true);   /* the window's panel AND its neck strip (the strip rides the audition pair) */
 }
 function cagePlaybackBehavioursOpen(){
  let d=document.getElementById('cagePbPop'); if(d)d.remove();
@@ -5635,8 +5638,11 @@ function cageBallSlurs(notes){
   const prev=lastOn[n.s];
   if(prev&&n.t>prev.t){
    const gap=n.t-(prev.t+Math.max(0,+prev.d||0));
-   if(n.tech==='slide')out.push({from:prev.i,to:n.i,kind:'slide',up:n.f>prev.f});   /* marked by the user — whatever the gap */
-   else if(gap<=0.13&&n.f!==prev.f&&!n.tech)out.push({from:prev.i,to:n.i,kind:n.f>prev.f?'H':'P'});
+   /* R39 [70]: a mark set between the two notes wins — slide, H, P, or 'none' (nothing, even when they touch) */
+   if(n.tech==='slide')out.push({from:prev.i,to:n.i,kind:'slide',up:n.f>prev.f,marked:true});
+   else if(n.tech==='H'||n.tech==='P')out.push({from:prev.i,to:n.i,kind:n.tech,marked:true});
+   else if(n.tech==='none'){}
+   else if(gap<=0.13&&n.f!==prev.f)out.push({from:prev.i,to:n.i,kind:n.f>prev.f?'H':'P'});
   }
   lastOn[n.s]=n;
  }
@@ -5707,6 +5713,41 @@ function cageBallDraw(rows){
   notes.forEach(n=>{if(n.t+n.d<beat||n.t>beat+span)return; const y=LH-4-n.s*lg; lc.fillStyle=n.f===0?'#8f8f95':cageFingerColor(n.finger); lc.globalAlpha=n.t<beat?.4:.9; lc.fillRect(Math.max(0,lx(n.t)),y-2,Math.max(3,lx(n.t+n.d)-lx(n.t)),4);});
   lc.globalAlpha=1; lc.fillStyle='#ffe27a'; lc.fillRect(0,0,2,LH);}
  _cageBall={pills,slurs,ball,beat,px,ppb,notes:notes.length};
+}
+/* ==== R39 (build 2026-09-06r, the 96th, Fable) — HIS [70]: "A slide has to be marked between 2 notes, just like a hammer-on and a pull-off" ==== */
+function cageBallPillAt(e){
+ const c=document.getElementById('cageBallBoard'); const B=_cageBall; if(!c||!B)return null;
+ const r=c.getBoundingClientRect(); const x=(e.clientX-r.left)*c.width/Math.max(1,r.width), y=(e.clientY-r.top)*c.height/Math.max(1,r.height);
+ return B.pills.find(p=>x>=p.x0&&x<=p.x1&&Math.abs(y-p.y)<=16)||null;
+}
+function cageBallNextOnString(rows,i){
+ /* pure: the index of the next note on the same string after note i (by onset), or -1 */
+ const n=rows[i]; const g=cageNoteGtr(n); if(!n||!g)return -1;
+ let best=-1,bt=Infinity;
+ rows.forEach((m,j)=>{if(j===i||!m)return;const h=cageNoteGtr(m);if(!h||h.s!==g.s)return;const t=+m[0];if(t>+n[0]&&t<bt){bt=t;best=j;}});
+ return best;
+}
+function cageBallPairMark(i,mark){
+ /* the mark between note i and the next on its string, written on the second note's gtr.tech ('slide' · 'H' · 'P' · 'none' · null = let the app infer) — one undo, through the linked world so it writes back to MAIN */
+ if(!_cageLink||!_cageLink.wid)return null;
+ let j=-1;
+ withGridWorld(_cageLink.wid,()=>{
+  const face=cageSelTarget().face; const rows=project.tracks[face]||[];
+  j=cageBallNextOnString(rows,i); if(j<0)return;
+  if(typeof snapshot==='function')snapshot();
+  const g=Object.assign({},cageNoteGtr(rows[j])||{}); g.tech=mark||null; cageSetNoteGtr(rows[j],g);
+  if(typeof refresh==='function')refresh(true);
+ });
+ _cageLink.lastWorld=''; try{cageLinkTick();}catch(e){}
+ return j;
+}
+function cageBallPairMenu(e,p){
+ const rows=cageLinkWorldRows(_cageLink.wid,cageSelTarget().face); const j=cageBallNextOnString(rows,p.i);
+ if(j<0){wanFloatMenu(e,[{hd:'Fret '+p.f+' — no later note on this string'},{label:'Nothing to mark',dis:true}]);return;}
+ const cur=(cageNoteGtr(rows[j])||{}).tech||null; const to=cageNoteGtr(rows[j]);
+ const row=(label,mark)=>({label,cur:cur===mark,fn:()=>cageBallPairMark(p.i,mark)});
+ wanFloatMenu(e,[{hd:'Between fret '+p.f+' and fret '+to.f+' on this string'},row('Slide (a diagonal)','slide'),row('Hammer-on (H)','H'),row('Pull-off (P)','P'),row('Nothing — even if they touch','none'),row('Let the app infer (touching notes: H rising, P falling)',null)]);
+ const m=document.getElementById('wanWebMenu'); if(m)m.setAttribute('data-cage-pair','1');
 }
 function cageNeckSizes(){
  /* pure: the linked neck's sizes — his [55]: "the actual numbers on the fretboard need to be twice as big at least. Let's say
