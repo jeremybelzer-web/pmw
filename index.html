@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4846,13 +4846,15 @@ function notSplitTicks(pos,len,meter){
    a note a 16th short of a half is written as the half; three notes struck together become one chord in ONE voice, so
    E7's pair rule no longer fires on display noise). The ask is a standing choice (Simplify notation: off · 16th · 8th — his [47] name) with the
    count of what was rounded in the status, not a modal. The width: bars a line fall until every head has room. */
-function notRoundNote(t,d,res){
- /* pure: one note in ticks read at `res` ticks — its start to the 16th (or finer when res is finer), its end to res, never
-    shorter than the start grid. res 0 = exact. {t,d} */
+function notRoundNote(t,d,res,opts){
+ /* pure: one note in ticks read at `res` ticks — its start to the 16th (or to the grid itself when the grid is a triplet
+    or finer), its end to res, never shorter than the start grid. res 0 = exact. opts.start / opts.end (default true)
+    switch either side off — his reference dialog's Adjust Note: Start · End. {t,d} */
  const q=Math.max(1,Math.round(+res||0)),T=Math.round(+t||0),D=Math.max(1,Math.round(+d||1));
  if(!(res>0))return {t:T,d:D};
- const g=Math.min(q,12);
- const t2=Math.round(T/g)*g, e2=Math.round((T+D)/q)*q;
+ const doS=!(opts&&opts.start===false),doE=!(opts&&opts.end===false);
+ const g=(q%12===0)?Math.min(q,12):q;
+ const t2=doS?Math.round(T/g)*g:T, e2=doE?Math.round((T+D)/q)*q:T+D;
  return {t:t2,d:Math.max(g,e2-t2)};
 }
 function notBarsThatFit(measures,from,want,W,minW){
@@ -4886,7 +4888,23 @@ function notSmallestGrid(rows,opts){
  }
  return last;
 }
-function notGridWord(res){return ({48:'quarter',24:'8th',12:'16th',6:'32nd'})[Math.round(+res)]||'8th';}
+function notGridWord(res){return ({48:'quarter',24:'8th',16:'8th triplet',12:'16th',8:'16th triplet',6:'32nd'})[Math.round(+res)]||'8th';}
+function quantizeRowsMulti(rows,idxs,steps,strength,adjStart,adjEnd){
+ /* pure (R23, his reference dialog): the selected rows pulled toward the NEAREST point of any of the grids in `steps`
+    (beats — "1/8 + 1/8 triplet" is two grids), by `strength`; Start moves the onsets, End moves the endings (the length
+    follows, never under the finest grid). Rows outside `idxs` are untouched. */
+ const set=new Set(idxs),gs=(Array.isArray(steps)?steps:[steps]).map(Number).filter(g=>g>0);
+ if(!gs.length)return rows.map(n=>n?n.slice():n);
+ const near=v=>{let best=null;for(const g of gs){const p=Math.round(v/g)*g;if(best===null||Math.abs(p-v)<Math.abs(best-v))best=p;}return best;};
+ const fine=Math.min.apply(null,gs),k=Math.max(0,Math.min(1,+strength||0));
+ return rows.map((n,i)=>{
+  if(!set.has(i)||!n)return n?n.slice():n;
+  const c=n.slice();const t0=+c[0],e0=t0+(+c[1]);
+  if(adjStart!==false){c[0]=+(t0+(near(t0)-t0)*k).toFixed(6);}
+  if(adjEnd){const e2=e0+(near(e0)-e0)*k;c[1]=+Math.max(fine,e2-c[0]).toFixed(6);}
+  return c;
+ });
+}
 function notAutoRes(){
  /* the auto resolution over every pitched track that carries notes */
  let rows=[];try{pitchedTrackIds(project.tracks).forEach(t=>{const a=project.tracks[t];if(Array.isArray(a))rows=rows.concat(a);});}catch(e){}
@@ -4906,9 +4924,9 @@ function notSpell(rows,opts){
  opts=opts||{};
  const meterAt=typeof opts.meterAt==='function'?opts.meterAt:()=>({num:4,den:4});
  const keyAt=typeof opts.keyAt==='function'?opts.keyAt:()=>({tonic:0,pcs:[0,2,4,5,7,9,11]});
- const res=(+opts.res>0)?Math.round(+opts.res):0;let rounded=0;   /* E9 [43]: the read-at resolution in ticks (0 = exact) */
+ const res=(+opts.res>0)?Math.round(+opts.res):0;let rounded=0;const rSw={start:opts.resStart!==false,end:opts.resEnd!==false};   /* E9 [43]: the read-at resolution in ticks (0 = exact); R23: Start · End switches */
  const clean0=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0&&isFinite(r[2]))
-  .map(r=>{let t=Math.round(r[0]*NOT_TPB),d=Math.max(1,Math.round(r[1]*NOT_TPB));if(res>0){const q=notRoundNote(t,d,res);if(q.d!==d||q.t!==t)rounded++;t=q.t;d=q.d;}return {t,d,midi:Math.round(r[2])};}).sort((a,b)=>a.t-b.t||a.midi-b.midi);   /* E9: read at the resolution */
+  .map(r=>{let t=Math.round(r[0]*NOT_TPB),d=Math.max(1,Math.round(r[1]*NOT_TPB));if(res>0){const q=notRoundNote(t,d,res,rSw);if(q.d!==d||q.t!==t)rounded++;t=q.t;d=q.d;}return {t,d,midi:Math.round(r[2])};}).sort((a,b)=>a.t-b.t||a.midi-b.midi);   /* E9: read at the resolution */
  /* E8 (his [36]): two notes of ONE pitch that overlap are one note — a held note and its repeat inside it are not two
     voices (they drew as one head wearing two stems); the later one is absorbed, the sound's end kept */
  const clean=[];
@@ -5041,7 +5059,7 @@ function notMeterAtApp(beat){
 }
 function notSpellTrack(rows,opts){
  /* the app adapter: the project's meter map and per-section key (melismaKeyAt's {tonic,pcs}) around the pure speller — read at Wig & Quill's resolution (E9) */
- return notSpell(rows,{res:(opts&&opts.res!=null)?+opts.res:notReadRes(),meterAt:notMeterAtApp,keyAt:b=>{try{return melismaKeyAt(b);}catch(e){return {tonic:0,pcs:[0,2,4,5,7,9,11]};}},loop:(typeof LOOP==='number'&&LOOP>0)?LOOP:4});
+ return notSpell(rows,{res:(opts&&opts.res!=null)?+opts.res:notReadRes(),resStart:(typeof wqState==='object'&&wqState)?wqState.simpStart!==false:true,resEnd:(typeof wqState==='object'&&wqState)?wqState.simpEnd!==false:true,meterAt:notMeterAtApp,keyAt:b=>{try{return melismaKeyAt(b);}catch(e){return {tonic:0,pcs:[0,2,4,5,7,9,11]};}},loop:(typeof LOOP==='number'&&LOOP>0)?LOOP:4});
 }
 /* ==== E4 (build 2026-09-05a, the 96th) — WIG & QUILL STEP INPUT, the caret grammar of the feature pass §2. You pick a
    value and type letters; the caret is the grid's own playhead (it rides playheadBeat and advances by what you write).
@@ -6273,7 +6291,7 @@ function cageNotationDraw(){
    (a part carrying guitar layouts is written 8vb over TAB) · Part = one track · chord symbols from the chord lane above
    the top staff · dynamics from velocity under each staff · 2 or 4 bars a line · follows the transport. The feature
    pass's E3, round 1 (Score/Part · symbols · dynamics); step input (E4) and the grid's view (E5) follow. */
-var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:'auto',resFound:null,painter:null};   /* R22 [49]: res 'auto' = the song's smallest subdivision (resFound), else 24 · 12 · 6 · 0 by hand */   /* R19 [44]: painter = null (VexFlow when loaded) · 'vex' · 'house' */   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
+var wqState={layout:'score',part:'melody',bars:4,follow:true,iv:null,last:null,res:'auto',resFound:null,simpStart:true,simpEnd:true,painter:null};   /* R23 [50]: res 'auto' is internal only — the card shows the value found; simpStart/simpEnd = the dialog's Adjust Note */   /* R22 [49]: res 'auto' = the song's smallest subdivision (resFound), else 24 · 12 · 6 · 0 by hand */   /* R19 [44]: painter = null (VexFlow when loaded) · 'vex' · 'house' */   /* E9 [43]: res = the read-at resolution in ticks — 24 an 8th (default) · 12 a 16th · 0 exact */
 function wqParts(){
  /* the parts a score shows: pitched tracks that carry notes, in the app's own order */
  try{return pitchedTrackIds(project.tracks).filter(t=>Array.isArray(project.tracks[t])&&project.tracks[t].length);}catch(e){return [];}
@@ -6291,15 +6309,22 @@ function buildWqWindow(){
   +'<span class="cpchip'+(wqState.layout==='part'?' on':'')+'" id="wqLayPart" title="One track on its own staff">Part</span>'
   +'<label id="wqPartLbl" style="font-size:11px;color:var(--text);display:'+((wqState.layout==='part'||wqInput.on)?'inline-flex':'none')+';gap:4px;align-items:center;">Track <select id="wqPart" style="font-size:11px;">'+parts.map(t=>'<option value="'+t+'"'+(t===wqState.part?' selected':'')+'>'+lbl(t)+'</option>').join('')+'</select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;">Bars a line <select id="wqBars" style="font-size:11px;"><option value="2"'+(wqState.bars===2?' selected':'')+'>2</option><option value="4"'+(wqState.bars===4?' selected':'')+'>4</option></select></label>'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Simplify notation (his [47]: extend notes to a cleaner end point and shift them to a cleaner entry point — but only on the standard notation, not in the MIDI, since most MIDI decisions are intentional for the sound). Auto (default, his [49]): the song&#8217;s smallest subdivision — a 16th-note melody reads at the 16th, an 8th-note song at the 8th — shown beside the word; the choices after it set it by hand. To the 8th: an ending a 16th short of a dotted quarter is written as the dotted quarter, notes struck together are one chord in one voice. To the 16th: finer. Off: every tick as played — the second voice and the tied fragments come back. The MIDI is never touched; the status counts what was simplified.">Simplify notation <select id="wqRes" style="font-size:11px;"><option value="auto"'+(wqState.res==='auto'?' selected':'')+'>auto · '+notGridWord((wqState.res==='auto'?notAutoRes():((wqState.resFound&&wqState.resFound.res)||notAutoRes())))+'</option><option value="24"'+(wqState.res===24?' selected':'')+'>to the 8th</option><option value="12"'+(wqState.res===12?' selected':'')+'>to the 16th</option><option value="6"'+(wqState.res===6?' selected':'')+'>to the 32nd</option><option value="0"'+(wqState.res===0?' selected':'')+'>off</option></select></label>'
+  +'<span class="cpchip" id="wqSimp" title="Simplify notation (his [47]/[49]/[50]) — the score reads the played notes at a clean grid, the MIDI never changed. It opens at the song&#8217;s smallest subdivision; change it in the card.">Simplify notation · '+notGridWord(notReadRes())+'</span>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;" title="Paint — who draws the glyphs (R19, his word): VexFlow (the open engraving library, MIT; loads from the CDN as Tone.js does) or the house skin. The musical decisions are the app&#8217;s own either way — the values, ties, beams, voices, rests, the key&#8217;s spelling, the read-at rounding. If VexFlow hits a limitation, the house skin is one click away.">Paint <select id="wqPaint" style="font-size:11px;"><option value="vex"'+(notPainter()==='vex'?' selected':'')+'>VexFlow</option><option value="house"'+(notPainter()==='house'?' selected':'')+'>house</option></select></label>'
   +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="wqFollow"'+(wqState.follow?' checked':'')+'/> Follow the transport</label>'
   +'<span id="wqStatus" style="font-size:10.5px;color:var(--dim);"></span>'
   +'<span class="cpchip'+(wqInput.on?' on':'')+'" id="wqWriteBtn" title="Step input — write notes at the caret (the playhead), the keypad way: 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd · . dotted · T triplet · A–G a pitch in the key · + − sharp/flat · ↑ ↓ octave · ⇧+letter a chord · , or R a rest · SPACE advances · ⌫ back · ← → step · click the sheet to place the caret · Esc leaves · the ⓘ beside this explains the method">✎ Write</span>'
   +'<span class="cpchip" id="wqInfo" title="How note entry works here — the method, in one card">ⓘ</span>'
   +'<span id="wqWriteChip" style="font-size:10.5px;color:var(--dim);"></span></div>'
+  +'<div id="wqSimpCard" style="display:none;font-size:11.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:6px;max-width:420px;">'
+  +'<div id="wqSimpFoundLine" style="font-size:10.5px;color:var(--dim);margin-bottom:6px;"></div>'
+  +'<div style="display:grid;grid-template-columns:110px 1fr;gap:8px 10px;align-items:center;">'
+  +'<span>Simplify To:</span><select id="wqRes" style="font-size:11px;">'+[[24,'1/8'],[16,'1/8 triplet'],[12,'1/16'],[8,'1/16 triplet'],[6,'1/32'],[0,'off']].map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select>'
+  +'<span>Adjust Note:</span><span><span class="cpchip'+(wqState.simpStart!==false?' on':'')+'" id="wqSimpStart" title="Read the starts at the grid">Start</span> <span class="cpchip'+(wqState.simpEnd!==false?' on':'')+'" id="wqSimpEnd" title="Read the endings at the grid">End</span></span>'
+  +'<span>Amount:</span><span style="color:var(--dim);">100 % — the score reads at the grid; the Amount belongs to the ⊞ Quantize window, which changes the notes</span>'
+  +'</div><div style="margin-top:8px;display:flex;gap:8px;"><span class="cpchip" id="wqSimpFound" title="Back to the value found in the song">↻ Use the value found</span><span class="cpchip" id="wqSimpClose">Close</span></div></div>'
   +'<div id="wqInfoCard" style="display:none;font-size:11px;line-height:1.5;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
-  +'<b>Note entry — the keypad method professional engraving programs use, so the habit carries over.</b> ✎ Write puts the caret at the playhead; click the sheet to move it. <b>The numbers pick the value:</b> 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd — 6 is the quarter, larger is longer. <b>.</b> adds a dot (it stays on until pressed again) · <b>T</b> makes a triplet · <b>A–G</b> writes that pitch in the key at the caret, in the octave nearest the last note · <b>+ / −</b> sharpen or flatten the note just written · <b>↑ ↓</b> move it an octave · <b>⇧ + a letter</b> stacks a chord · <b>, or R</b> writes a rest · <b>SPACE</b> advances the caret by the value without writing · <b>⌫</b> takes the last note back · <b>← →</b> step the caret · <b>Esc</b> leaves. A new note replaces whatever started inside its span; every note is one undo. <b>Simplify notation</b> reads the played notes at a clean grid for the page only — auto finds the song&#8217;s smallest subdivision (a 16th-note melody reads at the 16th), the other choices set it by hand — the MIDI is never changed. <b>Ctrl+click a head</b> for its menu: dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo.</div>'
+  +'<b>Note entry — the keypad method professional engraving programs use, so the habit carries over.</b> ✎ Write puts the caret at the playhead; click the sheet to move it. <b>The numbers pick the value:</b> 8 whole · 7 half · 6 quarter · 5 8th · 4 16th · 3 32nd — 6 is the quarter, larger is longer. <b>.</b> adds a dot (it stays on until pressed again) · <b>T</b> makes a triplet · <b>A–G</b> writes that pitch in the key at the caret, in the octave nearest the last note · <b>+ / −</b> sharpen or flatten the note just written · <b>↑ ↓</b> move it an octave · <b>⇧ + a letter</b> stacks a chord · <b>, or R</b> writes a rest · <b>SPACE</b> advances the caret by the value without writing · <b>⌫</b> takes the last note back · <b>← →</b> step the caret · <b>Esc</b> leaves. A new note replaces whatever started inside its span; every note is one undo. <b>Simplify notation</b> reads the played notes at a clean grid for the page only — it opens at the song&#8217;s smallest subdivision (a 16th-note melody reads at the 16th) and its card changes it, Start and End each switchable — the MIDI is never changed. <b>Ctrl+click a head</b> for its menu: dotted · triplet · split · tie · a semitone · delete — each edits the MIDI, one undo.</div>'
   +'<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;"><canvas id="wqCanvas" width="1100" height="180" style="display:block;width:100%;height:auto;"></canvas></div>';
  const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
  on('wqLayScore',()=>{wqState.layout='score';buildWqWindow();});
@@ -6308,7 +6333,11 @@ function buildWqWindow(){
  const bs=document.getElementById('wqBars');if(bs)bs.onchange=()=>{wqState.bars=+bs.value||4;wqDraw();};
  const ptl=document.getElementById('wqPaint');if(ptl)ptl.onchange=()=>{wqState.painter=ptl.value==='house'?'house':'vex';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* R19 */
  const inf=document.getElementById('wqInfo');if(inf)inf.onclick=()=>{const cd=document.getElementById('wqInfoCard');if(cd){const on=cd.style.display==='none';cd.style.display=on?'block':'none';inf.classList.toggle('on',on);}};   /* R21 [48]: the ⓘ card */
- const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=rsl.value==='auto'?'auto':(+rsl.value||0);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
+ const smp=document.getElementById('wqSimp');if(smp)smp.onclick=()=>{const cd=document.getElementById('wqSimpCard');if(cd){const on=cd.style.display==='none';cd.style.display=on?'block':'none';smp.classList.toggle('on',on);if(on)wqSimpSync();}};   /* R23 [50] */
+ const smpC=document.getElementById('wqSimpClose');if(smpC)smpC.onclick=()=>{const cd=document.getElementById('wqSimpCard');if(cd)cd.style.display='none';const c2=document.getElementById('wqSimp');if(c2)c2.classList.remove('on');};
+ const smpF=document.getElementById('wqSimpFound');if(smpF)smpF.onclick=()=>{wqState.res='auto';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};
+ ['wqSimpStart','wqSimpEnd'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=()=>{const k=id==='wqSimpStart'?'simpStart':'simpEnd';wqState[k]=!(wqState[k]!==false);b.classList.toggle('on',wqState[k]);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};});
+ const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=(+rsl.value||0);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
  const cv=document.getElementById('wqCanvas');if(cv){cv.onclick=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();wqNoteMenu(e);return;}wqInputClick(e);};cv.oncontextmenu=e=>{e.preventDefault();wqNoteMenu(e);};}   /* R20 [45]: ctrl+click a head = the note menu */
@@ -6360,8 +6389,8 @@ function wqDraw(){
  const o={bars:wqState.bars};
  if(wqInput.on){o.at=wqCaretBeat();o.caret={part:wqInputPart(),beat:wqCaretBeat(),label:wqInputValueWord()};if(wqState.last&&wqState.last.parts&&wqState.last.bars===(wqState.bars||4))o.keepFrom=wqState.last.from;}
  const r=wqDrawInto(c,ids.filter(t=>wqPartRows(t).length),o);
- const rsA=document.getElementById('wqRes');if(rsA&&rsA.options[0]&&rsA.options[0].value==='auto'){const f=wqState.resFound||{res:notAutoRes()};rsA.options[0].textContent='auto · '+notGridWord(f.res);}   /* R22: the auto label follows the song */
- const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' simplified for the score to the '+notGridWord(notReadRes())+(wqState.res==='auto'?' (the song\'s smallest subdivision)':'')+' — the MIDI untouched (Simplify notation: off shows them as played)':'')):'nothing to notate yet — write some notes on the grid';
+ wqSimpSync();   /* R23: the chip, the card's select and its found line follow the song */
+ const st=document.getElementById('wqStatus');if(st)st.textContent=r.parts?('bars '+(r.from+1)+'–'+r.to+' · '+r.parts+' part'+(r.parts===1?'':'s')+' · '+r.items+' notes'+(r.rounded?' · '+r.rounded+' note'+(r.rounded===1?'':'s')+' simplified for the score to the '+notGridWord(notReadRes())+(wqState.res==='auto'?' (found in the song)':'')+' — the MIDI untouched':'')):'nothing to notate yet — write some notes on the grid';
  wqState.last=r;return r;
 }
 /* the pop-up from the Guitar window (RAW [24]) — the linked part as a floating sheet, following the transport; Escape closes */
@@ -6597,6 +6626,13 @@ function wqNoteMenu(e){
   {label:'✕ Delete this note',fn:()=>wqNoteApply(h.t,i,'delete')}];
  wanFloatMenu(e,rows);
  return true;
+}
+function wqSimpSync(){
+ /* R23 [50]: Simplify notation's chip, select and found line follow the song — the value found is SHOWN, never the word auto */
+ const eff=notReadRes(),f=wqState.resFound;
+ const chip=document.getElementById('wqSimp');if(chip)chip.textContent='Simplify notation · '+notGridWord(eff);
+ const sel=document.getElementById('wqRes');if(sel&&String(sel.value)!==String(eff))sel.value=String(eff);
+ const fl=document.getElementById('wqSimpFoundLine');if(fl)fl.textContent=f?('Smallest subdivision found in the song: '+notGridWord(f.res)+' ('+f.n+' notes, '+Math.round(f.coverage*100)+'% on it)'+(wqState.res==='auto'?' — in use':' — set by hand to the '+notGridWord(eff))):'';
 }
 function wqInputClick(e){
  /* a click on the sheet in write mode moves the caret there (snapped to the 16th) and, in Score, picks that part */
@@ -21619,39 +21655,45 @@ function renderChordEdFly(){
  el.appendChild(roots);
 }
 function renderQuantWin(){
+ /* R23 (his [50], the reference dialog in gems-images/MEDIA-07/08): Quantize To · Adjust Note: Start End · Amount · Apply · Close —
+    "triplet" written out where the reference says T; the list opens at the smallest subdivision found (his [49]) */
  const el=document.getElementById('quantWin');if(!el||!flyOpen)return;
- el.innerHTML='';
  el.innerHTML='<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px;">⊞ Quantize</div>';
- const row=document.createElement('div');
- row.style.cssText='display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--text);';
- /* R22 [49]: the same smart reading first — the grid defaults to the melody's smallest subdivision */
  const found=notSmallestGrid(project.melody||[]);const gv=found.res===6?'0.125':found.res===12?'0.25':'0.5';
+ const opts=[['grid','Current Grid'],['1','1/4'],['0.5','1/8'],['0.5T','1/8 triplet'],['0.5+T','1/8 + 1/8 triplet'],['0.25','1/16'],['0.25T','1/16 triplet'],['0.25+T','1/16 + 1/16 triplet'],['0.125','1/32']];
+ const row=document.createElement('div');
+ row.style.cssText='display:flex;flex-direction:column;gap:7px;font-size:11px;color:var(--text);';
  row.innerHTML=
-  '<div id="qzSmart" style="font-size:10.5px;color:var(--dim);" title="Read from the melody&#8217;s note starts: the coarsest grid that explains them (each grid tolerating a quarter of itself). The Grid below starts there; change it freely.">Smallest subdivision found: <b>1/'+({24:'8',12:'16',6:'32'})[found.res]+'</b> ('+found.n+' notes, '+Math.round(found.coverage*100)+'% on it)</div>'
-  +'<label style="display:flex;gap:6px;align-items:center;" title="The grid the note starts pull toward — it opens at the smallest subdivision found">Grid <select id="qzGrid" style="flex:1;min-width:0;padding:2px 4px;font-size:11px;">'
-  +'<option value="4">1 bar</option><option value="2">1/2</option><option value="1">1/4</option>'
-  +'<option value="0.5"'+(gv==='0.5'?' selected':'')+'>1/8</option><option value="0.25"'+(gv==='0.25'?' selected':'')+'>1/16</option><option value="0.125"'+(gv==='0.125'?' selected':'')+'>1/32</option></select></label>'
-  +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Scale the grid by 2/3 — triplet feel"><input type="checkbox" id="qzTrip" style="accent-color:var(--accent);"> Triplet</label>'
-  +'<label style="display:flex;gap:6px;align-items:center;" title="100% lands exactly on the grid; less pulls part-way">Amount <input type="range" id="qzAmt" min="0" max="100" value="100" style="flex:1;accent-color:var(--accent);"><span id="qzAmtV" style="min-width:30px;color:var(--dim);">100%</span></label>'
-  +'<label style="display:flex;gap:5px;align-items:center;cursor:pointer;" title="Snap durations to the grid too (starts always quantize)"><input type="checkbox" id="qzDur" style="accent-color:var(--accent);"> Also durations</label>';
+  '<div id="qzSmart" style="font-size:10.5px;color:var(--dim);" title="Read from the melody&#8217;s note starts: the coarsest grid that explains them (each grid tolerating a quarter of itself). Quantize To opens there; change it freely.">Smallest subdivision found: <b>1/'+({24:'8',12:'16',6:'32'})[found.res]+'</b> ('+found.n+' notes, '+Math.round(found.coverage*100)+'% on it)</div>'
+  +'<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 6px;align-items:center;min-width:0;">'
+  +'<span style="white-space:nowrap;">Quantize To:</span><select id="qzGrid" style="min-width:0;padding:2px 4px;font-size:11px;" title="The grid the notes pull toward — a triplet grid, or both grids at once (the nearest point of either)">'+opts.map(o=>'<option value="'+o[0]+'"'+(o[0]===gv?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'
+  +'<span style="white-space:nowrap;">Adjust Note:</span><span style="display:flex;gap:4px;"><span class="cpchip on" id="qzStart" style="padding:2px 8px;" title="Move the note starts">Start</span><span class="cpchip" id="qzEnd" style="padding:2px 8px;" title="Move the note endings (the lengths follow)">End</span></span>'
+  +'<span style="white-space:nowrap;">Amount:</span><span style="display:flex;gap:6px;align-items:center;min-width:0;"><input type="range" id="qzAmt" min="0" max="100" value="100" style="flex:1;min-width:40px;accent-color:var(--accent);" title="100 % lands exactly on the grid; less pulls part-way"><span id="qzAmtV" style="min-width:44px;text-align:right;">100 %</span></span>'
+  +'</div>';
  el.appendChild(row);
- const btn=document.createElement('button');
- btn.textContent='✓ Quantize selection';
- btn.title='Pull the selected notes’ starts toward the grid by Amount — one undo';
- btn.style.cssText='margin-top:6px;width:100%;';
+ const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;margin-top:8px;';
+ const btn=document.createElement('button');btn.id='qzApply';btn.textContent='Apply';btn.title='Pull the selected notes toward the grid by Amount — one undo';btn.style.cssText='flex:1;';
  btn.onclick=()=>{
   if(!selNotes.size){flashHint('Select some notes first — Quantize pulls the selection to the grid.');return;}
-  const g=document.getElementById('qzGrid'),tr=document.getElementById('qzTrip'),am=document.getElementById('qzAmt'),du=document.getElementById('qzDur');
-  let st=+g.value;if(tr.checked)st=st*2/3;
+  const g=document.getElementById('qzGrid'),am=document.getElementById('qzAmt'),st=document.getElementById('qzStart'),en=document.getElementById('qzEnd');
+  const v=g.value;let steps;
+  if(v==='grid'){let gs=.25;try{gs=gridStep();}catch(e){}steps=[gs];}
+  else if(/\+T$/.test(v)){const b=+v.replace('+T','');steps=[b,b*2/3];}
+  else if(/T$/.test(v)){steps=[(+v.replace('T',''))*2/3];}
+  else steps=[+v];
+  const doS=st.classList.contains('on'),doE=en.classList.contains('on');
+  if(!doS&&!doE){flashHint('Adjust Note: light Start or End (or both) first.');return;}
   snapshot();
-  const out=quantizeRows(project.melody,[...selNotes],st,(+am.value)/100,du.checked);
+  const out=quantizeRowsMulti(project.melody,[...selNotes],steps,(+am.value)/100,doS,doE);
   project.melody.length=0;for(const n of out)project.melody.push(n);
-  noteEngine('quantize',{n:selNotes.size,grid:st});
+  noteEngine('quantize',{n:selNotes.size,grid:v});
   refresh(true);
  };
- el.appendChild(btn);
+ const cls=document.createElement('button');cls.id='qzClose';cls.textContent='Close';cls.style.cssText='flex:1;';cls.onclick=()=>{try{closeFlyCol();}catch(e){}};
+ bar.appendChild(btn);bar.appendChild(cls);el.appendChild(bar);
+ ['qzStart','qzEnd'].forEach(id=>{const b=el.querySelector('#'+id);if(b)b.onclick=()=>b.classList.toggle('on');});
  const amt=el.querySelector('#qzAmt'),amtV=el.querySelector('#qzAmtV');
- if(amt)amt.oninput=()=>{amtV.textContent=amt.value+'%';};
+ if(amt)amt.oninput=()=>{amtV.textContent=amt.value+' %';};
 }
 /* the ctrl+click dispatcher (§3 landmine ⑨: on macOS ctrl+click IS contextmenu — ONE
    handler owns the grid background's right-click and dispatches) */
