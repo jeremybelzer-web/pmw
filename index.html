@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06r</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06s</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5570,7 +5570,7 @@ function cageViewFrame(shown,span,frame){
  return {lo:sh-2,cells:sp+2};
 }
 function cageFramePref(){try{return (typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.neckFrame==='head')?'head':'float';}catch(e){return 'float';}}
-const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs (coming)',on:false},{id:'highway',label:'Strings from the bottom, foreshortened (coming)',on:false}];
+const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs',on:true},{id:'highway',label:'Strings from the bottom, foreshortened (coming)',on:false}];
 function cageGuitarMenu(e){
  /* the drop-down: the views, the toggles, Playback Behaviours… — rows run through wanFloatMenu (the map-menu shell) */
  const q=id=>document.getElementById(id);
@@ -5624,9 +5624,10 @@ function cageViewApply(){
  /* which canvases show for the chosen view — the CAGED neck (with its overview) or the bouncing ball */
  const view=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged';
  const q=id=>document.getElementById(id); const ball=view==='ball';
- [['cageMiniBoard',!ball],['cageLinkBoard',!ball],['cageBallBoard',ball],['cageBallLine',ball]].forEach(([id,on])=>{const el=q(id);if(el)el.style.display=on?'block':'none';});
+ const angled=view==='angled';
+ [['cageMiniBoard',!ball&&!angled],['cageLinkBoard',!ball&&!angled],['cageBallBoard',ball],['cageBallLine',ball],['cageAngledBoard',angled]].forEach(([id,on])=>{const el=q(id);if(el)el.style.display=on?'block':'none';});
  const sel=q('cageViewSel'); if(sel&&sel.value!==view)sel.value=view;
- if(ball)cageBallLoop();
+ if(ball||angled)cageBallLoop();
 }
 function cageBallSlurs(notes){
  /* pure — his [67]: consecutive notes on ONE string that touch (the next starts by the time the first ends, within a
@@ -5660,8 +5661,8 @@ var _cageBall=null, _cageBallRaf=null;
 function cageBallLoop(){
  /* smooth while the song plays: the 200ms tick is not enough for a ball */
  if(_cageBallRaf)return;
- const step=()=>{_cageBallRaf=null; const on=(typeof cageState==='object'&&cageState&&cageState.viewName==='ball')&&_cageLink&&_cageLink.wid&&document.getElementById('cageBallBoard');
-  if(!on)return; if(typeof playing!=='undefined'&&playing){try{cageBallDraw(cageLinkWorldRows(_cageLink.wid,cageSelTarget().face));}catch(e){}} _cageBallRaf=requestAnimationFrame(step);};
+ const step=()=>{_cageBallRaf=null; const vn=(typeof cageState==='object'&&cageState&&cageState.viewName)||'caged'; const on=(vn==='ball'||vn==='angled')&&_cageLink&&_cageLink.wid&&document.getElementById('cageBallBoard');
+  if(!on)return; if(typeof playing!=='undefined'&&playing){try{const rows=cageLinkWorldRows(_cageLink.wid,cageSelTarget().face); if(vn==='ball')cageBallDraw(rows); else cageAngledDraw(rows);}catch(e){}} _cageBallRaf=requestAnimationFrame(step);};
  _cageBallRaf=requestAnimationFrame(step);
 }
 function cageBallDraw(rows){
@@ -5749,6 +5750,76 @@ function cageBallPairMenu(e,p){
  wanFloatMenu(e,[{hd:'Between fret '+p.f+' and fret '+to.f+' on this string'},row('Slide (a diagonal)','slide'),row('Hammer-on (H)','H'),row('Pull-off (P)','P'),row('Nothing — even if they touch','none'),row('Let the app infer (touching notes: H rising, P falling)',null)]);
  const m=document.getElementById('wanWebMenu'); if(m)m.setAttribute('data-cage-pair','1');
 }
+/* ==== R40 (build 2026-09-06s, the 96th, Fable) — HIS [66] (l): THE ANGLED NECK WITH GLOBS ====
+   His pictures ① ②: a fretboard slanted away from the viewer (looking down at the hands), a chord "gate" sliding toward
+   the player, "notes are represented by globs that last for the length of the notes". Here: the board in an oblique
+   projection (the near edge the high e, the far edge the low E, the far edge shifted right), the window following the
+   chord as the CAGED neck does; every coming note a glowing glob hanging above its fret and string at a height that is
+   its time away, descending on a translucent tube (his [68]'s idea, applied here too — no lanes) until it lands on the
+   beat; a sounding note a capsule along its string as long as it still has to play. */
+function cageAngledHeight(t,beat,ppb,cap){
+ /* pure: how high above the board a note hangs — its time away × ppb, capped; 0 at and after its onset */
+ const dt=(+t||0)-(+beat||0); if(dt<=0)return 0;
+ return Math.min(+cap||260,dt*(+ppb||90));
+}
+function cageAngledProject(f,s,h,G){
+ /* pure: a point on (or above) the board → canvas — f fractional fret (0 = the nut), s the string (0 low E, far), h the height */
+ const depth=(5-(+s||0))/5;   /* 1 far, 0 near */
+ const x=G.x0+((+f||0)-G.viewLo)*G.fretW+depth*G.shear;
+ const y=G.yNear-depth*(G.yNear-G.yFar)-(+h||0);
+ return {x,y};
+}
+var _cageAngled=null;
+function cageAngledDraw(rows,V){
+ const c=document.getElementById('cageAngledBoard'); if(!c)return;
+ const ctx=c.getContext('2d'); const W=c.width,H=c.height; const beat=cageBeatNow();
+ const view=V||{lo:(cageView.shown!=null?cageView.shown:0)-2,cells:(cageView.span||5)+2};
+ const G={x0:70,x1:W-40,yNear:H-40,yFar:H-190,shear:70,viewLo:view.lo,cells:view.cells,fretW:(W-110-70)/view.cells,ppb:90,cap:H-230};
+ ctx.clearRect(0,0,W,H); const sky=ctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,'#0e0f14'); sky.addColorStop(1,'#1e1a14'); ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+ /* the board */
+ const P=(f,s,h)=>cageAngledProject(f,s,h,G);
+ const fL=G.viewLo, fR=G.viewLo+G.cells;
+ const c0=P(fL,0,0),c1=P(fR,0,0),c2=P(fR,5,0),c3=P(fL,5,0);
+ ctx.beginPath(); ctx.moveTo(c0.x,c0.y); ctx.lineTo(c1.x,c1.y); ctx.lineTo(c2.x,c2.y); ctx.lineTo(c3.x,c3.y); ctx.closePath();
+ const wood=ctx.createLinearGradient(0,c0.y,0,c3.y); wood.addColorStop(0,'#2a2218'); wood.addColorStop(1,'#3a2f22'); ctx.fillStyle=wood; ctx.fill();
+ ctx.strokeStyle='#5a4b38'; ctx.lineWidth=1; ctx.stroke();
+ const k0=Math.max(0,Math.ceil(fL-1e-9)), k1=Math.min(19,Math.floor(fR+1e-9));
+ for(let k=k0;k<=k1;k++){const a=P(k,0,0),b=P(k,5,0); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineWidth=k===0?5:1.2; ctx.strokeStyle=k===0?'#c4b89a':'#8a7a62'; ctx.globalAlpha=k===0?.95:.7; ctx.stroke();}
+ ctx.globalAlpha=1;
+ for(let k=Math.max(1,k0);k<=k1;k++){const m=P(k-0.5,5,0); if(m.x>G.x0-10&&m.x<G.x1+10){ctx.fillStyle='#c8b48c'; ctx.globalAlpha=.75; ctx.font='bold 14px system-ui,sans-serif'; ctx.textAlign='center'; ctx.fillText(String(k),m.x,G.yNear+22);}}
+ ctx.globalAlpha=1;
+ for(let s=0;s<6;s++){const a=P(fL,s,0),b=P(fR,s,0); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineWidth=0.8+(5-s)*0.45; ctx.strokeStyle=s<3?'#b9a27a':'#d7d3c8'; ctx.globalAlpha=.9; ctx.stroke();}
+ ctx.globalAlpha=1;
+ /* the notes: back (far strings, high) first so the near ones paint over */
+ const notes=[]; (rows||[]).forEach((n,i)=>{if(!n)return;const g=cageNoteGtr(n);if(!g||g.s==null)return;const t=+n[0],d=Math.max(0.05,+n[1]||0);if(t+d<beat-0.5||t>beat+(G.cap/G.ppb)+0.5)return;notes.push({i,t,d,s:+g.s,f:+g.f,finger:g.finger,midi:+n[2]});});
+ notes.sort((a,b)=>a.s-b.s||b.t-a.t);
+ const globs=[];
+ for(const n of notes){
+  if(n.f<fL-0.5||n.f>fR+0.5)continue;
+  const col=n.f===0?'#8f8f95':cageFingerColor(n.finger); const st=cageNotePlayState([n.t,n.d,n.midi],beat);
+  const fx=n.f===0?0:n.f-0.5; const h=cageAngledHeight(n.t,beat,G.ppb,G.cap);
+  const base=P(fx,n.s,0);
+  if(st==='played'){ctx.globalAlpha=.25; ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(base.x,base.y,14,8,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; continue;}
+  if(h>0){
+   /* the tube: 60% transparent, glowing, from the board up to the glob */
+   const top=P(fx,n.s,h); ctx.globalAlpha=.4; ctx.fillStyle=col; ctx.fillRect(base.x-9,top.y,18,base.y-top.y); ctx.globalAlpha=.9; ctx.strokeStyle=col; ctx.lineWidth=1; ctx.strokeRect(base.x-9,top.y,18,base.y-top.y);
+   ctx.globalAlpha=.5; ctx.beginPath(); ctx.ellipse(base.x,base.y,12,6,0,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); ctx.globalAlpha=1;
+   ctx.shadowColor=col; ctx.shadowBlur=16; ctx.beginPath(); ctx.arc(top.x,top.y,15,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); ctx.shadowBlur=0;
+   ctx.fillStyle='#1a1208'; ctx.font='bold 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(n.f),top.x,top.y+1);
+   globs.push({i:n.i,x:top.x,y:top.y,h,st,f:n.f,s:n.s});
+  }else{
+   /* sounding: a capsule along the string as long as it still has to play */
+   const remain=Math.max(0,n.t+n.d-beat); const len=Math.min(G.fretW*2.2,remain*60);
+   ctx.shadowColor=col; ctx.shadowBlur=18; ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(base.x,base.y-11); ctx.lineTo(base.x+len,base.y-11); ctx.arc(base.x+len,base.y,11,-Math.PI/2,Math.PI/2); ctx.lineTo(base.x,base.y+11); ctx.arc(base.x,base.y,11,Math.PI/2,Math.PI*1.5); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0;
+   ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+   ctx.fillStyle='#1a1208'; ctx.font='bold 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(n.f),base.x,base.y+1);
+   globs.push({i:n.i,x:base.x,y:base.y,h:0,st,f:n.f,s:n.s,len});
+  }
+ }
+ ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+ ctx.fillStyle='#98a0b2'; ctx.font='11px system-ui,sans-serif'; ctx.fillText('Angled neck — the globs descend to the fret they land on; a sounding note lasts as long as it plays',14,18);
+ _cageAngled={G,globs,beat,fL,fR};
+}
 function cageNeckSizes(){
  /* pure: the linked neck's sizes — his [55]: "the actual numbers on the fretboard need to be twice as big at least. Let's say
     2.5 times as big" — the finger numbers 27px (from 11), the dots grown to hold them, the fret labels 15px (from 10) */
@@ -5831,6 +5902,7 @@ function cageLinkNeckDraw(rows){
  try{cageMiniDraw(rootPc,V);}catch(e){}
  cageHandLegendDraw();
  if(typeof cageState==='object'&&cageState&&cageState.viewName==='ball')try{cageBallDraw(rows);}catch(e){}   /* R38 [66]: the bouncing-ball view rides the same placements */
+ if(typeof cageState==='object'&&cageState&&cageState.viewName==='angled')try{cageAngledDraw(rows,V);}catch(e){}   /* R40 [66]: the angled neck too */
 }
 function cageHandLegendDraw(){
  const host=document.getElementById('cageFingerLegend'); if(!host)return;
@@ -7420,7 +7492,7 @@ function cageLinkAttach(w){
   +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px;flex-wrap:wrap;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck</span>'
   +'<label style="font-size:10px;color:var(--dim);display:flex;align-items:center;gap:4px;">'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]) — CAGED today; the slanted neck, the bouncing ball and the ball with notation are next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="slant" disabled>Slanted neck (soon)</option><option value="ball">Bouncing ball</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]) — CAGED today; the slanted neck, the bouncing ball and the ball with notation are next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="angled">Angled neck with globs</option><option value="ball">Bouncing ball</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
   +'Layout <select id="cageLayoutView" style="padding:3px 6px;font-size:11px;">'
   +'<option value="midi">MIDI + neck</option>'
   +'<option value="notation">Notation + neck</option>'
@@ -7433,6 +7505,7 @@ function cageLinkAttach(w){
   +'<div id="cageMiniMidi" style="display:none;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;">'
   +'<canvas id="cageMiniMidiCanvas" width="920" height="48" style="display:block;width:100%;height:auto;"></canvas></div>'
   +'<canvas id="cageMiniBoard" width="920" height="64" style="display:block;width:100%;height:auto;margin-bottom:4px;cursor:grab;border-radius:6px;" title="The whole neck (his [57]) — the five CAGED shapes for the chord in play with their root notes; the box is what the large neck shows. Drag the box, or click another shape, and the neck slides there."></canvas>'
+  +'<canvas id="cageAngledBoard" width="920" height="420" style="display:none;width:100%;height:auto;max-height:52vh;border-radius:8px;" title="Angled neck (his [66]) — the fretboard slanted away as if you were looking down at your hands; the notes to come descend as glowing globs on their tubes to the fret and string they land on; a sounding note lasts as long as it plays"></canvas>'
   +'<canvas id="cageBallBoard" width="920" height="340" style="display:none;width:100%;height:auto;max-height:46vh;border-radius:8px;" title="Bouncing ball (his [66]) — the strings across, the notes as pills as long as they last, the ball landing on each note as it sounds; H = hammer-on, P = pull-off, a diagonal = a slide"></canvas>'
   +'<canvas id="cageBallLine" width="920" height="40" style="display:none;width:100%;height:auto;margin-top:4px;border-radius:6px;" title="The pills to come"></canvas>'
   +'<canvas id="cageLinkBoard" width="920" height="340" style="display:block;width:100%;height:auto;max-height:46vh;"></canvas>'
