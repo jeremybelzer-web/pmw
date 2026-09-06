@@ -787,6 +787,18 @@
   #skKbd .skKey{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:30px;height:46px;margin:1px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);font-size:10px;color:var(--text);cursor:pointer;}
   #skKbd .skKey.blk{background:#1a1c22;color:var(--dim);height:32px;}
   #skKbd .skKey.on{background:var(--accent);color:#08131f;}
+  #skTool{display:flex;align-items:center;gap:4px;padding:2px 8px;border-bottom:1px solid var(--line);background:var(--panel);font-size:11px;flex:0 0 auto;min-height:22px;}
+  #skTool .skToolChip{padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim);cursor:pointer;white-space:nowrap;}
+  #skTool .skToolChip b{color:var(--text);font-weight:700;margin-right:2px;}
+  #skTool .skToolChip:hover{background:var(--panel2);}
+  #skTool .skToolChip.on{background:var(--panel2);color:var(--accent);border-color:var(--accent);}
+  #skHint{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);padding:0 8px;font-size:11px;}
+  #skDesk .skFl{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.55);resize:both;overflow:hidden;min-width:260px;min-height:120px;}
+  #skPlaylist{position:absolute;left:6px;top:6px;right:6px;bottom:6px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .skFlBar{display:flex;align-items:center;gap:8px;padding:2px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);background:var(--panel2);border-bottom:1px solid var(--line);cursor:grab;user-select:none;flex:0 0 auto;}
+  .skFlBar .skFlT{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .skFlBody{flex:1 1 auto;min-height:0;overflow:auto;position:relative;}
+  .skFlBody > .skCell{margin:0!important;width:100%!important;height:auto!important;}
   #cnvViews .cnvView{width:150px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid var(--line);}
   #cnvViews .cnvView.on{border-color:var(--accent);}
   #cnvViews .cnvView.soon{opacity:.5;cursor:default;}
@@ -830,7 +842,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06t</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06u</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -15596,7 +15608,7 @@ function cnvBuild(){
    const curSkin=(typeof skinState==='object'&&skinState)?skinState.skin:'shelf';
    for(const [id,name,tip] of SKIN_DEFS){
     const box=document.createElement('div');
-    box.className='cnvView'+(curSkin===id?' on':'')+(id==='dv12'?' soon':'');
+    box.className='cnvView'+(curSkin===id?' on':'');
     box.dataset.view=id;
     box.title=tip;
     let dia='<div style="border:1px solid var(--line);border-radius:4px;height:56px;display:flex;overflow:hidden;font-size:8px;color:var(--dim);">';
@@ -15605,9 +15617,9 @@ function cnvBuild(){
     else dia+='<div style="flex:1;display:flex;flex-direction:column;"><div style="flex:0 0 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;">TOOLBAR</div><div style="flex:1;display:flex;align-items:center;justify-content:center;">F5 · F6 · F7 · F9</div></div>';
     dia+='</div>';
     box.innerHTML=dia+'<div style="font-size:9.5px;color:var(--dim);margin-top:2px;text-align:center;">'+name+'</div>';
-    if(id==='dv12')box.onclick=()=>{flashHint('DV-12 — the rack view — arrives with the next round.');};
-    else box.onclick=()=>{
+    box.onclick=()=>{
      if(id==='shelf'){if(!(typeof skinState==='object'&&skinState))return;canvasState.layout=null;}
+     else if(id==='dv12')canvasState.layout={preset:'dv12',skin:'dv12',panes:JSON.parse(JSON.stringify(SKIN_PANES_DEF_FL))};
      else canvasState.layout={preset:'gv2',skin:'gv2',panes:Object.assign({},SKIN_PANES_DEF)};
      persistCanvas();swLayoutApply(canvasState.layout);cnvBuild();cnvSaveSync();
     };
@@ -15998,17 +16010,26 @@ function swLayoutRepack(){
 const SKIN_DEFS=[
  ['shelf','Essence Shelf','GV-1 — today’s view: the column, or one of the four swipe layouts below.'],
  ['gv2','GV-2 · Arranger','GV-2 — the arranger view: a browser on the left, the grid in the centre, the Essence Shelf on the right, the open windows in a lane below, the info view lower-left. Drag any border. Drag it to the edge to tuck a pane away — the edge keeps a strip that brings it back.'],
- ['dv12','DV-12 · Rack','DV-12 — the rack view: the toolbar line, floating windows on the F-keys, the typing-keypad piano. Coming in the next round.']];
+ ['dv12','DV-12 · Rack','DV-12 — the rack view: a toolbar line with the window keys (F5 the playlist · F6 the rack · F7 the piano roll · F8 the browser · F9 the mixer · F10 setup · F11 song info · F12 close all), every window floating on a desktop with its place remembered, the typing-keypad piano on ⌃T.']];
 const SKIN_PANES_DEF={l:18,r:22,b:24,lc:0,rc:0,bc:0,info:1};
 function skinNorm(raw){
  /* pure — the view guard: a layout carrying skin:'gv2' with its panes clamped (l 8–40 · r 8–45 ·
     b 8–60 · the three collapsed flags · the info view flag). Anything else answers null — a row
     layout, junk, or the Essence Shelf view itself, which is the row engine's business. */
  if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
- if(raw.skin!=='gv2')return null;
+ if(raw.skin!=='gv2'&&raw.skin!=='dv12')return null;
  const p=(raw.panes&&typeof raw.panes==='object'&&!Array.isArray(raw.panes))?raw.panes:{};
  const num=(v,d,lo,hi)=>(typeof v==='number'&&isFinite(v))?Math.max(lo,Math.min(hi,v)):d;
  const flag=(v,d)=>(v===1||v===true)?1:(v===0||v===false)?0:d;
+ if(raw.skin==='dv12'){
+  /* R2: the rack view — the browser, the playlist and rack and song-info flags, the hint bar, every float's remembered place */
+  const wins={};
+  if(p.wins&&typeof p.wins==='object'&&!Array.isArray(p.wins))for(const k of Object.keys(p.wins)){
+   const w=p.wins[k];if(!w||typeof w!=='object'||typeof k!=='string'||k.length>40)continue;
+   wins[k]={x:num(w.x,40,-2000,6000),y:num(w.y,28,0,6000),w:num(w.w,600,260,6000),h:num(w.h,380,120,6000)};
+  }
+  return {preset:'dv12',skin:'dv12',panes:{l:num(p.l,18,8,40),lc:flag(p.lc,0),pl:flag(p.pl,1),rack:flag(p.rack,0),si:flag(p.si,0),info:flag(p.info,1),wins}};
+ }
  return {preset:'gv2',skin:'gv2',panes:{l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),
   lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1)}};
 }
@@ -16064,7 +16085,7 @@ function skinTeardown(keep){
   _skSaved=null;
  }
  layer.remove();
- document.body.classList.remove('skinOn','skinGv2');
+ document.body.classList.remove('skinOn','skinGv2','skinDv12');
  try{const _rl=document.getElementById('rail');if(_rl&&_rl.dataset.skD!==undefined){_rl.style.display=_rl.dataset.skD;delete _rl.dataset.skD;}}catch(e){}
  document.body.style.overflow='';
  skinState=null;
@@ -16107,6 +16128,14 @@ function skinKbdKey(e,down){
  if(typeof isTypingTarget==='function'&&isTypingTarget(document.activeElement))return false;
  if(e.metaKey||e.ctrlKey||e.altKey)return false;
  const k=String(e.key||'').toLowerCase();
+ if(skinState.skin==='dv12'){
+  const n2=skinKbdNoteFl(k,skinKbd.oct);
+  if(n2===null)return false;
+  e.preventDefault();e._kbdOwned=true;
+  if(down){if(e.repeat||skinKbd.down[k]!==undefined)return true;skinKbd.down[k]=n2;skinKbdSend(0x90,n2,skinKbd.vel);}
+  else{const n3=skinKbd.down[k];if(n3===undefined)return true;delete skinKbd.down[k];skinKbdSend(0x80,n3,0);}
+  skinKbdDraw();return true;
+ }
  if(k==='z'||k==='x'){if(down&&!e.repeat){skinKbd.oct=Math.max(0,Math.min(8,skinKbd.oct+(k==='z'?-1:1)));skinKbdDraw();}e.preventDefault();e._kbdOwned=true;return true;}
  if(k==='c'||k==='v'){if(down&&!e.repeat){skinKbd.vel=Math.max(10,Math.min(127,skinKbd.vel+(k==='c'?-10:10)));skinKbdDraw();}e.preventDefault();e._kbdOwned=true;return true;}
  const note=skinKbdNote(k,skinKbd.oct);
@@ -16127,6 +16156,7 @@ window.addEventListener('keyup',e=>{try{skinKbdKey(e,false);}catch(err){}},true)
 window.addEventListener('blur',()=>{try{for(const key of Object.keys(skinKbd.down))skinKbdSend(0x80,skinKbd.down[key],0);skinKbd.down={};skinKbdDraw();}catch(e){}});
 function skinKbdDraw(){
  const k=document.getElementById('skKbd');if(!k)return;
+ if(skinState&&skinState.skin==='dv12')return skinKbdDrawFl(k);
  const oct=skinKbd.oct;
  const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
  const keys='awsedftgyhujkolp;'.split('');
@@ -16173,7 +16203,13 @@ function skinKbdToggle(){
 function skinKeyAction(e){
  /* DV-11 ②: the view's own key commands run FIRST, only while a view is on */
  if(!skinState)return false;
- const act=skinKeyMatch(e,/Mac|iPhone|iPad/.test(navigator.platform||''));
+ const _mac=/Mac|iPhone|iPad/.test(navigator.platform||'');
+ if(skinState.skin==='dv12'){
+  const a2=skinKeyMatchFl(e,_mac);if(!a2)return false;
+  if(skinFlAct(a2,e)){e.preventDefault();return true;}
+  return false;
+ }
+ const act=skinKeyMatch(e,_mac);
  if(!act)return false;
  e.preventDefault();
  if(act==='kbd'){skinKbdToggle();return true;}
@@ -16202,7 +16238,7 @@ function skinBrowserBuild(pane){
  const top=document.createElement('div');
  top.style.cssText='display:flex;gap:6px;align-items:center;padding:6px 8px 4px;';
  top.innerHTML='<input id="skBrSearch" type="search" placeholder="Search" style="flex:1 1 auto;min-width:0;font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);">'
-  +'<span class="cpchip'+(skinKbd.on?' on':'')+'" id="skKbdChip" title="The keyboard window — play and record from the typing keys (⌘K)">⌨</span>';
+  +'<span class="cpchip'+(skinKbd.on?' on':'')+'" id="skKbdChip" title="'+(skinState&&skinState.skin==='dv12'?'The typing piano — play and record from the typing keys (⌃T or ⌥T)':'The keyboard window — play and record from the typing keys (⌘K)')+'">⌨</span>';
  pane.appendChild(top);
  const list=document.createElement('div');
  list.id='skBrList';
@@ -16253,7 +16289,7 @@ function skinBrowserBuild(pane){
 }
 function skinInfoTick(e){
  if(!skinState||!skinState.panes.info)return;
- const b=document.getElementById('skInfoB');if(!b)return;
+ const b=document.getElementById('skHint')||document.getElementById('skInfoB');if(!b)return;   /* R2: the rack view's hint bar first — its browser keeps a hidden info box */
  const t=skinInfoText(e.target);
  if(t&&t!==b.dataset.last){b.dataset.last=t;b.textContent=t;}
 }
@@ -16289,11 +16325,11 @@ function skinApply(sk){
  try{if(typeof swLayoutTeardown==='function')swLayoutTeardown();}catch(e){}
  skinState=sk;
  const P=sk.panes;
- document.body.classList.add('skinOn','skinGv2');
+ document.body.classList.add('skinOn',sk.skin==='dv12'?'skinDv12':'skinGv2');
  try{const _rl=document.getElementById('rail');if(_rl&&_rl.dataset.skD===undefined){_rl.dataset.skD=_rl.style.display||'';_rl.style.display='none';}}catch(e){}   /* the rail rides inside #gridRowWrap with an inline display — the browser column carries its openers under a view */
  /* DV-11 ② (labelled): entering the view chooses its key-command set — Set A for GV-2 — unless a
     personal set is chosen; leaving gives the previous set back */
- try{if(!wasOn&&typeof SETTINGS==='object'&&SETTINGS&&KEYSETS[SETTINGS.keyset||'live']&&(SETTINGS.keyset||'live')!=='live'){_skPrevKeyset=SETTINGS.keyset||'live';SETTINGS.keyset='live';persistSettings();}}catch(e){}
+ try{const _ks=sk.skin==='dv12'?'fl':'live';if(!wasOn&&typeof SETTINGS==='object'&&SETTINGS&&KEYSETS[SETTINGS.keyset||'live']&&(SETTINGS.keyset||'live')!==_ks){_skPrevKeyset=SETTINGS.keyset||'live';SETTINGS.keyset=_ks;persistSettings();}}catch(e){}   /* R2: Set B for the rack view */
  try{if(typeof fixedChromeApply==='function')fixedChromeApply();}catch(e){}
  const padT=parseFloat(document.body.style.paddingTop)||0;
  const padB=parseFloat(document.body.style.paddingBottom)||0;
@@ -16312,6 +16348,12 @@ function skinApply(sk){
   else{m.classList.add('swCell');   /* the row engine's own cell class — inline-block in the lane, inline-flex for the flex-native members */
   m.style.width='96%';m.style.height='94%';m.style.overflow='auto';m.style.boxSizing='border-box';m.style.scrollSnapAlign='start';}
  };
+ if(sk.skin==='dv12'){
+  /* R2: the rack view builds its own layer — the toolbar line, the browser, the desktop */
+  skinLayoutDv12(sk,layer,remember,cell);
+  if(_kbdWas){skinKbd.oct=_kbdOct;skinKbd.vel=_kbdVel;skinKbdToggle();}
+  return;
+ }
  /* the main row: browser | centre | right */
  const main=document.createElement('div');
  main.className='skMain';
@@ -16391,6 +16433,281 @@ function skinApply(sk){
  if(_kbdWas){skinKbd.oct=_kbdOct;skinKbd.vel=_kbdVel;skinKbdToggle();}
 }
 window.addEventListener('resize',(function(){let _t=null;return function(){clearTimeout(_t);_t=setTimeout(function(){try{if(skinState)skinApply(skinState);}catch(e){}},200);};})());
+/* ==== R2 (build 2026-09-06u, the 97th, Fable) — DV-12 · DV-13: THE RACK VIEW. The second view
+   (the brief's §5): a toolbar line under the transport carrying the window keys of his shortcut
+   document's Window Navigation table (F5 the playlist · F6 the rack · F7 the piano roll · F8
+   the browser · F9 the mixer · F10 setup · F11 song info · F12 close all · Esc the front window ·
+   Tab cycles) and the hint bar (GV-6's cousin) · the browser column left · a DESKTOP where the
+   grid sits as the playlist frame and every open window FLOATS in its own frame — moved by its
+   bar, resized by its corner, brought to the front by a click, its place remembered (⚠ labelled:
+   the Aug 25 no-overlap law is the Essence Shelf view's; DV-1 lets a view carry its own window
+   behaviour) · the typing-keypad piano (⌃T here — ⌘T is the browser's — or ⌥T anywhere): two
+   octaves on two rows, the octave by ⌥2–⌥6 as his document lists it. ⛔ No product names. ==== */
+const SKIN_PANES_DEF_FL={l:18,lc:0,pl:1,rack:0,si:0,info:1,wins:{}};
+function skinKbdNoteFl(key,oct){
+ /* pure — the DV-12 typing piano's map (DV-13): the lower row z s x d c v g b h n j m , l . ; /
+    climbs from C of the octave (oct 4 = MIDI 60) by semitones to E; the upper row q 2 w 3 e r 5 t
+    6 y 7 u i 9 o 0 p [ = ] climbs from C an octave above to G; anything else null; the ceiling holds. */
+ if(typeof key!=='string'||!key.length)return null;
+ const k=key.toLowerCase();
+ const lo='zsxdcvgbhnjm,l.;/',hi='q2w3er5t6y7ui9o0p[=]';
+ const o=(typeof oct==='number'&&isFinite(oct))?Math.max(0,Math.min(7,Math.round(oct))):4;
+ let m=null;
+ const i=lo.indexOf(k);if(i>=0)m=12*(o+1)+i;
+ else{const j=hi.indexOf(k);if(j>=0)m=12*(o+2)+j;}
+ if(m===null)return null;
+ return (m>=0&&m<=127)?m:null;
+}
+function skinKeyMatchFl(e,mac){
+ /* pure — the DV-12 view's keys, from his shortcut document's Window Navigation table: F5 the
+    playlist · F6 the rack · F7 the piano roll · F8 (or ⌥F8) the browser · F9 the mixer · F10 setup ·
+    F11 song info · F12 close all · Esc the front window · Tab cycles the windows · the typing
+    piano on ⌃T (⌘T and Ctrl+T belong to the browser) or ⌥T · ⌥2–⌥6 the piano's octave. */
+ if(!e||typeof e.key!=='string')return null;
+ const k=e.key,kl=k.toLowerCase();
+ const plain=!e.metaKey&&!e.ctrlKey&&!e.shiftKey;
+ if(kl==='t'&&!e.metaKey&&!e.shiftKey&&((e.ctrlKey&&!e.altKey)||(e.altKey&&!e.ctrlKey)))return 'kbd';
+ if(e.altKey&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&/^[2-6]$/.test(k))return 'oct'+k;
+ if(e.altKey&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&/^(Digit|Numpad)[2-6]$/.test(String(e.code||'')))return 'oct'+String(e.code).slice(-1);
+ if(!plain)return null;
+ if(k==='F8')return 'browser';
+ if(e.altKey)return null;
+ const F={F5:'playlist',F6:'rack',F7:'roll',F9:'mixer',F10:'setup',F11:'songinfo',F12:'closeall',Escape:'esc',Tab:'cycle'};
+ return F[k]||null;
+}
+let _skZ=50,_skFloatZ={};
+function skinFloatMount(desk,id,title,el,P,remember,cell,onClose){
+ const fr=document.createElement('div');
+ fr.className='skFl';fr.dataset.fl=id;
+ const n=Object.keys(_skFloatZ).length;
+ const w0=(P.wins&&P.wins[id])||null;
+ const dr=desk.getBoundingClientRect();
+ const x=w0?w0.x:40+(n%6)*28,y=w0?w0.y:28+(n%6)*28;
+ const w=w0?w0.w:Math.min(720,Math.max(320,dr.width-120)),h=w0?w0.h:Math.min(440,Math.max(200,dr.height-100));
+ fr.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;';
+ fr.style.zIndex=_skFloatZ[id]||(++_skZ);_skFloatZ[id]=+fr.style.zIndex;
+ const bar=document.createElement('div');
+ bar.className='skFlBar';
+ bar.innerHTML='<span class="skFlT">'+title+'</span>'+(onClose?'<span class="wbtn skFlX" title="Close this window (Esc closes the front one · F12 closes them all)">✕</span>':'');
+ fr.appendChild(bar);
+ const body=document.createElement('div');
+ body.className='skFlBody';
+ fr.appendChild(body);
+ if(el){
+  if(remember)remember(el);
+  if(cell)cell(el,false);
+  el.style.width='';el.style.height='';el.style.scrollSnapAlign='';el.style.display='';el.style.margin='0';
+  body.appendChild(el);
+ }
+ desk.appendChild(fr);
+ const front=()=>{fr.style.zIndex=++_skZ;_skFloatZ[id]=_skZ;};
+ fr.addEventListener('mousedown',front,true);
+ if(onClose)bar.querySelector('.skFlX').onclick=e=>{e.stopPropagation();onClose();};
+ const persist=()=>{
+  const r=fr.getBoundingClientRect(),d2=desk.getBoundingClientRect();
+  P.wins=P.wins||{};
+  P.wins[id]={x:Math.round(r.left-d2.left),y:Math.round(r.top-d2.top),w:Math.round(r.width),h:Math.round(r.height)};
+  skinPersist();
+ };
+ bar.onmousedown=e0=>{
+  if(e0.button!==0||e0.target.closest('.wbtn'))return;
+  e0.preventDefault();
+  const x0=e0.clientX,y0=e0.clientY,l0=fr.offsetLeft,t0=fr.offsetTop;
+  const mv=ev=>{fr.style.left=Math.max(-fr.offsetWidth+60,l0+ev.clientX-x0)+'px';fr.style.top=Math.max(0,t0+ev.clientY-y0)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);persist();};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
+ fr.addEventListener('mouseup',e=>{if(e.target===fr)persist();});   /* a corner resize ends on the frame */
+ return fr;
+}
+function skinFloats(){
+ return [...document.querySelectorAll('#skDesk .skFl')].sort((a,b)=>(+a.style.zIndex)-(+b.style.zIndex));
+}
+function skinFloatClose(fr){
+ if(!fr)return;
+ const x=fr.querySelector('.skFlX');
+ if(x)x.click();
+}
+function skinSongInfoHtml(){
+ let s=null;try{s=project.song||null;}catch(e){}
+ const esc=v=>String(v==null?'':v).replace(/</g,'&lt;');
+ let key='';try{key=(typeof PCN==='object'&&PCN?PCN[project.tonic]:'')+' '+(project.mode||'');}catch(e){}
+ let bpm='';try{bpm=document.getElementById('tempo').value;}catch(e){}
+ let bars='';try{bars=Math.round(LOOP/4);}catch(e){}
+ return '<div style="padding:10px 12px;font-size:12px;line-height:1.5;">'
+  +'<div style="font-size:15px;font-weight:700;">'+esc(s&&(s.title||s.name)||'Untitled')+'</div>'
+  +'<div style="color:var(--dim);">'+esc(s&&(s.composer||s.prov)||'')+'</div>'
+  +'<div style="margin-top:8px;">Key <b>'+esc(key)+'</b> · Tempo <b>'+esc(bpm)+'</b> bpm · <b>'+esc(bars)+'</b> bars</div>'
+  +'<div style="margin-top:8px;color:var(--dim);font-size:11px;">The title and the composer are edited on the 📄 Page view of Wig &amp; Quill; this card reads them. ⚠ Labelled: an editable card is a later cut.</div>'
+  +'</div>';
+}
+function skinFlAct(act,e){
+ /* the DV-12 view's actions — from the toolbar chips and the keys alike; returns true when handled */
+ const P=skinState.panes;
+ const desk=document.getElementById('skDesk');
+ const again=()=>{skinPersist();skinApply(skinState);};
+ if(act==='kbd'){skinKbdToggle();return true;}
+ if(/^oct[2-6]$/.test(act)){skinKbd.oct=+act.slice(3);if(skinKbd.on)skinKbdDraw();try{flashHint('Typing piano — octave '+skinKbd.oct);}catch(err){}return true;}
+ if(act==='playlist'){P.pl=P.pl?0:1;again();return true;}
+ if(act==='rack'){P.rack=P.rack?0:1;again();return true;}
+ if(act==='songinfo'){P.si=P.si?0:1;again();return true;}
+ if(act==='browser'){P.lc=P.lc?0:1;again();return true;}
+ if(act==='mixer'){try{toggleMixer();}catch(err){}return true;}
+ if(act==='setup'){try{uiDispatch({type:'toggle',id:'setupPanel'});}catch(err){}return true;}
+ if(act==='roll'){
+  /* the piano roll = the active track's own roll in the playlist (▸ expand), scrolled into view */
+  try{
+   if(!P.pl){P.pl=1;skinPersist();skinApply(skinState);}
+   const t=activeTrack||'melody';
+   toggleTrackBig(t);
+   const nb=document.querySelector('#skPlaylist .thead[data-t="'+t+'"]');
+   if(nb&&nb.scrollIntoView)nb.scrollIntoView({block:'nearest'});
+   flashHint(trackIsBig(t)?'Piano roll — '+trackLabel(t)+' expanded (F7 again folds it)':'Piano roll — '+trackLabel(t)+' folded');
+  }catch(err){}
+  return true;
+ }
+ if(act==='closeall'){
+  /* by STATE, not by clicking frames — a closer's re-apply would leave the rest of the loop holding stale frames */
+  let any=false;
+  try{for(const id of (uiState.openWins||[]).slice()){uiDispatch({type:'toggle',id});any=true;}}catch(err){}
+  try{if(uiState.trips){uiDispatch({type:'toggle',id:'tripsPanel'});any=true;}}catch(err){}
+  try{if(typeof palWinClose==='function'&&!(palState&&palState.win&&palState.win.closed)){palWinClose();any=true;}}catch(err){}
+  P.rack=0;P.si=0;skinPersist();skinApply(skinState);
+  return true;
+ }
+ if(act==='esc'){
+  if(document.querySelector('.essObjPop'))return false;   /* the Escape law's pop-ups keep their Esc */
+  const fl=skinFloats();if(!fl.length)return false;
+  skinFloatClose(fl[fl.length-1]);return true;
+ }
+ if(act==='cycle'){
+  const fl=skinFloats();if(fl.length<2)return false;
+  fl[0].style.zIndex=++_skZ;_skFloatZ[fl[0].dataset.fl]=_skZ;return true;
+ }
+ return false;
+}
+function skinLayoutDv12(sk,layer,remember,cell){
+ const P=sk.panes;
+ /* the toolbar line: the window keys and the hint bar */
+ const tool=document.createElement('div');
+ tool.id='skTool';
+ const chips=[['playlist','F5','Playlist',()=>!!P.pl],['rack','F6','Rack',()=>!!P.rack],['roll','F7','Piano roll',()=>{try{return trackIsBig(activeTrack||'melody');}catch(e){return false;}}],
+  ['browser','F8','Browser',()=>!P.lc],['mixer','F9','Mixer',()=>{try{return !!mixerOpen;}catch(e){return false;}}],['setup','F10','Setup',()=>uiWinShown('setupPanel')],
+  ['songinfo','F11','Song info',()=>!!P.si],['kbd','⌃T','Keys',()=>skinKbd.on]];
+ for(const [act,key,name,isOn] of chips){
+  const c=document.createElement('span');
+  c.className='skToolChip'+(isOn()?' on':'');
+  c.dataset.act=act;
+  c.innerHTML='<b>'+key+'</b> '+name;
+  c.title=name+' ('+key+')'+(act==='kbd'?' — the typing piano: ⌃T here (⌘T is the browser’s) or ⌥T; ⌥2–⌥6 pick the octave':act==='closeall'?'':'');
+  c.onclick=()=>skinFlAct(act);
+  tool.appendChild(c);
+ }
+ const all=document.createElement('span');all.className='skToolChip';all.innerHTML='<b>F12</b> Close all';all.title='Close every floating window (F12)';all.onclick=()=>skinFlAct('closeall');tool.appendChild(all);
+ const hint=document.createElement('span');hint.id='skHint';hint.textContent=P.info?'Rest the pointer on anything and read what it does here.':'';hint.style.display=P.info?'':'none';tool.appendChild(hint);
+ const tri=document.createElement('span');tri.id='skInfoTri';tri.style.cssText='position:static;margin-left:auto;';tri.textContent=P.info?'▾':'▸';tri.title=P.info?'Hide the hint bar':'Show the hint bar — it describes whatever the pointer rests on';tri.onclick=()=>{P.info=P.info?0:1;skinPersist();skinApply(skinState);};tool.appendChild(tri);
+ layer.appendChild(tool);
+ const row=document.createElement('div');
+ row.style.cssText='display:flex;flex:1 1 0%;min-height:0;position:relative;';
+ layer.appendChild(row);
+ const brw=document.createElement('div');
+ brw.id='skBrowser';brw.className='skPane';
+ brw.style.cssText='display:flex;flex-direction:column;flex:0 0 '+(P.lc?0:P.l)+'%;border-right:1px solid var(--line);background:var(--panel);';
+ row.appendChild(brw);
+ if(!P.lc){
+  skinBrowserBuild(brw);
+  try{const inf=brw.querySelector('#skInfo');if(inf)inf.style.display='none';}catch(e){}   /* the hint bar carries GV-6 here */
+  let live=null;
+  row.appendChild(skinSplitter(true,ev=>{const r=row.getBoundingClientRect();live=Math.max(0,Math.min(40,100*(ev.clientX-r.left)/r.width));brw.style.flexBasis=live+'%';},
+   ()=>{if(live===null)return;if(live<8){P.lc=1;}else{P.l=live;}skinPersist();skinApply(skinState);}));
+ }else row.appendChild(skinEdge('l','The browser is tucked away — click, or F8, to bring it back',()=>{P.lc=0;skinPersist();skinApply(skinState);}));
+ const desk=document.createElement('div');
+ desk.id='skDesk';
+ desk.style.cssText='flex:1 1 0%;position:relative;overflow:hidden;background:var(--bg);';
+ row.appendChild(desk);
+ if(P.pl){
+  const pl=document.createElement('div');
+  pl.id='skPlaylist';
+  pl.innerHTML='<div class="skFlBar"><span class="skFlT">Playlist — the multi-track grid (F5)</span><span class="wbtn skFlX" title="Hide the playlist (F5 brings it back)">✕</span></div>';
+  const body=document.createElement('div');body.className='skFlBody';pl.appendChild(body);
+  desk.appendChild(pl);
+  pl.querySelector('.skFlX').onclick=()=>{skinState.panes.pl=0;skinPersist();skinApply(skinState);};
+  for(const m of swRowMembers('grids')){cell(m,true);body.appendChild(m);}
+ }else{
+  const hint2=document.createElement('div');
+  hint2.style.cssText='position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:12px;color:var(--dim);';
+  hint2.textContent='The playlist is hidden — F5 brings it back.';
+  desk.appendChild(hint2);
+ }
+ /* the floats: every open window, the rack, the song info */
+ for(const m of swRowMembers('engines')){
+  const d=WINDOW_DEFS.find(x=>x.id===m.id);
+  const name=d?(d.icon||'')+' '+(d.title||d.name):(m.id==='chordPanel'?'🎹 Chord Palette':m.id);
+  const closer=d?(()=>uiDispatch({type:'toggle',id:m.id})):(m.id==='chordPanel'&&typeof palWinClose==='function'?(()=>{palWinClose();skinRepack();}):null);   /* the palette closes by its own law; a stack's shelf window has no closer of its own */
+  skinFloatMount(desk,m.id,name,m,P,remember,cell,closer);
+ }
+ if(P.rack){
+  const d=swShelfBlock();remember(d);
+  try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
+  try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
+  skinFloatMount(desk,'rack','🔷 Rack — the Essence Shelf (F6)',d,P,null,null,()=>{skinState.panes.rack=0;skinPersist();skinApply(skinState);});   /* the LIVE panes — a re-apply mints a new object, so a captured one goes stale */
+  d.style.display='';d.style.height='';
+  try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
+ }
+ if(P.si){
+  const card=document.createElement('div');card.innerHTML=skinSongInfoHtml();
+  const fr=skinFloatMount(desk,'songinfo','ℹ Song info (F11)',null,P,null,null,()=>{skinState.panes.si=0;skinPersist();skinApply(skinState);});
+  fr.querySelector('.skFlBody').appendChild(card);
+  if(!(P.wins&&P.wins.songinfo)){fr.style.width='360px';fr.style.height='170px';}
+ }
+ /* the playlist fills its frame (the fit-to-width law, grow-only) */
+ try{
+  const gsvg=document.querySelector('#gridWrap [id="grid"]');
+  const gcell=document.getElementById('gridRowWrap');
+  const body=document.querySelector('#skPlaylist .skFlBody');
+  if(body&&gsvg&&gcell&&gcell.closest('#skinLayer')&&typeof LOOP==='number'&&LOOP>0){
+   const cr=body.getBoundingClientRect(),sr=gsvg.getBoundingClientRect();
+   const declW=+gsvg.getAttribute('width')||sr.width;
+   const z=(sr.width>0&&declW>0)?sr.width/declW:1;
+   const avail=Math.floor((cr.right-sr.left)/z)-GUT-24;
+   const fit=Math.floor(avail/LOOP);
+   if(!window._swUserZoom&&isFinite(fit)&&fit>PPB){PPB=Math.min(96,fit);refresh(true);drawTrackSel();}
+  }
+ }catch(e){}
+}
+function skinKbdDrawFl(k){
+ const oct=skinKbd.oct;
+ const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+ const lo='zsxdcvgbhnjm,l.;/'.split(''),hi='q2w3er5t6y7ui9o0p[=]'.split('');
+ const rowHtml=(keys,base)=>{let h='<div style="display:flex;align-items:flex-start;">';
+  for(let i=0;i<keys.length;i++){const m=base+i,nm=names[i%12],blk=nm.length>1;const on=Object.values(skinKbd.down).indexOf(m)>=0;
+   h+='<div class="skKey'+(blk?' blk':'')+(on?' on':'')+'" data-midi="'+m+'"><span style="font-weight:700;">'+keys[i].toUpperCase()+'</span><span style="font-size:9px;">'+nm+(blk?'':(Math.floor(m/12)-1))+'</span></div>';}
+  return h+'</div>';};
+ let html='<div class="winHead" id="skKbdHead" style="margin:0 0 6px 0;cursor:grab;"><span class="picon">⌨</span><span class="wtitle">Typing piano (DV-12)</span>'
+  +'<span style="margin-left:auto;font-size:10.5px;color:var(--dim);">octave <span class="cpchip" id="skKbdOctDn" title="An octave down">◀</span> <b style="color:var(--text);">'+oct+'</b> <span class="cpchip" id="skKbdOctUp" title="An octave up">▶</span> (⌥2–⌥6)</span>'
+  +'<span class="wbtn" id="skKbdX" title="Close the typing piano (⌃T)">✕</span></div>'
+  +rowHtml(hi,12*(oct+2))+rowHtml(lo,12*(oct+1))
+  +'<div style="font-size:10px;color:var(--dim);margin-top:4px;">Type to play — the lower row is the octave, the upper row the one above. The notes go where a MIDI keyboard’s would.</div>';
+ k.innerHTML=html;
+ k.querySelector('#skKbdX').onclick=e=>{e.stopPropagation();skinKbdClose();};
+ k.querySelector('#skKbdOctDn').onclick=()=>{skinKbd.oct=Math.max(0,skinKbd.oct-1);skinKbdDraw();};
+ k.querySelector('#skKbdOctUp').onclick=()=>{skinKbd.oct=Math.min(7,skinKbd.oct+1);skinKbdDraw();};
+ k.querySelectorAll('.skKey').forEach(el=>{
+  el.onmousedown=e=>{e.preventDefault();const m=+el.dataset.midi;skinKbdSend(0x90,m,skinKbd.vel);el.classList.add('on');
+   const up=()=>{skinKbdSend(0x80,m,0);el.classList.remove('on');document.removeEventListener('mouseup',up);};
+   document.addEventListener('mouseup',up);};
+ });
+ const head=k.querySelector('#skKbdHead');
+ head.onmousedown=e=>{
+  if(e.target.closest('.wbtn,.cpchip'))return;
+  const r=k.getBoundingClientRect(),x0=e.clientX,y0=e.clientY;
+  k.style.transform='none';k.style.left=r.left+'px';k.style.top=r.top+'px';k.style.bottom='auto';
+  const mv=ev=>{k.style.left=(r.left+ev.clientX-x0)+'px';k.style.top=(r.top+ev.clientY-y0)+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  e.preventDefault();
+ };
+}
 function swLayoutApply(layout){
  /* R1 (the 97th): a VIEW rides the same slot — route it to the view engine; a row layout tears any view down */
  {const _sk=(typeof skinNorm==='function')?skinNorm(layout):null;
