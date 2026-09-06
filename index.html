@@ -804,7 +804,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4847,15 +4847,18 @@ function notSplitTicks(pos,len,meter){
    E7's pair rule no longer fires on display noise). The ask is a standing choice (Simplify notation: off · 16th · 8th — his [47] name) with the
    count of what was rounded in the status, not a modal. The width: bars a line fall until every head has room. */
 function notRoundNote(t,d,res,opts){
- /* pure: one note in ticks read at `res` ticks — its start to the 16th (or to the grid itself when the grid is a triplet
-    or finer), its end to res, never shorter than the start grid. res 0 = exact. opts.start / opts.end (default true)
-    switch either side off — his reference dialog's Adjust Note: Start · End. {t,d} */
- const q=Math.max(1,Math.round(+res||0)),T=Math.round(+t||0),D=Math.max(1,Math.round(+d||1));
- if(!(res>0))return {t:T,d:D};
+ /* pure: one note in ticks read at `res` — a grid in ticks, or a LIST of grids ("1/8 + 1/8 triplet": the nearest point
+    of either, R26). The start goes to the 16th (or to the grid itself when the grid is a triplet or finer), the end to the
+    grid, never shorter than the start grid. res 0 / [] = exact. opts.start / opts.end (default true) switch either side
+    off — his reference dialog's Adjust Note: Start · End. {t,d} */
+ const T=Math.round(+t||0),D=Math.max(1,Math.round(+d||1));
+ const grids=(Array.isArray(res)?res:[res]).map(x=>Math.round(+x||0)).filter(x=>x>0);
+ if(!grids.length)return {t:T,d:D};
  const doS=!(opts&&opts.start===false),doE=!(opts&&opts.end===false);
- const g=(q%12===0)?Math.min(q,12):q;
- const t2=doS?Math.round(T/g)*g:T, e2=doE?Math.round((T+D)/q)*q:T+D;
- return {t:t2,d:Math.max(g,e2-t2)};
+ const sg=grids.map(q=>(q%12===0)?Math.min(q,12):q);
+ const near=(v,gs)=>{let best=null;for(const g of gs){const p=Math.round(v/g)*g;if(best===null||Math.abs(p-v)<Math.abs(best-v))best=p;}return best;};
+ const t2=doS?near(T,sg):T, e2=doE?near(T+D,grids):T+D;
+ return {t:t2,d:Math.max(Math.min.apply(null,sg),e2-t2)};
 }
 function notBarsThatFit(measures,from,want,W,minW){
  /* pure: how many of the `want` measures from `from` fit a staff of width W when every item (a head or a rest) needs
@@ -4888,7 +4891,7 @@ function notSmallestGrid(rows,opts){
  }
  return last;
 }
-function notGridWord(res){return ({48:'quarter',24:'8th',16:'8th triplet',12:'16th',8:'16th triplet',6:'32nd'})[Math.round(+res)]||'8th';}
+function notGridWord(res){if(Array.isArray(res))return res.map(notGridWord).join(' + ');return ({48:'quarter',24:'8th',16:'8th triplet',12:'16th',8:'16th triplet',6:'32nd'})[Math.round(+res)]||'8th';}
 function quantizeRowsMulti(rows,idxs,steps,strength,adjStart,adjEnd){
  /* pure (R23, his reference dialog): the selected rows pulled toward the NEAREST point of any of the grids in `steps`
     (beats — "1/8 + 1/8 triplet" is two grids), by `strength`; Start moves the onsets, End moves the endings (the length
@@ -4915,6 +4918,7 @@ function notAutoRes(){
 function notReadRes(){
  const w=(typeof wqState==='object'&&wqState)?wqState.res:'auto';
  if(w==='auto'||w==null)return notAutoRes();   /* R22: smart by default */
+ if(typeof w==='string'&&/\+/.test(w))return w.split('+').map(Number).filter(g=>g>0);   /* R26: "1/8 + 1/8 triplet" */
  return isFinite(+w)?+w:24;
 }
 function notSpell(rows,opts){
@@ -4924,9 +4928,9 @@ function notSpell(rows,opts){
  opts=opts||{};
  const meterAt=typeof opts.meterAt==='function'?opts.meterAt:()=>({num:4,den:4});
  const keyAt=typeof opts.keyAt==='function'?opts.keyAt:()=>({tonic:0,pcs:[0,2,4,5,7,9,11]});
- const res=(+opts.res>0)?Math.round(+opts.res):0;let rounded=0;const rSw={start:opts.resStart!==false,end:opts.resEnd!==false};   /* E9 [43]: the read-at resolution in ticks (0 = exact); R23: Start · End switches */
+ const res=Array.isArray(opts.res)?opts.res.map(Number).filter(g=>g>0):((+opts.res>0)?Math.round(+opts.res):0);const resOn=Array.isArray(res)?res.length>0:res>0;let rounded=0;const rSw={start:opts.resStart!==false,end:opts.resEnd!==false};   /* E9 [43]: the read-at resolution in ticks (0 = exact); R23: Start · End switches */
  const clean0=(rows||[]).filter(r=>Array.isArray(r)&&isFinite(r[0])&&r[0]>=0&&isFinite(r[1])&&r[1]>0&&isFinite(r[2]))
-  .map(r=>{let t=Math.round(r[0]*NOT_TPB),d=Math.max(1,Math.round(r[1]*NOT_TPB));if(res>0){const q=notRoundNote(t,d,res,rSw);if(q.d!==d||q.t!==t)rounded++;t=q.t;d=q.d;}return {t,d,midi:Math.round(r[2])};}).sort((a,b)=>a.t-b.t||a.midi-b.midi);   /* E9: read at the resolution */
+  .map(r=>{let t=Math.round(r[0]*NOT_TPB),d=Math.max(1,Math.round(r[1]*NOT_TPB));if(resOn){const q=notRoundNote(t,d,res,rSw);if(q.d!==d||q.t!==t)rounded++;t=q.t;d=q.d;}return {t,d,midi:Math.round(r[2])};}).sort((a,b)=>a.t-b.t||a.midi-b.midi);   /* E9: read at the resolution */
  /* E8 (his [36]): two notes of ONE pitch that overlap are one note — a held note and its repeat inside it are not two
     voices (they drew as one head wearing two stems); the later one is absorbed, the sound's end kept */
  const clean=[];
@@ -6319,7 +6323,7 @@ function buildWqWindow(){
   +'<div id="wqSimpCard" style="display:none;font-size:11.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:6px;max-width:420px;">'
   +'<div id="wqSimpFoundLine" style="font-size:10.5px;color:var(--dim);margin-bottom:6px;"></div>'
   +'<div style="display:grid;grid-template-columns:110px 1fr;gap:8px 10px;align-items:center;">'
-  +'<span>Simplify To:</span><select id="wqRes" style="font-size:11px;">'+[[24,'1/8'],[16,'1/8 triplet'],[12,'1/16'],[8,'1/16 triplet'],[6,'1/32'],[0,'off']].map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select>'
+  +'<span>Simplify To:</span><select id="wqRes" style="font-size:11px;">'+[[48,'1/4'],[24,'1/8'],[16,'1/8 triplet'],['24+16','1/8 + 1/8 triplet'],[12,'1/16'],[8,'1/16 triplet'],['12+8','1/16 + 1/16 triplet'],[6,'1/32'],[0,'off']].map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('')+'</select>'
   +'<span>Adjust Note:</span><span><span class="cpchip'+(wqState.simpStart!==false?' on':'')+'" id="wqSimpStart" title="Read the starts at the grid">Start</span> <span class="cpchip'+(wqState.simpEnd!==false?' on':'')+'" id="wqSimpEnd" title="Read the endings at the grid">End</span></span>'
   +'<span>Amount:</span><span style="color:var(--dim);">100 % — the score reads at the grid; the Amount belongs to the ⊞ Quantize window, which changes the notes</span>'
   +'</div><div style="margin-top:8px;display:flex;gap:8px;"><span class="cpchip" id="wqSimpFound" title="Back to the value found in the song">↻ Use the value found</span><span class="cpchip" id="wqSimpClose">Close</span></div></div>'
@@ -6337,7 +6341,7 @@ function buildWqWindow(){
  const smpC=document.getElementById('wqSimpClose');if(smpC)smpC.onclick=()=>{const cd=document.getElementById('wqSimpCard');if(cd)cd.style.display='none';const c2=document.getElementById('wqSimp');if(c2)c2.classList.remove('on');};
  const smpF=document.getElementById('wqSimpFound');if(smpF)smpF.onclick=()=>{wqState.res='auto';wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};
  ['wqSimpStart','wqSimpEnd'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=()=>{const k=id==='wqSimpStart'?'simpStart':'simpEnd';wqState[k]=!(wqState[k]!==false);b.classList.toggle('on',wqState[k]);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};});
- const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=(+rsl.value||0);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
+ const rsl=document.getElementById('wqRes');if(rsl)rsl.onchange=()=>{wqState.res=/\+/.test(rsl.value)?rsl.value:(+rsl.value||0);wqDraw();try{if(typeof paperMode!=='undefined'&&paperMode==='score')refresh(true);}catch(e){}};   /* E9: the page reads at the same resolution */
  const fl=document.getElementById('wqFollow');if(fl)fl.onchange=()=>{wqState.follow=!!fl.checked;};
  on('wqWriteBtn',()=>wqInputToggle());
  const cv=document.getElementById('wqCanvas');if(cv){cv.onclick=e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();wqNoteMenu(e);return;}wqInputClick(e);};cv.oncontextmenu=e=>{e.preventDefault();wqNoteMenu(e);};}   /* R20 [45]: ctrl+click a head = the note menu */
@@ -6631,7 +6635,7 @@ function wqSimpSync(){
  /* R23 [50]: Simplify notation's chip, select and found line follow the song — the value found is SHOWN, never the word auto */
  const eff=notReadRes(),f=wqState.resFound;
  const chip=document.getElementById('wqSimp');if(chip)chip.textContent='Simplify notation · '+notGridWord(eff);
- const sel=document.getElementById('wqRes');if(sel&&String(sel.value)!==String(eff))sel.value=String(eff);
+ const effV=Array.isArray(eff)?eff.join('+'):String(eff);const sel=document.getElementById('wqRes');if(sel&&String(sel.value)!==effV)sel.value=effV;
  const fl=document.getElementById('wqSimpFoundLine');if(fl)fl.textContent=f?('Smallest subdivision found in the song: '+notGridWord(f.res)+' ('+f.n+' notes, '+Math.round(f.coverage*100)+'% on it)'+(wqState.res==='auto'?' — in use':' — set by hand to the '+notGridWord(eff))):'';
 }
 function wqInputClick(e){
@@ -9845,7 +9849,7 @@ function validKeysets(list){
 const KEYSETS_KEY='cp_keysets';
 function keysetsLoad(){try{const o=JSON.parse(localStorage.getItem(KEYSETS_KEY)||'{}');const l=o&&Array.isArray(o.list)?o.list:[];return validKeysets(l)?l:[];}catch(e){return [];}}
 function keysetsSave(list){try{localStorage.setItem(KEYSETS_KEY,JSON.stringify({list:validKeysets(list)?list:[]}));}catch(e){}}
-function keysetGet(id){return keysetResolve(id,keysetsLoad());}
+function keysetGet(id){return keysetResolve(id==null?'live':id,keysetsLoad());}
 function keysetsNewFrom(baseId,name){
  /* "Add to template": a personal set from the CURRENT set — a preset's bindings copied, or a personal set duplicated */
  const list=keysetsLoad();const src=keysetResolve(baseId,list);
@@ -9875,13 +9879,13 @@ function keysetsExport(id){const blob=new Blob([keysetsExportText(id)],{type:'ap
 function keysetsImport(after){const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const n=keysetsImportText(String(rd.result||''));flashHint(n<0?'That file is not a key-command set.':n+' set'+(n===1?'':'s')+' joined this device.');if(after)after(n);};rd.readAsText(f);};inp.click();}
 function keysetSelectRefresh(){
  const sel=document.getElementById('setKeyset');if(!sel)return;
- sel.innerHTML=['ours','live','fl','pt','dor'].map(k=>'<option value="'+k+'"'+((SETTINGS.keyset||'ours')===k?' selected':'')+'>'+KEYSETS[k].label+'</option>').join('')+keysetsLoad().map(p=>'<option value="'+p.id+'"'+(SETTINGS.keyset===p.id?' selected':'')+'>★ '+String(p.name).replace(/</g,'&lt;')+'</option>').join('');
- const n=document.getElementById('setKeysetNote');if(n)n.textContent=keysetGet(SETTINGS.keyset||'ours').note;
+ sel.innerHTML=['ours','live','fl','pt','dor'].map(k=>'<option value="'+k+'"'+((SETTINGS.keyset||'live')===k?' selected':'')+'>'+KEYSETS[k].label+'</option>').join('')+keysetsLoad().map(p=>'<option value="'+p.id+'"'+(SETTINGS.keyset===p.id?' selected':'')+'>★ '+String(p.name).replace(/</g,'&lt;')+'</option>').join('');
+ const n=document.getElementById('setKeysetNote');if(n)n.textContent=keysetGet(SETTINGS.keyset||'live').note;
 }
 function keysetCardRender(show){
  /* the personal set's card: every action with its key, a "press a key" capture per row, rename · export · delete */
  const cd=document.getElementById('setKeysetCard');if(!cd)return;
- const id=SETTINGS.keyset||'ours';const p=keysetsLoad().find(x=>x.id===id);
+ const id=SETTINGS.keyset||'live';const p=keysetsLoad().find(x=>x.id===id);
  if(!p){cd.style.display='none';return;}
  const mac=/Mac|iPhone|iPad/.test(navigator.platform||'');const set=keysetGet(id);const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
  const acts=[['open','Open the Quantize window'],['apply','Apply its settings to the selection'],['quick','Quick-quantize to the current grid'],['quickStart','Quick-quantize the starts only'],['narrow','Narrow the grid'],['widen','Widen the grid'],['triplet','Triplet grid on / off']];
@@ -9919,7 +9923,7 @@ function keysetRun(act){
  /* the actions: open the window · apply its settings · quick-quantize (to the current grid) · the grid keys */
  const sel=(typeof selNotes==='object'&&selNotes)?[...selNotes]:[];
  const stepsOf=v=>{if(v==='grid'){let gs=.25;try{gs=gridStep();}catch(e){}return [gs];}if(/\+T$/.test(v)){const b=+v.replace('+T','');return [b,b*2/3];}if(/T$/.test(v))return [(+v.replace('T',''))*2/3];return [+v];};
- const doQ=(steps,st,en,amt,word)=>{if(!sel.length){flashHint('Select some notes first — '+word+' pulls the selection to the grid.');return false;}snapshot();const out=quantizeRowsMulti(project.melody,sel,steps,amt,st,en);project.melody.length=0;for(const n of out)project.melody.push(n);noteEngine('quantize',{n:sel.length,grid:String(steps[0])});refresh(true);flashHint(word+' — '+sel.length+' note'+(sel.length===1?'':'s')+' · ⌘Z undoes');return true;};
+ const doQ=(steps,st,en,amt,word)=>{if(!sel.length){keysetRun('open');flashHint('Nothing selected — the ⊞ Quantize window is open; select notes, then press again to apply.');return false;}   /* R26 [54]: ⌘U with nothing selected opens the window */snapshot();const out=quantizeRowsMulti(project.melody,sel,steps,amt,st,en);project.melody.length=0;for(const n of out)project.melody.push(n);noteEngine('quantize',{n:sel.length,grid:String(steps[0])});refresh(true);flashHint(word+' — '+sel.length+' note'+(sel.length===1?'':'s')+' · ⌘Z undoes');return true;};
  if(act==='open'){try{if(typeof flyOpen!=='undefined'&&!flyOpen)openFlyCol();else if(typeof renderQuantWin==='function')renderQuantWin();}catch(e){}const w=document.getElementById('quantWin');if(w)w.scrollIntoView({block:'nearest'});flashHint('⊞ Quantize — the window is open on the grid\'s left');return true;}
  if(act==='apply')return doQ(stepsOf(qzState.grid),qzState.start!==false,!!qzState.end,isFinite(+qzState.amt)?+qzState.amt:1,'Quantize (the window\'s settings)');
  if(act==='quick')return doQ(stepsOf('grid'),true,true,1,'Quick quantize to the current grid');
@@ -34755,7 +34759,7 @@ function parseSettings(str){
  fixedGrid:false,
  rmPrompts:true,
  hallElevator:true,
- keyset:'ours'};   /* R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
+ keyset:'live'};   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
   if(o&&typeof o==='object'){
@@ -34769,7 +34773,7 @@ function parseSettings(str){
    if(o.classicHeads===true)def.classicHeads=true;   /* 77th */
    if(o.rmPrompts===false)def.rmPrompts=false;   /* F3: an explicit false skips the guided question */
    if(o.hallElevator===false)def.hallElevator=false;   /* R9: skip the hallway's elevator entry */
-   if(o.keyset==='live'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
+   if(o.keyset==='ours'||o.keyset==='fl'||o.keyset==='pt'||o.keyset==='dor'||o.keyset==='live'||(typeof o.keyset==='string'&&/^my:/.test(o.keyset)))def.keyset=o.keyset;   /* R24/R25: the chosen key-command set — a preset or a personal set's id */
    if(o.chordLaneCanHide===false)def.chordLaneCanHide=false;
    if(o.ragaFamFirst==='western')def.ragaFamFirst='western';   /* 3.5 (§11): browser family order — Carnatic first is the default */
    if(typeof o.ragaTerms==='string')def.ragaTerms=o.ragaTerms.slice(0,400);   /* 3.5: the Character column's Search Terms */
@@ -38222,7 +38226,7 @@ function settingsHTML(){
  <p><label><input type="checkbox" id="setAuto" ${SETTINGS.autosave?'checked':''}> Autosave the session in this browser (restores after a crash or an accidental close; with this off, closing with unsaved work asks first)</label></p>
  <p><label><input type="checkbox" id="setRmPrompts" ${SETTINGS.rmPrompts?'checked':''}> Prompts by Pro Music Workbench for Rhythmic Motif — the Embellisher opens with its guided question. Off: straight to the options pop-up.</label></p>
  <p><label><input type="checkbox" id="setHallElev" ${SETTINGS.hallElevator!==false?'checked':''}> The Wanderer's bamboo elevator — the thatched shelter that sinks you into the Hallway view when it opens. Off: skip straight to the corridor (the 🎋 chip in the hallway's header flips this too).</label></p>
- <p><label>Key commands <select id="setKeyset">${['ours','live','fl','pt','dor'].map(k=>`<option value="${k}" ${(SETTINGS.keyset||'ours')===k?'selected':''}>${KEYSETS[k].label}</option>`).join('')}${keysetsLoad().map(p=>`<option value="${p.id}" ${SETTINGS.keyset===p.id?'selected':''}>★ ${p.name.replace(/</g,'&lt;')}</option>`).join('')}</select></label> <span class="cpchip" id="setKeysetAdd" title="Add to template — a personal set built from the chosen set's keys, yours to change key by key, keep several, and share as a file">＋ Add to template</span> <span class="cpchip" id="setKeysetEdit" title="Change the keys of the chosen personal set">✎ Edit</span> <span class="cpchip" id="setKeysetImport" title="Bring in a friend's set (a .keys.json file)">⬆ Import</span><br><span id="setKeysetNote" style="font-size:11px;color:var(--dim);">${keysetGet(SETTINGS.keyset||'ours').note}</span></p>
+ <p><label>Key commands <select id="setKeyset">${['ours','live','fl','pt','dor'].map(k=>`<option value="${k}" ${(SETTINGS.keyset||'live')===k?'selected':''}>${KEYSETS[k].label}</option>`).join('')}${keysetsLoad().map(p=>`<option value="${p.id}" ${SETTINGS.keyset===p.id?'selected':''}>★ ${p.name.replace(/</g,'&lt;')}</option>`).join('')}</select></label> <span class="cpchip" id="setKeysetAdd" title="Add to template — a personal set built from the chosen set's keys, yours to change key by key, keep several, and share as a file">＋ Add to template</span> <span class="cpchip" id="setKeysetEdit" title="Change the keys of the chosen personal set">✎ Edit</span> <span class="cpchip" id="setKeysetImport" title="Bring in a friend's set (a .keys.json file)">⬆ Import</span><br><span id="setKeysetNote" style="font-size:11px;color:var(--dim);">${keysetGet(SETTINGS.keyset||'live').note}</span></p>
  <div id="setKeysetCard" style="display:none;font-size:11.5px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:0 0 8px;max-width:560px;"></div>
  <p><label><input type="checkbox" id="setRecOver" ${SETTINGS.recordOver?'checked':''}> Record over existing MIDI — while recording, incoming notes REPLACE the armed track's notes in the recorded span. Off (the default): new notes simply add to the MIDI that is already there.</label></p>
  <h3>Clips</h3>
@@ -38291,7 +38295,7 @@ function openSettings(){
  if(g('setRmPrompts'))g('setRmPrompts').onchange=e=>{SETTINGS.rmPrompts=e.target.checked;persistSettings();};
  if(g('setHallElev'))g('setHallElev').onchange=e=>{SETTINGS.hallElevator=e.target.checked;persistSettings();};
  if(g('setKeyset'))g('setKeyset').onchange=e=>{const v=e.target.value;SETTINGS.keyset=(KEYSETS[v]||keysetsLoad().some(p=>p.id===v))?v:'ours';persistSettings();const n=g('setKeysetNote');if(n)n.textContent=keysetGet(SETTINGS.keyset).note;flashHint('Key commands: '+keysetGet(SETTINGS.keyset).label);keysetCardRender();};   /* R24 [52] · R25 [53] */
- if(g('setKeysetAdd'))g('setKeysetAdd').onclick=()=>{const cur=keysetGet(SETTINGS.keyset||'ours');const name=window.prompt('A name for your set (built from '+cur.label+'):','My set '+(keysetsLoad().length+1));if(name==null)return;const p=keysetsNewFrom(SETTINGS.keyset||'ours',name);SETTINGS.keyset=p.id;persistSettings();keysetSelectRefresh();keysetCardRender(true);flashHint('Your set "'+p.name+'" — change any key in the card, then use it anywhere.');};
+ if(g('setKeysetAdd'))g('setKeysetAdd').onclick=()=>{const cur=keysetGet(SETTINGS.keyset||'live');const name=window.prompt('A name for your set (built from '+cur.label+'):','My set '+(keysetsLoad().length+1));if(name==null)return;const p=keysetsNewFrom(SETTINGS.keyset||'live',name);SETTINGS.keyset=p.id;persistSettings();keysetSelectRefresh();keysetCardRender(true);flashHint('Your set "'+p.name+'" — change any key in the card, then use it anywhere.');};
  if(g('setKeysetEdit'))g('setKeysetEdit').onclick=()=>{const cd=g('setKeysetCard');if(!cd)return;const on=cd.style.display==='none';if(on)keysetCardRender(true);else cd.style.display='none';};
  if(g('setKeysetImport'))g('setKeysetImport').onclick=()=>keysetsImport(n=>{if(n>0){const l=keysetsLoad();SETTINGS.keyset=l[l.length-1].id;persistSettings();keysetSelectRefresh();keysetCardRender(true);}});
  if(g('setClipAlign'))g('setClipAlign').onchange=e=>{SETTINGS.clipAlign=e.target.value==='bars'?'bars':'chords';persistSettings();drawTrackSel();if(typeof drawMainStrip==='function')drawMainStrip();};
