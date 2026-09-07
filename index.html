@@ -769,6 +769,11 @@
 
   /* ==== R4b (build 2026-09-06z, Cursor) — RAW [7]: track controls on the RIGHT under GV-2 ==== */
   /* ==== R4c (build 2026-09-06aa, Cursor) — RAW [8]: right pane Shelf⇄engine · one centre grid · ▾/[+] ==== */
+  /* R55 (his [28]): heads on the RIGHT by ORDER and a STICKY right edge, not by row-reverse. Row-reverse made every lane overflow to
+     the LEFT of the scroll container, where no scroll can reach — the zoom grew leftwards from the right end and bars 1–2 sat off
+     the left edge. Now a row is as wide as its lane + head (never narrower than the wrap), the lane overflows RIGHT (the wrap
+     scrolls), and the head sticks to the visible right edge like the reference's track heads. The R51 law (every head at one x,
+     the active track's row included) holds by the same rules. */
   body.skinGv2 .trow,
   body.skinGv2 #ovRow,
   body.skinGv2 #modLaneRow,
@@ -777,14 +782,22 @@
   body.skinGv2 #tsigLaneRow,
   body.skinGv2 #chordRow,
   body.skinGv2 #lowerRow,
-  body.skinGv2 #snapDock{flex-direction:row-reverse;}
-  body.skinGv2 #gridRow{display:flex;align-items:stretch;}
+  body.skinGv2 #snapDock{flex-direction:row;width:max-content;min-width:100%;box-sizing:border-box;}
+  body.skinGv2 .trow > .thead,
+  body.skinGv2 #ovRow > .thead,
+  body.skinGv2 #modLaneRow > .thead,
+  body.skinGv2 #tempoLaneRow > .thead,
+  body.skinGv2 #sectionLaneRow > .thead,
+  body.skinGv2 #tsigLaneRow > .thead,
+  body.skinGv2 #chordRow > .thead,
+  body.skinGv2 #lowerRow > .thead,
+  body.skinGv2 #snapDock > .thead{order:9;margin-left:auto;position:sticky!important;right:0;z-index:3;background:var(--panel);}
+  body.skinGv2 #skCentre [id="gridWinHead"]{position:sticky;left:0;z-index:4;}   /* R55: the grid's title bar stays at the visible left edge while the lane scrolls */
+  body.skinGv2 .trow > .gvwrap,body.skinGv2 .trow > .tlane,body.skinGv2 #chordRow > .chordlane{order:1;}
+  body.skinGv2 #gridRow{display:flex;align-items:stretch;flex-direction:row!important;width:max-content;min-width:100%;box-sizing:border-box;}
   body.skinGv2 #gridRow #flyCol{order:0;}
-  /* R51 (his [21]): the ACTIVE track's row (#gridRow) obeys the same heads-right law as its siblings — row-reverse, the head hugging
-     the row's right edge, the lane overflowing left — instead of order rules that pushed its head past the row's end (the "long track") */
-  body.skinGv2 #gridRow{flex-direction:row-reverse!important;}
-  body.skinGv2 #gridRow .gvwrap{order:0;}
-  body.skinGv2 #gridRow #gridHead{order:0;}
+  body.skinGv2 #gridRow .gvwrap{order:1;}
+  body.skinGv2 #gridRow #gridHead{order:9;margin-left:auto;position:sticky!important;right:0;z-index:3;}
   /* R52 (his [22]): the ACTIVE track's head wears the same vertical padding as its siblings' name boxes (.thead.nbox), so every
      micro row in a grid — the active one included — stands at ONE height; a fresh grid's third row is no longer the short one */
   body.skinGv2 #gridRow #gridHead.nboxMicro{padding-top:6px;padding-bottom:8px;}
@@ -916,7 +929,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -25331,6 +25344,11 @@ svg.addEventListener('wheel',gridWheel,{passive:false});
    grid — trackpad pinch arrives as ctrl+wheel; the beat under the cursor stays put
    (the wrap's horizontal scroll re-anchors). Works over the main grid, every lane,
    every strip, the bar lanes and the Keys lane — one capture listener on the wrap. ==== */
+function zoomAnchorLeft(laneX0,gut,beat,ppb,cursorX){
+ /* R55 (his [28]): the wrap's scrollLeft that keeps `beat` under the cursor after a zoom — the lane's origin (scroll coordinates) +
+    the gutter + the beat's new pixel, less the cursor's offset in the wrap; never negative. Pure — unit-tested. */
+ return Math.max(0,laneX0+gut+beat*ppb-cursorX);
+}
 function wheelZoomPPB(ppb,dy){
  /* pure: exponential zoom, the bar-lane drag's own clamp [14,240] */
  return Math.max(14,Math.min(240,ppb*Math.exp(-(dy||0)/220)));
@@ -25342,11 +25360,14 @@ function wheelZoomPPB(ppb,dy){
   if(typeof paperView!=='undefined'&&paperView)return;
   e.preventDefault();e.stopPropagation();
   const r=w.getBoundingClientRect();
-  const beat=((e.clientX-r.left+w.scrollLeft)-GUT-14-76)/PPB;   /* header col + padding sit left of every svg (the vsbX offsets) */
+  /* R55 (his [28]): the lane's origin is READ from the DOM (the first lane box), so the anchor holds whichever side the heads sit on */
+  const laneEl=w.querySelector('.trow > .gvwrap, [id="gridRow"] > .gvwrap');
+  const laneX0=laneEl?(laneEl.getBoundingClientRect().left-r.left+w.scrollLeft):(14+theadWNow());
+  const beat=((e.clientX-r.left+w.scrollLeft)-laneX0-GUT)/PPB;
   PPB=wheelZoomPPB(PPB,e.deltaY);
   refresh(false);
   if(typeof followProg!=='undefined'){followProg=true;requestAnimationFrame(()=>{followProg=false;});}   /* fix 5: a zoom re-anchor is not a manual pan */
-  w.scrollLeft=Math.max(0,GUT+14+theadWNow()+beat*PPB-(e.clientX-r.left));
+  w.scrollLeft=zoomAnchorLeft(laneX0,GUT,beat,PPB,e.clientX-r.left);
  },{passive:false,capture:true});
 })();
 /* the scrollbar rides the visible right corner — re-place it when the timeline pans */
@@ -25491,7 +25512,16 @@ document.addEventListener('mousemove',e=>{
   return;
  }else if(drag.mode==='zoom'){
   PPB=Math.max(14,Math.min(240,drag.p0*Math.exp((pt.y-drag.y0)/110)));window._swUserZoom=true;   /* deeper max zoom: room for the 32nd band · his 151st: a hand zoom outranks the fit law */
-  refresh(false);return;
+  refresh(false);
+  /* R55 (his [28]): the beat under the press stays put — the wrap re-anchors around it every step (the reference's law) */
+  try{
+   const w=document.getElementById('gridWrap');
+   if(w){
+    if(drag.s0==null){drag.s0=w.scrollLeft;drag.b0=(drag.x0-GUT)/drag.p0;drag.ez=(typeof effZoomOf==='function')?effZoomOf(w):1;}
+    w.scrollLeft=Math.max(0,drag.s0+((GUT+drag.b0*PPB)-drag.x0)*drag.ez);
+   }
+  }catch(e){}
+  return;
  }else if(drag.mode==='loopsel'){
   const st=gridStep();
   const cb=Math.max(0,Math.min(LOOP,Math.round(((pt.x-GUT)/PPB)/st)*st));
@@ -38362,12 +38392,14 @@ async function togglePlay(){
  if(playing){
   if(typeof finalizeTake==='function')finalizeTake();   /* commit held notes BEFORE the transport resets */
   if(typeof finalizeAutoTake==='function')finalizeAutoTake();   /* 2.7 R5b: the automation take lands the same way */
+  let _stopAt=null;try{_stopAt=transportBeat();}catch(e){}
   Tone.Transport.stop();playing=false;
   for(const _ci of countInPend){try{_ci.stop();}catch(e){}}countInPend.length=0;   /* SETUP R1: ■ Stop silences a pending count-in */
   Tone.Transport.bpm.value=+tempo.value;      /* leave any Mode-1 tempo map behind */
   playBtn.textContent='▶ Play';playBtn.classList.remove('stop');
   document.querySelectorAll('.cb').forEach(e=>e.classList.remove('active'));
-  updatePlayheadLine();   /* stop returns the playhead to the start marker */
+  if(typeof _stopAt==='number'&&isFinite(_stopAt))playheadBeat=Math.max(0,Math.min(LOOP,_stopAt));   /* R55 (his [28]): the playhead STAYS where it stopped — play resumes from there */
+  updatePlayheadLine();
   if(syncActiveKey())refresh(false);   /* …and the key context settles back on the marker */
  }else{
   rebuild();
