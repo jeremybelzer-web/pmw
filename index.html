@@ -832,6 +832,13 @@
   /* R48 (his [12]): the Info view's own pane, lower-left */
   #skinLayer #skInfoPane{overflow:auto;background:var(--panel);border-right:1px solid var(--line);}
   #skinLayer #skInfoPane #skInfo{border-top:none;max-height:none;height:100%;box-sizing:border-box;}
+  /* R49 (his [16]): no palette button on the grid under GV-2 (the Chord Palette is an engine); the grid fills the centre; the lane's miniatures a quarter wide */
+  body.skinGv2 #gridPalBtn{display:none!important;}
+  body.skinGv2 #skCentre .skCell{margin:0!important;width:100%!important;}
+  body.skinGv2 #skLane .skCell{width:24%!important;min-width:180px;}
+  #skinLayer .skCell.skSel{outline:2px solid var(--accent);outline-offset:-2px;}
+  .skExpand{cursor:pointer;} body:not(.skinGv2) .skExpand{display:none!important;}
+  #skinLayer .skRightBar{display:flex;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px;color:var(--dim);flex:0 0 auto;}
   #skinLayer .skEmpty{border:2px dashed var(--line);border-radius:10px;margin:6px;display:flex;align-items:center;justify-content:center;overflow:auto;}
   #skinLayer .skEmptyIn{padding:12px;max-width:520px;}
   #skinLayer .skEmptyList{display:flex;flex-wrap:wrap;gap:4px;}
@@ -882,7 +889,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ae</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06af</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16481,13 +16488,14 @@ function skinNorm(raw){
   wins[k]={x:num(w.x,40,-2000,6000),y:num(w.y,28,0,6000),w:num(w.w,600,260,6000),h:num(w.h,380,120,6000)};
  }
  const fl=Array.isArray(p.fl)?p.fl.filter((x,i)=>typeof x==='string'&&x.length<=40&&p.fl.indexOf(x)===i).slice(0,32):[];
- const tree=skinTreeInfoJoin((typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)}));   /* R48 [12]: a saved tree without the Info leaf gets one */   /* seeded from the COERCED numbers */
+ const tree=skinTreeReshape(skinTreeInfoJoin((typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)})));   /* R48 [12]: a saved tree without the Info leaf gets one · R49 [16]: the R1 shape becomes floor-to-ceiling */   /* seeded from the COERCED numbers */
  const cid=(typeof p.centreId==='string'&&(p.centreId===''||p.centreId==='main'||/^g\d+$/.test(p.centreId)))?p.centreId:'main';
  const rmode=(p.rightMode==='win')?'win':'shelf';
  const rwin=(typeof p.rightWin==='string'&&p.rightWin.length&&p.rightWin.length<=40)?p.rightWin:'';
+ const rlast=(typeof p.rightLast==='string'&&p.rightLast.length<=40)?p.rightLast:'';   /* R49 [16]: the engine the right pane last held (the Shelf toggle's way back) */
  return {preset:'gv2',skin:'gv2',panes:{l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),
   lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0),info:flag(p.info,1),hideMain:flag(p.hideMain,0),
-  centreId:cid,rightMode:rmode,rightWin:(rmode==='win'?rwin:''),tree,wins,fl}};
+  centreId:cid,rightMode:rmode,rightWin:(rmode==='win'?rwin:''),rightLast:rlast,tree,wins,fl}};
 }
 function skinKbdNote(key,oct){
  /* pure — the GV-2 keyboard window's map (DV-13): the two typing rows a w s e d f t g y h u j k o l p ;
@@ -16587,6 +16595,59 @@ function skinGv2GridCatalog(){
  }
  return out;
 }
+function skinLaneChrome(m){
+ /* R49 (his [16]): a lane miniature's chrome — ▸ in its head expands it into the right rectangle; a click on its title
+    highlights it (Delete then closes it); its own ✕ closes it as ever */
+ const head=m.querySelector('.winHead'); if(!head)return;
+ if(!head.querySelector('.skExpand')){
+  const x=document.createElement('span'); x.className='wbtn skExpand'; x.textContent='▸'; x.title='Expand this window into the right rectangle (his [16]) — the border eases out to make room if it needs to';
+  x.onclick=e=>{e.stopPropagation();e.preventDefault();skinGv2Expand(m.id);};
+  const firstBtn=head.querySelector('.wbtn'); if(firstBtn)head.insertBefore(x,firstBtn); else head.appendChild(x);
+ }
+ const t=head.querySelector('.wtitle');
+ if(t&&!t._skSelBound){t._skSelBound=true; t.addEventListener('click',e=>{if(!skinIsGv2())return; e.stopPropagation(); e.preventDefault(); skinLaneSelect(m.id);},true);}
+}
+function skinLaneSelect(id){
+ if(!skinState)return; const same=skinState._sel===id;
+ document.querySelectorAll('#skinLayer .skCell.skSel').forEach(c=>c.classList.remove('skSel'));
+ skinState._sel=same?'':id;
+ if(!same){const c=document.getElementById(id); if(c)c.classList.add('skSel');}
+}
+function skinLaneClose(id){
+ /* the selected miniature goes — the palette by its own law, a window by its toggle */
+ if(!id)return false;
+ try{if(id==='chordPanel'){if(typeof palWinClose==='function')palWinClose();skinRepack();}else uiDispatch({type:'toggle',id});}catch(e){return false;}
+ if(skinState)skinState._sel='';
+ return true;
+}
+function skinGv2Expand(winId){
+ /* R49 [16]: the miniature's larger version fills the floor-to-ceiling right rectangle; when the window needs more room than the pane
+    has, the border eases out to the left in his bell curve — slow, then fast, then slow — and the new share is remembered */
+ skinGv2FocusEngine(winId);
+ try{
+  const layer=document.getElementById('skinLayer'), P=skinState&&skinState.panes, root=P&&P.tree;
+  if(!layer||!root||root.t!=='h'||!root.b||root.b.k!=='shelf'||root.cb)return;
+  const right=document.getElementById('skRight'), win=document.getElementById(winId);
+  const elA=layer.querySelector(':scope > .skNode'); if(!right||!win||!elA||right.parentNode!==layer)return;
+  const need=Math.min(45,100*(win.scrollWidth+28)/Math.max(1,layer.clientWidth));
+  const cur=100-root.pct; if(need<=cur+0.5)return;
+  const from=root.pct, to=Math.max(3,Math.min(97,100-need)); const t0=performance.now(); const dur=650;
+  skinState._anim={from,to,t0};
+  const step=()=>{const u=Math.max(0,Math.min(1,(performance.now()-t0)/dur)); const e=(typeof cageEaseInOut==='function')?cageEaseInOut(u):u; const p=from+(to-from)*e;
+   elA.style.flex=p+' 1 0%'; right.style.flex=(100-p)+' 1 0%';
+   if(u<1)requestAnimationFrame(step); else {root.pct=to; skinState._anim=null; try{skinTreeLegacySync(P);skinPersist();}catch(e2){}}};
+  requestAnimationFrame(step);
+ }catch(e){}
+}
+(function(){
+ if(document._skDelBound)return; document._skDelBound=true;
+ document.addEventListener('keydown',e=>{
+  if(!skinIsGv2()||!skinState||!skinState._sel)return;
+  if(e.key!=='Delete'&&e.key!=='Backspace')return;
+  const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  e.preventDefault();e.stopPropagation(); skinLaneClose(skinState._sel);
+ },true);
+})();
 function skinGv2FocusShelf(){
  if(!skinIsGv2()||!skinState)return;
  const P=skinState.panes;if(P.rightMode==='shelf'&&!P.rightWin)return;
@@ -16596,7 +16657,7 @@ function skinGv2FocusEngine(winId){
  if(!skinIsGv2()||!skinState||!winId)return;
  const P=skinState.panes;
  if(P.rightMode==='win'&&P.rightWin===winId)return;
- P.rightMode='win';P.rightWin=String(winId);skinPersist();skinApply(skinState);
+ P.rightMode='win';P.rightWin=String(winId);P.rightLast=String(winId);skinPersist();skinApply(skinState);
 }
 function skinGv2ShowCentre(id){
  if(!skinIsGv2()||!skinState)return;
@@ -17277,9 +17338,25 @@ function skinTreeDefault(p){
  const l=Math.max(8,Math.min(40,num(p.l,18))),r=Math.max(8,Math.min(45,num(p.r,22))),b=Math.max(8,Math.min(60,num(p.b,24)));
  const inner=100-l;
  const rr=Math.max(3,Math.min(97,100*r/inner));
- return {t:'v',pct:Math.max(3,Math.min(97,100-b)),ca:0,cb:p.bc===1?1:0,
-  a:{t:'h',pct:l,ca:p.lc===1?1:0,cb:0,a:{k:'browser'},b:{t:'h',pct:Math.max(3,Math.min(97,100-rr)),ca:0,cb:p.rc===1?1:0,a:{k:'grid'},b:{k:'shelf'}}},
-  b:{t:'h',pct:l,ca:0,cb:0,a:{k:'info'},b:{k:'lane'}}};   /* R48 [12]: the Info view is its own small pane in the lower-LEFT corner, the lane beside it */
+ /* R49 (his [16]): the right rectangle runs from the top of the grid to the BOTTOM of the app — the root is [left | right],
+    the left a column: [browser | grid] over [info | lane] (R48 [12]); the R1 numbers l · r · b still describe it */
+ const left=100-r; const lL=Math.max(3,Math.min(97,100*l/left));
+ return {t:'h',pct:Math.max(3,Math.min(97,left)),ca:0,cb:p.rc===1?1:0,
+  a:{t:'v',pct:Math.max(3,Math.min(97,100-b)),ca:0,cb:p.bc===1?1:0,
+   a:{t:'h',pct:lL,ca:p.lc===1?1:0,cb:0,a:{k:'browser'},b:{k:'grid'}},
+   b:{t:'h',pct:lL,ca:0,cb:0,a:{k:'info'},b:{k:'lane'}}},
+  b:{k:'shelf'}};
+}
+function skinTreeReshape(node){
+ /* pure — R49 [16]: a tree in the R1/R48 shape (the shelf inside the top row) becomes the floor-to-ceiling shape, its numbers and
+    flags carried; any other tree (his own splits) passes untouched */
+ try{
+  const t=node; if(!t||t.t!=='v'||!t.a||t.a.t!=='h'||!t.a.a||t.a.a.k!=='browser'||!t.a.b||t.a.b.t!=='h'||!t.a.b.a||t.a.b.a.k!=='grid'||!t.a.b.b||t.a.b.b.k!=='shelf')return node;
+  const bottom=t.b; if(!bottom||!(bottom.k==='lane'||(bottom.t==='h'&&bottom.a&&bottom.a.k==='info'&&bottom.b&&bottom.b.k==='lane')))return node;
+  const l=t.a.pct, inner=100-l, rShare=(100-t.a.b.pct)*inner/100, left=Math.max(3,Math.min(97,100-rShare)), lL=Math.max(3,Math.min(97,100*l/left));
+  const bot=bottom.k==='lane'?{t:'h',pct:lL,ca:0,cb:0,a:{k:'info'},b:{k:'lane'}}:{t:'h',pct:Math.max(3,Math.min(97,100*bottom.pct/left)),ca:bottom.ca|0,cb:bottom.cb|0,a:{k:'info'},b:{k:'lane'}};
+  return {t:'h',pct:left,ca:0,cb:t.a.b.cb|0,a:{t:'v',pct:t.pct,ca:0,cb:t.cb|0,a:{t:'h',pct:lL,ca:t.a.ca|0,cb:0,a:{k:'browser'},b:{k:'grid'}},b:bot},b:{k:'shelf'}};
+ }catch(e){return node;}
 }
 function skinTreeInfoJoin(node){
  /* pure — R48 [12]: a tree saved before the Info leaf existed gets one — the first lane leaf becomes [info | lane] */
@@ -17307,6 +17384,9 @@ function skinTreeLegacySync(P){
  /* the R1 numbers follow the canonical tree so the R1 keys and suites keep reading them */
  try{
   const t=P.tree;
+  if(t&&t.t==='h'&&t.b&&t.b.k==='shelf'&&t.a&&t.a.t==='v'&&t.a.a&&t.a.a.t==='h'&&t.a.a.a&&t.a.a.a.k==='browser'&&t.a.a.b&&t.a.a.b.k==='grid'){   /* R49: [ [browser|grid] / [info|lane] ] | shelf */
+   P.r=Math.round(100-t.pct);P.rc=t.cb;P.b=Math.round(100-t.a.pct);P.bc=t.a.cb;P.l=Math.round(t.a.a.pct*t.pct/100);P.lc=t.a.a.ca;return;
+  }
   const laneOk=t&&t.b&&(t.b.k==='lane'||(t.b.t==='h'&&t.b.b&&t.b.b.k==='lane'&&t.b.a&&t.b.a.k==='info'));   /* R48: [info | lane] below */
   if(t&&t.t==='v'&&laneOk&&t.a&&t.a.t==='h'&&t.a.a&&t.a.a.k==='browser'&&t.a.b&&t.a.b.t==='h'&&t.a.b.a&&t.a.b.a.k==='grid'&&t.a.b.b&&t.a.b.b.k==='shelf'){
    P.l=t.a.pct;P.lc=t.a.ca;P.b=100-t.pct;P.bc=t.cb;P.rc=t.a.b.cb;P.r=Math.round((100-t.a.b.pct)*(100-t.a.pct))/100;
@@ -17418,6 +17498,15 @@ function skinLeafMount(leaf,path,host,ctx){
  }else if(leaf.k==='shelf'){
   el=document.createElement('div');el.id='skRight';el.className='skPane skLeaf';
   el.style.cssText='display:flex;flex-direction:column;border-left:1px solid var(--line);overflow:auto;';
+  {/* R49 (his [16]): a toggle, upper-right, between the window here and the Essence Shelf — "I might scrap this design later but I at least want to try it" */
+   const rb=document.createElement('div');rb.className='skRightBar';
+   const showingWin=P.rightMode==='win'&&P.rightWin&&document.getElementById(P.rightWin);
+   const lastD=P.rightLast?WINDOW_DEFS.find(x=>x.id===P.rightLast):null;
+   rb.innerHTML=(showingWin?'<span style="flex:1 1 auto;">'+((WINDOW_DEFS.find(x=>x.id===P.rightWin)||{}).name||'')+' · enlarged</span><span class="cpchip" id="skRightShelf" title="Show the Essence Shelf here instead">🔷 Essence Shelf</span>':'<span style="flex:1 1 auto;">Essence Shelf</span>'+(lastD||(P.rightLast==='chordPanel')?'<span class="cpchip" id="skRightBack" title="Back to the window this pane held">↩ '+(lastD?lastD.name:'Chord Palette')+'</span>':''));
+   el.appendChild(rb);
+   const sh=rb.querySelector('#skRightShelf'); if(sh)sh.onclick=e=>{e.stopPropagation();skinGv2FocusShelf();};
+   const bk=rb.querySelector('#skRightBack'); if(bk)bk.onclick=e=>{e.stopPropagation();skinGv2FocusEngine(P.rightLast);};
+  }
   /* RAW [8] / DV-16: Shelf when the centre is focused; the selected engine when a lane mini is clicked */
   if(P.rightMode==='win'&&P.rightWin){
    const winEl=document.getElementById(P.rightWin);
@@ -17469,11 +17558,8 @@ function skinLeafMount(leaf,path,host,ctx){
    const members=swRowMembers('engines').filter(m=>placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0&&m.id!==rightId);
    for(const m of members){
     cell(m,false);el.appendChild(m);
-    m.addEventListener('pointerdown',ev=>{
-     if(ev.button!==0)return;
-     if(ev.target.closest&&ev.target.closest('.wbtn,.cpchip,button,input,select,textarea,a'))return;
-     try{skinGv2FocusEngine(m.id);}catch(e){}
-    },true);
+    try{skinLaneChrome(m);}catch(e){}   /* R49 [16]: ▸ expands into the right pane; the title selects (Delete closes); ✕ is the window's own */
+    if(skinState&&skinState._sel===m.id)m.classList.add('skSel');
    }
    /* R48 [12]: the "… · in detail" stub is gone — the enlarged engine is on the right, the lane holds the others */
    if(!members.length&&!rightId){
@@ -17524,7 +17610,7 @@ function skinTreeRender(node,path,host,ctx){
  /* an internal node: a flex box with its two sides and the border between them */
  if(node.k)return skinLeafMount(node,path,host,ctx);
  const box=document.createElement('div');
- box.className='skNode '+(node.t==='h'?'skH':'skV')+(path.length===1&&path[0]==='a'&&node.t==='h'?' skMain':'');
+ box.className='skNode '+(node.t==='h'?'skH':'skV')+((node.t==='h'&&node.a&&node.a.k==='browser')||(path.length===1&&path[0]==='a'&&node.t==='h'&&!(node.a&&node.a.t))?' skMain':'');   /* R49: the main row is the one that holds the browser */
  box.dataset.path=path.join('')||'root';
  host.appendChild(box);
  const P=ctx.P;
