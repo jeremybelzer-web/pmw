@@ -929,7 +929,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07g</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16827,6 +16827,7 @@ function skinGv2ShowCentre(id){
  else{P.centreId=cat[0].id;}
  try{skinGv2MicroWorld(P.centreId);}catch(e){}   /* R50 [19]/[20]: the grid in the centre is micro — the lower rectangle is the magnifier, never a track's own big edit */
  skinPersist();skinApply(skinState);
+ try{if(typeof uiWinShown==='function'&&uiWinShown('harmPanel')&&typeof buildHarmWindow==='function'){harmState.last=null;buildHarmWindow();}}catch(e){}   /* R56 (his [29]): a new grid in the centre re-greets the Harmonizer with its melody */
 }
 function skinGv2MicroWorld(id){
  /* R50 (his [19]/[20]): every grid world shown under GV-2 keeps its tracks micro — a new Grid 2 / Grid 3 looks like Grid 1, empty */
@@ -26697,14 +26698,62 @@ function harmonizeLine(rows,chords,opts){
 /* ==== 5.5 THE HARMONIZER WINDOW — the singer-lips window over the pure core ==== */
 var harmState={type:'topline',voices:2,noCross:true,classical:true,ext:{9:false,11:false,13:false},start:'auto',speed:50,last:null,
  voiceSel:0,editedVoices:{},world:null,float:false};   /* his 173rd/174th: the expanded face — the current voice's tab, the user's per-voice edits (kept across tab flips, cleared when the parameters change), the mounted world, the ⤢ float */
+function harmVisibleBeats(scrollLeft,laneX0,gut,ppb,laneW,loop){
+ /* R56 (his [29]): the beats on screen — the wrap's scroll and the lane's origin give the first visible beat, the lane's visible
+    width the last; [0, loop] when the whole song is in view. Pure — unit-tested. */
+ const b0=Math.max(0,(scrollLeft-laneX0-gut)/Math.max(1,ppb));
+ const b1=Math.min(loop,b0+Math.max(0,laneW)/Math.max(1,ppb));
+ return [+b0.toFixed(4),+b1.toFixed(4)];
+}
+function harmRowsInWindow(rows,b0,b1){
+ /* R56 (his [29]): the notes whose onset lies inside [b0,b1). Pure — unit-tested. */
+ return (rows||[]).filter(n=>n&&n[0]>=b0-1e-6&&n[0]<b1-1e-6);
+}
+function harmSourceWorld(){
+ /* R56 (his [29]): the grid ON SCREEN is the Harmonizer's song — the centre grid under GV-2, the focused grid elsewhere; a world
+    whose melody track is empty yields to Grid 1's */
+ let id='main';
+ try{
+  if(typeof skinIsGv2==='function'&&skinIsGv2()&&skinState&&skinState.panes&&skinState.panes.centreId)id=skinState.panes.centreId;
+  else if(typeof gridFocus==='string'&&GRID_WORLDS[gridFocus])id=gridFocus;
+ }catch(e){}
+ if(!GRID_WORLDS[id])id='main';
+ if(id!=='main'){try{const n=withGridWorld(id,()=>(project.tracks.melody||[]).length);if(!n)id='main';}catch(e){id='main';}}
+ return id;
+}
 function harmSelRows(){
- /* the material: the SELECTED melody notes when a selection stands, else the whole line */
+ /* the material: the SELECTED notes when a selection stands (the active track's rows — the indices are its), else the MAIN
+    MELODY of the grid on screen (R56, his [29]) — the melody track, kept to the bars on screen when that leaves notes */
  const mel=project.melody||[];
  if(typeof selNotes==='object'&&selNotes&&selNotes.size){
   const rows=[...selNotes].map(i=>mel[i]).filter(Boolean);
-  if(rows.length)return rows.slice().sort((a,b)=>a[0]-b[0]);
+  if(rows.length){harmState.src={id:CUR_GRID,track:(typeof activeTrack==='string'?activeTrack:'melody'),sel:true,b0:null,b1:null};return rows.slice().sort((a,b)=>a[0]-b[0]);}
  }
- return mel.slice().sort((a,b)=>a[0]-b[0]);
+ const main=(project.tracks&&project.tracks.melody)||[];
+ const all=main.slice().sort((a,b)=>a[0]-b[0]);
+ let b0=0,b1=LOOP,vis=null;
+ try{
+  const w=GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].els&&GRID_WORLDS[CUR_GRID].els.wrap;
+  const lane=w&&w.querySelector('.trow > .gvwrap, [id="gridRow"] > .gvwrap');
+  if(w&&lane&&w.clientWidth>0){
+   const wr=w.getBoundingClientRect(),lr=lane.getBoundingClientRect();
+   const laneX0=lr.left-wr.left+w.scrollLeft;
+   const headsRight=(typeof skinIsGv2==='function'&&skinIsGv2());
+   const laneW=w.clientWidth-(headsRight?laneX0+theadWNow():laneX0);
+   [b0,b1]=harmVisibleBeats(w.scrollLeft,laneX0,GUT,PPB,laneW,LOOP);
+   if(b1-b0<LOOP-1e-6){const inWin=harmRowsInWindow(all,b0,b1);if(inWin.length)vis=inWin;}
+  }
+ }catch(e){}
+ harmState.src={id:CUR_GRID,track:'melody',sel:false,b0:vis?b0:0,b1:vis?b1:LOOP,part:!!vis};
+ return vis||all;
+}
+function harmSrcNote(){
+ /* the status line's account of the material (R56) */
+ const src=harmState.src;if(!src)return '';
+ const grid=src.id==='main'?'Grid 1':('Grid '+String(src.id).slice(1));
+ if(src.sel)return 'Material: the selected notes of '+(typeof trackLabel==='function'?trackLabel(src.track):src.track)+' in '+grid+'.';
+ const bars=src.part?(' · bars '+(Math.floor(src.b0/4)+1)+'–'+Math.max(Math.floor(src.b0/4)+1,Math.ceil(src.b1/4))+' on screen'):' · the whole melody';
+ return 'Material: the main melody of '+grid+bars+'.';
 }
 function harmRun(){
  /* reads MAIN's song whatever grid is current (the R57 precedent — an open rig's empty
@@ -26718,7 +26767,8 @@ function harmRun(){
    start:harmState.start,speed:harmState.speed});
   return {rows,res};
  };
- const r=(typeof withGridWorld==='function'&&typeof CUR_GRID==='string'&&CUR_GRID!=='main')?withGridWorld('main',run):run();
+ const src=(typeof harmSourceWorld==='function')?harmSourceWorld():'main';   /* R56 (his [29]): the grid on screen, not always Grid 1 */
+ const r=(typeof withGridWorld==='function'&&typeof CUR_GRID==='string'&&CUR_GRID!==src)?withGridWorld(src,run):run();
  if(!r)return null;
  harmState.last=r;harmState.editedVoices={};
  if(harmState.voiceSel>=r.res.voices.length)harmState.voiceSel=0;
@@ -26753,6 +26803,9 @@ function harmAudition(){
 }
 function harmApply(split){
  const r=harmState.last||harmRun();if(!r||!r.res.voices.length)return;
+ /* R56 (his [29]): the write lands in the SOURCE world (the grid on screen) — and, for the main-melody material, in the melody track */
+ const src=(harmState.src&&harmState.src.id&&GRID_WORLDS[harmState.src.id])?harmState.src.id:'main';
+ if(typeof withGridWorld==='function'&&typeof CUR_GRID==='string'&&CUR_GRID!==src)return withGridWorld(src,()=>harmApply(split));
  harmVoiceHarvest();   /* his 174th: edits made in the expanded grid COUNT — the write reads them */
  snapshot();
  if(split){
@@ -26766,9 +26819,10 @@ function harmApply(split){
   persistTrackLabels();
  }else{
   /* the spec's default: the same track — the harmony joins the melody's own lane */
-  const mel=project.melody;
+  const toMel=!!(harmState.src&&harmState.src.track==='melody'&&!harmState.src.sel);
+  const mel=toMel?(project.tracks.melody||(project.tracks.melody=[])):project.melody;
   for(let k=0;k<r.res.voices.length;k++)for(const h of harmVoiceRows(k)){const nn=[h[0],h[1],h[2]];nn[8]=.6;mel.push(nn);}
-  project.melody=mel;
+  if(!toMel)project.melody=mel;
  }
  noteEngine&&noteEngine('harmonizer',{type:harmState.type,voices:harmState.voices});
  refresh(true);drawTrackSel();
@@ -27155,6 +27209,7 @@ function harmObjMount(){
  const host=document.getElementById('harmObjRow');if(!host)return;
  host.innerHTML='';
  const r=harmState.last||harmRun();if(!r||!r.res.voices.length)return;
+ try{const st=document.getElementById('harmStatus');if(st&&!st.textContent)st.textContent=harmSrcNote();}catch(e){}   /* R56: say whose melody this is */
  const rows=[];for(const line of r.res.voices)for(const h of line)rows.push([h[0],h[1],h[2]]);
  rows.sort((a,b)=>a[0]-b[0]);
  const o={id:'harm:'+Date.now(),name:(harmState.type==='counter'?'Counter-melody':'Harmony')+' × '+r.res.voices.length,strand:'melody',data:{rows},org:'harmPanel'};
@@ -39045,7 +39100,7 @@ function uiDispatch(action){
   if(p&&p.scrollIntoView)try{p.scrollIntoView({block:'start'});}catch(e){}
   if(uiState.open==='wanPanel'&&typeof wanSyncFollow==='function')wanSyncFollow();   /* 4.6: the board greets the playhead's key */
   if(uiState.open==='ragaPanel'&&typeof renderRagaResults==='function'){try{renderRagaResults();renderRagaInfo();}catch(e){}}   /* his 168th: the row tiles re-realize at open — the boot render predates the song's chords, so the ghosts were empty */
-  if(uiState.open==='harmPanel'&&typeof buildHarmWindow==='function'){try{buildHarmWindow();}catch(e){}}   /* 5.5: the Harmonizer greets its selection */
+  if(uiState.open==='harmPanel'&&typeof buildHarmWindow==='function'){try{if(typeof harmState==='object'&&harmState)harmState.last=null;buildHarmWindow();}catch(e){}}   /* 5.5: the Harmonizer greets its selection · R56 (his [29]): a fresh read of the screen on every open, never a stale result */
   if(uiState.open==='wqPanel'&&typeof buildWqWindow==='function'){try{buildWqWindow();}catch(e){}}   /* E3: Wig & Quill greets the song */
   if(uiState.open==='cagePanel'&&typeof buildCageWindow==='function'){try{buildCageWindow(); if(_ag&&typeof cageLinkAttach==='function')cageLinkAttach(_ag); try{cageStackSeat();}catch(e2){}}catch(e){}}   /* Guitar Engine: shape board + linked 1-track neck · his [77] seat */
   if(uiState.open==='orbPanel'&&typeof renderOrb==='function')renderOrb();           /* 4.7: the map greets the song's regions */
