@@ -891,7 +891,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ag</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ah</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16569,11 +16569,36 @@ function skinGv2MagOpen(t,a,d){
   }catch(e){}
  }
  skinPersist();skinApply(skinState);
+ try{skinGv2LaneEase(60,true);}catch(e){}   /* R50 [19]: the lower rectangle eases out to ~40% of the screen in his bell curve */
 }
 function skinGv2MagClose(){
  skinGv2Lane={mode:'engines',t:null,a:null,d:null};
  try{selNotes=new Set();}catch(e){}
+ const back=(skinState&&skinState.panes&&skinState.panes._magPct!=null)?skinState.panes._magPct:null;   /* R50: the share to ease back to survives the re-apply (skinNorm mints a fresh panes object) */
  if(skinState)skinApply(skinState);
+ try{if(back!=null){skinState.panes._magPct=back;skinGv2LaneEase(null,false);}}catch(e){}
+}
+function skinGv2LaneEase(targetPct,remember){
+ /* R50 (his [19]): the left column's border between the top row and the lower rectangle eases — slow, then fast, then slow
+    (cageEaseInOut, 650ms) — to `targetPct` (the top row's share; null = back to the share remembered before the magnifier) */
+ const layer=document.getElementById('skinLayer'), P=skinState&&skinState.panes, root=P&&P.tree; if(!layer||!root)return false;
+ const col=(root.t==='h'&&root.a&&root.a.t==='v')?root.a:(root.t==='v'?root:null); if(!col||col.ca||col.cb)return false;
+ const colEl=(root.t==='h')?layer.querySelector(':scope > .skNode.skV'):layer; if(!colEl)return false;
+ const kids=[...colEl.children].filter(k=>k.classList.contains('skNode')||k.classList.contains('skPane')||k.classList.contains('skLeaf')); if(kids.length<2)return false;
+ const elA=kids[0], elB=kids[kids.length-1];
+ let to; if(targetPct==null){if(P._magPct==null)return false; to=P._magPct; P._magPct=null;} else {if(remember&&P._magPct==null)P._magPct=col.pct; to=Math.max(3,Math.min(97,+targetPct));}
+ const from=col.pct; if(Math.abs(to-from)<0.5){col.pct=to;return true;}
+ const t0=performance.now(), dur=650; skinState._laneAnim={from,to,t0};
+ const step=()=>{const u=Math.max(0,Math.min(1,(performance.now()-t0)/dur)); const e=(typeof cageEaseInOut==='function')?cageEaseInOut(u):u; const p=from+(to-from)*e;
+  elA.style.flex=p+' 1 0%'; elB.style.flex=(100-p)+' 1 0%';
+  if(u<1)requestAnimationFrame(step); else {col.pct=to; skinState._laneAnim=null; try{skinTreeLegacySync(P);skinPersist();}catch(e2){}}};
+ requestAnimationFrame(step); return true;
+}
+function skinGv2TrackPane(t){
+ /* R50 (his [19]): a double-click on a track's NAME makes the lower rectangle that track's pane — blank until the track has plug-ins */
+ if(!skinIsGv2())return;
+ skinGv2Lane={mode:'track',t,a:null,d:null};
+ skinPersist();skinApply(skinState);
 }
 function skinGv2GridIdOf(el){
  if(!el)return null;
@@ -16671,7 +16696,14 @@ function skinGv2ShowCentre(id){
  if(id&&cat.some(g=>g.id===id)){P.centreId=id;P.hideMain=(id==='main'?0:P.hideMain);}
  else if(!cat.length){P.centreId='';}
  else{P.centreId=cat[0].id;}
+ try{skinGv2MicroWorld(P.centreId);}catch(e){}   /* R50 [19]/[20]: the grid in the centre is micro — the lower rectangle is the magnifier, never a track's own big edit */
  skinPersist();skinApply(skinState);
+}
+function skinGv2MicroWorld(id){
+ /* R50 (his [19]/[20]): every grid world shown under GV-2 keeps its tracks micro — a new Grid 2 / Grid 3 looks like Grid 1, empty */
+ if(!skinIsGv2()||!id)return;
+ if(id==='main'){skinGv2MicroAll();return;}
+ if(typeof GRID_WORLDS==='object'&&GRID_WORLDS[id]&&typeof withGridWorld==='function')withGridWorld(id,()=>{try{skinGv2MicroAll();}catch(e){}});
 }
 function skinGv2CentreCycle(dir){
  /* swipe L→R (dir +1) reveals the next multi-track; R→L the previous */
@@ -17542,7 +17574,19 @@ function skinLeafMount(leaf,path,host,ctx){
  }else if(leaf.k==='lane'){
   el=document.createElement('div');el.id='skLane';el.className='skPane skLeaf swRow';el.dataset.cat='engines';
   el.style.cssText='border-top:1px solid var(--line);overflow-x:auto;overflow-y:auto;white-space:nowrap;scroll-snap-type:x mandatory;position:relative;background:var(--bg);';
-  if(skinGv2Lane&&skinGv2Lane.mode==='mag'){
+  if(skinGv2Lane&&skinGv2Lane.mode==='track'){
+   /* R50 (his [19]): the track's pane — blank until per-track plug-ins exist */
+   el.style.whiteSpace='normal';el.style.overflow='auto';
+   const tn=(typeof trackLabel==='function'&&skinGv2Lane.t)?trackLabel(skinGv2Lane.t):(skinGv2Lane.t||'track');
+   const bar=document.createElement('div');bar.className='skTrackBar';
+   bar.style.cssText='display:flex;gap:8px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2;';
+   bar.innerHTML='<span style="font-size:11px;color:var(--text);font-weight:600;">Track · '+String(tn).replace(/</g,'&lt;')+'</span><span class="cpchip" id="skTrackBack" title="Return the lower rectangle to the miniature engine windows">↩ Engines</span>';
+   el.appendChild(bar); bar.querySelector('#skTrackBack').onclick=e=>{e.stopPropagation();skinGv2MagClose();};
+   const note=document.createElement('div');note.id='skTrackNote';
+   note.style.cssText='padding:18px 16px;font-size:12px;color:var(--dim);line-height:1.5;max-width:720px;';
+   note.textContent='No plug-ins on this track yet. Drag one here when they exist — the app’s own (Compressor · EQ · Reverb · Gate) and its instruments (the Sampler, the Synth) are on the roadmap; third-party plug-ins arrive with the native shell (DV-9).';
+   el.appendChild(note);
+  }else if(skinGv2Lane&&skinGv2Lane.mode==='mag'){
    /* DV-17 / RAW [6]: the lower pane holds the Track MIDI Magnifier while a clip is open */
    el.style.whiteSpace='normal';el.style.overflow='hidden';
    const bar=document.createElement('div');
@@ -36364,6 +36408,7 @@ function trackHead(t,inLane,microOv){
  /* July 24 round (client): double-click anywhere around the track name = select the
     whole track (the name itself keeps its rename double-click; S/● keep theirs) */
  h.ondblclick=e=>{
+  if(typeof skinIsGv2==='function'&&skinIsGv2()&&e.target.closest&&e.target.closest('.tname')){e.stopPropagation();e.preventDefault();try{skinGv2TrackPane(t);}catch(e2){}return;}   /* R50 [19]: the name → the track's pane in the lower rectangle */
   if(e.target.closest&&(e.target.closest('.tname')||e.target.closest('.tctl')||e.target.closest('.texp')||e.target.closest('.tvol')))return;
   selectWholeTrack(t);
  };
@@ -39749,6 +39794,7 @@ function gridUserSpawn(opts){
   try{localStorage.setItem('cp_ui',JSON.stringify(uiState));}catch(e){}
  }
  gridsPersistSoon();
+ try{if(typeof skinIsGv2==='function'&&skinIsGv2()&&typeof skinGv2MicroWorld==='function')skinGv2MicroWorld(w.id);}catch(e){}   /* R50 [19]/[20]: a new grid under GV-2 is micro from its first frame */
  return w;
 }
 /* per-grid persistence — ONE key (cp_grids, the 26th cp_ key): user grids ride reloads;
