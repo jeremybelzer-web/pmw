@@ -929,7 +929,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -26588,6 +26588,65 @@ function harmWeight(rows,i,beatsPerBar){
 }
 const HARM_SWEET=[3,4,8,9];        /* 3rds & 6ths — the harmony singer's home */
 const HARM_OK=[0,3,4,5,7,8,9];     /* + unison/4th/5th (the pass-through set) */
+const HARM_DEG_NAME={0:'1',1:'♭9',2:'9',3:'♭3',4:'3',5:'11',6:'♯11',7:'5',8:'♭6',9:'6',10:'♭7',11:'7'};
+function harmDegreePc(c,deg){
+ /* R57 (his [30]/[31]): the pitch class of a CHORD DEGREE — 1 · 3 · 5 · 6 · 7 · 9 · 4(11) — read from the chord's own intervals
+    (its 3rd and 5th as it has them; a 7th it lacks reads ♭7; the 6th, 9th and 11th over the root). Pure — unit-tested. */
+ if(!c)return null;
+ const r=((c.r||0)%12+12)%12, iv=(Array.isArray(c.iv)&&c.iv.length)?c.iv:[0,4,7];
+ const d=+deg;
+ const off=d===1?0:d===3?(iv[1]!=null?iv[1]:4):d===5?(iv[2]!=null?iv[2]:7):d===7?(iv[3]!=null?iv[3]:(iv.indexOf(11)>=0?11:10)):d===6?9:d===9?2:d===4?5:null;
+ return off==null?null:((r+off)%12+12)%12;
+}
+function harmStartPitch(mel0,c,deg,dir){
+ /* R57 (his [30]): a voice's FIRST note — the chord degree nearest ABOVE or BELOW the melody's first note (never the melody's own
+    pitch: "the root above" is the octave's root). Pure — unit-tested. */
+ const pc=harmDegreePc(c,deg);if(pc==null)return null;
+ if(dir==='above'){for(let m=mel0+1;m<=mel0+24;m++)if(((m%12)+12)%12===pc)return m;}
+ else{for(let m=mel0-1;m>=mel0-24;m--)if(((m%12)+12)%12===pc)return m;}
+ return null;
+}
+function harmStartSpec(x){
+ /* R57: one reading of a starting note — {deg,dir}; the old words (auto · 3rd · 5th · 8ve) still read; 'above:3' / 'below:9' are the
+    lanes' values. Pure — unit-tested. */
+ if(x&&typeof x==='object'&&x.deg!=null)return {deg:x.deg==='auto'?'auto':+x.deg,dir:x.dir==='above'?'above':'below'};
+ const v=String(x==null?'auto':x);
+ if(v==='auto'||v==='')return {deg:'auto',dir:'below'};
+ if(v==='3rd')return {deg:3,dir:'below'};
+ if(v==='5th')return {deg:5,dir:'below'};
+ if(v==='8ve')return {deg:1,dir:'below'};
+ const m=/^(above|below):(\d)$/.exec(v);
+ if(m)return {deg:+m[2],dir:m[1]};
+ return {deg:'auto',dir:'below'};
+}
+function harmStartOptions(simplify,belowOnly){
+ /* R57 (his [30]/[31]): the starting notes a harmony voice may take — with SIMPLIFY on, the 1 · 3 · 5 of the chord; off, also the
+    6 · 7 · 9 · 4(11) — each above and below (the MINIMAL counter-melody, a background under the topline by the 5.5 law, only
+    below). Pure — unit-tested. */
+ const degs=(simplify===false)?[1,3,5,6,7,9,4]:[1,3,5];
+ const ord=d=>d===1?'the root':d===9?'the 9th (2nd)':d===4?'the 4th (11th)':('the '+d+(d===3?'rd':'th'));
+ const out=[['auto','Auto']];
+ for(const dir of (belowOnly?['below']:['above','below']))for(const d of degs)out.push([dir+':'+d,ord(d)+' '+dir]);
+ return out;
+}
+function harmEmbellish(line,chords,minDur){
+ /* R57 (his [31]): EMBELLISH — where a harmony note is held a quarter or longer (the lead holding), it opens with a SUSPENSION: a
+    neighbour tone one or two semitones above the target for up to half a beat, then the target. Pure — unit-tested. */
+ const md=(typeof minDur==='number'&&minDur>0)?minDur:1;
+ const out=[];
+ for(const n of (line||[])){
+  if(!n||n[1]<md-1e-6){out.push(n);continue;}
+  let c=null;try{c=chordAt(chords,n[0]).c;}catch(e){}
+  const pcs=c?harmChordPcs(c,{9:true,11:true,13:true}):null;
+  let sus=null;
+  for(const d of [2,1]){const m=n[2]+d;if(!pcs||pcs.has(((m%12)+12)%12)){sus=m;break;}}
+  if(sus==null)sus=n[2]+2;
+  const sd=Math.min(.5,+(n[1]/2).toFixed(4));
+  out.push([n[0],sd,sus]);
+  out.push([+(n[0]+sd).toFixed(4),+(n[1]-sd).toFixed(4),n[2]]);
+ }
+ return out;
+}
 function harmonizeLine(rows,chords,opts){
  /* rows [[beat,dur,midi,…]] → {voices:[line,…]} — each line [[beat,dur,midi]…], one per
     harmony voice (opts.voices counts the MELODY: 2 voices = melody + 1 line).
@@ -26605,6 +26664,12 @@ function harmonizeLine(rows,chords,opts){
  const mel=(rows||[]).filter(n=>Array.isArray(n)&&n.length>=3).slice().sort((a,b)=>a[0]-b[0]);
  if(!mel.length)return {voices:[]};
  const chAt=b=>{try{return chordAt(chords,b).c;}catch(e){return null;}};
+ /* R57 (his [31]): SIMPLIFY (default on) limits every harmony note to the 1 · 3 · 5 of the chord under it; the per-voice STARTING
+    NOTES ride opts.starts; EMBELLISH adds suspensions on held notes (the post-pass below) */
+ const simplify=opts.simplify!==false;
+ const starts=Array.isArray(opts.starts)?opts.starts:[];
+ const pcsOf=c=>simplify?new Set([1,3,5].map(d=>harmDegreePc(c,d)).filter(x=>x!=null)):harmChordPcs(c,ext);
+ const finish=vs=>({voices:opts.embellish?vs.map(l=>harmEmbellish(l,chords,1)):vs});
  const voices=[];
  if((opts.type||'topline')==='counter'){
   /* THE BACKGROUND COUNTER-MELODY: its own slower/faster walk (speed 0–100 → step
@@ -26615,10 +26680,17 @@ function harmonizeLine(rows,chords,opts){
   const step=Math.max(.5,2-1.5*(sp/100));
   const t0=mel[0][0],tEnd=mel[mel.length-1][0]+mel[mel.length-1][1];
   const line=[];
-  let cur=mel[0][2]-12;
+  /* R57 (his [31]): MINIMAL — the counter starts on a DIFFERENT chord tone than the melody (its own starting note when chosen;
+     else the root, then the 5th, then the 3rd, nearest under the melody's opening) */
+  let cur=null;
+  {const c0=chAt(t0);const st0=harmStartSpec(starts[0]!=null?starts[0]:opts.start);
+   if(c0&&st0.deg!=='auto')cur=harmStartPitch(mel[0][2],c0,st0.deg,st0.dir);
+   if(cur==null&&c0){const melPc=((mel[0][2]%12)+12)%12;let pick=null;for(const d of [1,5,3]){const pc=harmDegreePc(c0,d);if(pc!=null&&pc!==melPc){pick=pc;break;}}
+    if(pick!=null)for(let m=mel[0][2]-1;m>=mel[0][2]-24;m--)if(((m%12)+12)%12===pick){cur=m;break;}}
+   if(cur==null)cur=mel[0][2]-12;}
   for(let t=t0;t<tEnd-1e-6;t+=step){
    const c=chAt(t);if(!c){continue;}
-   const pcs=[...harmChordPcs(c,ext)];
+   const pcs=[...pcsOf(c)];
    const mi=mel.findIndex(n=>n[0]>t+1e-6);
    const mNow=mi>0?mel[mi-1]:mel[0],mPrev=mi>1?mel[mi-2]:null;
    const dir=(mPrev&&mNow[2]!==mPrev[2])?(mNow[2]>mPrev[2]?-1:1):0;   /* contrary */
@@ -26641,10 +26713,10 @@ function harmonizeLine(rows,chords,opts){
   }
   voices.push(line);
   if(V>2){
-   const sub=harmonizeLine(line,chords,{type:'topline',voices:V-1,noCross,classical,ext,rangeSpan:span,start:opts.start});
+   const sub=harmonizeLine(line,chords,{type:'topline',voices:V-1,noCross,classical,ext,rangeSpan:span,start:opts.start,starts:starts.slice(1),simplify});
    for(const l of sub.voices)voices.push(l);
   }
-  return {voices};
+  return finish(voices);
  }
  /* FOLLOW-THE-TOPLINE: V−1 lines under the melody. Voice v anchors on voice v−1
     (the melody is voice 0) — candidates are the chord's pcs in the octave under the
@@ -26654,36 +26726,46 @@ function harmonizeLine(rows,chords,opts){
     keeps it strictly under its anchor and ONLY the range floor may break that. */
  let anchor=mel;
  for(let v=1;v<V;v++){
+  /* R57 (his [30]): each voice has its own STARTING NOTE — a chord degree above or below the melody's first note — and its side:
+     an "above" voice walks the octave above its anchor and never crosses under it */
+  const st=harmStartSpec(starts[v-1]!=null?starts[v-1]:(v===1?opts.start:null));
+  const up=st.dir==='above';
   const line=[];let prevPick=null,prevAnch=null;
   for(let i=0;i<anchor.length;i++){
    const n=anchor[i],c=chAt(n[0]);if(!c){continue;}
-   const pcs=harmChordPcs(c,ext);
+   const pcs=pcsOf(c);
    const w=harmWeight(anchor,i);
-   const floor=mel[Math.min(i,mel.length-1)][2]-span;
+   const melRef=mel[Math.min(i,mel.length-1)][2];
+   const floor=melRef-span,ceil=melRef+span;
+   if(i===0&&st.deg!=='auto'){
+    const sp=harmStartPitch(mel[0][2],c,st.deg,st.dir);
+    if(sp!=null&&sp>=floor&&sp<=ceil){line.push([n[0],n[1],sp]);prevPick=sp;prevAnch=n[2];continue;}
+   }
    const cands=[];
-   for(let m=n[2]-1;m>=n[2]-12;m--)if(pcs.has(((m%12)+12)%12))cands.push(m);
-   if(!cands.length)for(let m=n[2]-13;m>=n[2]-24;m--)if(pcs.has(((m%12)+12)%12)){cands.push(m);break;}
+   if(up){
+    for(let m=n[2]+1;m<=n[2]+12;m++)if(pcs.has(((m%12)+12)%12))cands.push(m);
+    if(!cands.length)for(let m=n[2]+13;m<=n[2]+24;m++)if(pcs.has(((m%12)+12)%12)){cands.push(m);break;}
+   }else{
+    for(let m=n[2]-1;m>=n[2]-12;m--)if(pcs.has(((m%12)+12)%12))cands.push(m);
+    if(!cands.length)for(let m=n[2]-13;m>=n[2]-24;m--)if(pcs.has(((m%12)+12)%12)){cands.push(m);break;}
+   }
    let best=null,bs=-1e9;
    for(const m of cands){
-    if(noCross&&m>=n[2]&&m>floor)continue;
-    if(m<floor)continue;
+    if(noCross&&(up?(m<=n[2]&&m<ceil):(m>=n[2]&&m>floor)))continue;
+    if(up?m>ceil:m<floor)continue;
     const iv=((n[2]-m)%12+12)%12;
-    const melIv=((mel[Math.min(i,mel.length-1)][2]-m)%12+12)%12;
+    const melIv=((melRef-m)%12+12)%12;
     let s=0;
     if(HARM_SWEET.indexOf(melIv)>=0)s+=3;
     else if(HARM_OK.indexOf(melIv)>=0)s+=1;
     else if(w>=2)continue;                        /* a heavy note refuses the rub */
     else s-=1;
-    if(i===0&&opts.start&&opts.start!=='auto'){
-     const want=opts.start==='3rd'?[3,4]:opts.start==='5th'?[7]:[0];
-     if(want.indexOf(melIv)>=0)s+=4;
-    }
     if(prevPick!=null)s-=Math.abs(m-prevPick)*.6;
     if(classical&&prevPick!=null&&prevAnch!=null){
      const pIv=((prevAnch-prevPick)%12+12)%12;
      if((iv===7||iv===0)&&pIv===iv&&Math.sign(m-prevPick)===Math.sign(n[2]-prevAnch)&&m!==prevPick)s-=6;
     }
-    if(s>bs||(s===bs&&m>(best==null?-1e9:best))){bs=s;best=m;}
+    if(s>bs||(s===bs&&(up?m<(best==null?1e9:best):m>(best==null?-1e9:best)))){bs=s;best=m;}
    }
    if(best==null)continue;
    line.push([n[0],n[1],best]);
@@ -26692,11 +26774,11 @@ function harmonizeLine(rows,chords,opts){
   voices.push(line);
   anchor=line.length?line:anchor;
  }
- return {voices};
+ return finish(voices);
 }
 /* ==== /5.5 pure core ==== */
 /* ==== 5.5 THE HARMONIZER WINDOW — the singer-lips window over the pure core ==== */
-var harmState={type:'topline',voices:2,noCross:true,classical:true,ext:{9:false,11:false,13:false},start:'auto',speed:50,last:null,
+var harmState={type:'topline',voices:2,noCross:true,classical:true,ext:{9:false,11:false,13:false},start:'auto',starts:[],simplify:true,embellish:false,speed:50,last:null,
  voiceSel:0,editedVoices:{},world:null,float:false};   /* his 173rd/174th: the expanded face — the current voice's tab, the user's per-voice edits (kept across tab flips, cleared when the parameters change), the mounted world, the ⤢ float */
 function harmVisibleBeats(scrollLeft,laneX0,gut,ppb,laneW,loop){
  /* R56 (his [29]): the beats on screen — the wrap's scroll and the lane's origin give the first visible beat, the lane's visible
@@ -26764,7 +26846,7 @@ function harmRun(){
   if(!rows.length)return null;
   const res=harmonizeLine(rows,project.chords||[],{type:harmState.type,voices:harmState.voices,
    noCross:harmState.noCross,classical:harmState.classical,ext:harmState.ext,
-   start:harmState.start,speed:harmState.speed});
+   start:harmState.start,starts:harmState.starts||[],simplify:harmState.simplify!==false,embellish:!!harmState.embellish,speed:harmState.speed});
   return {rows,res};
  };
  const src=(typeof harmSourceWorld==='function')?harmSourceWorld():'main';   /* R56 (his [29]): the grid on screen, not always Grid 1 */
@@ -26840,14 +26922,16 @@ function buildHarmWindow(){
  const _rows=
   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
   +'<span class="cpchip'+(st.type==='topline'?' on':'')+'" id="harmTypeTop" title="Follow-the-topline — a harmony voice shadows every melody note at consonant intervals below.">🎤 Follow the topline</span>'
-  +'<span class="cpchip'+(st.type==='counter'?' on':'')+'" id="harmTypeCtr" title="Background counter-melody — its own slower or faster line under the melody, contrary motion when it can.">🌊 Counter-melody</span>'
+  +'<span class="cpchip'+(st.type==='counter'?' on':'')+'" id="harmTypeCtr" title="Background counter-melody — its own slower or faster line under the melody, contrary motion when it can.">🌊 Minimal (counter-melody)</span>'
   +'<label style="font-size:11px;color:var(--text);" title="2–5 voices — the melody counts as one; the rest stack below, each under the last.">Voices <select id="harmVoices">'+[2,3,4,5].map(v=>'<option value="'+v+'"'+(st.voices===v?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'
-  +'<label style="font-size:11px;color:var(--text);" title="The first harmony note’s interval under the melody.">Starting note <select id="harmStart">'+[['auto','Auto'],['3rd','A 3rd below'],['5th','A 5th below'],['8ve','The octave']].map(o=>'<option value="'+o[0]+'"'+(st.start===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>'
+  +'<label style="display:none;">Starting note <select id="harmStart">'+harmStartOptions(st.simplify).map(o=>'<option value="'+o[0]+'"'+((st.starts&&st.starts[0]!=null?String(st.starts[0]):st.start)===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>'   /* R57: the starting notes live on the voice LANES below; this hidden select mirrors Voice 2's (the older suites' hook) */
   +'<label id="harmSpeedWrap" style="display:'+(st.type==='counter'?'flex':'none')+';gap:5px;align-items:center;font-size:11px;color:var(--text);" title="Slower ↔ faster (0–100): a slow counter sustains long tones; a fast one pulses.">Slower ⟷ faster <input id="harmSpeed" type="range" min="0" max="100" value="'+st.speed+'" style="width:110px;accent-color:var(--accent);"></label>'
   +'</div>'
   +'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
   +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="The no-crossing rule (its own toggle, default ON): a voice never rises above the one it follows — trumped ONLY by the range limit."><input type="checkbox" id="harmNoCross"'+(st.noCross?' checked':'')+' style="accent-color:var(--accent);">No crossing</label>'
   +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Classical counterpoint refuses parallel perfect 5ths and octaves; untick for the modern parallel-OK sound."><input type="checkbox" id="harmClassical"'+(st.classical?' checked':'')+' style="accent-color:var(--accent);">Classical voice-leading</label>'
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Simplify harmonies (his [31]): every harmony note — and every starting note — limited to the 1 · 3 · 5 of the chord under it. Off: the 6 · 7 · 9 · 4(11) join."><input type="checkbox" id="harmSimplify"'+(st.simplify!==false?' checked':'')+' style="accent-color:var(--accent);">Simplify harmonies</label>'
+  +'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;" title="Embellish harmonies (his [31]): where the lead holds a note a quarter or longer, the harmony opens with a suspension and resolves."><input type="checkbox" id="harmEmbellish"'+(st.embellish?' checked':'')+' style="accent-color:var(--accent);">Embellish harmonies</label>'
   +'<span style="font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);" title="Chord-extension allowances — which colors a harmony voice may borrow beyond the triad.">Extensions</span>'
   +[9,11,13].map(x=>'<label style="display:flex;gap:3px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;"><input type="checkbox" data-harmext="'+x+'"'+(st.ext[x]?' checked':'')+' style="accent-color:var(--accent);">'+x+'</label>').join('')
   +'</div>'
@@ -26857,7 +26941,8 @@ function buildHarmWindow(){
   +'<button id="harmSplitBtn" style="padding:5px 12px;font-size:12px;background:#3a3e4d;color:#e9eaef;" title="The split-to-tracks option — each voice lands on its own new track, labeled Harmony 2, 3…">⇉ Split to tracks</button>'
   +'<span id="harmStatus" style="font-size:10.5px;color:var(--dim);"></span>'
   +'</div>';
- const _obj='<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;'+(_split?'flex-direction:column;align-items:flex-start;flex:1;justify-content:center;':'margin-top:8px;')+'"></div>';
+ const _obj='<div id="harmLanes" style="display:flex;flex-direction:column;gap:6px;width:100%;margin-top:8px;"></div>'   /* R57 (his [30]): the voices as LANES — Voice 1 the existing melody, Voice 2… the harmonies, each with its own starting note */
+  +'<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;'+(_split?'flex-direction:column;align-items:flex-start;flex:1;justify-content:center;':'margin-top:8px;')+'"></div>';
  B.innerHTML=_split
   ?('<div style="display:flex;gap:14px;align-items:stretch;">'
     +'<div id="harmMain" style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:8px;">'+_prose+_obj+'</div>'
@@ -26865,10 +26950,12 @@ function buildHarmWindow(){
     +'</div>')
   :(_prose+'<div style="height:8px;"></div>'+_rows+_obj);
  const on=(id,fn)=>{const e=document.getElementById(id);if(e)e.onclick=fn;};
- on('harmTypeTop',()=>{harmState.type='topline';buildHarmWindow();});
- on('harmTypeCtr',()=>{harmState.type='counter';buildHarmWindow();});
+ on('harmTypeTop',()=>{harmState.type='topline';harmState.last=null;buildHarmWindow();});
+ on('harmTypeCtr',()=>{if(harmState.type!=='counter')harmState.speed=Math.min(harmState.speed,25);harmState.type='counter';harmState.last=null;buildHarmWindow();});   /* R57 [31]: MINIMAL moves less — a slow default */
  document.getElementById('harmVoices').onchange=e=>{harmState.voices=+e.target.value;};
- document.getElementById('harmStart').onchange=e=>{harmState.start=e.target.value;};
+ document.getElementById('harmStart').onchange=e=>{harmState.start=e.target.value;harmState.starts[0]=e.target.value;harmState.last=null;};
+ const _hs=document.getElementById('harmSimplify');if(_hs)_hs.onchange=e=>{harmState.simplify=!!e.target.checked;harmState.last=null;buildHarmWindow();};
+ const _he=document.getElementById('harmEmbellish');if(_he)_he.onchange=e=>{harmState.embellish=!!e.target.checked;harmState.last=null;buildHarmWindow();};
  const sp=document.getElementById('harmSpeed');if(sp)sp.oninput=e=>{harmState.speed=+e.target.value;};
  document.getElementById('harmNoCross').onchange=e=>{harmState.noCross=!!e.target.checked;};
  document.getElementById('harmClassical').onchange=e=>{harmState.classical=!!e.target.checked;};
@@ -26877,6 +26964,60 @@ function buildHarmWindow(){
  on('harmApplyBtn',()=>harmApply(false));
  on('harmSplitBtn',()=>harmApply(true));
  if(_split)harmInlineMount();else harmObjMount();   /* his 173rd: the split view carries the EXPANDED object */
+ try{harmLanesRender();}catch(e){}
+}
+const HARM_LANE_COLORS=['#4fd1c5','#9aa7ff','#ff6f8e','#c5e384'];
+function harmLanesRender(){
+ /* R57 (his [30]): SEE the result — one lane per voice under the Harmonizer's grid: Voice 1 · Existing melody (its first note's
+    chord degree named), Voice 2… · Harmony with its own Starting note select (the chord degree above or below) and, in the
+    split view, an ✎ that opens that voice in the expanded grid. Each lane is a small roll of its notes on one shared time
+    and pitch scale. */
+ const host=document.getElementById('harmLanes');if(!host)return;
+ host.innerHTML='';
+ const r=harmState.last;if(!r||!r.rows||!r.rows.length)return;
+ const lines=[{name:'Voice 1 · Existing melody',rows:r.rows,color:'#f0b55a',k:-1}];
+ r.res.voices.forEach((v,k)=>lines.push({name:'Voice '+(k+2)+' · Harmony',rows:harmVoiceRows(k),color:HARM_LANE_COLORS[k%HARM_LANE_COLORS.length],k}));
+ let t0=1e9,t1=0,lo=127,hi=0;
+ for(const L of lines)for(const n of L.rows){if(n[0]<t0)t0=n[0];if(n[0]+n[1]>t1)t1=n[0]+n[1];if(n[2]<lo)lo=n[2];if(n[2]>hi)hi=n[2];}
+ if(!(t1>t0))t1=t0+1;
+ lo=Math.max(0,lo-1);hi=Math.min(127,hi+1);
+ const c0=(()=>{try{return chordAt(project.chords||[],r.rows[0][0]).c;}catch(e){return null;}})();
+ const degOf=m=>{if(!c0)return '';const iv=((m-(c0.r||0))%12+12)%12;return HARM_DEG_NAME[iv]||'';};
+ const split=!!document.querySelector('#harmCtl');
+ const W=Math.max(220,(host.clientWidth||(host.parentElement&&host.parentElement.clientWidth)||300)-4),H=30;
+ lines.forEach(L=>{
+  const row=document.createElement('div');row.className='harmLane';row.setAttribute('data-voice',String(L.k+2));
+  row.style.cssText='display:flex;flex-direction:column;gap:3px;';
+  const head=document.createElement('div');head.style.cssText='display:flex;gap:8px;align-items:center;font-size:11px;flex-wrap:wrap;';
+  const nm=document.createElement('span');nm.className='harmLaneName';nm.style.cssText='font-weight:600;color:'+L.color+';';nm.textContent=L.name;
+  head.appendChild(nm);
+  if(L.k<0){
+   const d=document.createElement('span');d.className='harmLaneStart';d.style.cssText='color:var(--dim);';
+   const dg=degOf(L.rows[0][2]);d.textContent=dg?('starts on the '+dg+' of the chord'):'';
+   head.appendChild(d);
+  }else{
+   const lab=document.createElement('label');lab.style.cssText='display:flex;gap:4px;align-items:center;color:var(--text);';
+   lab.appendChild(document.createTextNode('Starting note'));
+   const sel=document.createElement('select');sel.className='harmLaneSel';sel.setAttribute('data-voice',String(L.k));
+   const cur=(harmState.starts&&harmState.starts[L.k]!=null)?String(harmState.starts[L.k]):(L.k===0?String(harmState.start||'auto'):'auto');
+   for(const o of harmStartOptions(harmState.simplify,harmState.type==='counter'&&L.k===0)){const op=document.createElement('option');op.value=o[0];op.textContent=o[1];if(o[0]===cur)op.selected=true;sel.appendChild(op);}
+   sel.onchange=()=>{harmState.starts[L.k]=sel.value;if(L.k===0){harmState.start=sel.value;const hs=document.getElementById('harmStart');if(hs)hs.value=sel.value;}harmState.last=null;harmRun();if(document.querySelector('#harmCtl'))harmInlineMount();else harmObjMount();harmLanesRender();};
+   lab.appendChild(sel);head.appendChild(lab);
+   const first=L.rows[0]?degOf(L.rows[0][2]):'';
+   if(first){const d=document.createElement('span');d.className='harmLaneStart';d.style.cssText='color:var(--dim);';d.textContent='→ the '+first+(L.rows[0][2]>r.rows[0][2]?' above':' below');head.appendChild(d);}
+   if(split){const ed=document.createElement('span');ed.className='cpchip harmLaneEdit'+(harmState.voiceSel===L.k?' on':'');ed.textContent='✎';ed.title='Edit this voice in the grid';ed.onclick=()=>{harmVoiceHarvest();harmState.voiceSel=L.k;harmInlineMount();harmLanesRender();};head.appendChild(ed);}
+  }
+  row.appendChild(head);
+  const cv=document.createElement('canvas');cv.className='harmLaneCv';cv.width=W;cv.height=H;cv.style.cssText='width:'+W+'px;height:'+H+'px;border-radius:4px;background:#1a1d25;border:1px solid var(--line);';
+  const g=cv.getContext('2d');
+  g.fillStyle='rgba(255,255,255,.08)';for(let b=Math.ceil(t0);b<t1;b++){const x=(b-t0)/(t1-t0)*W;g.fillRect(Math.round(x),0,1,H);}
+  g.fillStyle='rgba(255,255,255,.16)';for(let b=Math.ceil(t0/4)*4;b<t1;b+=4){const x=(b-t0)/(t1-t0)*W;g.fillRect(Math.round(x),0,1,H);}
+  const rh=Math.max(2,H/(hi-lo+1));
+  g.fillStyle=L.color;
+  for(const n of L.rows){const x=(n[0]-t0)/(t1-t0)*W,w=Math.max(3,n[1]/(t1-t0)*W-1),y=(hi-n[2])/(hi-lo+1)*H;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.max(2,Math.round(rh)));}
+  row.appendChild(cv);
+  host.appendChild(row);
+ });
 }
 /* ==== his 179th — THE TRACK MIDI MAGNIFIER: the fixed-zoom band (2.6 Q7 class; the
    reference's name stays in the private docs). One engine serves the Harmonizer's
@@ -27120,7 +27261,7 @@ function harmInlineMount(){
  for(let k=0;k<r.res.voices.length;k++){
   const c=document.createElement('span');
   c.className='cpchip'+(harmState.voiceSel===k?' on':'');
-  c.textContent='Voice '+(k+2);
+  c.textContent='Voice '+(k+2)+' · Harmony';
   c.title='Edit this harmony voice — the others (and the melody) stay as ghost notes behind it. Your edits keep when you flip tabs.';
   c.onclick=()=>{harmVoiceHarvest();harmState.voiceSel=k;harmInlineMount();};
   bar.appendChild(c);
@@ -27135,7 +27276,7 @@ function harmInlineMount(){
  /* the world: the current voice on the face track, the rest as ghost tracks */
  const cur=harmVoiceRows(harmState.voiceSel);
  if(!cur.length){host.appendChild(Object.assign(document.createElement('div'),{textContent:'This voice came out empty — loosen the options (extensions, classical) or pick another starting note.'}));return;}
- const o={id:'harmv:'+harmState.voiceSel,name:'Voice '+(harmState.voiceSel+2),strand:'melody',data:{rows:cur},org:'harmPanel'};
+ const o={id:'harmv:'+harmState.voiceSel,name:'Voice '+(harmState.voiceSel+2)+' · Harmony',strand:'melody',data:{rows:cur},org:'harmPanel'};
  const m=essObjWorldMint(o);
  if(!m){host.appendChild(document.createTextNode('The voice would not realize.'));return;}
  harmState.world=m;
@@ -27146,6 +27287,12 @@ function harmInlineMount(){
    if(k===harmState.voiceSel)continue;
    project.tracks['x9'+(10+k)]=harmVoiceRows(k);
   }
+  /* R57 (his [30]): the melody and the other voices are VISIBLE lanes under the grid, named — not only ghosts in it */
+  try{
+   hiddenTracks.delete('x901');trackLabels['x901']='Voice 1 · Existing melody';
+   for(let k=0;k<r.res.voices.length;k++){if(k===harmState.voiceSel)continue;hiddenTracks.delete('x9'+(10+k));trackLabels['x9'+(10+k)]='Voice '+(k+2)+' · Harmony';}
+   trackLabels[m.face.track]='Voice '+(harmState.voiceSel+2)+' · Harmony (editing)';
+  }catch(e){}
   /* his 175th: this grid IS the magnifier — it renders LARGER than the melody above
      (PPB ≥ 90), so it overflows, scrolls, and the beat map has something to move.
      his 176th ("3 minutes to 3 hours or more"): a huge span would pass the browser's
