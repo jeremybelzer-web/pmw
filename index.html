@@ -871,7 +871,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06aa</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ab</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29027,13 +29027,14 @@ function wanViewMenu(e,side){
  /* his 166th: the View / Skin button above each side — the views join as they build */
  const w2=wanWeb2State();
  const cur=side===2?w2.view:'weber';
- const pick=v=>{if(side===2){w2.view=v;wanSide2Draw();}};
+ const pick=v=>{if(side===2){w2.view=v;try{wanWeberDraw();}catch(err){wanSide2Draw();}}};
  wanFloatMenu(e,[
   {hd:'View / Skin'},
   {label:'Weber&#8217;s Matrix of Related Keys (scales)',cur:cur==='weber',fn:()=>pick('weber')},
-  {label:'Hallway with books',cur:cur==='hallway',dis:side!==2,fn:()=>pick('hallway')},   /* R6 (the 96th): his [6]'s first animation view */
-  {label:'3D Matrix',cur:cur==='3d',dis:side!==2,fn:()=>pick('3d')},
-  {label:'Decision Trees',cur:cur==='tree',dis:side!==2,fn:()=>pick('tree')},
+  {label:'Hallway with books',cur:cur==='hallway',dis:side!==2,fn:()=>{wanHall.skin='books';wanTree.skin='books';try{wanTreeEnsureDefaults();}catch(err){}pick('hallway');}},   /* R44: Hallway = Trees paint (books) + hub/forks; cubes are NOT this skin */
+  {label:'3D Matrix (inside the cube)',cur:cur==='3d',dis:side!==2,fn:()=>pick('3d')},   /* R41: separate — Romantic-period chords / cubes tunnel (his [10]) */
+  {label:'Weber in time (keys over bars)',cur:cur==='time',dis:side!==2,fn:()=>pick('time')},   /* R42: candidate B — Weber floor · key path · Z=time */
+  {label:'Decision Trees',cur:cur==='tree',dis:side!==2,fn:()=>pick('tree')},   /* pre-game then walk; skins books · simple · puzzle */
   {label:'More views land with their rounds',dis:true}
  ]);
 }
@@ -29207,7 +29208,7 @@ function wanHallDraw(host){
    +'<span class="cpchip" id="wanHallBack" title="Stand at the song\'s start">⇤</span>'
    +'<span id="wanHallStatus" style="font-size:10.5px;color:#6b4f28;white-space:nowrap;"></span>'
    +'<span style="flex:1"></span>'
-   +'<span class="cpchip wanHallSkin" data-skin="books" title="Books on the shelves">📚</span><span class="cpchip wanHallSkin" data-skin="cubes" title="Cube blocks on the shelves">🧊</span><span class="cpchip wanHallSkin" data-skin="puzzle" title="Puzzle geometry on the walls, the ceiling and the floor">🧩</span>'
+   +'<span class="cpchip wanHallSkin" data-skin="books" title="Books on the shelves — Trees paint">📚</span><span class="cpchip wanHallSkin" data-skin="simple" title="Simple trees — labelled branches">🌳</span><span class="cpchip wanHallSkin" data-skin="puzzle" title="Jarvis puzzle geometry on walls, ceiling and floor — Trees paint">🧩</span>'
    +'<select id="wanHallMotion" title="Motion — how the camera advances: smoothly with the transport, or snapping to the beat or the bar" style="font-size:10px;"><option value="smooth">smooth</option><option value="beat">by the beat</option><option value="bar">by the bar</option></select>'
    +'<select id="wanHallSrc" title="Objects on the shelves — whatever is selected: the chords (the default), the melody\'s notes, the drums\' hits, or the key map (one object per section)" style="font-size:10px;">'+HALL_SRCS.map(s=>'<option value="'+s+'">'+({chords:'the chords',melody:'the melody',drums:'the drums',keys:'the key map'})[s]+'</option>').join('')+'</select>'
    +'<span class="cpchip" id="wanHallReset" title="Look straight ahead again">↺</span>'
@@ -29236,7 +29237,7 @@ function wanHallDraw(host){
   c.onkeyup=e=>{if(e.key===' '||e.code==='Space'){if(wanHall.glide){wanHall.glide=false;wanHallDraw();}e._cnvOwned=true;e.preventDefault();}};
   c.onblur=()=>{wanHall.glide=false;};
   c.onmouseup=()=>{if(wanHall.drag&&!wanHall.drag.moved)wanHall.drag=null;};
-  host.querySelectorAll('.wanHallSkin').forEach(el=>{el.onclick=()=>{wanHall.skin=el.getAttribute('data-skin')||'books';wanHallDraw();};});
+  host.querySelectorAll('.wanHallSkin').forEach(el=>{el.onclick=()=>{wanHall.skin=wanTreeNormSkin(el.getAttribute('data-skin')||'books');wanTree.skin=wanHall.skin;wanHallDraw();};});
   const mo=document.getElementById('wanHallMotion');if(mo){mo.value=wanHall.motion;mo.onchange=()=>{wanHall.motion=mo.value;wanHallDraw();};}
   const so=document.getElementById('wanHallSrc');if(so){so.value=wanHall.src||'chords';so.onchange=()=>{wanHall.src=HALL_SRCS.indexOf(so.value)>=0?so.value:'chords';wanHall.sel=null;wanHallDraw();};}
   const rs=document.getElementById('wanHallReset');if(rs)rs.onclick=()=>{wanHall.look={dx:0,dy:0};wanHall.ahead=0;wanHall.yaw=0;wanHallDraw();};   /* R17: ↺ faces ahead again */
@@ -29257,7 +29258,7 @@ function wanHallDraw(host){
  const items=wanHallItems(src,wanHallData(src));
  const books=view.facing==='behind'?wanHallLayoutBehind(items,cam,HALL_DEPTH):wanHallLayoutItems(items,cam,HALL_DEPTH);wanHall.books=books;
  const cx=W/2+(wanHall.look.dx||0)+view.dx,cy=H*.42+(wanHall.look.dy||0),halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17,ceilH=H*.3;
- host.querySelectorAll('.wanHallSkin').forEach(el=>el.classList.toggle('on',el.getAttribute('data-skin')===wanHall.skin));
+ wanHall.skin=wanTreeNormSkin(wanHall.skin);wanTree.skin=wanHall.skin;host.querySelectorAll('.wanHallSkin').forEach(el=>el.classList.toggle('on',el.getAttribute('data-skin')===wanHall.skin));
  const xw=(side,s)=>cx+(side<0?-1:1)*halfW*s, yFloor=s=>cy+floorH*s, yShelf=s=>cy+shelfH*s;
  /* the hall: ceiling · walls · floor, from the vanishing point out */
  ctx.clearRect(0,0,W,H);
@@ -29274,20 +29275,21 @@ function wanHallDraw(host){
  /* the books, far to near, alternating walls */
  const hits=[];
  books.slice().sort((a,b)=>b.z1-a.z1).forEach(bk=>{
-  const skin=wanHall.skin||'books';
+  const skin=wanTreeNormSkin(wanHall.skin);
   const s1=wanHallScale(bk.z1),s2=wanHallScale(bk.z2);
-  const surf=skin==='puzzle'?(bk.i%4):(bk.i%2?2:0);   /* 0 left wall · 1 ceiling · 2 right wall · 3 floor — the puzzle uses all four (his View 5) */
+  const surf=skin==='puzzle'?(bk.i%4):(skin==='simple'?(bk.i%2?2:0):(bk.i%2?2:0));   /* puzzle: all four surfaces; books/simple: shelves */
   let pts;
-  if(surf===1||surf===3){const tw=W*.12;const y1=surf===1?cy-ceilH*s1:yFloor(s1)-1,y2=surf===1?cy-ceilH*s2:yFloor(s2)-1;pts=[[cx-tw*s1,y1],[cx-tw*s2,y2],[cx+tw*s2,y2],[cx+tw*s1,y1]];}
-  else{const side=surf===2?1:-1;const xa=xw(side,s1),xb=xw(side,s2),ya=yShelf(s1),yb=yShelf(s2),ha=(skin==='cubes'?bookH*.8:bookH)*s1,hb=(skin==='cubes'?bookH*.8:bookH)*s2;pts=[[xa,ya],[xb,yb],[xb,yb-hb],[xa,ya-ha]];}
+  if(surf===1||surf===3){const tw=W*(skin==='puzzle'?.14:.12);const y1=surf===1?cy-ceilH*s1:yFloor(s1)-1,y2=surf===1?cy-ceilH*s2:yFloor(s2)-1;pts=[[cx-tw*s1,y1],[cx-tw*s2,y2],[cx+tw*s2,y2],[cx+tw*s1,y1]];}
+  else{const side=surf===2?1:-1;const xa=xw(side,s1),xb=xw(side,s2),ya=yShelf(s1),yb=yShelf(s2),ha=(skin==='simple'?bookH*.55:bookH)*s1,hb=(skin==='simple'?bookH*.55:bookH)*s2;pts=[[xa,ya],[xb,yb],[xb,yb-hb],[xa,ya-ha]];}
   const col=wanHallChordColor(bk),sel=wanHall.sel===bk.i;
-  ctx.fillStyle=col;ctx.globalAlpha=bk.inside?1:.92;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
-  if(skin==='cubes'&&(surf===0||surf===2)){/* a top face toward the corridor's centre — the block reads as a cube */
-   const side=surf===2?1:-1,dep=bookH*.35;ctx.fillStyle='rgba(255,255,255,.22)';ctx.beginPath();ctx.moveTo(pts[3][0],pts[3][1]);ctx.lineTo(pts[2][0],pts[2][1]);ctx.lineTo(pts[2][0]-side*dep*s2,pts[2][1]-dep*.4*s2);ctx.lineTo(pts[3][0]-side*dep*s1,pts[3][1]-dep*.4*s1);ctx.closePath();ctx.fill();}
-  if(skin==='puzzle'){/* the piece's knob and socket — an inset line and a notch */
-   ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo((pts[0][0]*3+pts[1][0])/4,(pts[0][1]*3+pts[1][1])/4);ctx.lineTo((pts[3][0]*3+pts[2][0])/4,(pts[3][1]*3+pts[2][1])/4);ctx.stroke();
-   ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.arc((pts[1][0]+pts[2][0])/2,(pts[1][1]+pts[2][1])/2,Math.max(1.5,4*s2),0,7);ctx.fill();}
-  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2:1;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.stroke();
+  if(skin==='puzzle'){wanJarvisPaint(ctx,pts,s1,bk.i); if(sel){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.stroke();}}
+  else if(skin==='simple'){ /* Y-branch glyph — the simple trees paint */
+   ctx.strokeStyle=sel?'#fff':col;ctx.lineWidth=sel?2.4:1.6;ctx.globalAlpha=bk.inside?1:.85;
+   const mx=(pts[0][0]+pts[1][0]+pts[2][0]+pts[3][0])/4,my=(pts[0][1]+pts[1][1]+pts[2][1]+pts[3][1])/4;
+   ctx.beginPath();ctx.moveTo(mx,pts[0][1]);ctx.lineTo(mx,my);ctx.lineTo(pts[3][0],pts[3][1]);ctx.moveTo(mx,my);ctx.lineTo(pts[2][0],pts[2][1]);ctx.stroke();ctx.globalAlpha=1;
+   ctx.fillStyle=col;ctx.beginPath();ctx.arc(mx,my,Math.max(2,4*s1),0,7);ctx.fill();}
+  else{ctx.fillStyle=col;ctx.globalAlpha=bk.inside?1:.92;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+   ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2:1;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.stroke();}
   const xa=pts[0][0],xb=pts[1][0],ya=pts[0][1],yb=pts[1][1],ha=pts[0][1]-pts[3][1],hb=pts[1][1]-pts[2][1];
   /* the spine's title, upright, sized by nearness */
   if(s1>.14){ctx.fillStyle='#fff';ctx.font='bold '+Math.max(8,Math.round(12*s1))+'px system-ui';ctx.textAlign='center';let lbl=bk.lbl;try{lbl=dispLbl(bk.lbl);}catch(e){}const st=wanHall.steps[bk.ci];ctx.fillText(lbl+(st?' ·'+(wanHallExchange(bk,st)||{}).op:''),(xa+xb)/2,(surf===1||surf===3)?((ya+yb)/2+4):((ya+yb)/2-(ha+hb)/4+4));ctx.textAlign='left';}
@@ -29296,9 +29298,11 @@ function wanHallDraw(host){
  wanHall.hits=hits.sort((a,b)=>a.z-b.z);   /* nearest first for the click */
  /* where you stand */
  ctx.strokeStyle=paintOf('--playhead','#e8a33d');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(xw(-1,1),yFloor(1)-1);ctx.lineTo(xw(1,1),yFloor(1)-1);ctx.stroke();
+ /* R44 his [9]: Hallway is Trees paint — inspiration halls + far hub out the windows */
+ try{wanTreeOverlayDraw(ctx,W,H,cam,{dx:(wanHall.look.dx||0)+view.dx,dy:wanHall.look.dy||0});}catch(err){}
  const st=document.getElementById('wanHallStatus');
  if(st){const bar=Math.floor(cam/4)+1,beat=Math.floor(cam%4)+1;const word={chords:'chord',melody:'note',drums:'hit',keys:'key'}[src]||'object';st.textContent='bar '+bar+' · beat '+beat+' · '+books.length+' '+word+(books.length===1?'':'s')+' ahead'+(wanHall.ahead?' · looking '+wanHall.ahead+' beat'+(wanHall.ahead===1?'':'s')+' ahead':'');}
- if(st){st.textContent+=' · floor '+(Math.max(0,HALL_SRCS.indexOf(src))+1)+' of '+HALL_SRCS.length+(view.facing==='behind'?' · facing the past':'')+(wanHall.glide?' · gliding':'');}   /* R17 */
+ if(st){st.textContent+=' · floor '+(Math.max(0,HALL_SRCS.indexOf(src))+1)+' of '+HALL_SRCS.length+(view.facing==='behind'?' · facing the past':'')+(wanHall.glide?' · gliding':'')+' · hub '+(wanTree.hubHits||[]).length+' · '+(wanTree.hits||[]).length+' halls';}   /* R17 · R44 Trees overlay */
  const elevOn=wanHallElevDraw(ctx,W,H);
  wanHall.last={cam,books:books.length,hits:hits.length,W,H,elev:elevOn};
  return wanHall.last;
@@ -29367,12 +29371,25 @@ function wanHallHit(x,y){
 function wanHallClick(e){
  const c=document.getElementById('wanHallCanvas');if(!c)return;
  const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ /* R44: hub / inspiration halls (Trees content on the Hallway paint) before Song A books */
+ for(const h of wanTree.hubHits||[]){const dx=x-h.px,dy=y-h.py;if(dx*dx+dy*dy<=(h.rad+6)*(h.rad+6)){wanTreeHubPick(h.id);wanHallDraw();return;}}
+ for(const h of wanTree.hits||[]){const dx=x-h.px,dy=y-h.py;if(dx*dx+dy*dy<=h.rad*h.rad){
+  wanTree.sel={i:h.i};wanTree.pending={songId:h.songId,songName:(wanTreeSongById(h.songId)||{}).short||h.songId,curiosity:h.curiosity,t:h.t,label:h.label,tonic:h.tonic,mode:h.mode};
+  wanTree.phase='walk';wanHallDraw();wanTreePromptOnHall();return;}}
  const h=wanHallHit(x,y);
- if(!h){wanHall.sel=null;wanHallDraw();return;}
- wanHall.sel=h.i;
+ if(!h){wanHall.sel=null;wanTree.pending=null;wanHallDraw();return;}
+ wanHall.sel=h.i;wanTree.pending=null;
  const bk=wanHall.books.find(b=>b.i===h.i);
  if(bk)wanHallAudition([bk]);
  wanHallDraw();
+}
+function wanTreePromptOnHall(){
+ /* reuse the Trees A/B prompt above the hallway canvas when a fork is pending */
+ let el=document.getElementById('wanTreePrompt');
+ if(!el){const c=document.getElementById('wanHallCanvas');if(!c||!c.parentNode)return;
+  el=document.createElement('div');el.id='wanTreePrompt';el.style.cssText='display:none;margin:0 0 6px 0;padding:8px 10px;border:1px solid #a8895f;border-radius:8px;background:#f7f0e4;font-size:11px;color:#4a3a20;line-height:1.45;';
+  c.parentNode.insertBefore(el,c);}
+ wanTreePromptPaint();
 }
 function wanHallDblClick(e){
  const c=document.getElementById('wanHallCanvas');if(!c)return;
@@ -29418,6 +29435,719 @@ function wanHallTick(){
  const cam=wanHallCam();
  if(cam!==wanHall.cam)wanHallDraw();
 }
+/* ==== R41 (the 96th / Cursor Weber lane) — VIEW 2: 3D MATRIX INSIDE THE CUBE ====
+   His Aug 31 brainstorm View 2 + his [40] ("BOTH" A and B, separately): user IN THE MIDDLE of the
+   Tonnetz 26-shell — foreshortened like a hallway; front = +X (fifths) · walls = ±Y (major thirds) ·
+   ceiling/floor = ±Z (parallel) · corners = the diagonals. Pure layer already shipped (`tonnetzAt`…
+   `tonnetzNeighbors26`). Click = audition · double-click = walk there (re-root) · drag = look around
+   (yaw + pitch) · ←→ A D turn · ↑↓ W S walk · SPACE = walk the face ahead (never the transport) ·
+   ↺ faces ahead. Decision Trees stay stubbed (brainstorm §5 Q2 + curated list still his). Tag letter
+   left for merge. */
+var wanCube={home:null,sel:null,cells:[],hits:[],look:{dx:0,dy:0},yaw:0,pitch:0,drag:null,last:null,elev:null};
+function wanCubeLbl(tonic,minor){
+ /* pure: a triad's letter name (C · Cm) for the cube's spines */
+ const t=((+tonic%12)+12)%12,nm=(typeof PCN!=='undefined'&&PCN[t])?PCN[t]:String(t);
+ return minor?nm+'m':nm;
+}
+function wanCubeRot(dx,dy,dz,yawDeg,pitchDeg){
+ /* pure: rotate a lattice offset by the camera's yaw (around Z) then pitch (around Y) — looking +X */
+ const y0=((+yawDeg||0)*Math.PI)/180,p0=((+pitchDeg||0)*Math.PI)/180;
+ const cY=Math.cos(y0),sY=Math.sin(y0),cP=Math.cos(p0),sP=Math.sin(p0);
+ const x1=(+dx||0)*cY-(+dy||0)*sY,y1=(+dx||0)*sY+(+dy||0)*cY,z1=+dz||0;
+ return {x:x1*cP+z1*sP,y:y1,z:-x1*sP+z1*cP};
+}
+function wanCubeProject(rx,ry,rz,W,H,look){
+ /* pure: camera looks +X; screen X = −Y · screen Y = −Z; foreshortening reuses the hallway's law.
+    Returns null when the cell sits behind the camera (depth ≤ 0). {px,py,s,depth,r} */
+ const depth=(+rx||0)+2.2;if(depth<=0.12)return null;
+ const w=(+W>0)?+W:640,h=(+H>0)?+H:280;
+ const s=wanHallScale(depth*3.2),cx=w/2+((look&&+look.dx)||0),cy=h*.48+((look&&+look.dy)||0);
+ const px=cx-(+ry||0)*w*.30*s,py=cy-(+rz||0)*h*.34*s,r=Math.max(7,22*s);
+ return {px,py,s,depth,r};
+}
+function wanCubeLayout(hx,hy,hz,opts){
+ /* pure: the 26 neighbours of home as foreshortened cells around the camera.
+    opts: {W,H,yaw,pitch,look}. Far-to-near for paint; nearest-first hits are built by the draw. */
+ const o=opts&&typeof opts==='object'?opts:{},W=(+o.W>0)?+o.W:640,H=(+o.H>0)?+o.H:280;
+ const yaw=+o.yaw||0,pitch=+o.pitch||0,look=o.look||{dx:0,dy:0};
+ const home=tonnetzAt(hx,hy,hz),out=[];
+ tonnetzNeighbors26(hx,hy,hz).forEach(n=>{
+  const rot=wanCubeRot(n.dx,n.dy,n.dz,yaw,pitch),pr=wanCubeProject(rot.x,rot.y,rot.z,W,H,look);
+  if(!pr)return;
+  out.push(Object.assign({},n,{lbl:wanCubeLbl(n.tonic,n.minor),px:pr.px,py:pr.py,s:pr.s,depth:pr.depth,rad:pr.r,rx:rot.x,ry:rot.y,rz:rot.z}));
+ });
+ return out.sort((a,b)=>b.depth-a.depth);
+}
+function wanCubeFaceAhead(yawDeg,pitchDeg){
+ /* pure: which face-axis (±X / ±Y / ±Z) the camera faces — the ↑/W walk target. Prefer the largest
+    forward (+rotated-X) among the six face steps. */
+ const faces=[{dx:1,dy:0,dz:0},{dx:-1,dy:0,dz:0},{dx:0,dy:1,dz:0},{dx:0,dy:-1,dz:0},{dx:0,dy:0,dz:1},{dx:0,dy:0,dz:-1}];
+ let best=faces[0],bestX=-1e9;
+ for(const f of faces){const r=wanCubeRot(f.dx,f.dy,f.dz,yawDeg,pitchDeg);if(r.x>bestX){bestX=r.x;best=f;}}
+ return best;
+}
+function wanCubeHomeKey(){
+ /* the cube's home triad from the dual board — LINKED = side 1's tonic/mode; UNLINKED = side 2's own */
+ const st=wanState,w2=wanWeb2State();
+ const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
+ const tonic=(w2.linked||w2.tonic==null)?st.tonic:w2.tonic;
+ const minor=(w2.linked||w2.minor==null)?minor1:!!w2.minor;
+ return {tonic:((+tonic%12)+12)%12,minor:!!minor};
+}
+function wanCubeDraw(host){
+ host=host||document.getElementById('wanSide2');if(!host)return null;
+ if(!document.getElementById('wanCubeCanvas')){
+  host.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">'
+   +'<span id="wanCubeStatus" style="font-size:10.5px;color:#6b4f28;white-space:nowrap;"></span>'
+   +'<span style="flex:1"></span>'
+   +'<span class="cpchip" id="wanCubeReset" title="Look straight ahead again">↺</span>'
+   +'<span class="cpchip'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?' on':'')+'" id="wanCubeElev" title="The bamboo elevator — same setting as the Hallway (remembered)">🎋</span>'
+   +'<span style="font-size:9.5px;color:#6b4f28;">you stand at home · click = hear · double-click = walk there · drag = look (yaw + pitch) · ←→ A D = turn · ↑↓ W S = walk · SPACE = walk the face ahead (never the transport) · ↺</span></div>'
+   +'<canvas id="wanCubeCanvas" width="640" height="280" tabindex="0" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;outline:none;"></canvas>';
+  const c=document.getElementById('wanCubeCanvas');
+  c.onclick=e=>{if(wanCube.drag&&wanCube.drag.moved){wanCube.drag=null;return;}wanCube.drag=null;wanCubeClick(e);};
+  c.ondblclick=wanCubeDblClick;
+  c.onmousedown=e=>{if(e.button!==0)return;try{c.focus({preventScroll:true});}catch(err){}
+   wanCube.drag={x:e.clientX,y:e.clientY,yaw:wanCube.yaw||0,pitch:wanCube.pitch||0,moved:false};};
+  c.onmousemove=e=>{const d=wanCube.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
+   wanCube.yaw=wanHallYawNorm((d.yaw||0)+mx*0.45);wanCube.pitch=Math.max(-75,Math.min(75,(d.pitch||0)-my*0.35));wanCubeDraw();};
+  c.onmouseup=()=>{if(wanCube.drag&&!wanCube.drag.moved)wanCube.drag=null;};
+  c.onmouseenter=()=>{try{c.focus({preventScroll:true});}catch(err){}};
+  /* his [40] first-person controls, adapted to the lattice: walk = re-root one face step; SPACE never reaches the transport (`_cnvOwned`, the Hallway's own law) */
+  c.onkeydown=e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;
+   const k=e.key,kl=String(k||'').toLowerCase();
+   if(k==='ArrowLeft'||kl==='a'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCube.yaw=wanHallYawNorm((wanCube.yaw||0)-15);wanCubeDraw();return;}
+   if(k==='ArrowRight'||kl==='d'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCube.yaw=wanHallYawNorm((wanCube.yaw||0)+15);wanCubeDraw();return;}
+   if(k==='ArrowUp'||kl==='w'||k===' '||k==='Spacebar'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();if(!e.repeat)wanCubeWalkFace(1);return;}
+   if(k==='ArrowDown'||kl==='s'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();if(!e.repeat)wanCubeWalkFace(-1);return;}
+   if(k==='Home'||kl==='r'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCube.yaw=0;wanCube.pitch=0;wanCube.look={dx:0,dy:0};wanCubeDraw();return;}
+  };
+  const rs=document.getElementById('wanCubeReset');if(rs)rs.onclick=()=>{wanCube.yaw=0;wanCube.pitch=0;wanCube.look={dx:0,dy:0};wanCubeDraw();};
+  const el=document.getElementById('wanCubeElev');if(el)el.onclick=()=>{try{SETTINGS.hallElevator=!(SETTINGS.hallElevator!==false);persistSettings();}catch(err){}el.classList.toggle('on',!!(SETTINGS&&SETTINGS.hallElevator!==false));};
+  wanCube.elev=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?{t0:performance.now(),dur:1200,label:'descending into the cube…'}:null;
+ }
+ const c=document.getElementById('wanCubeCanvas');if(!c)return null;
+ const ctx=c.getContext('2d'),W=c.width,H=c.height;
+ const hk=wanCubeHomeKey(),coord=tonnetzCoord(hk.tonic,hk.minor);wanCube.home=coord;
+ const cells=wanCubeLayout(coord.x,coord.y,coord.z,{W,H,yaw:wanCube.yaw||0,pitch:wanCube.pitch||0,look:wanCube.look||{dx:0,dy:0}});
+ wanCube.cells=cells;
+ const cx=W/2+((wanCube.look&&wanCube.look.dx)||0),cy=H*.48+((wanCube.look&&wanCube.look.dy)||0);
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#1e242c';ctx.fillRect(0,0,W,H);
+ /* depth haze — a soft corridor suggestion behind the shell */
+ const g=ctx.createRadialGradient(cx,cy,8,cx,cy,Math.max(W,H)*.55);
+ g.addColorStop(0,'rgba(70,90,110,.35)');g.addColorStop(1,'rgba(20,24,30,0)');
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ const hits=[];
+ cells.forEach(cell=>{
+  const face=cell.kind==='face',edge=cell.kind==='edge';
+  const col=cell.tag?({P:'#6ec6ff',L:'#9be39b',R:'#f0c36a',S:'#d4a0ff',N:'#ff9e7a',H:'#ff7aad'})[cell.tag]||'#b8c4d4'
+   :(face?'#8fa3b8':edge?'#6a7a8c':'#4e5a68');
+  const sel=wanCube.sel&&wanCube.sel.x===cell.x&&wanCube.sel.y===cell.y&&wanCube.sel.z===cell.z;
+  ctx.beginPath();ctx.arc(cell.px,cell.py,cell.rad,0,7);
+  ctx.fillStyle=col;ctx.globalAlpha=face?.95:edge?.82:.7;ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2.4:1;ctx.stroke();
+  if(cell.s>.22){ctx.fillStyle='#fff';ctx.font='bold '+Math.max(8,Math.round(11*cell.s))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText(cell.lbl+(cell.tag?' ·'+cell.tag:''),cell.px,cell.py);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+  hits.push({x:cell.x,y:cell.y,z:cell.z,tonic:cell.tonic,minor:cell.minor,tag:cell.tag,lbl:cell.lbl,px:cell.px,py:cell.py,rad:cell.rad,depth:cell.depth,kind:cell.kind});
+ });
+ wanCube.hits=hits.slice().sort((a,b)=>a.depth-b.depth);
+ /* you stand here — home disc */
+ ctx.beginPath();ctx.arc(cx,cy,14,0,7);ctx.fillStyle=paintOf('--playhead','#e8a33d');ctx.fill();
+ ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle='#1a1208';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillText(wanCubeLbl(hk.tonic,hk.minor),cx,cy);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+ const stEl=document.getElementById('wanCubeStatus');
+ if(stEl){const tagged=cells.filter(x=>x.tag).map(x=>x.tag).sort().join('');
+  stEl.textContent='home '+wanCubeLbl(hk.tonic,hk.minor)+' · '+cells.length+' of 26 neighbours in view · PLRSHN '+tagged
+   +(wanCube.yaw||wanCube.pitch?' · looking':'');}
+ /* elevator overlay — same law as the hallway, reused when the setting is on */
+ if(wanCube.elev){
+  const ev=wanCube.elev,p=Math.min(1,(performance.now()-ev.t0)/(ev.dur||1200));
+  if(p>=1)wanCube.elev=null;
+  else{
+   const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+   ctx.fillStyle='rgba(0,0,0,'+(0.85*(1-ease)).toFixed(3)+')';ctx.fillRect(0,0,W,H);
+   const y=-H*.25+ease*H*1.5,rw=W*.34,rh=H*.16;
+   ctx.strokeStyle='#8a6a3a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx-rw*.7,y+rh);ctx.lineTo(cx-rw*.7,y+rh*3.2);ctx.moveTo(cx+rw*.7,y+rh);ctx.lineTo(cx+rw*.7,y+rh*3.2);ctx.stroke();
+   ctx.fillStyle='#b8985a';ctx.beginPath();ctx.moveTo(cx-rw,y+rh);ctx.lineTo(cx,y);ctx.lineTo(cx+rw,y+rh);ctx.lineTo(cx+rw*.85,y+rh*1.25);ctx.lineTo(cx-rw*.85,y+rh*1.25);ctx.closePath();ctx.fill();
+   ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(ev.label||'descending…',cx,y+rh*3.6);ctx.textAlign='left';
+   try{requestAnimationFrame(()=>{if(wanCube.elev)wanCubeDraw();});}catch(e){}
+  }
+ }
+ wanCube.last={home:coord,cells:cells.length,hits:wanCube.hits.length,W,H};
+ return wanCube.last;
+}
+function wanCubeHit(x,y){
+ for(const h of wanCube.hits){const dx=x-h.px,dy=y-h.py;if(dx*dx+dy*dy<=h.rad*h.rad)return h;}
+ return null;
+}
+function wanCubeClick(e){
+ const c=document.getElementById('wanCubeCanvas');if(!c)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ const h=wanCubeHit(x,y);
+ if(!h){wanCube.sel=null;wanCubeDraw();return;}
+ wanCube.sel={x:h.x,y:h.y,z:h.z};try{wanKeyAudition(h.tonic,h.minor);}catch(err){}
+ wanCubeDraw();
+}
+function wanCubeWalkTo(tonic,minor,label){
+ /* double-click / ↑ walk — re-root the Wanderer (LINKED shares side 1; UNLINKED only this side) */
+ const w2=wanWeb2State();
+ if(w2.linked){try{wanRerootStable(tonic,!!minor,null,label||'a walk inside the cube');}catch(err){}}
+ else{w2.tonic=((+tonic%12)+12)%12;w2.minor=!!minor;}
+ wanCube.sel=null;wanCube.yaw=0;wanCube.pitch=0;
+ try{wanSide2Draw();}catch(e){wanCubeDraw();}
+ try{if(w2.linked)wanWeberDraw();}catch(e){}
+}
+function wanCubeDblClick(e){
+ const c=document.getElementById('wanCubeCanvas');if(!c)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ const h=wanCubeHit(x,y);if(!h)return;
+ wanCubeWalkTo(h.tonic,h.minor,'a double-click walk inside the cube'+(h.tag?' · '+h.tag:''));
+}
+function wanCubeWalkFace(dir){
+ /* dir +1 = the face ahead (↑/W/SPACE); −1 = the opposite face (↓/S) — lattice walk, one triad */
+ const sgn=(+dir<0)?-1:1,hk=wanCubeHomeKey(),coord=tonnetzCoord(hk.tonic,hk.minor),step=wanCubeFaceAhead(wanCube.yaw||0,wanCube.pitch||0);
+ const next=tonnetzAt(coord.x+sgn*step.dx,coord.y+sgn*step.dy,coord.z+sgn*step.dz);
+ wanCubeWalkTo(next.tonic,next.minor,(sgn>0?'↑':'↓')+' walk inside the cube');
+}
+/* ==== R42 (Cursor Weber lane) — CANDIDATE B: WEBER IN TIME ====
+   Design §1 B + his [40] ("BOTH" A and B): the 1817 key table as the floor in perspective,
+   the song's key path as a ribbon rising through it bar by bar, the camera at the playhead
+   (Hallway law: time = space). Separate View-menu entry from the cube (A). Tag 2026-09-06x. */
+var wanTime={sel:null,hits:[],look:{dx:0,dy:0},yaw:0,last:null,iv:null,elev:null,drag:null};
+function wanTimeModeMinor(mode){
+ /* pure: is this section mode a minor colour (aeolian family) — the Weber table's minor columns */
+ return mode==='aeolian'||/minor|aeolian|dorian|phrygian/i.test(String(mode||'')+' '+((typeof SCALE_DB==='object'&&SCALE_DB[mode])?SCALE_DB[mode].name||'':''));
+}
+function wanTimeFindCell(grid,tonic,minor){
+ /* pure: the (r,c) seat of a key on a weberGrid — first match of pc + major/minor */
+ const pc=((+tonic%12)+12)%12,m=!!minor;
+ for(let r=0;r<(grid||[]).length;r++){
+  const row=grid[r]||[];
+  for(let c=0;c<row.length;c++){
+   const cell=row[c];if(!!cell.minor===m&&wanLofPc(cell.lof)===pc)return {r,c,lof:cell.lof,minor:!!cell.minor};
+  }
+ }
+ return null;
+}
+function wanTimeFloorPt(r,c,z,W,H,look){
+ /* pure: lattice seat (r,c) on the floor at depth z (beats ahead) — one-point perspective via wanHallScale.
+    Camera looks +Z into time; screen X from column, screen Y from foreshortened floor + row tilt. */
+ const s=wanHallScale(Math.max(0.12,+z||0)),w=(+W>0)?+W:640,h=(+H>0)?+H:280;
+ const cx=w/2+((look&&+look.dx)||0),cy=h*.40+((look&&+look.dy)||0);
+ const u=((+c||0)-WEB_CA)*16,v=((+r||0)-WEB_RC)*11;
+ return {px:cx+u*s,py:cy+48*s+v*s*.32,s,z:+z||0};
+}
+function wanTimeLayout(centerLof,sections,loop,cam,depth,opts){
+ /* pure: Weber floor cells + the song's key-path ribbon ahead of the camera.
+    opts: {W,H,look}. Path from keyRegions; each marker seated on the table at its key. */
+ const o=opts&&typeof opts==='object'?opts:{},W=(+o.W>0)?+o.W:640,H=(+o.H>0)?+o.H:280,look=o.look||{dx:0,dy:0};
+ const D=(+depth>0)?+depth:HALL_DEPTH,c0=+cam||0,Lp=(+loop>0)?+loop:32;
+ const grid=weberGrid(+centerLof||0),floor=[],path=[];
+ for(let r=0;r<WEB_ROWS;r++)for(let c=0;c<WEB_COLS;c++){
+  const cell=grid[r][c],pt=wanTimeFloorPt(r,c,2.2,W,H,look);
+  const nm=wanLofName(cell.lof),letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
+  floor.push({r,c,lof:cell.lof,minor:!!cell.minor,lbl:letter,px:pt.px,py:pt.py,s:pt.s,rad:Math.max(5,11*pt.s)});
+ }
+ const regs=(typeof keyRegions==='function')?keyRegions(sections,Lp):[];
+ regs.forEach((reg,i)=>{
+  const minor=wanTimeModeMinor(reg.mode),seat=wanTimeFindCell(grid,reg.tonic,minor);if(!seat)return;
+  const z1=reg.start-c0,z2=(reg.end!=null?reg.end:Lp)-c0;if(z2<=0||z1>=D)return;
+  const z=Math.max(0.25,(Math.max(0,z1)+Math.min(D,z2))/2),pt=wanTimeFloorPt(seat.r,seat.c,z,W,H,look);
+  const lbl=(typeof sectionKeyLabel==='function')?sectionKeyLabel({tonic:reg.tonic,mode:reg.mode}):(PCN[((reg.tonic%12)+12)%12]+(minor?'m':''));
+  path.push({i,t:reg.start,end:reg.end,d:Math.max(0,(reg.end!=null?reg.end:Lp)-reg.start),tonic:reg.tonic,mode:reg.mode,minor,lof:seat.lof,r:seat.r,c:seat.c,z1:Math.max(0,z1),z2:Math.min(D,z2),z,inside:z1<=0,lbl,px:pt.px,py:pt.py,s:pt.s,rad:Math.max(8,18*pt.s)});
+ });
+ return {floor,path:path.sort((a,b)=>b.z-a.z),grid,cam:c0};
+}
+function wanTimeHomeLof(){
+ /* the floor centres on the Wanderer's home (LINKED = side 1; UNLINKED = side 2's own) */
+ const st=wanState,w2=wanWeb2State();
+ const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
+ const tonic=(w2.linked||w2.tonic==null)?st.tonic:w2.tonic;
+ const minor=(w2.linked||w2.minor==null)?minor1:!!w2.minor;
+ const tonicLof=wanPcLof(tonic,minor);
+ return {tonic:((+tonic%12)+12)%12,minor:!!minor,lof:(minor?tonicLof-3:tonicLof)+(w2.shift||0)};
+}
+function wanTimeDraw(host){
+ host=host||document.getElementById('wanSide2');if(!host)return null;
+ if(!document.getElementById('wanTimeCanvas')){
+  host.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">'
+   +'<span id="wanTimeStatus" style="font-size:10.5px;color:#6b4f28;white-space:nowrap;"></span>'
+   +'<span style="flex:1"></span>'
+   +'<span class="cpchip" id="wanTimeBack" title="Stand at the song\'s start">⇤</span>'
+   +'<span class="cpchip" id="wanTimeReset" title="Look straight ahead again">↺</span>'
+   +'<span class="cpchip'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?' on':'')+'" id="wanTimeElev" title="The bamboo elevator — same setting as the Hallway (remembered)">🎋</span>'
+   +'<span style="font-size:9.5px;color:#6b4f28;">Weber floor · key path rises through time · camera at the playhead · click a key on the ribbon = hear · drag = look · wheel = look ahead · ←→ = turn · ↑↓ W S = walk time · SPACE = glide · ↺</span></div>'
+   +'<canvas id="wanTimeCanvas" width="640" height="280" tabindex="0" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;outline:none;"></canvas>';
+  const c=document.getElementById('wanTimeCanvas');
+  c.onclick=e=>{if(wanTime.drag&&wanTime.drag.moved){wanTime.drag=null;return;}wanTime.drag=null;wanTimeClick(e);};
+  c.onmousedown=e=>{if(e.button!==0)return;try{c.focus({preventScroll:true});}catch(err){}
+   wanTime.drag={x:e.clientX,y:e.clientY,yaw:wanTime.yaw||0,dy:(wanTime.look&&wanTime.look.dy)||0,moved:false};};
+  c.onmousemove=e=>{const d=wanTime.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
+   wanTime.yaw=wanHallYawNorm((d.yaw||0)+mx*0.45);wanTime.look={dx:0,dy:Math.max(-80,Math.min(80,(d.dy||0)+my))};wanTimeDraw();};
+  c.onmouseup=()=>{if(wanTime.drag&&!wanTime.drag.moved)wanTime.drag=null;};
+  c.onmouseenter=()=>{try{c.focus({preventScroll:true});}catch(err){}};
+  c.onkeydown=e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;
+   const k=e.key,kl=String(k||'').toLowerCase();
+   const r=wanHallNav({ahead:wanHall.ahead||0,yaw:wanTime.yaw||0,floor:0,dx:(wanTime.look&&wanTime.look.dx)||0},e.key,{W:c.width});
+   if(!r)return;e._cnvOwned=true;e.preventDefault();e.stopPropagation();
+   if(r.glide){if(!wanHall.glide){wanHall.glide=true;}return;}
+   wanHall.ahead=r.ahead;wanTime.yaw=r.yaw;wanTime.look={dx:r.dx,dy:r.reset?0:((wanTime.look&&wanTime.look.dy)||0)};
+   if(r.reset){wanTime.yaw=0;wanTime.look={dx:0,dy:0};}wanTimeDraw();};
+  c.onkeyup=e=>{if(e.key===' '||e.code==='Space'){if(wanHall.glide){wanHall.glide=false;wanTimeDraw();}e._cnvOwned=true;e.preventDefault();}};
+  c.onblur=()=>{wanHall.glide=false;};
+  c.onwheel=e=>{e.preventDefault();wanHall.ahead=Math.max(0,Math.min(HALL_DEPTH,(wanHall.ahead||0)+(e.deltaY>0?1:-1)));wanTimeDraw();};
+  const rs=document.getElementById('wanTimeReset');if(rs)rs.onclick=()=>{wanTime.yaw=0;wanTime.look={dx:0,dy:0};wanTimeDraw();};
+  const bb=document.getElementById('wanTimeBack');if(bb)bb.onclick=()=>{wanHall.ahead=0;try{setPlayheadBeat(0);}catch(err){}wanTimeDraw();};
+  const el=document.getElementById('wanTimeElev');if(el)el.onclick=()=>{try{SETTINGS.hallElevator=!(SETTINGS.hallElevator!==false);persistSettings();}catch(err){}el.classList.toggle('on',!!(SETTINGS&&SETTINGS.hallElevator!==false));};
+  wanTime.elev=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?{t0:performance.now(),dur:1200,label:'descending onto the key table…'}:null;
+  if(!wanTime.iv)wanTime.iv=setInterval(wanTimeTick,100);
+ }
+ const c=document.getElementById('wanTimeCanvas');if(!c)return null;
+ const ctx=c.getContext('2d'),W=c.width,H=c.height;
+ const home=wanTimeHomeLof(),cam=wanHallCam();
+ const look={dx:Math.sin(((wanTime.yaw||0)*Math.PI)/180)*40+((wanTime.look&&wanTime.look.dx)||0),dy:(wanTime.look&&wanTime.look.dy)||0};
+ let secs=[],Lp=32;try{secs=project.sections||[];Lp=(typeof LOOP==='number'&&LOOP>0)?LOOP:32;}catch(err){}
+ const lay=wanTimeLayout(home.lof,secs,Lp,cam,HALL_DEPTH,{W,H,look});
+ ctx.clearRect(0,0,W,H);ctx.fillStyle='#1a1e26';ctx.fillRect(0,0,W,H);
+ /* ground haze */
+ const hx=W/2+look.dx,hy=H*.40+look.dy;
+ const g=ctx.createLinearGradient(0,hy,0,H);g.addColorStop(0,'rgba(40,50,62,.2)');g.addColorStop(1,'rgba(90,70,40,.35)');
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ /* floor cells — far to near already by fixed z; paint major brighter */
+ lay.floor.forEach(cell=>{
+  const homeCell=wanLofPc(cell.lof)===home.tonic&&!!cell.minor===!!home.minor;
+  ctx.beginPath();ctx.arc(cell.px,cell.py,cell.rad,0,7);
+  ctx.fillStyle=cell.minor?'rgba(120,140,160,.35)':'rgba(180,160,120,.45)';if(homeCell)ctx.fillStyle='rgba(232,163,61,.55)';
+  ctx.fill();ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1;ctx.stroke();
+  if(cell.s>.35){ctx.fillStyle='#e8e0d0';ctx.font=(cell.minor?'':'bold ')+Math.max(7,Math.round(9*cell.s))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText(cell.lbl,cell.px,cell.py);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+ });
+ /* ribbon through the path — connect midpoints in time order (near→far redrawn after) */
+ const chron=lay.path.slice().sort((a,b)=>a.t-b.t);
+ if(chron.length>1){ctx.beginPath();chron.forEach((p,i)=>{if(i)ctx.lineTo(p.px,p.py);else ctx.moveTo(p.px,p.py);});
+  ctx.strokeStyle='rgba(232,163,61,.85)';ctx.lineWidth=2.4;ctx.stroke();}
+ const hits=[];
+ lay.path.forEach(p=>{
+  const sel=wanTime.sel&&wanTime.sel.i===p.i;
+  ctx.beginPath();ctx.arc(p.px,p.py,p.rad,0,7);
+  ctx.fillStyle=p.inside?paintOf('--playhead','#e8a33d'):'#6ec6ff';ctx.globalAlpha=p.inside?.95:.8;ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.5)';ctx.lineWidth=sel?2.4:1;ctx.stroke();
+  if(p.s>.2){ctx.fillStyle='#1a1208';ctx.font='bold '+Math.max(8,Math.round(11*p.s))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText(p.lbl,p.px,p.py);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+  hits.push({i:p.i,tonic:p.tonic,minor:p.minor,lbl:p.lbl,px:p.px,py:p.py,rad:p.rad,z:p.z});
+ });
+ wanTime.hits=hits.slice().sort((a,b)=>a.z-b.z);
+ const stEl=document.getElementById('wanTimeStatus');
+ if(stEl){const here=chron.find(p=>p.inside)||chron[0];
+  stEl.textContent='home '+(PCN[home.tonic]+(home.minor?'m':''))+' · '+(lay.path.length)+' key'+(lay.path.length===1?'':'s')+' on the ribbon'
+   +(here?' · standing in '+here.lbl:'')+(wanHall.glide?' · gliding':'')+(wanTime.yaw?' · looking':'');}
+ if(wanTime.elev){
+  const ev=wanTime.elev,p=Math.min(1,(performance.now()-ev.t0)/(ev.dur||1200));
+  if(p>=1)wanTime.elev=null;
+  else{
+   const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+   ctx.fillStyle='rgba(0,0,0,'+(0.85*(1-ease)).toFixed(3)+')';ctx.fillRect(0,0,W,H);
+   const y=-H*.25+ease*H*1.5,rw=W*.34,rh=H*.16,cx2=W/2;
+   ctx.strokeStyle='#8a6a3a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx2-rw*.7,y+rh);ctx.lineTo(cx2-rw*.7,y+rh*3.2);ctx.moveTo(cx2+rw*.7,y+rh);ctx.lineTo(cx2+rw*.7,y+rh*3.2);ctx.stroke();
+   ctx.fillStyle='#b8985a';ctx.beginPath();ctx.moveTo(cx2-rw,y+rh);ctx.lineTo(cx2,y);ctx.lineTo(cx2+rw,y+rh);ctx.lineTo(cx2+rw*.85,y+rh*1.25);ctx.lineTo(cx2-rw*.85,y+rh*1.25);ctx.closePath();ctx.fill();
+   ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(ev.label||'descending…',cx2,y+rh*3.6);ctx.textAlign='left';
+   try{requestAnimationFrame(()=>{if(wanTime.elev)wanTimeDraw();});}catch(e){}
+  }
+ }
+ wanTime.last={cam,path:lay.path.length,floor:lay.floor.length,hits:wanTime.hits.length,W,H};
+ return wanTime.last;
+}
+function wanTimeTick(){
+ const shown=document.getElementById('wanPanel')&&!document.getElementById('wanPanel').classList.contains('hidden');
+ if(!document.getElementById('wanTimeCanvas')||!shown||wanWeb2State().view!=='time'){clearInterval(wanTime.iv);wanTime.iv=null;return;}
+ if(wanHall.glide){wanHall.ahead=Math.min(HALL_DEPTH,(wanHall.ahead||0)+0.5);wanTimeDraw();return;}
+ const cam=wanHallCam();
+ if(!wanTime.last||cam!==wanTime.last.cam)wanTimeDraw();
+}
+function wanTimeHit(x,y){
+ for(const h of wanTime.hits){const dx=x-h.px,dy=y-h.py;if(dx*dx+dy*dy<=h.rad*h.rad)return h;}
+ return null;
+}
+function wanTimeClick(e){
+ const c=document.getElementById('wanTimeCanvas');if(!c)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ const h=wanTimeHit(x,y);
+ if(!h){wanTime.sel=null;wanTimeDraw();return;}
+ wanTime.sel={i:h.i};try{wanKeyAudition(h.tonic,h.minor);}catch(err){}
+ wanTimeDraw();
+}
+/* ==== R43 (Cursor Weber lane) — DECISION TREES · first shell ====
+   His [6][7] in WEBER-WANDERER-VIEWS-RAW-2026-09-06.md + the Aug 31 clock-hub brainstorm:
+   pre-game defines curiosities + inspiration count + curated list (default seed pack if none);
+   walk Song A with labelled hallways for each matching inspiration event; far hub of other
+   curated songs — click rotates and swaps inspirations (1st click replaces one; next replaces
+   the other when N=2). Take-fork asks melody law A (fit, default) / B (keep intervals).
+   Real rewrite of pitched tracks is the NEXT round; this round ships the adventure shell. */
+const WAN_TREE_CURIOS=[
+ {id:'modulation',name:'Modulation (psych-out + real)'},
+ {id:'melodicForm',name:'Song / melodic form'}
+];
+const WAN_TREE_SEEDS=[
+ {id:'seed-chopin',name:'Chopin — harmonic template',short:'Chopin',events:[
+  {curiosity:'modulation',t:10,label:'psych-out pivot · & of 2 · bar 3',side:'L',tonic:5,mode:'aeolian'},
+  {curiosity:'modulation',t:30,label:'section modulation · beat 2 · bar 8',side:'L',tonic:7,mode:'ionian'},
+  {curiosity:'melodicForm',t:16,label:'verse form turn',side:'L',tonic:0,mode:'ionian'}]},
+ {id:'seed-beethoven',name:'Beethoven — harmonic template',short:'Beethoven',events:[
+  {curiosity:'modulation',t:12,label:'pivot into the dominant',side:'R',tonic:7,mode:'ionian'},
+  {curiosity:'modulation',t:32,label:'section modulation · beat 4 · bar 8',side:'R',tonic:2,mode:'ionian'},
+  {curiosity:'melodicForm',t:16,label:'development shape',side:'R',tonic:0,mode:'ionian'}]},
+ {id:'seed-grieg',name:'Grieg — harmonic template',short:'Grieg',events:[
+  {curiosity:'modulation',t:14,label:'modal colour shift',side:'L',tonic:9,mode:'aeolian'},
+  {curiosity:'melodicForm',t:20,label:'folk-phrase fork',side:'R',tonic:0,mode:'ionian'}]},
+ {id:'seed-tchaikovsky',name:'Tchaikovsky — harmonic template',short:'Tchaikovsky',events:[
+  {curiosity:'modulation',t:18,label:'ballet pivot',side:'R',tonic:4,mode:'ionian'},
+  {curiosity:'modulation',t:28,label:'section rise',side:'L',tonic:9,mode:'aeolian'}]},
+ {id:'seed-gershwin',name:'Gershwin — harmonic template',short:'Gershwin',events:[
+  {curiosity:'modulation',t:8,label:'blue-note pivot',side:'L',tonic:3,mode:'aeolian'},
+  {curiosity:'melodicForm',t:24,label:'chorus form',side:'R',tonic:0,mode:'ionian'}]},
+ {id:'seed-schubert',name:'Schubert — harmonic template',short:'Schubert',events:[
+  {curiosity:'modulation',t:22,label:'song-form pivot',side:'R',tonic:5,mode:'ionian'},
+  {curiosity:'melodicForm',t:16,label:'strophic turn',side:'L',tonic:0,mode:'ionian'}]},
+ {id:'seed-prokofiev',name:'Prokofiev — harmonic template',short:'Prokofiev',events:[
+  {curiosity:'modulation',t:11,label:'side-slip',side:'L',tonic:1,mode:'ionian'},
+  {curiosity:'modulation',t:26,label:'section cut',side:'R',tonic:8,mode:'aeolian'}]}
+];
+var wanTree={phase:'setup',curios:['modulation'],inspN:2,songSource:'default',curated:[],active:[],hubSwap:0,ahead:0,sel:null,pending:null,melodyLaw:'fit',hits:[],hubHits:[],last:null,iv:null,look:{dx:0,dy:0},yaw:0,drag:null,status:'',skin:'books'};   /* R44: books · simple · puzzle paints; cubes stay the separate 3D matrix view */
+function wanTreeSeedPack(){return WAN_TREE_SEEDS.map(s=>({id:s.id,name:s.name,short:s.short,events:s.events.map(e=>({curiosity:e.curiosity,t:e.t,label:e.label,side:e.side,tonic:e.tonic,mode:e.mode}))}));}
+function wanTreeCuratedSongs(st){
+ /* pure: the list for this game — default seed pack when none curated (his Option A) */
+ const pack=wanTreeSeedPack(),raw=st&&typeof st==='object'?st:{};
+ if(raw.songSource==='default'||!Array.isArray(raw.curated)||!raw.curated.length)return pack;
+ const want=new Set(raw.curated.map(String));
+ const hit=pack.filter(s=>want.has(s.id));
+ return hit.length?hit:pack;
+}
+function wanTreeNormSetup(raw){
+ /* pure: clamp the pre-game — curios ≥1 from the known set, inspN 1|2, songSource, curated ids */
+ const pack=wanTreeSeedPack(),ids=new Set(pack.map(s=>s.id)),curioIds=new Set(WAN_TREE_CURIOS.map(c=>c.id));
+ const o=raw&&typeof raw==='object'?raw:{};
+ let curios=Array.isArray(o.curios)?o.curios.map(String).filter(id=>curioIds.has(id)):[];
+ if(!curios.length)curios=['modulation'];
+ const inspN=(+o.inspN===1)?1:2;
+ const songSource=(o.songSource==='database'||o.songSource==='curated')?o.songSource:'default';
+ let curated=Array.isArray(o.curated)?o.curated.map(String).filter(id=>ids.has(id)):[];
+ if(songSource==='default')curated=[];
+ return {curios,inspN,songSource,curated,melodyLaw:(o.melodyLaw==='intervals')?'intervals':'fit'};
+}
+function wanTreeActiveFromCurated(curated,inspN,prefer){
+ /* pure: first inspN songs from curated; prefer keeps ids still in curated when rotating */
+ const list=Array.isArray(curated)?curated:[],n=(+inspN===1)?1:2;
+ const pref=(Array.isArray(prefer)?prefer:[]).filter(id=>list.some(s=>s.id===id));
+ const out=pref.slice(0,n);
+ for(const s of list){if(out.length>=n)break;if(out.indexOf(s.id)<0)out.push(s.id);}
+ return out;
+}
+function wanTreeHubSongs(curated,active){
+ /* pure: rim = curated not currently active, in list order — the far hub */
+ const act=new Set(Array.isArray(active)?active:[]);
+ return (Array.isArray(curated)?curated:[]).filter(s=>!act.has(s.id));
+}
+function wanTreeApplyHubClick(active,hubId,inspN,swapSlot){
+ /* pure: his hub order — N=1 replaces the only inspiration; N=2 first click replaces slot 0,
+    next click replaces slot 1 (swapSlot toggles). Returns {active,swapSlot}. */
+ const n=(+inspN===1)?1:2,id=String(hubId||''),slot=((+swapSlot||0)%n+n)%n;
+ let act=(Array.isArray(active)?active.map(String):[]).slice(0,n);
+ while(act.length<n)act.push('');
+ if(n===1)return {active:[id],swapSlot:0};
+ if(act.indexOf(id)>=0)return {active:act,swapSlot:slot};
+ act[slot]=id;
+ return {active:act,swapSlot:(slot+1)%n};
+}
+function wanTreeForks(activeSongs,curios,cam,depth){
+ /* pure: labelled hallways ahead — one fork per matching curiosity event on each active inspiration */
+ const cur=new Set(Array.isArray(curios)?curios:[]),D=(+depth>0)?+depth:HALL_DEPTH,c0=+cam||0,out=[];
+ (Array.isArray(activeSongs)?activeSongs:[]).forEach((song,si)=>{
+  (song.events||[]).forEach((ev,ei)=>{
+   if(!cur.has(ev.curiosity))return;
+   const z=ev.t-c0;if(z<=-2||z>=D)return;
+   out.push({songId:song.id,songName:song.short||song.name,curiosity:ev.curiosity,t:ev.t,label:ev.label,side:ev.side||(si%2?'R':'L'),tonic:ev.tonic,mode:ev.mode,z:Math.max(0.2,z),i:song.id+':'+ei,inside:z<=0});
+  });
+ });
+ return out.sort((a,b)=>b.z-a.z);
+}
+function wanTreeProjectFork(fork,W,H,look){
+ /* pure: hallway placement — side L/R · foreshortening by z */
+ const s=wanHallScale(Math.max(0.15,fork.z)),w=(+W>0)?+W:640,h=(+H>0)?+H:280;
+ const cx=w/2+((look&&+look.dx)||0),cy=h*.48+((look&&+look.dy)||0);
+ const xSide=(fork.side==='R'?1:-1)*w*.28*s;
+ return {px:cx+xSide,py:cy-10*s,s,rad:Math.max(10,28*s)};
+}
+function wanTreeLayout(st,cam,opts){
+ /* pure: forks on the path + hub rim for the far clock */
+ const o=opts&&typeof opts==='object'?opts:{},W=(+o.W>0)?+o.W:640,H=(+o.H>0)?+o.H:280,look=o.look||{dx:0,dy:0};
+ const curated=wanTreeCuratedSongs(st),activeIds=Array.isArray(st.active)?st.active:[];
+ const activeSongs=activeIds.map(id=>curated.find(s=>s.id===id)).filter(Boolean);
+ const forks=wanTreeForks(activeSongs,st.curios,cam,HALL_DEPTH).map(f=>{
+  const pr=wanTreeProjectFork(f,W,H,look);return Object.assign({},f,pr);
+ });
+ const hub=wanTreeHubSongs(curated,activeIds).map((s,i,arr)=>{
+  const ang=(-Math.PI/2)+(i/Math.max(1,arr.length))*Math.PI*2,R=Math.min(W,H)*.36;
+  return {id:s.id,name:s.short||s.name,px:W/2+Math.cos(ang)*R+((look&&look.dx)||0)*.15,py:H*.22+Math.sin(ang)*R*.35,rad:11};
+ });
+ return {forks,hub,activeSongs,curated};
+}
+
+function wanTreeNormSkin(s){
+ /* his [9][10]: Trees paints are books · simple · puzzle. Cubes are the separate 3D matrix (Romantic-period chords), not a Trees/Hallway skin. */
+ const v=String(s==null?'':s);
+ if(v==='puzzle'||v==='simple')return v;
+ return 'books';
+}
+function wanTreeEnsureDefaults(){
+ /* hallway = Trees paint: ensure inspirations + curios so forks and the far hub exist without forcing the pre-game */
+ if(!Array.isArray(wanTree.curios)||!wanTree.curios.length)wanTree.curios=['modulation','melodicForm'];
+ wanTree.inspN=(+wanTree.inspN===1)?1:2;
+ if(wanTree.songSource!=='database')wanTree.songSource='default';
+ const curated=wanTreeCuratedSongs(wanTree);
+ if(!Array.isArray(wanTree.active)||!wanTree.active.length)
+  wanTree.active=wanTreeActiveFromCurated(curated,wanTree.inspN,[]);
+ wanTree.skin=wanTreeNormSkin(wanTree.skin||wanHall.skin);
+ wanHall.skin=wanTree.skin;
+ return wanTree;
+}
+function wanJarvisPaint(ctx,pts,s,kind){
+ /* his [10]: interior Jarvis geometry — extruded amber tiles / L / arc shards on the corridor surfaces (not the whole sphere) */
+ if(!ctx||!pts||pts.length<4)return;
+ const s1=Math.max(0.08,+s||1),k=(+kind||0)%5;
+ const fill=['rgba(255,170,60,.88)','rgba(255,140,40,.82)','rgba(255,200,90,.78)','rgba(230,120,35,.85)','rgba(255,185,70,.8)'][k];
+ ctx.save();
+ ctx.fillStyle=fill;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.fill();
+ /* extruded top lip toward the vanishing point */
+ const mid=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);
+ const lift=Math.max(2,7*s1);
+ ctx.fillStyle='rgba(255,230,160,.35)';ctx.beginPath();
+ ctx.moveTo(pts[3][0],pts[3][1]);ctx.lineTo(pts[2][0],pts[2][1]);
+ ctx.lineTo(pts[2][0]+(mid[0]-pts[2][0])*.15,pts[2][1]-lift);ctx.lineTo(pts[3][0]+(mid[0]-pts[3][0])*.15,pts[3][1]-lift);ctx.closePath();ctx.fill();
+ /* L / T / block micro-pieces (the interior shards) */
+ const ax=(pts[0][0]+pts[1][0])*.5,ay=(pts[0][1]+pts[1][1])*.5;
+ const bx=(pts[2][0]+pts[3][0])*.5,by=(pts[2][1]+pts[3][1])*.5;
+ const ux=(bx-ax),uy=(by-ay),len=Math.hypot(ux,uy)||1;
+ const nx=-uy/len,ny=ux/len,w=Math.max(2,5*s1);
+ ctx.fillStyle='rgba(255,240,180,.55)';
+ if(k===0||k===3){ /* block */
+  ctx.fillRect(mid[0]-w,mid[1]-w*.4,w*2,w*.8);
+ }else if(k===1){ /* L */
+  ctx.beginPath();ctx.moveTo(mid[0]-w,mid[1]-w);ctx.lineTo(mid[0]+w*.2,mid[1]-w);ctx.lineTo(mid[0]+w*.2,mid[1]+w*.2);ctx.lineTo(mid[0]+w,mid[1]+w*.2);ctx.lineTo(mid[0]+w,mid[1]+w);ctx.lineTo(mid[0]-w,mid[1]+w);ctx.closePath();ctx.fill();
+ }else{ /* T / arc tick */
+  ctx.fillRect(mid[0]-w*1.2,mid[1]-w*.25,w*2.4,w*.5);
+  ctx.fillRect(mid[0]-w*.25,mid[1]-w,w*.5,w*1.6);
+ }
+ ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=Math.max(0.6,1.2*s1);
+ ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.stroke();
+ ctx.restore();
+}
+function wanTreeOverlayDraw(ctx,W,H,cam,look){
+ /* far hub + labelled inspiration halls — shared by Hallway paint and Trees walk (his [9]) */
+ wanTreeEnsureDefaults();
+ const lay=wanTreeLayout(wanTree,cam,{W,H,look:look||{dx:0,dy:0}});
+ lay.hub.forEach(h=>{
+  ctx.beginPath();ctx.arc(h.px,h.py,h.rad,0,7);ctx.fillStyle='rgba(180,200,220,.55)';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#d8e0ea';ctx.font='9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(h.name,h.px,h.py+h.rad+9);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+ });
+ wanTree.hubHits=lay.hub.slice();
+ const hits=[];
+ lay.forks.forEach(f=>{
+  const sel=wanTree.sel&&wanTree.sel.i===f.i;
+  ctx.beginPath();ctx.arc(f.px,f.py,f.rad,0,7);
+  ctx.fillStyle=f.curiosity==='modulation'?'#6ec6ff':'#9be39b';ctx.globalAlpha=f.inside?.95:.75;ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2.4:1.2;ctx.stroke();
+  if(f.s>.25){ctx.fillStyle='#1a1208';ctx.font='bold '+Math.max(8,Math.round(10*f.s))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText(f.songName,f.px,f.py-4);ctx.font=Math.max(7,Math.round(8*f.s))+'px system-ui';ctx.fillText(f.label,f.px,f.py+8);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+  hits.push({kind:'fork',i:f.i,songId:f.songId,curiosity:f.curiosity,t:f.t,label:f.label,tonic:f.tonic,mode:f.mode,px:f.px,py:f.py,rad:f.rad,z:f.z});
+ });
+ wanTree.hits=hits.slice().sort((a,b)=>a.z-b.z);
+ return lay;
+}
+
+function wanTreeSongById(id){return wanTreeSeedPack().find(s=>s.id===id)||null;}
+function wanTreeEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function wanTreeDraw(host){
+ host=host||document.getElementById('wanSide2');if(!host)return null;
+ if(wanTree.phase!=='walk'){wanTreeSetupDraw(host);return wanTree.last;}
+ if(!document.getElementById('wanTreeCanvas')){
+  host.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">'
+   +'<span id="wanTreeStatus" style="font-size:10.5px;color:#6b4f28;white-space:nowrap;"></span>'
+   +'<span style="flex:1"></span>'
+   +'<span class="cpchip wanTreeSkin" data-skin="books" title="Books hallway — Trees paint">📚</span>'
+   +'<span class="cpchip wanTreeSkin" data-skin="simple" title="Simple trees">🌳</span>'
+   +'<span class="cpchip wanTreeSkin" data-skin="puzzle" title="Jarvis puzzle geometry — Trees paint">🧩</span>'
+   +'<span class="cpchip" id="wanTreeSetup" title="Back to the pre-game — curiosities, inspirations, curated list">⚙ Setup</span>'
+   +'<span class="cpchip" id="wanTreeBack" title="Stand at the song\'s start">⇤</span>'
+   +'<span class="cpchip" id="wanTreeReset" title="Look straight ahead">↺</span>'
+   +'<span style="font-size:9.5px;color:#6b4f28;">paints: books · simple · Jarvis puzzle · halls = inspiration events · far hub · Cubes = separate 3D matrix</span></div>'
+   +'<div id="wanTreePrompt" style="display:none;margin:0 0 6px 0;padding:8px 10px;border:1px solid #a8895f;border-radius:8px;background:#f7f0e4;font-size:11px;color:#4a3a20;line-height:1.45;"></div>'
+   +'<canvas id="wanTreeCanvas" width="640" height="280" tabindex="0" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;outline:none;"></canvas>';
+  const c=document.getElementById('wanTreeCanvas');
+  c.onclick=e=>{if(wanTree.drag&&wanTree.drag.moved){wanTree.drag=null;return;}wanTree.drag=null;wanTreeClick(e);};
+  c.onmousedown=e=>{if(e.button!==0)return;try{c.focus({preventScroll:true});}catch(err){}
+   wanTree.drag={x:e.clientX,y:e.clientY,yaw:wanTree.yaw||0,dy:(wanTree.look&&wanTree.look.dy)||0,moved:false};};
+  c.onmousemove=e=>{const d=wanTree.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
+   wanTree.yaw=wanHallYawNorm((d.yaw||0)+mx*0.45);wanTree.look={dx:0,dy:Math.max(-80,Math.min(80,(d.dy||0)+my))};wanTreeDraw();};
+  c.onmouseup=()=>{if(wanTree.drag&&!wanTree.drag.moved)wanTree.drag=null;};
+  c.onmouseenter=()=>{try{c.focus({preventScroll:true});}catch(err){}};
+  c.onkeydown=e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;
+   const r=wanHallNav({ahead:wanTree.ahead||0,yaw:wanTree.yaw||0,floor:0,dx:(wanTree.look&&wanTree.look.dx)||0},e.key,{W:c.width});
+   if(!r)return;e._cnvOwned=true;e.preventDefault();e.stopPropagation();
+   if(r.glide){if(!wanHall.glide)wanHall.glide=true;return;}
+   wanTree.ahead=r.ahead;wanTree.yaw=r.yaw;if(r.reset){wanTree.yaw=0;wanTree.look={dx:0,dy:0};wanTree.ahead=0;}wanTreeDraw();};
+  c.onkeyup=e=>{if(e.key===' '||e.code==='Space'){if(wanHall.glide){wanHall.glide=false;wanTreeDraw();}e._cnvOwned=true;e.preventDefault();}};
+  c.onblur=()=>{wanHall.glide=false;};
+  c.onwheel=e=>{e.preventDefault();wanTree.ahead=Math.max(0,Math.min(HALL_DEPTH,(wanTree.ahead||0)+(e.deltaY>0?1:-1)));wanTreeDraw();};
+  const su=document.getElementById('wanTreeSetup');if(su)su.onclick=()=>{wanTree.phase='setup';wanTree.pending=null;wanTreeDraw();};
+  const bb=document.getElementById('wanTreeBack');if(bb)bb.onclick=()=>{wanTree.ahead=0;try{setPlayheadBeat(0);}catch(err){}wanTreeDraw();};
+  const rs=document.getElementById('wanTreeReset');if(rs)rs.onclick=()=>{wanTree.yaw=0;wanTree.look={dx:0,dy:0};wanTreeDraw();};
+  host.querySelectorAll('.wanTreeSkin').forEach(el=>{el.onclick=()=>{wanTree.skin=wanTreeNormSkin(el.getAttribute('data-skin'));wanHall.skin=wanTree.skin;wanTreeDraw();};});
+  if(!wanTree.iv)wanTree.iv=setInterval(wanTreeTick,100);
+ }
+ const c=document.getElementById('wanTreeCanvas');if(!c)return null;
+ const ctx=c.getContext('2d'),W=c.width,H=c.height;
+ let cam=0;try{cam=wanHallSnap((typeof notPlayheadBeat==='function'?notPlayheadBeat():0)+(wanTree.ahead||0),wanHall.motion||'smooth');}catch(err){cam=wanTree.ahead||0;}
+ const look={dx:Math.sin(((wanTree.yaw||0)*Math.PI)/180)*36+((wanTree.look&&wanTree.look.dx)||0),dy:(wanTree.look&&wanTree.look.dy)||0};
+ const lay=wanTreeLayout(wanTree,cam,{W,H,look});
+ wanTree.skin=wanTreeNormSkin(wanTree.skin);wanHall.skin=wanTree.skin;
+ host.querySelectorAll('.wanTreeSkin').forEach(el=>el.classList.toggle('on',el.getAttribute('data-skin')===wanTree.skin));
+ ctx.clearRect(0,0,W,H);ctx.fillStyle='#2a2320';ctx.fillRect(0,0,W,H);
+ const hx=W/2+look.dx,hy=H*.42+look.dy,halfW=W*.48,floorH=H*.55,shelfH=H*.2,bookH=H*.17,ceilH=H*.3;
+ const xw=(side,s)=>hx+(side<0?-1:1)*halfW*s, yFloor=s=>hy+floorH*s, yShelf=s=>hy+shelfH*s;
+ const s0=1,sFar=wanHallScale(HALL_DEPTH);
+ ctx.fillStyle='#6b5a44';ctx.beginPath();ctx.moveTo(xw(-1,s0),yFloor(s0));ctx.lineTo(xw(1,s0),yFloor(s0));ctx.lineTo(xw(1,sFar),yFloor(sFar));ctx.lineTo(xw(-1,sFar),yFloor(sFar));ctx.closePath();ctx.fill();
+ for(const side of [-1,1]){ctx.fillStyle=side<0?'#4a3d31':'#54463a';ctx.beginPath();ctx.moveTo(xw(side,s0),0);ctx.lineTo(xw(side,s0),yFloor(s0));ctx.lineTo(xw(side,sFar),yFloor(sFar));ctx.lineTo(xw(side,sFar),hy-floorH*sFar);ctx.closePath();ctx.fill();}
+ for(let z=0;z<=HALL_DEPTH;z+=4){const s=wanHallScale(z);ctx.strokeStyle='rgba(255,230,180,.25)';ctx.beginPath();ctx.moveTo(xw(-1,s),yFloor(s));ctx.lineTo(xw(1,s),yFloor(s));ctx.stroke();}
+ /* Song A objects in the active Trees paint */
+ try{
+  const items=wanHallItems('chords',wanHallData('chords'));
+  const books=wanHallLayoutItems(items,cam,HALL_DEPTH);
+  const skin=wanTree.skin;
+  books.slice().sort((a,b)=>b.z1-a.z1).forEach(bk=>{
+   const s1=wanHallScale(bk.z1),s2=wanHallScale(bk.z2);
+   const surf=skin==='puzzle'?(bk.i%4):(bk.i%2?2:0);
+   let pts;
+   if(surf===1||surf===3){const tw=W*.14;const y1=surf===1?hy-ceilH*s1:yFloor(s1)-1,y2=surf===1?hy-ceilH*s2:yFloor(s2)-1;pts=[[hx-tw*s1,y1],[hx-tw*s2,y2],[hx+tw*s2,y2],[hx+tw*s1,y1]];}
+   else{const side=surf===2?1:-1;const xa=xw(side,s1),xb=xw(side,s2),ya=yShelf(s1),yb=yShelf(s2),ha=(skin==='simple'?bookH*.55:bookH)*s1,hb=(skin==='simple'?bookH*.55:bookH)*s2;pts=[[xa,ya],[xb,yb],[xb,yb-hb],[xa,ya-ha]];}
+   const col=wanHallChordColor(bk);
+   if(skin==='puzzle')wanJarvisPaint(ctx,pts,s1,bk.i);
+   else if(skin==='simple'){ctx.strokeStyle=col;ctx.lineWidth=1.6;const mx=(pts[0][0]+pts[1][0]+pts[2][0]+pts[3][0])/4,my=(pts[0][1]+pts[1][1]+pts[2][1]+pts[3][1])/4;ctx.beginPath();ctx.moveTo(mx,pts[0][1]);ctx.lineTo(mx,my);ctx.lineTo(pts[3][0],pts[3][1]);ctx.moveTo(mx,my);ctx.lineTo(pts[2][0],pts[2][1]);ctx.stroke();ctx.fillStyle=col;ctx.beginPath();ctx.arc(mx,my,Math.max(2,4*s1),0,7);ctx.fill();}
+   else{ctx.fillStyle=col;ctx.globalAlpha=.92;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<4;k++)ctx.lineTo(pts[k][0],pts[k][1]);ctx.closePath();ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle='rgba(0,0,0,.4)';ctx.stroke();}
+  });
+ }catch(err){}
+ /* hub + labelled halls (shared) */
+ const ol=wanTreeOverlayDraw(ctx,W,H,cam,look);
+ const stEl=document.getElementById('wanTreeStatus');
+ if(stEl){const names=(ol.activeSongs||lay.activeSongs).map(s=>s.short||s.name).join(' · ')||'—';
+  stEl.textContent='paint '+wanTree.skin+' · inspirations: '+names+' · '+(ol.forks||lay.forks).length+' halls · hub '+(ol.hub||lay.hub).length
+   +(wanTree.status?' · '+wanTree.status:'');}
+ wanTreePromptPaint();
+ wanTree.last={cam,forks:(wanTree.hits||[]).length,hub:(wanTree.hubHits||[]).length,active:(wanTree.active||[]).slice(),skin:wanTree.skin,W,H};
+ return wanTree.last;
+}
+function wanTreePromptPaint(){
+ const el=document.getElementById('wanTreePrompt');if(!el)return;
+ const p=wanTree.pending;
+ if(!p){el.style.display='none';el.innerHTML='';return;}
+ el.style.display='block';
+ el.innerHTML='<b>Take the '+wanTreeEsc(p.songName||p.songId)+' hallway</b> — '+wanTreeEsc(p.label||p.curiosity)
+  +'<div style="margin-top:6px;">Do you want to:</div>'
+  +'<div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">'
+  +'<span class="cpchip'+(wanTree.melodyLaw==='fit'?' on':'')+'" id="wanTreeLawFit">A. Keep your melody notes the same as they are as much as possible yet still make them sound good with the new chords? (Default)</span>'
+  +'<span class="cpchip'+(wanTree.melodyLaw==='intervals'?' on':'')+'" id="wanTreeLawInt">B. Keep the relationship between the intervals of your melody notes and the chords below them, no matter what the chords are in the new song?</span>'
+  +'</div>'
+  +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
+  +'<span class="cpchip on" id="wanTreeTake">Take this hallway</span>'
+  +'<span class="cpchip" id="wanTreeCancel">Stay on Song A</span></div>'
+  +'<div style="margin-top:6px;font-size:10px;color:#6b4f28;">R43 ships the adventure shell — pitched rewrite of every track (drums only if pitched) lands with the next round; your A/B choice is remembered for that round.</div>';
+ const a=document.getElementById('wanTreeLawFit');if(a)a.onclick=()=>{wanTree.melodyLaw='fit';wanTreePromptPaint();};
+ const b=document.getElementById('wanTreeLawInt');if(b)b.onclick=()=>{wanTree.melodyLaw='intervals';wanTreePromptPaint();};
+ const t=document.getElementById('wanTreeTake');if(t)t.onclick=()=>wanTreeTakePending();
+ const x=document.getElementById('wanTreeCancel');if(x)x.onclick=()=>{wanTree.pending=null;wanTree.status='stayed on Song A';if(document.getElementById('wanHallCanvas')&&wanWeb2State().view==='hallway')wanHallDraw();else wanTreeDraw();};
+}
+function wanTreeTakePending(){
+ const p=wanTree.pending;if(!p)return;
+ wanTree.status='took '+((p.songName||p.songId))+' · law '+(wanTree.melodyLaw==='intervals'?'B (intervals)':'A (fit)');
+ wanTree.pending=null;wanTree.sel=null;
+ try{if(p.tonic!=null)wanKeyAudition(p.tonic,/aeolian|minor/i.test(p.mode||''));}catch(err){}
+ if(document.getElementById('wanHallCanvas')&&wanWeb2State().view==='hallway')wanHallDraw();
+ else wanTreeDraw();
+}
+function wanTreeSetupDraw(host){
+ host=host||document.getElementById('wanSide2');if(!host)return;
+ const n=wanTreeNormSetup(wanTree);wanTree.curios=n.curios;wanTree.inspN=n.inspN;wanTree.songSource=n.songSource;wanTree.curated=n.curated;
+ const pack=wanTreeSeedPack();
+ let h='<div style="padding:8px 6px 12px;color:#4a3a20;font-size:11.5px;line-height:1.45;">'
+  +'<div style="font-weight:700;margin-bottom:6px;">Decision Trees — pre-game</div>'
+  +'<div style="margin-bottom:8px;color:#6b4f28;">Define the curiosities and inspirations <b>before</b> the walk (his Q2). Multiple curiosities and multiple songs just mean more labelled hallways.</div>'
+  +'<div style="margin:8px 0 4px;font-weight:600;">Curiosity or Curiosity Suite</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
+ WAN_TREE_CURIOS.forEach(c=>{h+='<span class="cpchip wanTreeCurio'+(wanTree.curios.indexOf(c.id)>=0?' on':'')+'" data-id="'+c.id+'">'+c.name+'</span>';});
+ h+='</div><div style="margin:10px 0 4px;font-weight:600;">Number of inspiration songs</div><div style="display:flex;gap:6px;">'
+  +'<span class="cpchip wanTreeN'+(wanTree.inspN===1?' on':'')+'" data-n="1">1</span>'
+  +'<span class="cpchip wanTreeN'+(wanTree.inspN===2?' on':'')+'" data-n="2">2</span></div>'
+  +'<div style="margin:10px 0 4px;font-weight:600;">Choose the songs</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">'
+  +'<span class="cpchip wanTreeSrc'+(wanTree.songSource==='default'?' on':'')+'" data-src="default">A. Default Curated Songs</span>'
+  +'<span class="cpchip wanTreeSrc'+(wanTree.songSource==='database'?' on':'')+'" data-src="database">B. The Song Database (make your own curated list)</span></div>';
+ if(wanTree.songSource==='database'){
+  h+='<div style="font-size:10.5px;color:#6b4f28;margin-bottom:4px;">Pick templates into your curated list (composition-level seeds — no recordings):</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
+  pack.forEach(s=>{h+='<span class="cpchip wanTreePick'+(wanTree.curated.indexOf(s.id)>=0?' on':'')+'" data-id="'+s.id+'">'+s.short+'</span>';});
+  h+='</div>';
+ }else{
+  h+='<div style="font-size:10.5px;color:#6b4f28;margin-bottom:8px;">Using the default pack: '+pack.map(s=>s.short).join(' · ')+'.</div>';
+ }
+ h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">'
+  +'<span class="cpchip on" id="wanTreeStart">Start the decision-tree walk</span></div></div>';
+ host.innerHTML=h;
+ host.querySelectorAll('.wanTreeCurio').forEach(el=>{el.onclick=()=>{
+  const id=el.getAttribute('data-id');let c=wanTree.curios.slice();
+  if(c.indexOf(id)>=0){if(c.length>1)c=c.filter(x=>x!==id);}else c.push(id);
+  wanTree.curios=c;wanTreeSetupDraw(host);};});
+ host.querySelectorAll('.wanTreeN').forEach(el=>{el.onclick=()=>{wanTree.inspN=+el.getAttribute('data-n')===1?1:2;wanTreeSetupDraw(host);};});
+ host.querySelectorAll('.wanTreeSrc').forEach(el=>{el.onclick=()=>{wanTree.songSource=el.getAttribute('data-src')==='database'?'database':'default';if(wanTree.songSource==='default')wanTree.curated=[];wanTreeSetupDraw(host);};});
+ host.querySelectorAll('.wanTreePick').forEach(el=>{el.onclick=()=>{
+  const id=el.getAttribute('data-id');let c=wanTree.curated.slice();
+  if(c.indexOf(id)>=0)c=c.filter(x=>x!==id);else c.push(id);
+  wanTree.curated=c;wanTreeSetupDraw(host);};});
+ const go=document.getElementById('wanTreeStart');if(go)go.onclick=()=>wanTreeStartWalk();
+ wanTree.last={phase:'setup',curios:wanTree.curios.slice(),inspN:wanTree.inspN,songSource:wanTree.songSource};
+}
+function wanTreeStartWalk(){
+ const n=wanTreeNormSetup(wanTree);Object.assign(wanTree,n);
+ const curated=wanTreeCuratedSongs(wanTree);
+ wanTree.active=wanTreeActiveFromCurated(curated,wanTree.inspN,[]);
+ wanTree.hubSwap=0;wanTree.phase='walk';wanTree.pending=null;wanTree.ahead=0;wanTree.status='walking Song A';wanTree.skin=wanTreeNormSkin(wanTree.skin||wanHall.skin);wanHall.skin=wanTree.skin;
+ try{wanWeberDraw();}catch(err){wanTreeDraw();}
+}
+function wanTreeTick(){
+ const shown=document.getElementById('wanPanel')&&!document.getElementById('wanPanel').classList.contains('hidden');
+ if(!document.getElementById('wanTreeCanvas')||!shown||wanWeb2State().view!=='tree'||wanTree.phase!=='walk'){clearInterval(wanTree.iv);wanTree.iv=null;return;}
+ if(wanHall.glide){wanTree.ahead=Math.min(HALL_DEPTH,(wanTree.ahead||0)+0.5);wanTreeDraw();return;}
+ let cam=0;try{cam=wanHallSnap((typeof notPlayheadBeat==='function'?notPlayheadBeat():0)+(wanTree.ahead||0),wanHall.motion||'smooth');}catch(err){cam=wanTree.ahead||0;}
+ if(!wanTree.last||cam!==wanTree.last.cam)wanTreeDraw();
+}
+function wanTreeClick(e){
+ const c=document.getElementById('wanTreeCanvas');if(!c)return;
+ const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
+ for(const h of wanTree.hubHits||[]){const dx=x-h.px,dy=y-h.py;if(dx*dx+dy*dy<=(h.rad+6)*(h.rad+6)){wanTreeHubPick(h.id);return;}}
+ for(const h of wanTree.hits||[]){const dx=x-h.px,dy=y-h.py;if(dx*dx+dy*dy<=h.rad*h.rad){
+  wanTree.sel={i:h.i};wanTree.pending={songId:h.songId,songName:(wanTreeSongById(h.songId)||{}).short||h.songId,curiosity:h.curiosity,t:h.t,label:h.label,tonic:h.tonic,mode:h.mode};
+  wanTreeDraw();return;}}
+ wanTree.sel=null;wanTree.pending=null;wanTreeDraw();
+}
+function wanTreeHubPick(hubId){
+ const curated=wanTreeCuratedSongs(wanTree);
+ const r=wanTreeApplyHubClick(wanTree.active,hubId,wanTree.inspN,wanTree.hubSwap);
+ wanTree.active=r.active.filter(Boolean);
+ /* refill if a slot went empty */
+ wanTree.active=wanTreeActiveFromCurated(curated,wanTree.inspN,wanTree.active);
+ wanTree.hubSwap=r.swapSlot;
+ wanTree.status='hub → '+(wanTree.active.map(id=>(wanTreeSongById(id)||{}).short||id).join(' · '));
+ wanTree.pending=null;wanTreeDraw();
+}
 function wanSide2Draw(){
  /* his 165th/166th: THE 2ND WANDERER — the dual board's right side. v1, recorded
     honestly: the same Weber lattice with its OWN pan-free draw; LINKED (default) =
@@ -29427,9 +30157,12 @@ function wanSide2Draw(){
     the next rounds' territory, not claimed. */
  const host=document.getElementById('wanSide2');if(!host)return;
  const st=wanState,w2=wanWeb2State();
- if(w2.view==='hallway'){wanHallDraw(host);return;}   /* R6: the first animation view */
+ if(w2.view==='hallway'){try{wanTreeEnsureDefaults();}catch(err){}wanHallDraw(host);return;}   /* R44: Hallway = Trees paint */
+ if(w2.view==='3d'){wanCubeDraw(host);return;}   /* R41: View 2 — inside the Tonnetz cube */
+ if(w2.view==='time'){wanTimeDraw(host);return;}   /* R42: candidate B — Weber extruded by TIME */
+ if(w2.view==='tree'){wanTreeDraw(host);return;}   /* R43: Decision Trees — pre-game + walk + hub */
  if(w2.view!=='weber'){
-  host.innerHTML='<div style="font-size:11px;color:#6b4f28;padding:22px 10px;line-height:1.5;">'+(w2.view==='3d'?'The <b>3D Matrix</b> view lands with its own round — the colour categories you set here will paint it too.':'The <b>Decision Trees</b> view lands with its own round — the colour categories you set here will paint it too.')+'</div>';
+  host.innerHTML='<div style="font-size:11px;color:#6b4f28;padding:22px 10px;line-height:1.5;">More views land with their rounds.</div>';
   return;
  }
  const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
@@ -29572,7 +30305,7 @@ function wanWeberDraw(){
     +'<span id="wanLinkBtn" class="cpchip" style="font-size:12px;letter-spacing:-1px;cursor:pointer;" title="'+(wanWeb2State().linked?'Linked — the left side is linked with the right side. They both are in the same key, with the same scale. Click for options.':'Unlinked — each side is independent of the other. Click for options.')+'">'+(wanWeb2State().linked?'◅━▻':'━')+'</span>'
     +'<div style="flex:1;width:3px;border-radius:2px;background:#a8895f;opacity:.6;"></div></div>'
    +'<div id="wanSide2Col" style="flex:'+(1-wanWeb2State().split).toFixed(3)+' 1 0;min-width:200px;display:flex;flex-direction:column;gap:4px;">'
-   +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='hallway'?'Hallway with books':wanWeb2State().view==='3d'?'3D Matrix':'Decision Trees')+' ▾</span>'
+   +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='hallway'?'Hallway with books':wanWeb2State().view==='3d'?'3D Matrix (inside the cube)':wanWeb2State().view==='time'?'Weber in time (keys over bars)':'Decision Trees')+' ▾</span>'
    +(wanWeb2State().linked?'':'<span style="font-size:9.5px;color:#6b4f28;">independent — double-click a key to set THIS side&#8217;s home</span>')+'</div>'
    +'<div id="wanSide2" style="overflow-x:auto;"></div></div>':'')
   +'<div id="wanLegend"></div></div>';   /* 80th R21: the arrow marker stood down; R22: the legend rides the right */
