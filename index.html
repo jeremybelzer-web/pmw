@@ -823,6 +823,15 @@
   #skinLayer .skNode.skH{flex-direction:row;} #skinLayer .skNode.skV{flex-direction:column;}
   #skinLayer .skEdge-t,#skinLayer .skEdge-b{position:relative;flex:0 0 14px;width:auto;}
   #skinLayer .skLeaf{min-width:0;min-height:0;}
+  /* R48 (his [9]/[10] in DUAL-SKINS-RAW): a shelf block's head is pinned to its pane's TOP in every host, its ✕ at the right — whatever the cell's own layout */
+  #skinLayer #swShelf,#skinLayer [id^="essWin_"]{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:stretch!important;}
+  #skinLayer #swShelf>.winHead,#skinLayer [id^="essWin_"]>.winHead{order:-1;position:sticky;top:0;z-index:2;background:var(--panel);margin:0 0 6px 0;}
+  #skinLayer #swShelf>.essBody,#skinLayer [id^="essWin_"]>.essBody{order:1;}
+  /* R48 (his [13]): under GV-2 the browser column is the one engines list — the chip bar above the grid steps aside */
+  body.skinGv2 #engWin{display:none!important;}
+  /* R48 (his [12]): the Info view's own pane, lower-left */
+  #skinLayer #skInfoPane{overflow:auto;background:var(--panel);border-right:1px solid var(--line);}
+  #skinLayer #skInfoPane #skInfo{border-top:none;max-height:none;height:100%;box-sizing:border-box;}
   #skinLayer .skEmpty{border:2px dashed var(--line);border-radius:10px;margin:6px;display:flex;align-items:center;justify-content:center;overflow:auto;}
   #skinLayer .skEmptyIn{padding:12px;max-width:520px;}
   #skinLayer .skEmptyList{display:flex;flex-wrap:wrap;gap:4px;}
@@ -834,6 +843,8 @@
   /* ==== 76th R2 · THE FIXED CHROME (his words: the transport and the navigation
        section become fixed windows at the top; the left icon rail stops scrolling) ==== */
   #transportWin,#navWin,#engWin,#gcWin{position:fixed;left:0;right:0;z-index:90;background:var(--bg);border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  #transportWin{z-index:95;}   /* R48 [14] (DUAL-SKINS-RAW): the File menu drops down OVER the bars below it and over a view's panes, never behind */
+  #swipeBtn{display:none!important;}   /* R48 [14]: the Swipe button is retired — the Canvas window carries the swipe layouts (the hidden-buttons precedent keeps its handler and the suites) */
   #navWin.navBottom{opacity:.6;border-top:1px solid var(--line);border-bottom:none;box-shadow:0 -2px 10px rgba(0,0,0,.35);}   /* 78th R5 (his words): the bottom Navigator is 40% transparent */
   #navWin.navBottom:hover{opacity:1;}   /* full strength under the pointer [inference — a 40%-transparent control surface must stay usable] */
   #navWin .navLaneLab{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);flex:0 0 92px;align-self:center;}
@@ -871,7 +882,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ad</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ae</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -888,6 +899,14 @@
     <div class="ctl" id="fileMenuCtl" style="position:relative;">
       <button id="fileMenuBtn" type="button" style="font-size:12px;padding:4px 12px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;cursor:pointer;">File ▾</button>
       <div id="fileMenu" style="display:none;position:absolute;left:0;top:100%;margin-top:4px;z-index:110;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 6px 20px rgba(0,0,0,.45);white-space:nowrap;">
+        <div id="fmCanvas" class="fmItem" data-fm="canvasBtn" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="The Canvas — zoom, the views and the swipe layouts, your templates">🖼 Canvas</div>
+        <div id="fmImport" class="fmItem" data-fm="win:importPanel" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="Import — songs, MIDI, audio">⤓ Import</div>
+        <div id="fmSetup" class="fmItem" data-fm="win:setupPanel" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="Setup — MIDI, audio, count-in">🔧 Setup</div>
+        <div id="fmSettings" class="fmItem" data-fm="setBtn" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="Settings — display options, project save/open, legal">⚙ Settings</div>
+        <div id="fmEdu" class="fmItem" data-fm="eduBtn" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="Education — the theory behind every button">🎓 Education</div>
+        <div id="fmHelp" class="fmItem" data-fm="helpBtn" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="Gestures &amp; shortcuts reference">? Help</div>
+        <div id="fmAbout" class="fmItem" data-fm="aboutBtn" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="What the app does and the intended workflow">ℹ About</div>
+        <div style="height:1px;background:var(--line);margin:4px 6px;"></div>
         <div id="fmNewGrid" style="padding:6px 12px;font-size:12px;cursor:pointer;border-radius:6px;color:var(--text);" title="A new Multi-Track Grid with its own Chord Palette — linked to Grid 1 by default (one tempo, one key, one transport); unlink it from its title bar for its own.">＋ Create Multi-Track Grid</div>
       </div>
     </div>
@@ -901,7 +920,7 @@
     <!-- 19y: the Scale (background) menu and the Conform/extensions controls moved to the top of the Chord Palette dock -->
 
     <div class="ctl"><label>Tempo</label><div style="display:flex;align-items:center;gap:8px;">
-      <input type="range" id="tempo" min="50" max="180" value="117"><span class="tval" id="tval">117 bpm</span></div></div>
+      <input type="range" id="tempo" min="50" max="180" value="117"><span class="tval" id="tval">117 bpm</span><button id="tapBtn" type="button" title="TAP — tap the tempo out (his [15]): the last taps' average interval sets the BPM; a pause of two seconds starts a fresh count" style="padding:4px 9px;font-size:11px;">TAP</button></div></div>
     <div class="ctl"><label>&nbsp;</label><div style="display:flex;gap:8px;">
       <button id="play">▶ Play</button>
       <button id="recBtn" title="Record — arm a destination first: the R under a track name records notes from your MIDI keyboard, the ● on a parameter lane's header records automation from the knob or fader (or both at once). Turn this red, hit Play. New notes ADD to what's there; flip “Record over existing MIDI” in ⚙ Settings to replace instead.">⏺ Rec</button>
@@ -4817,7 +4836,14 @@ function cagePassageLayout(rows, rootPc){
     their place and their string. */
  const root=(rootPc==null&&typeof cageState==='object'&&cageState)?(+cageState.chordRootPc||0):(+rootPc||0);
  const openOn=cageOpenPref();
- let box=cageBoxForRoot(CAGED_NECK_ORDER[0], root);
+ /* R47 [83]: THE BOXES ARE THE KEY'S POSITIONS (his [80]) — the notes sit inside the position the neck stands in, as wide as its
+    pattern; a group leaves it only when no voicing fits, to the nearest neighbour along the neck */
+ let boxes=null, bi=0;
+ try{
+  const kr=(typeof cageState==='object'&&cageState&&cageState.scaleRootPc!=null)?(+cageState.scaleRootPc||0):null;
+  if(kr!=null){boxes=cageKeyBoxes(kr,!!cageState.scaleMinor); const vs=(typeof cageView==='object'&&cageView&&cageView.start!=null)?+cageView.start:0; const cur=cageKeyPositionAt(boxes,vs,(typeof cageView==='object'&&cageView&&cageView.span)||5); bi=Math.max(0,boxes.indexOf(cur));}
+ }catch(e){boxes=null;}
+ let box=boxes?boxes[bi]:cageBoxForRoot(CAGED_NECK_ORDER[0], root);
  const out=(rows||[]).map(()=>null);
  const order=(rows||[]).map((n,i)=>({n,i,t:n&&isFinite(+n[0])?+n[0]:1e15})).filter(x=>x.n).sort((a,b)=>a.t-b.t||a.i-b.i);
  const groups=[]; for(const it of order){const g=groups.length?groups[groups.length-1]:null; if(g&&Math.abs(it.t-g.t)<=0.08)g.items.push(it); else groups.push({t:it.t,items:[it]});}
@@ -4830,7 +4856,14 @@ function cagePassageLayout(rows, rootPc){
   const usedS=locked.map(({n})=>cageNoteGtr(n).s);
   const midis=free.map(({n})=>+n[2]);
   let pl=cageChordVoicing(midis,box,openOn,usedS), useBox=box;
-  if(!pl){
+  if(!pl&&boxes){
+   /* shift only when necessary — the neighbouring positions along the neck, nearest first (R47) */
+   for(const step of [1,-1,2,-2,3,-3,4,-4,5,-5,6,-6,7,-7]){
+    const j=bi+step; if(j<0||j>=boxes.length)continue;
+    const p=cageChordVoicing(midis,boxes[j],openOn,usedS);
+    if(p){pl=p;useBox=boxes[j];bi=j;break;}
+   }
+  }else if(!pl){
    /* shift only when necessary — the neighbouring boxes on the neck, nearest first */
    const ix=CAGED_NECK_ORDER.indexOf(box.shape);
    for(const step of [1,-1,2,-2,3,-3,4]){
@@ -4841,6 +4874,10 @@ function cagePassageLayout(rows, rootPc){
    }
   }
   if(pl){box=useBox; free.forEach(({i},k)=>{out[i]={s:pl[k].s,f:pl[k].f,shape:box.shape,startFret:box.startFret};}); continue;}
+  if(boxes){   /* R47: no full voicing anywhere — the nearest position where every note at least has a place, note by note */
+   let pick=null; for(const step of [0,1,-1,2,-2,3,-3,4,-4,5,-5,6,-6,7,-7]){const j=bi+step; if(j<0||j>=boxes.length)continue; if(free.every(({n})=>!!cagePosInBox(n[2],boxes[j],openOn))){pick=j;break;}}
+   if(pick!=null){bi=pick;box=boxes[pick];}
+  }
   free.forEach(({n,i})=>{let pos=cagePosInBox(n[2], box, openOn); if(!pos)pos=cageDefaultPos(n[2], box.startFret, box.window, openOn); if(pos)out[i]={s:pos.s,f:pos.f,shape:box.shape,startFret:box.startFret};});
  }
  return {box, placements:out};
@@ -5555,9 +5592,9 @@ function cageViewSet(start,span,opts){
  cageView.anim={from,to:st,t0:now,dur:opts.dur||650};
  cageViewAnimLoop(); return true;
 }
-function cageViewUpdate(rows,beat,boxStart){
+function cageViewUpdate(rows,beat,boxStart,boxWindow){
  /* every neck draw: where the notes in play sit → the window (the user's pin wins while the same chord stands) → the eased position */
- const span=Math.max(3,Math.round(+((typeof cageState==='object'&&cageState)?cageState.window:5))||5);
+ const span=Math.max(3,Math.round(+boxWindow)||Math.round(+((typeof cageState==='object'&&cageState)?cageState.window:5))||5);   /* R47 [83]: the position's own width (4 or 5) when the notes sit in a key position */
  const pts=[];(rows||[]).forEach(n=>{if(!n)return;const g=cageNoteGtr(n);if(g&&g.f!=null)pts.push({t:+n[0],d:+n[1]||0,f:+g.f,m:+n[2]});});
  const tg=cageViewTargetFrets(pts,beat);
  cageView.sig=tg.sig;
@@ -5570,15 +5607,19 @@ function cageViewUpdate(rows,beat,boxStart){
  const fr=cageViewFrame(shown,cageView.span,cageFramePref());   /* R37 [55] (f): floating frets or everything to the head */
  return {start:cageView.start,span:cageView.span,shown,lo:fr.lo,cells:fr.cells,frame:cageFramePref(),target:tg};
 }
-function cageViewCommit(start,shape){
+function cageViewCommit(start,shape,span){
  /* the user's position (a click on a shape, the box let go): the chord in play is re-placed there when it fits (the move
     machinery — one undo, locked positions), and the window slides there either way */
- const sp=cageView.span||5; const st=Math.max(0,Math.min(Math.max(0,CAGE_MAX_FRET-sp+1),Math.round(+start)||0));
+ let sp=Math.max(3,Math.round(+span)||0)||cageView.span||5; let st=Math.max(0,Math.min(Math.max(0,CAGE_MAX_FRET-sp+1),Math.round(+start)||0));   /* R47: a band's own width */
+ try{   /* R47 [83]: the positions are the KEY's five (and their octaves) — a commit snaps to the nearest one, at its own width */
+  const kr=(typeof cageState==='object'&&cageState&&cageState.scaleRootPc!=null)?(+cageState.scaleRootPc||0):null;
+  if(kr!=null){const B=cageKeyBoxes(kr,!!cageState.scaleMinor); let best=null; B.forEach(b=>{const d=Math.abs(b.lo-st); if(!best||d<best.d)best={b,d};}); if(best){st=best.b.lo; sp=best.b.window; if(!shape)shape=best.b.label;}}
+ }catch(e){}
  let placed=false, g=null;
  try{g=cageMoveGather();}catch(e){g=null;}
  if(g&&g.midis&&g.midis.length){
   const ev=cageMoveEvalAt(g.midis,st,sp);
-  if(ev.ok||ev.soft){cageView.pin={start:st,sig:cageView.sig};try{cageMoveApplyEval(ev);placed=true;}catch(e){}}
+  if(ev.ok){cageView.pin={start:st,sig:cageView.sig};try{cageMoveApplyEval(ev);placed=true;}catch(e){}}   /* R47 [83]: only a whole chord moves — a soft miss used to scatter two notes an octave up and leave the third behind */
  }
  cageView.pin={start:st,sig:cageView.sig};
  cageViewSet(st,sp);
@@ -5670,7 +5711,7 @@ function cageMiniBind(c){
   const k=Math.floor(v)+1; let best=null;   /* R46: the fret whose CELL is under the pointer (the cell for fret k spans v in [k-1,k)) — a centre click sat on the rounding boundary and the browser rounds the pixel */
   for(const sh of M.shapes.concat(M.octaves||[])){const inside=k>=sh.lo&&k<=sh.hi;   /* R46: the band spans the window's own frets */   /* R45: the octave bands take a click too */const d=Math.abs((sh.lo+sh.hi)/2-k);if(!best||(inside&&!best.inside)||(inside===best.inside&&d<best.d))best={sh,inside,d};}
   try{window._cageMiniClick={v,k,shape:best&&best.sh.shape,lo:best&&best.sh.lo};}catch(e){}   /* the suites' witness for a band click */
-  if(best)cageViewCommit(best.sh.startFret,best.sh.label||best.sh.shape);
+  if(best)cageViewCommit(best.sh.startFret,best.sh.label||best.sh.shape,best.sh.hi-best.sh.lo+1);   /* R47: the position's width */
  });
 }
 /* ==== R37 (build 2026-09-06p, the 96th, Fable) — HIS [55] (f) + [66] (j): THE GUITAR WINDOW'S DROP-DOWN AND PLAYBACK BEHAVIOURS ====
@@ -5786,6 +5827,11 @@ function cageKeyFamily(keyRoot,keyMinor){
  const root=((Math.round(+keyRoot)||0)%12+12)%12; const N=(typeof PCN!=='undefined'&&PCN)?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
  const steps=keyMinor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const q=keyMinor?['m','°','','m','m','','']:['','m','m','','','m','°'];
  return steps.map((st,i)=>N[(root+st)%12]+q[i]);
+}
+function cageKeyBoxes(keyRoot,keyMinor){
+ /* pure — his [83]: the key's positions as the boxes the linked track's notes are placed in — each exactly as wide as its
+    pattern (C and E four frets, A · G · D five), sorted along the neck */
+ return cageKeyPositions(keyRoot,keyMinor).map(p=>({shape:p.shape,label:p.label,startFret:p.lo,window:p.hi-p.lo+1,lo:p.lo,hi:p.hi,octave:p.octave|0}));
 }
 function cageKeyPositionAt(positions,start,span){
  /* pure: the key position the neck stands in — the one whose window overlaps the neck's window most, the nearest on a tie */
@@ -6220,7 +6266,7 @@ function cageLinkNeckDraw(rows){
   else if(g.finger==null||g.finger===''){g=Object.assign({},g,{finger:fingers[i]!=null?fingers[i]:cageFingerForFret(g.f,startF)}); cageSetNoteGtr(rows[i],g);}
  }
  if(typeof cageState==='object'&&cageState&&plan.box){cageState._cageBox=plan.box.shape;}
- const V=cageViewUpdate(rows,beat,plan.box?plan.box.startFret:startF);   /* R30 [57]: the window the neck shows — his 5-fret span + one fret each side, eased */
+ const V=cageViewUpdate(rows,beat,plan.box?plan.box.startFret:startF,plan.box&&plan.box.window?plan.box.window:null);   /* R30 [57]: the window the neck shows — the span + one fret each side, eased · R47 [83]: the span is the position's width */
  const fretW=(x1-x0)/V.cells, viewLo=V.lo;
  const fx=f=>x0+((f===0?0:f-0.5)-viewLo)*fretW;
  const roman=cageNeckBoardDraw(ctx,{x0,x1,y0,y1,strings,strGap,fretW,viewLo,cells:V.cells,NS,frame:V.frame});
@@ -16435,7 +16481,7 @@ function skinNorm(raw){
   wins[k]={x:num(w.x,40,-2000,6000),y:num(w.y,28,0,6000),w:num(w.w,600,260,6000),h:num(w.h,380,120,6000)};
  }
  const fl=Array.isArray(p.fl)?p.fl.filter((x,i)=>typeof x==='string'&&x.length<=40&&p.fl.indexOf(x)===i).slice(0,32):[];
- const tree=(typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)});   /* seeded from the COERCED numbers */
+ const tree=skinTreeInfoJoin((typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)}));   /* R48 [12]: a saved tree without the Info leaf gets one */   /* seeded from the COERCED numbers */
  const cid=(typeof p.centreId==='string'&&(p.centreId===''||p.centreId==='main'||/^g\d+$/.test(p.centreId)))?p.centreId:'main';
  const rmode=(p.rightMode==='win')?'win':'shelf';
  const rwin=(typeof p.rightWin==='string'&&p.rightWin.length&&p.rightWin.length<=40)?p.rightWin:'';
@@ -16774,7 +16820,7 @@ function skinKeyAction(e){
  if(act==='browser')return skinCollapseKind('browser');   /* R3: wherever the tree put the pane */
  if(act==='right')return skinCollapseKind('shelf');
  if(act==='lane')return skinCollapseKind('lane');
- if(act==='info')P.info=P.info?0:1;
+ if(act==='info'){try{if(skinTreeFindKind(P.tree,'info')){skinCollapseKind('info');return true;}}catch(e){} P.info=P.info?0:1;}   /* R48 [12]: ⌃⌥I tucks the Info PANE away and back (the tree's leaf); the old flag only where no leaf exists */
  skinPersist();skinApply(skinState);
  return true;
 }
@@ -16802,7 +16848,7 @@ function skinBrowserBuild(pane){
  list.style.cssText='flex:1 1 auto;min-height:0;overflow:auto;padding:0 4px 6px;';
  pane.appendChild(list);
  const groups=[['Engines',['varPanel','modPanel','melPanel','cagePanel','ragaPanel','wanPanel','orbPanel','prismPanel','harmPanel','wqPanel','cadPanel','rhyPanel','tripsPanel']],
-  ['Places',['importPanel','hubPanel','setupPanel']]];
+  ['Set-up',['importPanel','hubPanel','setupPanel']]];   /* his [11] (DUAL-SKINS-RAW): the third head is SET-UP, and the Chord Palette is an ENGINE */
  const draw=q=>{
   list.innerHTML='';
   const ql=String(q||'').toLowerCase();
@@ -16815,9 +16861,11 @@ function skinBrowserBuild(pane){
     const on=(id==='tripsPanel')?!!(uiState&&uiState.trips):uiWinShown(id);
     items.push('<div class="skBrItem'+(on?' on':'')+'" data-win="'+id+'" title="'+String(d.tip||name).replace(/"/g,'&quot;')+'">'+(d.icon||'')+' '+name+'</div>');
    }
-   if(gname==='Places'){
+   if(gname==='Engines'){   /* his [11]: the Chord Palette belongs with the engines */
     const palOpen=!(typeof palState==='object'&&palState&&palState.win&&palState.win.closed);
     if(!ql||'chord palette'.indexOf(ql)>=0)items.push('<div class="skBrItem'+(palOpen?' on':'')+'" data-act="palette" title="The Chord Palette — the chords of the key laid out to press and drag">🎹 Chord Palette</div>');
+   }
+   if(gname==='Set-up'){
     if(!ql||'canvas'.indexOf(ql)>=0)items.push('<div class="skBrItem" data-act="canvas" title="The Canvas — zoom, the views and the swipe layouts, your templates">🖼 Canvas</div>');
     if(!ql||'settings'.indexOf(ql)>=0)items.push('<div class="skBrItem" data-act="settings" title="Settings">⚙ Settings</div>');
    }
@@ -17211,7 +17259,7 @@ function skinTreeNorm(n,depth){
  depth=depth||0;
  if(!n||typeof n!=='object'||Array.isArray(n)||depth>8)return null;
  if(typeof n.k==='string'){
-  if(['browser','grid','shelf','lane','empty'].indexOf(n.k)>=0)return {k:n.k};
+  if(['browser','grid','shelf','lane','empty','info'].indexOf(n.k)>=0)return {k:n.k};   /* R48 [12]: the Info view's own leaf */
   if(n.k==='win'&&typeof n.id==='string'&&n.id.length&&n.id.length<=40)return {k:'win',id:n.id};
   return null;
  }
@@ -17231,7 +17279,14 @@ function skinTreeDefault(p){
  const rr=Math.max(3,Math.min(97,100*r/inner));
  return {t:'v',pct:Math.max(3,Math.min(97,100-b)),ca:0,cb:p.bc===1?1:0,
   a:{t:'h',pct:l,ca:p.lc===1?1:0,cb:0,a:{k:'browser'},b:{t:'h',pct:Math.max(3,Math.min(97,100-rr)),ca:0,cb:p.rc===1?1:0,a:{k:'grid'},b:{k:'shelf'}}},
-  b:{k:'lane'}};
+  b:{t:'h',pct:l,ca:0,cb:0,a:{k:'info'},b:{k:'lane'}}};   /* R48 [12]: the Info view is its own small pane in the lower-LEFT corner, the lane beside it */
+}
+function skinTreeInfoJoin(node){
+ /* pure — R48 [12]: a tree saved before the Info leaf existed gets one — the first lane leaf becomes [info | lane] */
+ if(!node||typeof node!=='object')return node;
+ if(skinTreeFindKind(node,'info'))return node;
+ const walk=n=>{if(!n)return n;if(n.k==='lane')return {t:'h',pct:18,ca:0,cb:0,a:{k:'info'},b:{k:'lane'}};if(n.t){const a=walk(n.a);if(a!==n.a)return Object.assign({},n,{a});const b=walk(n.b);if(b!==n.b)return Object.assign({},n,{b});}return n;};
+ return walk(node);
 }
 function skinTreeAt(root,path){
  let n=root;for(const s of path){if(!n||!n[s])return null;n=n[s];}return n;
@@ -17252,7 +17307,8 @@ function skinTreeLegacySync(P){
  /* the R1 numbers follow the canonical tree so the R1 keys and suites keep reading them */
  try{
   const t=P.tree;
-  if(t&&t.t==='v'&&t.b&&t.b.k==='lane'&&t.a&&t.a.t==='h'&&t.a.a&&t.a.a.k==='browser'&&t.a.b&&t.a.b.t==='h'&&t.a.b.a&&t.a.b.a.k==='grid'&&t.a.b.b&&t.a.b.b.k==='shelf'){
+  const laneOk=t&&t.b&&(t.b.k==='lane'||(t.b.t==='h'&&t.b.b&&t.b.b.k==='lane'&&t.b.a&&t.b.a.k==='info'));   /* R48: [info | lane] below */
+  if(t&&t.t==='v'&&laneOk&&t.a&&t.a.t==='h'&&t.a.a&&t.a.a.k==='browser'&&t.a.b&&t.a.b.t==='h'&&t.a.b.a&&t.a.b.a.k==='grid'&&t.a.b.b&&t.a.b.b.k==='shelf'){
    P.l=t.a.pct;P.lc=t.a.ca;P.b=100-t.pct;P.bc=t.cb;P.rc=t.a.b.cb;P.r=Math.round((100-t.a.b.pct)*(100-t.a.pct))/100;
   }
  }catch(e){}
@@ -17419,15 +17475,7 @@ function skinLeafMount(leaf,path,host,ctx){
      try{skinGv2FocusEngine(m.id);}catch(e){}
     },true);
    }
-   if(rightId){
-    const d=WINDOW_DEFS.find(x=>x.id===rightId);
-    const stub=document.createElement('div');stub.className='skLaneStub on';stub.dataset.win=rightId;
-    stub.style.cssText='display:inline-flex;align-items:center;gap:6px;margin:6px;padding:8px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--panel2);color:var(--accent);font-size:12px;cursor:pointer;vertical-align:top;scroll-snap-align:start;';
-    stub.textContent=(d?(d.icon||'')+' '+(d.name||rightId):rightId)+' · in detail';
-    stub.title='This engine fills the right pane — click another miniature to switch';
-    stub.onclick=e=>{e.stopPropagation();skinGv2FocusEngine(rightId);};
-    el.insertBefore(stub,el.firstChild);
-   }
+   /* R48 [12]: the "… · in detail" stub is gone — the enlarged engine is on the right, the lane holds the others */
    if(!members.length&&!rightId){
     const hint=document.createElement('div');
     hint.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);';
@@ -17442,6 +17490,13 @@ function skinLeafMount(leaf,path,host,ctx){
   const open=m&&swRowMembers('engines').indexOf(m)>=0;
   if(open){cell(m,false);m.style.width='100%';m.style.height='';m.style.scrollSnapAlign='';el.appendChild(m);}
   else skinEmptyFill(el,leaf,path,ctx,'That window is closed — pick one for this pane:');
+ }else if(leaf.k==='info'){
+  /* R48 [12]: the Info view (GV-6) in its own small pane — the browser column no longer carries it; its border to the lane is a tree splitter, so dragging it to the edge tucks it and the edge strip brings it back (GV-3) */
+  el=document.createElement('div');el.id='skInfoPane';el.className='skPane skLeaf';
+  let info=document.getElementById('skInfo');
+  if(!info){info=document.createElement('div');info.id='skInfo';info.innerHTML='<div id="skInfoT" style="font-weight:700;color:var(--text);margin-bottom:2px;">Info view</div><div id="skInfoB">Rest the pointer on anything and read what it does here.</div>';}
+  info.style.display='';
+  el.appendChild(info);
  }else{
   el=document.createElement('div');el.id='skEmpty_'+path.join('');el.className='skPane skLeaf skEmpty';
   skinEmptyFill(el,leaf,path,ctx,'An empty pane — pick a window for it, or ctrl+click a border to paste the floating windows here:');
@@ -40011,8 +40066,38 @@ function navSyncFromFocus(){
  ng.onmouseenter=()=>{ng.style.background='var(--panel2)';};
  ng.onmouseleave=()=>{ng.style.background='';};
  ng.onclick=()=>{menu.style.display='none';gridUserSpawn();};
+ /* R48 [14] (DUAL-SKINS-RAW): the File menu carries Canvas · Import · Setup · Settings · Education · Help · About — each row drives the same door its button does */
+ menu.querySelectorAll('.fmItem').forEach(it=>{
+  it.onmouseenter=()=>{it.style.background='var(--panel2)';}; it.onmouseleave=()=>{it.style.background='';};
+  it.onclick=()=>{menu.style.display='none'; const a=it.dataset.fm||''; try{
+   if(a.indexOf('win:')===0){uiDispatch({type:'toggle',id:a.slice(4)});}
+   else{const b=_gridGetById(a)||document.getElementById(a); if(b)b.click();}
+  }catch(e){}};
+ });
  document.addEventListener('mousedown',e=>{if(menu.style.display!=='none'&&!menu.contains(e.target)&&e.target!==btn)menu.style.display='none';},true);
 })();
+function tapTempoBpm(times,now){
+ /* pure — R48 [15]: taps (ms) → the BPM of their average interval; only taps within 2s of each other count, the last eight;
+    null until two taps stand; clamped to the tempo slider's 50–180 */
+ const T=(times||[]).map(Number).filter(isFinite).sort((a,b)=>a-b); if(now!=null&&T.length&&now-T[T.length-1]>2000)return null;
+ let run=[]; for(const t of T){if(run.length&&t-run[run.length-1]>2000)run=[];run.push(t);}
+ run=run.slice(-8); if(run.length<2)return null;
+ const avg=(run[run.length-1]-run[0])/(run.length-1); if(!(avg>0))return null;
+ return Math.max(50,Math.min(180,Math.round(60000/avg)));
+}
+var _tapTimes=[];
+function tapTempoHit(now){
+ /* a tap: keep the run, set the tempo through the slider's own handler (one path) */
+ const t=(now!=null)?+now:performance.now();
+ if(_tapTimes.length&&t-_tapTimes[_tapTimes.length-1]>2000)_tapTimes=[];
+ _tapTimes.push(t); _tapTimes=_tapTimes.slice(-8);
+ const bpm=tapTempoBpm(_tapTimes);
+ const inp=document.getElementById('tempo'), btn=document.getElementById('tapBtn');
+ if(btn){btn.textContent=_tapTimes.length<2?'TAP ·':(bpm?('TAP '+bpm):'TAP');}
+ if(bpm&&inp){inp.value=String(bpm);inp.dispatchEvent(new Event('input',{bubbles:true}));inp.dispatchEvent(new Event('change',{bubbles:true}));}
+ return bpm;
+}
+(function(){const b=document.getElementById('tapBtn');if(b)b.onclick=e=>{e.stopPropagation();tapTempoHit();};})();
 /* the event router: enter the world a gesture belongs to BEFORE its handlers run
    (document capture fires first), leave after the dispatch (a document bubble listener
    registered last). A handler's stopPropagation can eat the bubble exit — the next
