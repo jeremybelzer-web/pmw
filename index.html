@@ -916,7 +916,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -11495,7 +11495,7 @@ function drawGridView(v,svgEl){
  if(isMain)sizeSvg();
  else{svgEl.setAttribute('width',gw);svgEl.setAttribute('height',v.px);}
  withTrack(v.track||activeTrack,()=>{
- const vt=viewTop(v),gcId='gc_'+String(v.id).replace(/\W/g,'_');
+ const vt=viewTop(v),gcId='gc_'+((typeof CUR_GRID==='string'&&CUR_GRID)?CUR_GRID:'main')+'_'+String(v.id).replace(/\W/g,'_');   /* R54 (his [26]): the clip id carries the WORLD — every world's main view minted `gc_main`, and the document resolved url(#gc_main) to Grid 1's (18px, micro) clip, so a second world's notes were clipped away (the magnifier's empty lattice) */
  let out='';
  /* diagonal-stripe pattern marks chromatic (out-of-scale) notes */
  out+=`<defs><pattern id="chromStripe" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3.5" height="7" fill="rgba(0,0,0,.34)"/></pattern><clipPath id="${gcId}"><rect x="0" y="${vt}" width="${gw}" height="${v.px}"/></clipPath></defs>`;
@@ -16582,7 +16582,13 @@ function skinGv2RestoreHeights(){
 function skinGv2MagOpen(t,a,d){
  /* DV-17 / RAW [6]: double-click a MIDI clip → the LOWER pane becomes the magnifier; engines yield */
  if(!skinIsGv2())return;
- stripSel={t,i:null};selHead=t;selSurface='strip';
+ /* R54 (his [27]): with several clips of the lane selected (⇧-click, the range, the box), the magnifier opens on the WHOLE
+    selected span — first clip's start to last clip's end — as one continuous clip */
+ try{
+  const idx=(typeof stripMulti==='object'&&stripMulti&&stripMulti.t===t&&stripMulti.set.size>1)?[...stripMulti.set]:(typeof xsel==='object'&&xsel&&xsel.cells&&xsel.cells[t]&&xsel.cells[t].size>1)?[...xsel.cells[t]]:null;
+  if(idx&&typeof a==='number'){const sp=trackCellSpans(t);let lo=1e9,hi=0;for(const k of idx){if(!sp[k])continue;lo=Math.min(lo,sp[k].a);hi=Math.max(hi,sp[k].a+sp[k].d);}if(hi>lo){a=lo;d=hi-lo;}}
+ }catch(e){}
+ stripSel={t,i:null};selHead=null;selSurface='strip';   /* R54 (his [26]): no name-box selection — it outranked the clip region and the magnifier showed the WHOLE track */
  try{if(t&&t!=='drums'){activeTrack=t;}}catch(e){}
  skinGv2Lane={mode:'mag',t,a:(typeof a==='number'?a:null),d:(typeof d==='number'?d:null)};
  if(typeof a==='number'&&typeof d==='number'){
@@ -16593,7 +16599,9 @@ function skinGv2MagOpen(t,a,d){
    rows.forEach((n,i)=>{if(n&&n[0]>=a-1e-6&&n[0]<a+d-1e-6)selNotes.add(i);});
   }catch(e){}
  }
+ const keep=(skinState&&skinState.panes&&skinState.panes._magPct!=null)?skinState.panes._magPct:null;   /* R54 [26]: the share to ease back to survives every re-open (skinNorm mints a fresh panes object) */
  skinPersist();skinApply(skinState);
+ try{if(keep!=null&&skinState)skinState.panes._magPct=keep;}catch(e){}
  try{skinGv2LaneEase(60,true);}catch(e){}   /* R50 [19]: the lower rectangle eases out to ~40% of the screen in his bell curve */
 }
 function skinGv2MagClose(){
@@ -26876,27 +26884,38 @@ function magMount(host,tag,pinTarget){
  /* a band-sized, beat-locked magnified EDITOR of whatever is selected (his 181st) —
     edits flow BOTH WAYS (an 800ms mirror; one undo per write-back). A PINNED pane
     keeps its target; a following pane re-aims when the selection changes. */
+ if(_magPolls[tag])magClose(tag);   /* R54 (his [26]): a re-mount on the same tag closes the OLD poll first — its late tick was closing the NEW world (the magnifier blank on the second double-click) */
  const t=pinTarget||magTarget();
  const sig=magTargetSig(t);
  const rows=magTargetRows(t);
+ /* R54 (his [26]): under GV-2 a clip REGION is re-based to its own start and FITTED to the pane — the clip fills the lower
+    rectangle; the offset rides every comparison and write-back below */
+ const off=(t.kind==='region'&&typeof skinIsGv2==='function'&&skinIsGv2())?t.a:0;
+ const shift=(rs,k)=>rs.map(n=>{const c=n.slice();c[0]=+(c[0]+k).toFixed(6);return c;});
  const label=t.kind==='object'?(project.shelf.find(x=>x.id===t.objId)||{}).name
   :t.kind==='region'?('bars '+(Math.floor(t.a/4)+1)+'–'+Math.ceil(t.b/4)+' of '+(typeof trackLabel==='function'?trackLabel(t.tr):t.tr))
   :(typeof trackLabel==='function'?trackLabel(t.tr):t.tr);
- const o={id:'mag:'+tag,name:'Magnifier — '+(label||'track'),strand:'melody',data:{rows:rows.length?rows:[[0,1,60]]},org:'magnifier'};
+ const o={id:'mag:'+tag,name:'Magnifier — '+(label||'track'),strand:'melody',data:{rows:rows.length?shift(rows,-off):[[0,1,60]]},org:'magnifier'};
  const m=essObjWorldMint(o);
  if(!m)return null;
+ const span=(t.kind==='region')?Math.max(1,t.b-t.a):null;
  withGridWorld(m.w.id,()=>{
-  project.tracks[m.face.track]=rows.map(r2=>r2.slice());
+  project.tracks[m.face.track]=shift(rows,-off);
   PPB=Math.max(90,PPB);
+  if(off||span){LOOP=Math.max(2,Math.ceil(span));}
   if(LOOP>256)LOOP=256;   /* his 176th: 3-hour songs — the window clamps under the raster cap */
   refresh(true);
  });
  host.appendChild(m.w.els.root);
  m.w.els.root.style.marginTop='0';
  const scrollEl=m.w.els.root.querySelector('[id="gridWrap"]')||m.w.els.root;
- const link=(t.kind!=='object')?magLinkScroll(scrollEl,m.w.id,magMainGridEl()):null;   /* an object floats free of the timeline */
+ const link=(t.kind!=='object'&&!off)?magLinkScroll(scrollEl,m.w.id,magMainGridEl()):null;   /* an object floats free of the timeline; a fitted clip needs no lock */
+ if(off||(span&&typeof skinIsGv2==='function'&&skinIsGv2())){magFitToHost(host,m.w.id,span);}
+ let ro=null;
+ try{if(typeof ResizeObserver==='function'&&(off||span)&&typeof skinIsGv2==='function'&&skinIsGv2()){ro=new ResizeObserver(()=>{try{if(GRID_WORLDS[m.w.id])magFitToHost(host,m.w.id,span);}catch(e){}});ro.observe(host);}}catch(e){}   /* R54 [26]: the clip re-fits as the rectangle eases out */
  let lastMain=JSON.stringify(rows),lastWorld=lastMain;
  const iv=setInterval(()=>{
+  if(_magPolls[tag]&&_magPolls[tag].iv!==iv){clearInterval(iv);return;}   /* R54: an orphaned poll clears itself and touches nothing */
   if(!GRID_WORLDS[m.w.id]||!host.isConnected){magClose(tag);return;}
   try{
    if(!pinTarget&&magTargetSig(magTarget())!==sig){
@@ -26904,22 +26923,42 @@ function magMount(host,tag,pinTarget){
     magClose(tag);host.innerHTML='';magMount(host,tag,null);return;
    }
    const mainNow=JSON.stringify(magTargetRows(t));
-   const worldNow=JSON.stringify(withGridWorld(m.w.id,()=>(project.tracks[m.face.track]||[]).map(n=>[n[0],n[1],n[2]])));
+   const worldNow=JSON.stringify(shift(withGridWorld(m.w.id,()=>(project.tracks[m.face.track]||[]).map(n=>[n[0],n[1],n[2]])),off));
    if(worldNow!==lastWorld&&worldNow!==mainNow){
     magWriteBack(t,JSON.parse(worldNow));
     lastMain=worldNow;lastWorld=worldNow;
    }else if(mainNow!==lastMain){
-    withGridWorld(m.w.id,()=>{project.tracks[m.face.track]=JSON.parse(mainNow);refresh(true);});
+    withGridWorld(m.w.id,()=>{project.tracks[m.face.track]=shift(JSON.parse(mainNow),-off);refresh(true);});
     lastMain=mainNow;lastWorld=mainNow;
    }else{lastWorld=worldNow;}
   }catch(e){}
  },800);
- _magPolls[tag]={iv,wid:m.w.id,link};
+ _magPolls[tag]={iv,wid:m.w.id,link,ro};
  return m;
+}
+function magFitZoom(laneW,span){
+ /* R54 (his [26]): the zoom that lays `span` beats across `laneW` px of lane, clamped to the grid's own 14–240 px/beat. Pure — unit-tested. */
+ return Math.max(14,Math.min(240,laneW/Math.max(1,span)));
+}
+function magFitToHost(host,wid,span){
+ /* R54 (his [26]): the magnified clip FILLS the lower rectangle — the zoom lays the clip across the pane's width, the lattice
+    takes the pane's height under the bar lane, centred on the clip's notes */
+ try{
+  if(!host||!GRID_WORLDS[wid])return;
+  const W=host.clientWidth,H=host.clientHeight; if(W<80||H<60)return;
+  withGridWorld(wid,()=>{
+   const tw=(typeof theadWNow==='function')?theadWNow():96;
+   PPB=magFitZoom(W-GUT-tw-30,span||LOOP);
+   const px=Math.max(60,H-((typeof hdrH==='function')?hdrH():BARH)-10);
+   GRID_VIEWS.main.userPx=true;GRID_VIEWS.main.userScrolled=false;setViewPx(GRID_VIEWS.main,px);
+   refresh(true);
+  });
+ }catch(e){}
 }
 function magClose(tag){
  const p=_magPolls[tag];if(!p)return;
  clearInterval(p.iv);
+ if(p.ro)try{p.ro.disconnect();}catch(e){}
  if(p.link)try{p.link.unhook();}catch(e){}
  try{if(GRID_WORLDS[p.wid])gridWorldClose(p.wid);}catch(e){}
  delete _magPolls[tag];
@@ -39370,6 +39409,9 @@ function gridWorldSpawn(opts){
  root.style.marginTop='12px';   /* 75th fix ①: the clone joins the column's ONE 12px gap (Grid 1's root has none — the blocks above it carry their own); sibling margins collapse, so the palette's 12px below never doubles it */
  const rail=root.querySelector('[id="rail"]');if(rail)rail.remove();   /* the icon rail is app chrome, not grid chrome */
  root.classList.remove('gridFocused');
+ /* R54 (his [26]): the clone must not carry Grid 1's SKIN CELL dress — with Grid 1 seated in the centre its root wears skCell
+    (and the lane's quarter-width law then squeezed a magnifier world to 24% of its pane) */
+ try{root.classList.remove('skCell','swCell','skSel');root.style.width='';root.style.height='';root.style.overflow='';root.style.boxSizing='';root.style.scrollSnapAlign='';delete root.dataset.skW;delete root.dataset.skH;delete root.dataset.skO;}catch(e){}
  /* the clone carries Grid 1's RENDERED pixels — wipe the dynamic hosts so a renderer
     that early-returns on empty data leaves them honestly blank, never showing Grid 1's
     stale content in a blank instance (verify-43's keys-lane count caught this) */
