@@ -785,6 +785,11 @@
   body.skinGv2 #gridRow{flex-direction:row-reverse!important;}
   body.skinGv2 #gridRow .gvwrap{order:0;}
   body.skinGv2 #gridRow #gridHead{order:0;}
+  /* R52 (his [22]): the ACTIVE track's head wears the same vertical padding as its siblings' name boxes (.thead.nbox), so every
+     micro row in a grid — the active one included — stands at ONE height; a fresh grid's third row is no longer the short one */
+  body.skinGv2 #gridRow #gridHead.nboxMicro{padding-top:6px;padding-bottom:8px;}
+  /* R52 (his [23]): the centre grid SELECTED (a click on its title bar) wears the accent ring — Delete then closes it */
+  body.skinGv2 #skCentre [data-gridworld].skSel{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px;}
   body.skinGv2 .thead{padding-right:0;padding-left:8px;}
   body.skinGv2 #laneRows{padding-left:0;padding-right:var(--theadW,110px);}
   body.skinGv2 .nboxWRz{left:0;right:auto;width:12px;}
@@ -894,7 +899,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16643,14 +16648,30 @@ function skinLaneSelect(id){
  if(!skinState)return; const same=skinState._sel===id;
  document.querySelectorAll('#skinLayer .skCell.skSel').forEach(c=>c.classList.remove('skSel'));
  skinState._sel=same?'':id;
- if(!same){const c=document.getElementById(id==='shelf'?'swShelf':id); if(c)c.classList.add('skSel');}
+ if(!same){const c=document.getElementById(id==='shelf'?'swShelf':(/^grid:/.test(id)?(id==='grid:main'?'gridRowWrap':'gridRowWrap_'+id.slice(5)):id)); if(c)c.classList.add('skSel');}   /* R52 [23]: the centre grid selects too */
 }
 function skinLaneClose(id){
  /* the selected miniature goes — the palette by its own law, a window by its toggle */
  if(!id)return false;
- try{if(id==='shelf'){skinCollapseKind('shelf');}else if(id==='chordPanel'){if(typeof palWinClose==='function')palWinClose();skinRepack();}else uiDispatch({type:'toggle',id});}catch(e){return false;}   /* R49b [17]: the Shelf tucks its pane away */
+ try{
+  if(id==='shelf'){skinCollapseKind('shelf');}
+  else if(id==='chordPanel'){if(typeof palWinClose==='function')palWinClose();skinRepack();}
+  else if(/^grid:/.test(id)){
+   /* R52 (his [23]): the SELECTED centre grid closes by Delete the way its ✕ closes it (⌘Z brings it back); Grid 1 hides from the centre instead — the ▾ menu reseats it */
+   const gid=id.slice(5);
+   if(gid==='main'){if(skinState)skinState.panes.hideMain=1;skinGv2ShowCentre('');}
+   else{if(typeof winCloseNote==='function'&&typeof gridCloseRestorer==='function')winCloseNote(gridCloseRestorer(gid));gridWorldClose(gid);}
+  }
+  else uiDispatch({type:'toggle',id});
+ }catch(e){return false;}   /* R49b [17]: the Shelf tucks its pane away */
  if(skinState)skinState._sel='';
  return true;
+}
+function skinGv2GridChrome(root,id){
+ /* R52 (his [23]): a click on the centre grid's title bar SELECTS it (the accent ring; not on its chips, its ✕, its BPM box or
+    the ⠿ grip) and Delete then closes it — the same road as its ✕. The 75th's click-to-minimize stands outside GV-2. */
+ const head=root&&root.querySelector('[id="gridWinHead"]'); if(!head||head._skSelBound)return; head._skSelBound=true;
+ head.addEventListener('click',e=>{if(!skinIsGv2())return; if(e.target.closest&&e.target.closest('.wbtn,.cpchip,button,input,select,a,label,.colGrip'))return; e.stopPropagation();e.stopImmediatePropagation();e.preventDefault(); skinLaneSelect('grid:'+id);},true);
 }
 function skinGv2Expand(winId){
  /* R49 [16]: the miniature's larger version fills the floor-to-ceiling right rectangle; when the window needs more room than the pane
@@ -16677,7 +16698,7 @@ function skinGv2Expand(winId){
   if(!skinIsGv2()||!skinState||!skinState._sel)return;
   if(e.key!=='Delete'&&e.key!=='Backspace')return;
   const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
-  e.preventDefault();e.stopPropagation(); skinLaneClose(skinState._sel);
+  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation(); skinLaneClose(skinState._sel);
  },true);
 })();
 function skinGv2FocusShelf(){
@@ -16780,6 +16801,9 @@ function skinTeardown(keep){
    rec.el.classList.remove('skCell');rec.el.classList.remove('swCell');
    if(rec.el.dataset&&rec.el.dataset.skW!==undefined){rec.el.style.width=rec.el.dataset.skW;rec.el.style.height=rec.el.dataset.skH;rec.el.style.overflow=rec.el.dataset.skO;rec.el.style.boxSizing='';rec.el.style.scrollSnapAlign='';delete rec.el.dataset.skW;delete rec.el.dataset.skH;delete rec.el.dataset.skO;}
    if(!rec.parent||rec.el.id==='swShelf'){rec.el.remove();continue;}   /* a block minted for the view (the shelf block) goes away with it — swShelfBlock mints a fresh one on demand */
+   /* R52 (his [23]): a grid world CLOSED while the view stood is a corpse — its root must not come back to the body as an orphan
+      (a dead "gridRowWrap_g2" that took the number a new grid wanted and fooled the centre's catalog) */
+   try{const gw=rec.el.getAttribute&&rec.el.getAttribute('data-gridworld');if(gw&&gw!=='main'&&!(typeof GRID_WORLDS==='object'&&GRID_WORLDS[gw]))continue;}catch(e){}
    const nx=(rec.next&&rec.next.parentNode===document.body)?rec.next:null;
    document.body.insertBefore(rec.el,nx);
   }
@@ -17490,7 +17514,7 @@ function skinLeafMount(leaf,path,host,ctx){
   if(P.centreId&&!cat.some(g=>g.id===P.centreId))P.centreId=cat.length?cat[0].id:'';
   if(!P.centreId&&cat.length)P.centreId=cat[0].id;
   const cur=cat.find(g=>g.id===P.centreId)||null;
-  if(cur){cell(cur.el,true);el.appendChild(cur.el);}
+  if(cur){cell(cur.el,true);el.appendChild(cur.el);try{skinGv2GridChrome(cur.el,cur.id);}catch(e){}}
   else{
    const empty=document.createElement('div');
    empty.style.cssText='padding:24px;text-align:center;color:var(--dim);font-size:12px;';
@@ -37355,13 +37379,17 @@ function mkLaneRow(idx){
 /* the minimized main Grid's lane (July 24 r2): lives in the main gvwrap under the bar
    lane; same cells, same gestures — the active track is just another lane */
 function drawMainStrip(){
- const wrap=svg.parentElement;
- let el=document.getElementById('mainStrip');
+ /* R52 (his [22]): the CURRENT world's svg and wrap — the bare global is Grid 1's, so a Grid 2's active track was drawing
+    its strip into Grid 1's row and its own row stood empty at the head's 13px (the "3rd track is smaller than the first 2") */
+ const _sv=(typeof curSvg==='function')?curSvg():svg;
+ const wrap=_sv.parentElement;
+ let el=wrap?wrap.querySelector('[id="mainStrip"]'):null;
  const want=!paperView&&mainIsStrip();
  if(!want){if(el)el.remove();return;}
+ if(!wrap)return;
  if(!el){
   el=document.createElement('div');el.id='mainStrip';el.className='tstrip';
-  const rzEl=document.getElementById('mainRz');
+  const rzEl=wrap.querySelector('[id="mainRz"]');
   wrap.insertBefore(el,rzEl||null);
  }
  el.dataset.trk=activeTrack;
@@ -39214,6 +39242,16 @@ function gridWireClone(w){
   });
  }
 }
+function gridWorldFreeId(taken){
+ /* R52 (his [23]): a deleted grid's NUMBER is free again — the next blank grid takes the LOWEST empty one (Grid 2 after
+    Grid 2 is deleted), never the next in the sequence. Pure: `taken` is the set of live world ids. Unit-tested. */
+ let n=2;while(taken.has('g'+n))n++;return 'g'+n;
+}
+function gridWorldNextId(){
+ const tk=new Set(Object.keys(GRID_WORLDS));
+ try{document.querySelectorAll('[data-gridworld]').forEach(r=>{const m=/^gridRowWrap_(g\d+)$/.exec(r.id||'');if(m)tk.add(m[1]);});}catch(e){}
+ const id=gridWorldFreeId(tk);_gridWSeq=Math.max(_gridWSeq,+id.slice(1));return id;
+}
 function gridWorldSpawn(opts){
  /* mint a real second grid: clone Grid 1's composite, scrub what is Grid 1's alone,
     park a fresh blank world behind it, render it whole under that world.
@@ -39221,7 +39259,7 @@ function gridWorldSpawn(opts){
     opts.user marks it a user-created grid (persists, link chip, own palette). */
  const me=gridMainEls();if(!me)return null;
  if(!GRID_IDSET)GRID_IDSET=gridIdsetBuild();
- const id=(opts&&typeof opts.id==='string'&&/^g\d+$/.test(opts.id)&&!GRID_WORLDS[opts.id])?opts.id:'g'+(++_gridWSeq);
+ const id=(opts&&typeof opts.id==='string'&&/^g\d+$/.test(opts.id)&&!GRID_WORLDS[opts.id])?opts.id:gridWorldNextId();
  const root=me.root.cloneNode(true);
  root.id='gridRowWrap_'+id;
  root.setAttribute('data-gridworld',id);
@@ -39359,6 +39397,9 @@ function gridWorldClose(id){
   gridSlotsApply(GRID_WORLDS.main.slots);CUR_GRID='main';
  }
  if(_wasUser&&typeof gridsPersistSoon==='function')gridsPersistSoon();
+ /* R52 (his [23]): under GV-2 a closed grid LEAVES the centre — the next grid in the catalog (Grid 1 first) is seated at once,
+    never a blank pane whose centreId points at a dead world (the state that made Grid 3's ✕ look dead) */
+ try{if(typeof skinIsGv2==='function'&&skinIsGv2()&&skinState&&skinState.panes&&skinState.panes.centreId===id){skinState._sel='';skinGv2ShowCentre('');}}catch(e){}
 }
 function essShelfWinDraw(w){
  /* the shelf window's cards: THE Essence Shelf (Grid 1's project.shelf — essences ride
