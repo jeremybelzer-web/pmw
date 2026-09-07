@@ -837,6 +837,8 @@
   body.skinGv2 #skCentre .skCell{margin:0!important;width:100%!important;}
   body.skinGv2 #skLane .skCell{width:24%!important;min-width:180px;}
   #skinLayer .skCell.skSel{outline:2px solid var(--accent);outline-offset:-2px;}
+  /* R49b (his [18]): a miniature's head stays pinned at its cell's top whatever the scroll — title · ▸ · − · ✕ always in reach */
+  body.skinGv2 #skLane .skCell > .winHead{position:sticky;top:0;z-index:3;background:var(--panel);}
   .skExpand{cursor:pointer;} body:not(.skinGv2) .skExpand{display:none!important;}
   #skinLayer .skRightBar{display:flex;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px;color:var(--dim);flex:0 0 auto;}
   #skinLayer .skEmpty{border:2px dashed var(--line);border-radius:10px;margin:6px;display:flex;align-items:center;justify-content:center;overflow:auto;}
@@ -889,7 +891,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06af</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ag</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16606,17 +16608,19 @@ function skinLaneChrome(m){
  }
  const t=head.querySelector('.wtitle');
  if(t&&!t._skSelBound){t._skSelBound=true; t.addEventListener('click',e=>{if(!skinIsGv2())return; e.stopPropagation(); e.preventDefault(); skinLaneSelect(m.id);},true);}
+ if(!head._skSelBound){head._skSelBound=true; head.addEventListener('click',e=>{if(!skinIsGv2())return; if(e.target.closest&&e.target.closest('.wbtn,.cpchip,button,input,select,a,label'))return; e.stopPropagation(); e.preventDefault(); skinLaneSelect(m.id);},true);}   /* R49b [18]: anywhere on the head selects, not only the title */
+ try{m.scrollTop=0;}catch(e){}
 }
 function skinLaneSelect(id){
  if(!skinState)return; const same=skinState._sel===id;
  document.querySelectorAll('#skinLayer .skCell.skSel').forEach(c=>c.classList.remove('skSel'));
  skinState._sel=same?'':id;
- if(!same){const c=document.getElementById(id); if(c)c.classList.add('skSel');}
+ if(!same){const c=document.getElementById(id==='shelf'?'swShelf':id); if(c)c.classList.add('skSel');}
 }
 function skinLaneClose(id){
  /* the selected miniature goes — the palette by its own law, a window by its toggle */
  if(!id)return false;
- try{if(id==='chordPanel'){if(typeof palWinClose==='function')palWinClose();skinRepack();}else uiDispatch({type:'toggle',id});}catch(e){return false;}
+ try{if(id==='shelf'){skinCollapseKind('shelf');}else if(id==='chordPanel'){if(typeof palWinClose==='function')palWinClose();skinRepack();}else uiDispatch({type:'toggle',id});}catch(e){return false;}   /* R49b [17]: the Shelf tucks its pane away */
  if(skinState)skinState._sel='';
  return true;
 }
@@ -17525,6 +17529,10 @@ function skinLeafMount(leaf,path,host,ctx){
     const d=swShelfBlock();remember(d);el.appendChild(d);
     d.style.display='';d.style.height='100%';
     try{const mv=d.querySelector('#swShelfMove');if(mv)mv.style.display='none';}catch(e){}
+    /* R49b (his [17]): in this view the Shelf's ✕ tucks the right rectangle away (the edge strip or ⌘⌥H brings it back); its title selects it so Delete does the same; − still collapses the cards */
+    try{const x2=d.querySelector('#swShelfX'); if(x2){x2.title='Tuck the right rectangle away — the strip at the edge, or ⌘⌥H, brings it back'; x2.onclick=ev=>{ev.stopPropagation();skinCollapseKind('shelf');};}
+     const t2=d.querySelector('.winHead .wtitle'); if(t2&&!t2._skSelBound){t2._skSelBound=true; t2.addEventListener('click',ev=>{if(!skinIsGv2())return; ev.stopPropagation(); ev.preventDefault(); skinLaneSelect('shelf');},true);}
+     if(skinState&&skinState._sel==='shelf')d.classList.add('skSel');}catch(e){}
     try{const b=d.querySelector('.essBody');if(b){b.style.flexWrap='wrap';b.style.overflowX='';}}catch(e){}
     try{essShelfWinDraw({id:'main',pairFor:null,els:{essWin:d}});}catch(e){}
    }else{
