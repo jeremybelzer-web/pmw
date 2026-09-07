@@ -871,7 +871,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ac</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ad</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4411,6 +4411,7 @@ function cagedBridgePayload(chords,beat,tonic){
  const rootPc=(c.r|0)%12;
  const text=cagedBridgeChordText(c);
  const q=typeof cageParseChord==='function'?cageParseChord(text):{quality:'maj'};
+ let minorKey=false; try{const km=(typeof keyFor==='function')?keyFor(Math.max(0,+beat||0)):null; minorKey=!!modeIsMinor(km&&km.mode!=null?km.mode:(typeof project==='object'&&project?project.mode:''));}catch(e){minorKey=false;}   /* R46 [79]: the key's mode for the Absolute numbering */
  let next=null;
  if(hit&&hit.i!=null&&hit.i+1<chords.length){
   const nc=chords[hit.i+1];
@@ -4420,7 +4421,7 @@ function cagedBridgePayload(chords,beat,tonic){
    next={text:ntext,rootPc:(nc.r|0)%12,quality:nq.quality||'maj'};
   }
  }
- return {text:text,rootPc:rootPc,quality:q.quality||'maj',scaleRootPc:((tonic|0)%12+12)%12,beat:+beat||0,t:Date.now(),next:next};
+ return {text:text,rootPc:rootPc,quality:q.quality||'maj',scaleRootPc:((tonic|0)%12+12)%12,minorKey:minorKey,beat:+beat||0,t:Date.now(),next:next};
 }
 function cagedBridgePush(){
  try{
@@ -4458,6 +4459,10 @@ const CAGED_OPEN_MIN={
  D:{rootPc:2,frets:[-1,-1,0,2,3,1],color:'#2aa4a4'}
 };
 const CAGED_SHAPE_ORDER=['C','A','G','E','D'];
+/* R46 [82] — his pairs, by PITCH (the relative minor of each shape at its open position), pattern names in any key */
+const CAGED_REL_MINOR={C:'Am',A:'F#m',G:'Em',E:'C#m',D:'Bm'};
+/* the app's minor FINGERING letters (CAGED_OPEN_MIN) → his name for that shape: the fingering pairs with a major form (R33: C↔Am, A↔Gm, G↔Em, E↔Dm, D↔Cm) and takes that major's relative minor */
+const CAGED_MINOR_NAME={A:'Am',G:'F#m',E:'Em',D:'C#m',C:'Bm'};
 function cageIsMinorQ(quality){return quality==='min'||quality==='min7';}   /* R33: dim has its own forms now */
 function cageQualNow(q){
  /* the quality a shape is asked for: the caller's, else the window's chord */
@@ -4471,7 +4476,8 @@ function cageShapeLabel(shape,quality,rootPc){
     major/minor one (his [61]) */
  const sh=String(shape||'');
  if(quality==='dim'){const N=(typeof PCN!=='undefined')?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];return N[((Math.round(+rootPc)||0)%12+12)%12]+'° in the '+sh+' shape';}
- return sh+(quality==='min'||quality==='min7'?'m':'')+' shape';   /* R35 [64]: written as the chord — "Am shape" */
+ if(quality==='min'||quality==='min7')return ((typeof CAGED_MINOR_NAME==='object'&&CAGED_MINOR_NAME[sh])||(sh+'m'))+' shape';   /* R35 [64]: written as the chord — "Am shape"; R46 [82]: HIS names — the Gm fingering is the F#m shape, Dm the C#m, Cm the Bm */
+ return sh+' shape';
 }
 function cageDimForm(shapeName,dimRootPc){
  /* pure — his [59]/[61]: "There is exactly 1 diminished chord that fits in each major/minor shape" — and it is NOT a
@@ -5622,23 +5628,26 @@ function cageMiniDraw(rootPc,V){
  for(let s=0;s<6;s++){const y=G.yTop+s*gap;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-G.padR,y);ctx.stroke();}
  ctx.globalAlpha=.6; ctx.fillStyle=cageCss('--cage-fret','#c8b48c'); ctx.font='9px system-ui,sans-serif'; ctx.textAlign='center';
  for(const k of [1,3,5,7,9,12,15,17,19])ctx.fillText(String(k),xm(k)-cw/2,H-3);
- const shapes=cageMiniRoots(rootPc,cageQualNow());
- const octaves=cageMiniOctaves(shapes);   /* R45 [78]: every octave of the CAGED system across the neck */
- const curStart=(V&&V.start!=null)?+V.start:0; let cur=null;
- let curShape=null,curOct=0; try{const bs=cageShapeAtBox(rootPc,curStart,V.span||5,cageQualNow());curShape=bs&&bs.shape;curOct=bs?(bs.octave|0):0;}catch(e){curShape=null;}   /* the form the overlays stand in (R45) — the band of that shape and octave, else the nearest */
- shapes.concat(octaves).forEach(sh=>{const d=Math.abs(sh.lo-curStart)+(curShape&&sh.shape!==curShape?100:0)+(curShape&&(sh.octave|0)!==curOct?50:0);if(!cur||d<cur.d)cur={sh,d};});
- shapes.concat(octaves).forEach(sh=>{
-  const xa=xm(sh.lo-1),xb=xm(sh.hi);   /* lo=0: the band takes the nut's cell */
+ /* R46 [80]: the bands are the KEY's five positions (the relative major's shapes for a minor key) and their octave repeats — they
+    stand still while the chords change; the root dots are the key's tonic inside each window; the band the neck stands in is outlined */
+ const keyRoot=(typeof cageState==='object'&&cageState&&cageState.scaleRootPc!=null)?(+cageState.scaleRootPc||0):rootPc;
+ const keyMinor=!!(typeof cageState==='object'&&cageState&&cageState.scaleMinor);
+ const keyDegs=keyMinor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+ const positions=cageKeyPositions(keyRoot,keyMinor).map(p=>Object.assign({},p,{roots:cageScalePattern(keyRoot,keyDegs,{lo:p.lo,hi:p.hi}).filter(m=>m.deg===0).map(m=>({s:m.s,f:m.f}))}));
+ const shapes=positions.filter(p=>!p.octave), octaves=positions.filter(p=>p.octave);
+ const curPos=cageKeyPositionAt(positions,V&&V.start!=null?+V.start:0,V&&V.span?V.span:5); const cur=curPos?{sh:curPos}:null;
+ shapes.concat(octaves).forEach((sh,ix)=>{
+  const xa=xm(sh.lo-1),xb=xm(sh.hi);   /* the window's cells */
   ctx.globalAlpha=.16; ctx.fillStyle=sh.color; ctx.fillRect(xa,G.yTop-6,xb-xa,G.yBot-G.yTop+12);
-  if(cur&&cur.sh===sh){ctx.globalAlpha=.95;ctx.strokeStyle=sh.color;ctx.lineWidth=2;ctx.strokeRect(xa+1,G.yTop-5,xb-xa-2,G.yBot-G.yTop+10);}   /* R45: the position the neck stands in */
-  ctx.globalAlpha=.95; ctx.font='bold 10px system-ui,sans-serif'; ctx.fillStyle=sh.color; ctx.textAlign='center'; ctx.fillText((sh.label||sh.shape)+(sh.octave?' ·'+(sh.octave+1):''),(xa+xb)/2,G.yTop-2);
+  if(cur&&cur.sh===sh){ctx.globalAlpha=.95;ctx.strokeStyle=sh.color;ctx.lineWidth=2;ctx.strokeRect(xa+1,G.yTop-5,xb-xa-2,G.yBot-G.yTop+10);}   /* the position the neck stands in */
+  ctx.globalAlpha=.95; ctx.font='bold 9px system-ui,sans-serif'; ctx.fillStyle=sh.color; ctx.textAlign='center'; ctx.fillText((sh.label||sh.shape)+(sh.octave?' ·'+(sh.octave+1):''),(xa+xb)/2,(ix%2)?G.yTop+8:G.yTop-2);   /* the positions overlap (his worksheet), so the labels take two rows */
   sh.roots.forEach(r=>{const x=r.f===0?xm(0):xm(r.f)-cw/2,y=G.yTop+r.s*gap;ctx.globalAlpha=1;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=sh.color;ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,.85)';ctx.stroke();});
  });
  ctx.globalAlpha=1; ctx.textAlign='left';
  const bx0=xm(V.lo),bx1=xm(V.lo+V.cells);
  ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fillRect(bx0,1,bx1-bx0,H-2);
  ctx.strokeStyle=cageCss('--cage-ring','#fff'); ctx.lineWidth=2; ctx.globalAlpha=.9; ctx.strokeRect(bx0+1,2,bx1-bx0-2,H-4); ctx.globalAlpha=1;
- _cageMini={W,H,padL,cw,shapes,octaves,current:cur?{shape:cur.sh.shape,startFret:cur.sh.startFret,octave:cur.sh.octave||0}:null,boxX0:bx0,boxX1:bx1,lo:V.lo,cells:V.cells,rootPc};   /* R45: the octaves and the band the neck stands in */
+ _cageMini={W,H,padL,cw,shapes,octaves,current:cur?{shape:cur.sh.shape,label:cur.sh.label,startFret:cur.sh.startFret,octave:cur.sh.octave||0}:null,boxX0:bx0,boxX1:bx1,lo:V.lo,cells:V.cells,rootPc:keyRoot,keyMinor};   /* R45/R46: the key's positions, their octaves, the one the neck stands in */
  cageMiniBind(c);
 }
 function cageMiniBind(c){
@@ -5658,8 +5667,9 @@ function cageMiniBind(c){
    document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
    return;
   }
-  const k=Math.round(v); let best=null;
-  for(const sh of M.shapes.concat(M.octaves||[])){const inside=k>=sh.lo-1&&k<=sh.hi;   /* R45: the octave bands take a click too */const d=Math.abs((sh.lo+sh.hi)/2-k);if(!best||(inside&&!best.inside)||(inside===best.inside&&d<best.d))best={sh,inside,d};}
+  const k=Math.floor(v)+1; let best=null;   /* R46: the fret whose CELL is under the pointer (the cell for fret k spans v in [k-1,k)) — a centre click sat on the rounding boundary and the browser rounds the pixel */
+  for(const sh of M.shapes.concat(M.octaves||[])){const inside=k>=sh.lo&&k<=sh.hi;   /* R46: the band spans the window's own frets */   /* R45: the octave bands take a click too */const d=Math.abs((sh.lo+sh.hi)/2-k);if(!best||(inside&&!best.inside)||(inside===best.inside&&d<best.d))best={sh,inside,d};}
+  try{window._cageMiniClick={v,k,shape:best&&best.sh.shape,lo:best&&best.sh.lo};}catch(e){}   /* the suites' witness for a band click */
   if(best)cageViewCommit(best.sh.startFret,best.sh.label||best.sh.shape);
  });
 }
@@ -5712,34 +5722,118 @@ function cageShapeAtBox(rootPc,start,span,quality){
  }
  return best;
 }
-function cageNeckOverlays(rootPc,quality,start,span,on){
- /* pure: the marks the four overlays put on the large neck for the chord in play, in the CAGED position the neck stands at
-    → {shape,label,fits,box:{start,end},marks:[{s,f,pc,layer}],layers:[{id,count,color,kind,r,name}]} back to front.
-    ① the playable chord = the CAGED form that fits the box best, ONE note a string, wherever its frets are · ② the arpeggio =
-    every chord tone in the box (a 7th chord its four tones), several a string · ③ the pentatonic in the box — major for a
-    major chord, minor for a minor (a diminished reads minor) · ④ the complete scale in the box — the major scale for a major
-    chord, the natural minor for a minor, mixolydian for a dominant, locrian for a diminished (the parent scale of the
-    position; labelled). Fret 0 belongs to the box only when the box starts at the nut (his [55] (d)). */
+/* ==== R46 (build 2026-09-06ad, the 99th, Fable) — HIS [79]: THE CAGED SYSTEM SCALES ====
+   "Look at the middle column in this worksheet. That shows all 5 CAGED system scales. These scales can be thought of as both
+   major and natural minor… if you re-number the same numbers and when 6=1, 7=2, 1=3, 2=4, 3=5, 4=6, 5=7 then now it becomes
+   natural minor." The worksheet's scale in a position = ONE CONTIGUOUS RUN of pitches, every pitch once, inside the chord
+   shape's own fret window (one fret below its lowest fretted note up to its highest), a one-fret stretch only where a pitch
+   between two neighbours has no place inside. The pentatonic and the arpeggio columns are that pattern filtered. */
+function cageShapeWindow(frets){
+ /* pure: the fret window of a position — one fret below the shape's lowest fretted note (never below the nut) to its highest */
+ const F=(frets||[]).filter(f=>f!=null&&f>=0); if(!F.length)return {lo:0,hi:4};
+ const lo=Math.min(...F),hi=Math.max(...F); return {lo:Math.max(0,lo-1),hi};
+}
+function cageScalePattern(rootPc,degs,win){
+ /* pure: the worksheet's pattern — from the lowest scale pitch inside the window to the highest, every scale pitch once; a
+    pitch takes its place inside the window (the higher string when two would do), else the nearest stretch, staying on the
+    string the walk is on when two stretches tie → [{s,f,pc,deg}] low to high */
+ const root=((Math.round(+rootPc)||0)%12+12)%12; const D=new Set((degs||[]).map(d=>((d%12)+12)%12));
+ const lo=Math.max(0,win&&win.lo|0), hi=Math.max(lo,win&&win.hi|0);
+ const inW=f=>f>=lo&&f<=hi; const degOf=m=>((m%12)-root+12)%12;
+ let pmin=Infinity,pmax=-Infinity;
+ for(let s2=0;s2<6;s2++)for(let f=lo;f<=hi;f++){const m=cageMidi(s2,f);if(!D.has(degOf(m)))continue;if(m<pmin)pmin=m;if(m>pmax)pmax=m;}
+ if(!isFinite(pmin))return [];
+ const out=[]; let prevS=null;
+ for(let m=pmin;m<=pmax;m++){
+  if(!D.has(degOf(m)))continue;
+  let best=null;
+  for(let s2=0;s2<6;s2++){const f=m-CAGED_TUNING[s2]; if(f<0||f>CAGE_MAX_FRET)continue;
+   const dist=inW(f)?0:(f<lo?lo-f:f-hi); if(dist>2)continue;
+   const same=prevS===s2?1:0;
+   if(!best||dist<best.dist||(dist===best.dist&&(same>best.same||(same===best.same&&s2>best.s))))best={s:s2,f,dist,same};}
+  if(!best)continue;
+  out.push({s:best.s,f:best.f,pc:m%12,deg:degOf(m)}); prevS=best.s;
+ }
+ return out;
+}
+function cageOvDeg(pc,refRoot,refMinor){
+ /* pure — his [79]: the step written plain 1–7 in the reference's own scale (major, or the natural minor renumbered 6→1, 7→2,
+    1→3, 2→4, 3→5, 4→6, 5→7); a note outside that scale keeps the flat/sharp spelling; refMinor null → the chord's own degrees */
+ const st=(((+pc)-(+refRoot))%12+12)%12;
+ if(refMinor==null)return cageDegFrom(refRoot,pc);
+ const MAJ={0:'1',2:'2',4:'3',5:'4',7:'5',9:'6',11:'7',1:'b2',3:'b3',6:'b5',8:'b6',10:'b7'};
+ const MIN={0:'1',2:'2',3:'3',5:'4',7:'5',8:'6',10:'7',1:'b2',4:'#3',6:'b5',9:'#6',11:'#7'};
+ return (refMinor?MIN:MAJ)[st]||String(st);
+}
+function cageKeyPositions(keyRoot,keyMinor){
+ /* pure — his [80]: THE POSITION BELONGS TO THE KEY. The five CAGED positions of the key (a minor key reads its relative
+    major's five shapes — the co-shapes share one scale, his [63]), each with its scale window (cageShapeWindow of the major
+    form), repeated twelve frets up while it fits; sorted along the neck → [{shape,label,lo,hi,startFret,color,octave}] */
+ const root=((Math.round(+keyRoot)||0)%12+12)%12; const maj=keyMinor?(root+3)%12:root;
+ const degs=keyMinor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+ const base=CAGED_SHAPE_ORDER.map(name=>{const x=cageTransposeForm(name,maj,'maj');const W0=cageShapeWindow(x.frets);let rel=null;try{rel=cageRelativeForm(x,maj,'maj');}catch(e){}
+  /* his [81]: the position is as wide as its pattern — the C and E shapes four frets, the A · G · D five (the stretch note is part of the pattern) */
+  const pat=cageScalePattern(root,degs,W0); const F=pat.map(m=>m.f); const lo=F.length?Math.min(...F):W0.lo, hi=F.length?Math.max(...F):W0.hi;
+  const mn=(typeof CAGED_REL_MINOR==='object'&&CAGED_REL_MINOR[name])||(rel?rel.shape+'m':'');   /* his [82]: C · Am, A · F#m, G · Em, E · C#m, D · Bm */
+  const label=mn?(keyMinor?(mn+' · '+name):(name+' · '+mn)):name;   /* his [81]: "the first Am Shape/C Shape" — the minor first in a minor key */
+  return {shape:name,label,lo,hi,startFret:lo,color:x.color,octave:0};});
+ const out=base.slice();
+ base.forEach(p=>{for(let k=12;p.hi+k<=CAGE_MAX_FRET;k+=12)out.push(Object.assign({},p,{lo:p.lo+k,hi:p.hi+k,startFret:p.startFret+k,octave:k/12}));});
+ return out.sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
+}
+function cageKeyFamily(keyRoot,keyMinor){
+ /* pure — his [80]/[81]: the diatonic chords of the key — I ii iii IV V vi vii° for a major key, i ii° III iv v VI VII for a minor — all voiced inside any one position */
+ const root=((Math.round(+keyRoot)||0)%12+12)%12; const N=(typeof PCN!=='undefined'&&PCN)?PCN:['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+ const steps=keyMinor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]; const q=keyMinor?['m','°','','m','m','','']:['','m','m','','','m','°'];
+ return steps.map((st,i)=>N[(root+st)%12]+q[i]);
+}
+function cageKeyPositionAt(positions,start,span){
+ /* pure: the key position the neck stands in — the one whose window overlaps the neck's window most, the nearest on a tie */
+ const a=Math.max(0,Math.round(+start)||0), b=a+Math.max(3,Math.round(+span)||5)-1; let best=null;
+ (positions||[]).forEach(p=>{const ov=Math.max(0,Math.min(b,p.hi)-Math.max(a,p.lo)+1);const d=Math.abs(p.lo-a);if(!best||ov>best.ov||(ov===best.ov&&d<best.d))best={p,ov,d};});
+ return best?best.p:null;
+}
+function cageNeckOverlays(rootPc,quality,start,span,on,keyRoot,keyMinor){
+ /* pure: the marks the four overlays put on the large neck for the chord in play, in the KEY POSITION the neck stands at
+    (his [80]) → {shape,label,fits,octave,minor,position,box:{start,end},marks:[{s,f,pc,layer}],layers:[…]} back to front.
+    ④ the complete scale = the key's pattern in the position's window (the worksheet's middle column, his [79]; a minor key
+    is its relative major renumbered) · ③ the pentatonic = that pattern kept to the chord's pentatonic degrees (major chord →
+    major, minor → minor) · ② the arpeggio = that pattern kept to the chord tones (a 7th chord its four) · ① the playable
+    chord = the chord's CAGED form voiced inside the position's window, ONE note a string (across the octaves).
+    No key given → the chord's own scale in its own form's window (major / natural minor / mixolydian / locrian; labelled). */
  const root=((Math.round(+rootPc)||0)%12+12)%12; const q=cageQualNow(quality);
- const sp=Math.max(3,Math.round(+span)||5); const st=Math.max(0,Math.round(+start)||0); const end=st+sp-1;
+ const sp=Math.max(3,Math.round(+span)||5); const st=Math.max(0,Math.round(+start)||0);
  const P=Object.assign({chord:true,arp:false,penta:false,scale:false},on||{});
- const shape=cageShapeAtBox(root,st,sp,q);   /* across the octaves (an octave band's click lands here) */
  const minor=cageIsMinorQ(q)||q==='dim';
  const chordDegs=(q==='dom7'||q==='maj7'||q==='min7')?[...cageDegreeSet(q,'seventh')]:[...cageDegreeSet(q,'shape')];
  const pentaDegs=minor?[0,3,5,7,10]:[0,2,4,7,9];
- const scaleDegs=q==='dim'?[0,2,3,5,6,8,10]:(q==='dom7'?[0,2,4,5,7,9,10]:(cageIsMinorQ(q)?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]));
+ let W, scaleRoot, scaleDegs, position=null, shape=null;
+ if(keyRoot!=null&&isFinite(+keyRoot)){
+  const kr=((Math.round(+keyRoot)||0)%12+12)%12; const km=!!keyMinor;
+  position=cageKeyPositionAt(cageKeyPositions(kr,km),st,sp);
+  W=position?{lo:position.lo,hi:position.hi}:{lo:st,hi:st+sp-1};
+  scaleRoot=kr; scaleDegs=km?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  shape=cageShapeAtBox(root,W.lo,W.hi-W.lo+1,q);   /* the chord voiced inside the position */
+ }else{
+  shape=cageShapeAtBox(root,st,sp,q);
+  scaleRoot=root; scaleDegs=q==='dim'?[0,2,3,5,6,8,10]:(q==='dom7'?[0,2,4,5,7,9,10]:(cageIsMinorQ(q)?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11]));
+  let winFrets=shape?shape.frets:[];
+  if(shape&&cageIsMinorQ(q)){try{const base=cageTransposeForm(shape.shape,root,q);const rel=cageRelativeForm(base,root,q);if(rel&&rel.frets)winFrets=rel.frets.map(f=>f<0?-1:f+12*(shape.octave|0));}catch(e){}}
+  W=cageShapeWindow(winFrets);
+ }
+ const pattern=(P.scale||P.penta||P.arp)?cageScalePattern(scaleRoot,scaleDegs,W):[];
  const marks=[], layers=[];
- const inBox=(id,degs)=>{const D=new Set(degs);let n=0;for(let s=0;s<6;s++)for(let f=st;f<=end;f++){const pc=cageMidi(s,f)%12;if(!D.has((pc-root+12)%12))continue;marks.push({s,f,pc,layer:id});n++;}layers.push(Object.assign({id,count:n},CAGE_NECK_OVERLAY_STYLE[id]));};
- if(P.scale)inBox('scale',scaleDegs);
- if(P.penta)inBox('penta',pentaDegs);
- if(P.arp)inBox('arp',chordDegs);
- if(P.chord&&shape&&shape.frets){let n=0;shape.frets.forEach((f,s)=>{if(f==null||f<0)return;marks.push({s,f,pc:cageMidi(s,f)%12,layer:'chord'});n++;});layers.push(Object.assign({id:'chord',count:n},CAGE_NECK_OVERLAY_STYLE.chord));}
- return {shape:shape?shape.shape:null,label:shape?(shape.label||''):'',fits:!!(shape&&shape.fits),octave:shape?(shape.octave|0):0,minor,box:{start:st,end},marks,layers};
+ const keep=(id,degs)=>{const D=new Set(degs);let n=0;pattern.forEach(m=>{if(!D.has((m.pc-root+12)%12))return;marks.push({s:m.s,f:m.f,pc:m.pc,layer:id});n++;});layers.push(Object.assign({id,count:n},CAGE_NECK_OVERLAY_STYLE[id]));};
+ if(P.scale){let n=0;pattern.forEach(m=>{marks.push({s:m.s,f:m.f,pc:m.pc,layer:'scale'});n++;});layers.push(Object.assign({id:'scale',count:n},CAGE_NECK_OVERLAY_STYLE.scale));}
+ if(P.penta)keep('penta',pentaDegs);
+ if(P.arp)keep('arp',chordDegs);
+ if(P.chord&&shape&&shape.frets){let n=0;shape.frets.forEach((f,s2)=>{if(f==null||f<0)return;marks.push({s:s2,f,pc:cageMidi(s2,f)%12,layer:'chord'});n++;});layers.push(Object.assign({id:'chord',count:n},CAGE_NECK_OVERLAY_STYLE.chord));}
+ return {shape:shape?shape.shape:null,label:shape?(shape.label||''):'',fits:!!(shape&&shape.fits),octave:shape?(shape.octave|0):0,minor,position:position?{shape:position.shape,label:position.label,lo:position.lo,hi:position.hi,octave:position.octave|0}:null,box:{start:W.lo,end:W.hi},marks,layers};
 }
 function cageNeckOverlayDraw(ctx,G,OV){
  /* the overlays on the large neck, behind the MIDI dots — the degree in every mark (Absolute from the scale root, Relative from the chord root) */
  if(!ctx||!OV||!OV.marks||!OV.marks.length)return 0;
- const labelOf=pc=>cageDegFrom(G.numberView==='relative'?G.rootPc:G.scaleRootPc,pc);
+ const rel=G.numberView==='relative'; const labelOf=pc=>cageOvDeg(pc,rel?G.rootPc:G.scaleRootPc,rel?(G.chordMinor==null?null:!!G.chordMinor):(G.scaleMinor==null?null:!!G.scaleMinor));   /* R46 [79]: plain 1–7 in the reference's own scale, the natural minor renumbered */
  let n=0; ctx.save(); ctx.beginPath(); ctx.rect(G.x0-24,0,G.x1-G.x0+48,ctx.canvas.height); ctx.clip();
  for(const m of OV.marks){
   if(m.f<G.viewLo-0.5||m.f>G.viewLo+G.cells+0.5)continue;
@@ -5758,7 +5852,7 @@ function cageMiniOctaves(shapes){
  (shapes||[]).forEach(sh=>{for(let k=12;sh.hi+k<=CAGE_MAX_FRET;k+=12)out.push(Object.assign({},sh,{lo:sh.lo+k,hi:sh.hi+k,startFret:sh.startFret+k,octave:k/12,roots:(sh.roots||[]).map(r=>({s:r.s,f:r.f+k}))}));});
  return out.sort((a,b)=>a.lo-b.lo||a.startFret-b.startFret);
 }
-const CAGE_VIEWS=[{id:'caged',label:'CAGED',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs',on:true},{id:'highway',label:'Strings from the bottom, foreshortened',on:true}];
+const CAGE_VIEWS=[{id:'caged',label:'CAGED System Assistant',on:true},{id:'ball',label:'Bouncing ball',on:true},{id:'angled',label:'Angled neck with globs',on:true},{id:'highway',label:'Strings from the bottom, foreshortened',on:true}];
 function cageGuitarMenu(e){
  /* the drop-down: the views, the toggles, Playback Behaviours… — rows run through wanFloatMenu (the map-menu shell) */
  const q=id=>document.getElementById(id);
@@ -6134,9 +6228,10 @@ function cageLinkNeckDraw(rows){
  let OV=null;   /* R45 [78]: the four overlays for the chord in play, in the position the neck stands at — behind the MIDI dots */
  try{
   const qn=(typeof cageState==='object'&&cageState&&cageState.quality)||'maj';
-  OV=cageNeckOverlays(rootPc,qn,V.start,V.span||5,cageNeckOverlayPrefs());
-  OV.drawn=cageNeckOverlayDraw(ctx,{x0,x1,y0,strGap,fx,viewLo,cells:V.cells,rootPc,scaleRootPc:(typeof cageState==='object'&&cageState)?(+cageState.scaleRootPc||0):0,numberView:(typeof cageState==='object'&&cageState)?cageState.numberView:'absolute'},OV);
-  const _op=document.getElementById('cageOvPos'); if(_op)_op.textContent=(OV.shape||'')+(cageIsMinorQ(qn)?'m':'');
+  OV=cageNeckOverlays(rootPc,qn,V.start,V.span||5,cageNeckOverlayPrefs(),(typeof cageState==='object'&&cageState&&cageState.scaleRootPc!=null)?(+cageState.scaleRootPc||0):null,!!(typeof cageState==='object'&&cageState&&cageState.scaleMinor));   /* R46 [80]: in the KEY's position */
+  OV.drawn=cageNeckOverlayDraw(ctx,{x0,x1,y0,strGap,fx,viewLo,cells:V.cells,rootPc,scaleRootPc:(typeof cageState==='object'&&cageState)?(+cageState.scaleRootPc||0):0,numberView:(typeof cageState==='object'&&cageState)?cageState.numberView:'absolute',chordMinor:(qn==='dim'||qn==='dom7'||qn==='aug'||qn==='sus2'||qn==='sus4')?null:cageIsMinorQ(qn),scaleMinor:(typeof cageState==='object'&&cageState&&cageState.scaleMinor!=null)?!!cageState.scaleMinor:false},OV);
+  const _op=document.getElementById('cageOvPos'); if(_op)_op.textContent=OV.position?OV.position.label:((OV.shape||'')+(cageIsMinorQ(qn)?'m':''));   /* R46 [80]: the key's position */
+  const _of=document.getElementById('cageOvFamily'); if(_of)_of.textContent=OV.position?('· its chords, '+(OV.box.end-OV.box.start+1)+' frets: '+cageKeyFamily((typeof cageState==='object'&&cageState&&cageState.scaleRootPc!=null)?(+cageState.scaleRootPc||0):rootPc,!!(typeof cageState==='object'&&cageState&&cageState.scaleMinor)).join(' ')):'';   /* R46 [81] */
   const _ok=document.getElementById('cageOvPentaKind'); if(_ok)_ok.textContent=OV.minor?'(minor)':'(major)';
  }catch(e){OV=null;}
  ctx.save(); ctx.beginPath(); ctx.rect(x0-NS.rad.current-2,0,x1-x0+NS.rad.current+4,H); ctx.clip();
@@ -7781,7 +7876,7 @@ function cageLinkAttach(w){
   +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;gap:8px;flex-wrap:wrap;">'
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Guitar neck</span>'
   +'<label style="font-size:10px;color:var(--dim);display:flex;align-items:center;gap:4px;">'
-  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]/[66]) — CAGED · Bouncing ball · Angled neck · Strings from the bottom · Ball + notation next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED</option><option value="angled">Angled neck with globs</option><option value="ball">Bouncing ball</option><option value="highway">Strings from the bottom, foreshortened</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
+  +'<label style="font-size:11px;color:var(--text);display:inline-flex;gap:4px;align-items:center;margin-right:8px;" title="The Guitar window&#8217;s VIEW (his [55]/[66]) — CAGED · Bouncing ball · Angled neck · Strings from the bottom · Ball + notation next">View <select id="cageViewSel" style="padding:3px 6px;font-size:11px;"><option value="caged">CAGED System Assistant</option><option value="angled">Angled neck with globs</option><option value="ball">Bouncing ball</option><option value="highway">Strings from the bottom, foreshortened</option><option value="ballnot" disabled>Ball + notation (soon)</option></select></label>'
   +'Layout <select id="cageLayoutView" style="padding:3px 6px;font-size:11px;">'
   +'<option value="midi">MIDI + neck</option>'
   +'<option value="notation">Notation + neck</option>'
@@ -7803,6 +7898,7 @@ function cageLinkAttach(w){
   +'<span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);">Overlays</span>'
   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageOvChord"/><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ff6f8e;"></span>① Playable chord</label>'
   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageOvArp"/><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ffd166;"></span>② Full CAGED arpeggio in <b id="cageOvPos"></b>&nbsp;position</label>'
+  +'<span id="cageOvFamily" style="font-size:10px;color:var(--dim);" title="His [80]/[81]: the diatonic chords of the key — every one of them is voiced inside the position the neck stands in, as wide as its scale pattern"></span>'
   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageOvPenta"/><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#4fd1c5;"></span>③ Pentatonic scale <i id="cageOvPentaKind" style="color:var(--dim);font-style:normal;"></i></label>'
   +'<label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer;"><input type="checkbox" id="cageOvScale"/><span style="display:inline-block;width:14px;height:14px;background:#9aa7ff;"></span>④ Complete scale</label>'
   +'</div>'
@@ -7906,6 +8002,7 @@ function cageSetStatus(m){const e=document.getElementById('cageStatus');if(e)e.t
 function cageApplyPayload(payload){
  if(!payload||typeof payload!=='object')return;
  if(payload.scaleRootPc!=null)cageState.scaleRootPc=((+payload.scaleRootPc)%12+12)%12;
+ if(payload.minorKey!=null)cageState.scaleMinor=!!payload.minorKey;   /* R46 [79] */
  if(payload.rootPc!=null)cageState.chordRootPc=((+payload.rootPc)%12+12)%12;
  if(payload.text){cageState.chordText=String(payload.text);
   const q=cageParseChord(payload.text); cageState.quality=payload.quality||q.quality;}
