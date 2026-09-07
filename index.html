@@ -790,6 +790,23 @@
   body.skinGv2 #gridRow #gridHead.nboxMicro{padding-top:6px;padding-bottom:8px;}
   /* R52 (his [23]): the centre grid SELECTED (a click on its title bar) wears the accent ring — Delete then closes it */
   body.skinGv2 #skCentre [data-gridworld].skSel{outline:2px solid var(--accent);outline-offset:-2px;border-radius:6px;}
+  /* R53 (his [24] ②): ONE tidy grid under GV-2 — the lanes touch (a hairline between them, no 3px gaps), every lane carries the
+     beat grid (bar lines stronger) as its background, and an empty clip span is TRANSPARENT over it instead of a black rectangle */
+  body.skinGv2 #trackStrips .trow,body.skinGv2 #gridRow{margin-bottom:0;border-bottom:1px solid var(--line);}
+  body.skinGv2 #laneRows{gap:0;margin-top:0;}
+  body.skinGv2 .tstrip{background-color:#1a1d25;background-image:repeating-linear-gradient(to right,rgba(255,255,255,.16) 0 1px,transparent 1px var(--barw,136px)),repeating-linear-gradient(to right,rgba(255,255,255,.06) 0 1px,transparent 1px var(--ppb,34px)),repeating-linear-gradient(to right,var(--bandA,#262a33) 0 var(--band,136px),var(--bandB,#1c1f27) var(--band,136px) calc(2*var(--band,136px)));border-radius:0;}
+  /* R53 (his [25]): the lanes alternate light and dark grey bands whose unit follows the zoom (laneBandUnit — 4 bars · 1 bar · 1 beat
+     across this grid's zoom range; 16 bars at a zoom this grid does not reach); the ACTIVE track's lane wears both bands a shade lighter */
+  body.skinGv2 #gridRow .tstrip{--bandA:#363b48;--bandB:#2b303b;}
+  body.skinGv2 .gvwrap>.tstrip{flex:1 1 auto;min-height:0;}
+  body.skinGv2 .scell.gap{background:transparent;}
+  body.skinGv2 .scell.gap .stint{opacity:0;}
+  body.skinGv2 .scell.gap:hover .stint{opacity:0;}
+  /* R53 (his [24] ③): the INSERT MARKER — a line across the tracks that slowly pulses between blue and white, a ▼ at the top of the grid */
+  body.skinGv2 [id="gridWrap"]{position:relative;}
+  .skInsertMark{position:absolute;width:2px;z-index:4;pointer-events:none;background:#5b9cff;color:#5b9cff;animation:skInsertPulse 2.4s ease-in-out infinite;}
+  .skInsertMark::before{content:'';position:absolute;left:-4px;top:-7px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid currentColor;}
+  @keyframes skInsertPulse{0%,100%{background:#5b9cff;color:#5b9cff;}50%{background:#ffffff;color:#ffffff;}}
   body.skinGv2 .thead{padding-right:0;padding-left:8px;}
   body.skinGv2 #laneRows{padding-left:0;padding-right:var(--theadW,110px);}
   body.skinGv2 .nboxWRz{left:0;right:auto;width:12px;}
@@ -899,7 +916,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16673,6 +16690,73 @@ function skinGv2GridChrome(root,id){
  const head=root&&root.querySelector('[id="gridWinHead"]'); if(!head||head._skSelBound)return; head._skSelBound=true;
  head.addEventListener('click',e=>{if(!skinIsGv2())return; if(e.target.closest&&e.target.closest('.wbtn,.cpchip,button,input,select,a,label,.colGrip'))return; e.stopPropagation();e.stopImmediatePropagation();e.preventDefault(); skinLaneSelect('grid:'+id);},true);
 }
+function skinGv2StripGesture(root,id){
+ /* R53 (his [24] ③ + the box; ④): under GV-2 a press on EMPTY grid — a gap span, a lane's bare surface, the strips' background —
+    is neither a swipe nor a clip press: a CLICK puts the insert marker there (the pulsing line, the ▼ at the top of the grid)
+    and moves the playhead; a DRAG draws a box and selects every clip it touches (one lane → the lane's multi-select; several →
+    the cross-track capture). Cancelling the pointerdown stops the gap cell's own mousedown. */
+ if(!root||root._skStripGest)return; root._skStripGest=true;
+ let g=null;
+ const run=fn=>{if(id&&id!=='main'&&typeof withGridWorld==='function')return withGridWorld(id,fn);return fn();};
+ const beatAt=x=>{const st=root.querySelector('.tstrip'); if(!st)return null; const r=st.getBoundingClientRect(); const step=(typeof gridStep==='function')?gridStep():1; const b=Math.round(((x-r.left)/PPB)/step)*step; return Math.max(0,Math.min(LOOP,+b.toFixed(4)));};
+ root.addEventListener('pointerdown',ev=>{
+  if(ev.button!==0||!skinIsGv2())return;
+  const t=ev.target; if(!t||!t.closest)return;
+  if(t.closest('.scell:not(.gap),.thead,.tgrip,.wbtn,.cpchip,button,input,select,.rzh,.rzhN,.nboxWRz,.nboxHRz,[id="gridWinHead"],.blane,svg,.chordlane,[id="chordRow"],.skGv2Bar,.colGrip,.tcorner'))return;
+  if(!t.closest('[id="trackStrips"],[id="gridRow"],.tstrip'))return;
+  ev.preventDefault();ev.stopPropagation();
+  g={x0:ev.clientX,y0:ev.clientY,moved:false,box:null};
+  try{root.setPointerCapture(ev.pointerId);}catch(e){}
+ },true);
+ root.addEventListener('pointermove',ev=>{
+  if(!g)return; const dx=ev.clientX-g.x0,dy=ev.clientY-g.y0;
+  if(!g.moved&&Math.hypot(dx,dy)<4)return; g.moved=true;
+  if(!g.box){g.box=document.createElement('div');g.box.className='skMarquee';document.body.appendChild(g.box);}
+  g.box.style.cssText='position:fixed;z-index:120;pointer-events:none;border:1px solid var(--accent);background:rgba(240,181,90,.12);left:'+Math.min(g.x0,ev.clientX)+'px;top:'+Math.min(g.y0,ev.clientY)+'px;width:'+Math.abs(dx)+'px;height:'+Math.abs(dy)+'px;';
+ },true);
+ const done=ev=>{
+  if(!g)return; const G=g; g=null; if(G.box)G.box.remove();
+  const clearSel=()=>{try{xselClear();}catch(e){} stripSel=null;stripMulti={t:null,set:new Set()};selChordSet.clear();selChord=null;};
+  if(!G.moved){
+   run(()=>{const b=beatAt(G.x0); if(b==null)return; clearSel(); insertMarkSet(b); try{setPlayheadBeat(b);}catch(e){} refresh(false);drawTrackSel();drawMainStrip();drawChordLane();});
+   return;
+  }
+  const ya=Math.min(G.y0,ev.clientY),yb=Math.max(G.y0,ev.clientY),xa=Math.min(G.x0,ev.clientX),xb=Math.max(G.x0,ev.clientX);
+  const strips=[...root.querySelectorAll('.tstrip')].filter(st=>{const r=st.getBoundingClientRect();return r.bottom>=ya&&r.top<=yb&&st.dataset.trk;});
+  run(()=>{
+   const b0=beatAt(xa),b1=beatAt(xb); if(b0==null)return;
+   const spans={},gaps={};
+   for(const st of strips){const t=st.dataset.trk; if(!(t in project.tracks))continue; spans[t]=trackCellSpans(t); gaps[t]=[...st.querySelectorAll('.scell')].map(c=>c.classList.contains('gap'));}
+   const pick=marqueeCells(spans,b0,b1,gaps); const ts=Object.keys(pick);
+   clearSel();
+   if(ts.length===1){const t=ts[0];stripSel={t,i:pick[t][0]};stripMulti={t,set:new Set(pick[t])};selSurface='strip';}
+   else if(ts.length>1){for(const t of ts)xsel.cells[t]=new Set(pick[t]);selSurface='strip';}
+   refresh(false);drawTrackSel();drawMainStrip();drawChordLane();
+  });
+ };
+ root.addEventListener('pointerup',done,true);
+ root.addEventListener('pointercancel',()=>{if(g&&g.box)g.box.remove();g=null;},true);
+}
+function insertMarkSet(b){
+ const w=(typeof GRID_WORLDS==='object')?GRID_WORLDS[CUR_GRID]:null; if(w)w.insertBeat=b; insertMarkDraw();
+}
+function insertMarkDraw(){
+ /* R53 (his [24] ③): the insert marker of the CURRENT world — a line from the top of the strips to the bottom of the active row
+    at its beat, in the world's own wrap (the ▼ and the pulse are CSS). Hidden outside GV-2 or with no beat set. */
+ try{
+  const w=(typeof GRID_WORLDS==='object')?GRID_WORLDS[CUR_GRID]:null; const sv=(typeof curSvg==='function')?curSvg():svg;
+  const wrap=(sv&&sv.closest)?sv.closest('[id="gridWrap"]'):null; if(!wrap)return;
+  let m=wrap.querySelector(':scope > .skInsertMark');
+  const b=(w&&typeof w.insertBeat==='number')?w.insertBeat:null;
+  if(b==null||!(typeof skinIsGv2==='function'&&skinIsGv2())){if(m)m.style.display='none';return;}
+  if(!m){m=document.createElement('div');m.className='skInsertMark';wrap.appendChild(m);}
+  const strip=wrap.querySelector('.tstrip'),ts=wrap.querySelector('[id="trackStrips"]'),gr=wrap.querySelector('[id="gridRow"]');
+  if(!strip||!ts||!gr){m.style.display='none';return;}
+  const W=wrap.getBoundingClientRect(),S=strip.getBoundingClientRect(),T=ts.getBoundingClientRect(),G=gr.getBoundingClientRect();
+  const top=Math.min(T.top,G.top)-W.top,bot=Math.max(T.bottom,G.bottom)-W.top;
+  m.style.display='';m.style.left=(S.left-W.left+b*PPB-1)+'px';m.style.top=top+'px';m.style.height=Math.max(4,bot-top)+'px';
+ }catch(e){}
+}
 function skinGv2Expand(winId){
  /* R49 [16]: the miniature's larger version fills the floor-to-ceiling right rectangle; when the window needs more room than the pane
     has, the border eases out to the left in his bell curve — slow, then fast, then slow — and the new share is remembered */
@@ -17514,7 +17598,7 @@ function skinLeafMount(leaf,path,host,ctx){
   if(P.centreId&&!cat.some(g=>g.id===P.centreId))P.centreId=cat.length?cat[0].id:'';
   if(!P.centreId&&cat.length)P.centreId=cat[0].id;
   const cur=cat.find(g=>g.id===P.centreId)||null;
-  if(cur){cell(cur.el,true);el.appendChild(cur.el);try{skinGv2GridChrome(cur.el,cur.id);}catch(e){}}
+  if(cur){cell(cur.el,true);el.appendChild(cur.el);try{skinGv2GridChrome(cur.el,cur.id);skinGv2StripGesture(cur.el,cur.id);}catch(e){}}
   else{
    const empty=document.createElement('div');
    empty.style.cssText='padding:24px;text-align:center;color:var(--dim);font-size:12px;';
@@ -17542,17 +17626,8 @@ function skinLeafMount(leaf,path,host,ctx){
    if(ev.target.closest&&ev.target.closest('.skGv2Bar'))return;
    try{skinGv2FocusShelf();}catch(e){}
   },true);
-  /* swipe left→right reveals the next multi-track */
-  let _sx=null,_sy=null;
-  el.addEventListener('pointerdown',ev=>{
-   if(ev.button!==0||(ev.target.closest&&ev.target.closest('.skGv2Bar')))return;
-   _sx=ev.clientX;_sy=ev.clientY;
-  });
-  el.addEventListener('pointerup',ev=>{
-   if(_sx==null)return;const dx=ev.clientX-_sx,dy=ev.clientY-_sy;_sx=null;
-   if(Math.abs(dx)<64||Math.abs(dx)<Math.abs(dy)*1.2)return;
-   try{skinGv2CentreCycle(dx>0?1:-1);}catch(e){}
-  });
+  /* R53 (his [24] ④): the swipe that cycled the centre's grids is RETIRED — any 64px horizontal drag (a box drawn around clips)
+     jumped to the next multi-track. The ▾ menu switches grids; skinGv2CentreCycle stays for it. */
   el.addEventListener('contextmenu',ev=>{
    if(ev.target!==el&&!(ev.target.classList&&ev.target.classList.contains('skPane')))return;
    ev.preventDefault();ev.stopPropagation();
@@ -37016,6 +37091,7 @@ function drawTrackSel(){
   strip.dataset.trk=t;
   strip.style.height=hpx+'px';
   strip.style.marginLeft=GUT+'px';strip.style.width=(LOOP*PPB)+'px';
+  strip.style.setProperty('--ppb',PPB+'px');strip.style.setProperty('--barw',(4*PPB)+'px');strip.style.setProperty('--band',(laneBandUnit(PPB)*PPB)+'px');   /* R53 [24] ② / [25]: the lane's beat grid and its bands */
   buildStripContent(strip,t);
   sw.appendChild(strip);
   /* v3 (client Q3): strip resize lines moved to the name box — see trackHead */
@@ -37026,6 +37102,7 @@ function drawTrackSel(){
  LANE_VIEWS.length=laneIdx;   /* July 24 r3: drop lane views whose position vanished */
  applyCornerPin();   /* July 30 fix 4: a just-toggled corner triangle stays under the cursor */
  window.__stripSig=stripSig();
+ try{insertMarkDraw();}catch(e){}   /* R53 [24] ③: the insert marker follows the strips' geometry */
 }
 function hexA(hex,a){
  const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex||'');
@@ -37063,6 +37140,30 @@ function toggleCellInCapture(cells,t,ci){
  const s=cells[t]||(cells[t]=new Set());
  if(s.has(ci))s.delete(ci);else s.add(ci);
  return cells;
+}
+function stripRangeIdx(anchor,i,gaps){
+ /* R53 (his [24] ①): ⇧-click selects the RANGE — every clip from the anchor (the lane's last-clicked clip) to this one, the
+    empty spans skipped; with no anchor, this clip alone. Pure — unit-tested. */
+ if(anchor==null)return [i];
+ const out=[],lo=Math.min(anchor,i),hi=Math.max(anchor,i);
+ for(let k=lo;k<=hi;k++)if(k===i||k===anchor||!(gaps&&gaps[k]))out.push(k);
+ return out;
+}
+function marqueeCells(spans,b0,b1,gaps){
+ /* R53 (his [24], the box): the clips a box [b0,b1] touches on each lane it crosses — empty spans skipped, a lane with none
+    dropped. Pure — unit-tested. */
+ const out={};
+ for(const t in spans){const idx=[];spans[t].forEach((sp,ci)=>{if(gaps&&gaps[t]&&gaps[t][ci])return;if(sp.a<b1-1e-6&&sp.a+sp.d>b0+1e-6)idx.push(ci);});if(idx.length)out[t]=idx;}
+ return out;
+}
+function laneBandUnit(ppb){
+ /* R53 (his [25]): the band unit follows the zoom — 16 bars fully zoomed out, then 4 bars, 1 bar, 1 beat as the zoom grows: the
+    SMALLEST unit (in beats) whose band is wide enough to read, 120px. Pure — unit-tested. */
+ for(const u of [1,4,16,64])if(u*ppb>=120)return u;
+ return 64;
+}
+function stripGapFlags(t){
+ const ns=stripNotes(t);return trackCellSpans(t).map(sp=>!cellNoteIndices(ns,sp.a,sp.a+sp.d).length);
 }
 function xselToggleCell(t,ci){
  /* 2026-08-11a FIX 1: ⇧-click a clip on ANY lane while a capture (or a selection on
@@ -37395,6 +37496,7 @@ function drawMainStrip(){
  el.dataset.trk=activeTrack;
  el.style.height=Math.max(skinTrackFloor(),Math.round(GRID_VIEWS.main.px))+'px';   /* July 30 fix 2: box floor · RAW [6]: under GV-2 the active track reaches MICRO like its siblings */
  el.style.marginLeft=GUT+'px';el.style.width=(LOOP*PPB)+'px';
+ el.style.setProperty('--ppb',PPB+'px');el.style.setProperty('--barw',(4*PPB)+'px');el.style.setProperty('--band',(laneBandUnit(PPB)*PPB)+'px');   /* R53 [24] ② / [25]: the lane's beat grid and its bands */
  buildStripContent(el,activeTrack);
 }
 function spanRows(notes,a,b){
@@ -37481,8 +37583,10 @@ function stripCellDown(ev,t,i,a,d){
   if((stripMulti.t&&stripMulti.set.size&&stripMulti.t!==t)||(!stripMulti.t&&stripSel&&stripSel.t!==t&&stripSel.i!=null)){
    promoteStripSelectionToXsel();xselToggleCell(t,i);return;
   }
-  if(stripMulti.t!==t)stripMulti={t,set:new Set(stripSel&&stripSel.t===t&&stripSel.i!=null?[stripSel.i]:[])};
-  if(stripMulti.set.has(i))stripMulti.set.delete(i);else stripMulti.set.add(i);
+  const anchor=(stripSel&&stripSel.t===t&&stripSel.i!=null)?stripSel.i:null;
+  if(stripMulti.t!==t)stripMulti={t,set:new Set(anchor!=null?[anchor]:[])};
+  if(stripMulti.set.has(i))stripMulti.set.delete(i);
+  else{let gaps=null;try{gaps=stripGapFlags(t);}catch(e){} for(const k of stripRangeIdx(anchor,i,gaps))stripMulti.set.add(k);}   /* R53 (his [24] ①): the RANGE from the anchor, every clip between too */
   stripSel={t,i};
   selSurface='strip';
   selChordSet.clear();selChord=null;
