@@ -780,8 +780,11 @@
   body.skinGv2 #snapDock{flex-direction:row-reverse;}
   body.skinGv2 #gridRow{display:flex;align-items:stretch;}
   body.skinGv2 #gridRow #flyCol{order:0;}
-  body.skinGv2 #gridRow .gvwrap{order:1;}
-  body.skinGv2 #gridRow #gridHead{order:2;}
+  /* R51 (his [21]): the ACTIVE track's row (#gridRow) obeys the same heads-right law as its siblings — row-reverse, the head hugging
+     the row's right edge, the lane overflowing left — instead of order rules that pushed its head past the row's end (the "long track") */
+  body.skinGv2 #gridRow{flex-direction:row-reverse!important;}
+  body.skinGv2 #gridRow .gvwrap{order:0;}
+  body.skinGv2 #gridRow #gridHead{order:0;}
   body.skinGv2 .thead{padding-right:0;padding-left:8px;}
   body.skinGv2 #laneRows{padding-left:0;padding-right:var(--theadW,110px);}
   body.skinGv2 .nboxWRz{left:0;right:auto;width:12px;}
@@ -891,7 +894,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-06ah</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
