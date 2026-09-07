@@ -227,6 +227,9 @@
   /* his 174th: inside the Harmonizer's expanded grid the ghosts are CLICKABLE (double-click = switch to that voice) ·
      his 180th, THE HOLLOW-VOICES RULE: the non-current voices are HOLLOW — the fill goes, the note keeps its COLOR as the boundary only */
   .harmInline svg rect.gnGhost{pointer-events:auto;cursor:pointer;opacity:.55;fill:none;stroke-width:1.4;}
+  .harmInline svg rect.gnGhost[data-gt="x901"]{opacity:.92;stroke-width:1.8;}
+  .harmInline [id="gridWrap"]{position:relative;}   /* R58 (his [33]): the insert marker and the audition playhead sit in the Harmonizer grid's own wrap */
+  .harmPlayLine{position:absolute;width:2px;background:#ffffff;opacity:.9;z-index:5;pointer-events:none;box-shadow:0 0 6px rgba(255,255,255,.6);}   /* R58 (his [32]): the ORIGINAL melody — hollow, a coloured border — reads clearly beside the selected voice's solid notes */
   /* THE POP-UP ROLL SKIN (2.6 Q7 · the 85th R21 look ruling — decision numbers, the §3 name rule):
      inside an .essObjPop the real grid wears the roll look — light note blocks on the dark
      ground, the ghosts as HOLLOW OUTLINES ("a bit clearer", his 98th). Fill only — the
@@ -929,7 +932,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07h</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07i</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16769,13 +16772,14 @@ function insertMarkDraw(){
   const wrap=(sv&&sv.closest)?sv.closest('[id="gridWrap"]'):null; if(!wrap)return;
   let m=wrap.querySelector(':scope > .skInsertMark');
   const b=(w&&typeof w.insertBeat==='number')?w.insertBeat:null;
-  if(b==null||!(typeof skinIsGv2==='function'&&skinIsGv2())){if(m)m.style.display='none';return;}
+  if(b==null||!((typeof skinIsGv2==='function'&&skinIsGv2())||(w&&w.insertMarkAlways))){if(m)m.style.display='none';return;}   /* R58 [33]: a world that asked for the marker (the Harmonizer's grid) keeps it in every view */
   if(!m){m=document.createElement('div');m.className='skInsertMark';wrap.appendChild(m);}
-  const strip=wrap.querySelector('.tstrip'),ts=wrap.querySelector('[id="trackStrips"]'),gr=wrap.querySelector('[id="gridRow"]');
-  if(!strip||!ts||!gr){m.style.display='none';return;}
-  const W=wrap.getBoundingClientRect(),S=strip.getBoundingClientRect(),T=ts.getBoundingClientRect(),G=gr.getBoundingClientRect();
+  /* R58 (his [33]): the x origin is the first LANE BOX (a strip's or the active row's) — a rig world with hidden tracks has no strip */
+  const lane=wrap.querySelector('.trow > .gvwrap, [id="gridRow"] > .gvwrap'),ts=wrap.querySelector('[id="trackStrips"]'),gr=wrap.querySelector('[id="gridRow"]');
+  if(!lane||!gr){m.style.display='none';return;}
+  const W=wrap.getBoundingClientRect(),Lr=lane.getBoundingClientRect(),G=gr.getBoundingClientRect(),T=(ts&&ts.getBoundingClientRect().height>0)?ts.getBoundingClientRect():G;
   const top=Math.min(T.top,G.top)-W.top,bot=Math.max(T.bottom,G.bottom)-W.top;
-  m.style.display='';m.style.left=(S.left-W.left+b*PPB-1)+'px';m.style.top=top+'px';m.style.height=Math.max(4,bot-top)+'px';
+  m.style.display='';m.style.left=(Lr.left-W.left+GUT+b*PPB-1)+'px';m.style.top=top+'px';m.style.height=Math.max(4,bot-top)+'px';
  }catch(e){}
 }
 function skinGv2Expand(winId){
@@ -26872,14 +26876,22 @@ function harmVoiceHarvest(){
 function harmAudition(){
  /* melody + every harmony line together, playback-only through the band's own doors */
  const r=harmRun();if(!r)return;
+ /* R58 (his [33]): the audition starts from the grid's insert marker when one is set, and a PLAYHEAD runs across the grid — the run
+    is set going before the audio doors, so it needs no audio to move */
+ const bpm=+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96);
+ const spb=60/Math.max(40,Math.min(220,bpm));
+ const hw=harmState.world&&harmState.world.w&&GRID_WORLDS[harmState.world.w.id]?GRID_WORLDS[harmState.world.w.id]:null;
+ const mark=(hw&&typeof hw.insertBeat==='number')?hw.insertBeat:null;
+ const b0=(mark!=null&&mark<r.rows[r.rows.length-1][0]+r.rows[r.rows.length-1][1])?mark:r.rows[0][0];
+ let bEnd=b0;
+ for(const n of r.rows){if(n[0]<b0-1e-6)continue;if(n[0]+n[1]>bEnd)bEnd=n[0]+n[1];}
+ for(const line of r.res.voices)for(const h of line){if(h[0]<b0-1e-6)continue;if(h[0]+h[1]>bEnd)bEnd=h[0]+h[1];}
+ try{harmPlayheadRun(b0,bEnd,spb);}catch(e){}
  try{
   const t0=Tone.now()+.06;
-  const bpm=+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96);
-  const spb=60/Math.max(40,Math.min(220,bpm));
-  const b0=r.rows[0][0];
-  for(const n of r.rows)inst.note('melody',[n[2]],Math.max(.06,n[1]*spb*.95),t0+(n[0]-b0)*spb,.72);
+  for(const n of r.rows){if(n[0]<b0-1e-6)continue;inst.note('melody',[n[2]],Math.max(.06,n[1]*spb*.95),t0+(n[0]-b0)*spb,.72);}
   for(const line of r.res.voices)
-   for(const h of line)inst.note('comping',[h[2]],Math.max(.06,h[1]*spb*.95),t0+(h[0]-b0)*spb,.5);
+   for(const h of line){if(h[0]<b0-1e-6)continue;inst.note('comping',[h[2]],Math.max(.06,h[1]*spb*.95),t0+(h[0]-b0)*spb,.5);}
   harmStatus((r.res.voices.length)+' harmony line'+(r.res.voices.length>1?'s':'')+' under '+r.rows.length+' melody note'+(r.rows.length>1?'s':'')+' — nothing written. ✓ writes them.');
  }catch(e){}
 }
@@ -26923,7 +26935,7 @@ function buildHarmWindow(){
   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
   +'<span class="cpchip'+(st.type==='topline'?' on':'')+'" id="harmTypeTop" title="Follow-the-topline — a harmony voice shadows every melody note at consonant intervals below.">🎤 Follow the topline</span>'
   +'<span class="cpchip'+(st.type==='counter'?' on':'')+'" id="harmTypeCtr" title="Background counter-melody — its own slower or faster line under the melody, contrary motion when it can.">🌊 Minimal (counter-melody)</span>'
-  +'<label style="font-size:11px;color:var(--text);" title="2–5 voices — the melody counts as one; the rest stack below, each under the last.">Voices <select id="harmVoices">'+[2,3,4,5].map(v=>'<option value="'+v+'"'+(st.voices===v?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'
+  +'<label style="display:none;">Voices <select id="harmVoices">'+[2,3,4,5].map(v=>'<option value="'+v+'"'+(st.voices===v?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'   /* R58 (his [32]): the [+] under the lanes adds voices; this hidden select mirrors the count (the older suites' hook) */
   +'<label style="display:none;">Starting note <select id="harmStart">'+harmStartOptions(st.simplify).map(o=>'<option value="'+o[0]+'"'+((st.starts&&st.starts[0]!=null?String(st.starts[0]):st.start)===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>'   /* R57: the starting notes live on the voice LANES below; this hidden select mirrors Voice 2's (the older suites' hook) */
   +'<label id="harmSpeedWrap" style="display:'+(st.type==='counter'?'flex':'none')+';gap:5px;align-items:center;font-size:11px;color:var(--text);" title="Slower ↔ faster (0–100): a slow counter sustains long tones; a fast one pulses.">Slower ⟷ faster <input id="harmSpeed" type="range" min="0" max="100" value="'+st.speed+'" style="width:110px;accent-color:var(--accent);"></label>'
   +'</div>'
@@ -26941,8 +26953,9 @@ function buildHarmWindow(){
   +'<button id="harmSplitBtn" style="padding:5px 12px;font-size:12px;background:#3a3e4d;color:#e9eaef;" title="The split-to-tracks option — each voice lands on its own new track, labeled Harmony 2, 3…">⇉ Split to tracks</button>'
   +'<span id="harmStatus" style="font-size:10.5px;color:var(--dim);"></span>'
   +'</div>';
- const _obj='<div id="harmLanes" style="display:flex;flex-direction:column;gap:6px;width:100%;margin-top:8px;"></div>'   /* R57 (his [30]): the voices as LANES — Voice 1 the existing melody, Voice 2… the harmonies, each with its own starting note */
-  +'<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;'+(_split?'flex-direction:column;align-items:flex-start;flex:1;justify-content:center;':'margin-top:8px;')+'"></div>';
+ /* R58 (his [32]): the GRID first — open on launch in every assembly — and the voice LANES under it with their [+] */
+ const _obj='<div id="harmObjRow" style="display:flex;gap:8px;align-items:center;flex-direction:column;align-items:flex-start;'+(_split?'flex:1;justify-content:center;':'margin-top:8px;')+'"></div>'
+  +'<div id="harmLanes" style="display:flex;flex-direction:column;gap:6px;width:100%;margin-top:8px;"></div>';
  B.innerHTML=_split
   ?('<div style="display:flex;gap:14px;align-items:stretch;">'
     +'<div id="harmMain" style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:8px;">'+_prose+_obj+'</div>'
@@ -26963,8 +26976,9 @@ function buildHarmWindow(){
  on('harmHear',()=>harmAudition());
  on('harmApplyBtn',()=>harmApply(false));
  on('harmSplitBtn',()=>harmApply(true));
- if(_split)harmInlineMount();else harmObjMount();   /* his 173rd: the split view carries the EXPANDED object */
+ harmInlineMount();   /* R58 (his [32]): the grid is OPEN when the Harmonizer launches — in the column as in the split view (his 173rd's expanded object) */
  try{harmLanesRender();}catch(e){}
+ try{const st=document.getElementById('harmStatus');if(st&&!st.textContent&&harmState.last)st.textContent=harmSrcNote();}catch(e){}   /* R56: say whose melody this is (the tile no longer carries it) */
 }
 const HARM_LANE_COLORS=['#4fd1c5','#9aa7ff','#ff6f8e','#c5e384'];
 function harmLanesRender(){
@@ -26975,9 +26989,12 @@ function harmLanesRender(){
  const host=document.getElementById('harmLanes');if(!host)return;
  host.innerHTML='';
  const r=harmState.last;if(!r||!r.rows||!r.rows.length)return;
- const lines=[{name:'Voice 1 · Existing melody',rows:r.rows,color:'#f0b55a',k:-1}];
- r.res.voices.forEach((v,k)=>lines.push({name:'Voice '+(k+2)+' · Harmony',rows:harmVoiceRows(k),color:HARM_LANE_COLORS[k%HARM_LANE_COLORS.length],k}));
  let t0=1e9,t1=0,lo=127,hi=0;
+ /* R58 (his [32]): the lanes are the HARMONY voices — Voice 1 first — the original melody is the hollow reference in the grid
+    (its starting degree in the caption above the lanes) */
+ const lines=[];
+ r.res.voices.forEach((v,k)=>lines.push({name:'Voice '+(k+1),rows:harmVoiceRows(k),color:HARM_LANE_COLORS[k%HARM_LANE_COLORS.length],k}));
+ for(const n of r.rows){if(n[0]<t0)t0=n[0];if(n[0]+n[1]>t1)t1=n[0]+n[1];if(n[2]<lo)lo=n[2];if(n[2]>hi)hi=n[2];}
  for(const L of lines)for(const n of L.rows){if(n[0]<t0)t0=n[0];if(n[0]+n[1]>t1)t1=n[0]+n[1];if(n[2]<lo)lo=n[2];if(n[2]>hi)hi=n[2];}
  if(!(t1>t0))t1=t0+1;
  lo=Math.max(0,lo-1);hi=Math.min(127,hi+1);
@@ -26985,17 +27002,19 @@ function harmLanesRender(){
  const degOf=m=>{if(!c0)return '';const iv=((m-(c0.r||0))%12+12)%12;return HARM_DEG_NAME[iv]||'';};
  const split=!!document.querySelector('#harmCtl');
  const W=Math.max(220,(host.clientWidth||(host.parentElement&&host.parentElement.clientWidth)||300)-4),H=30;
+ const cap=document.createElement('div');cap.id='harmOrigCap';cap.style.cssText='font-size:11px;color:var(--dim);';
+ const odg=degOf(r.rows[0][2]);cap.textContent='Original melody'+(odg?(' · starts on the '+odg+' of the chord'):'')+' · the hollow notes in the grid';
+ host.appendChild(cap);
  lines.forEach(L=>{
-  const row=document.createElement('div');row.className='harmLane';row.setAttribute('data-voice',String(L.k+2));
-  row.style.cssText='display:flex;flex-direction:column;gap:3px;';
+  const on=harmState.voiceSel===L.k;
+  const row=document.createElement('div');row.className='harmLane'+(on?' on':'');row.setAttribute('data-voice',String(L.k+1));
+  row.style.cssText='display:flex;flex-direction:column;gap:3px;padding:4px 6px;border-radius:6px;'+(on?'outline:1px solid '+L.color+';':'');
   const head=document.createElement('div');head.style.cssText='display:flex;gap:8px;align-items:center;font-size:11px;flex-wrap:wrap;';
-  const nm=document.createElement('span');nm.className='harmLaneName';nm.style.cssText='font-weight:600;color:'+L.color+';';nm.textContent=L.name;
+  const nm=document.createElement('span');nm.className='cpchip harmLaneName'+(on?' on':'');nm.style.cssText='font-weight:600;color:'+L.color+';cursor:pointer;';nm.textContent=L.name;
+  nm.title='This voice ON — it is the solid, editable line in the grid; the original melody stays hollow behind it';
+  nm.onclick=()=>{if(harmState.voiceSel===L.k)return;harmVoiceHarvest();harmState.voiceSel=L.k;harmInlineMount();harmLanesRender();};
   head.appendChild(nm);
-  if(L.k<0){
-   const d=document.createElement('span');d.className='harmLaneStart';d.style.cssText='color:var(--dim);';
-   const dg=degOf(L.rows[0][2]);d.textContent=dg?('starts on the '+dg+' of the chord'):'';
-   head.appendChild(d);
-  }else{
+  {
    const lab=document.createElement('label');lab.style.cssText='display:flex;gap:4px;align-items:center;color:var(--text);';
    lab.appendChild(document.createTextNode('Starting note'));
    const sel=document.createElement('select');sel.className='harmLaneSel';sel.setAttribute('data-voice',String(L.k));
@@ -27005,7 +27024,7 @@ function harmLanesRender(){
    lab.appendChild(sel);head.appendChild(lab);
    const first=L.rows[0]?degOf(L.rows[0][2]):'';
    if(first){const d=document.createElement('span');d.className='harmLaneStart';d.style.cssText='color:var(--dim);';d.textContent='→ the '+first+(L.rows[0][2]>r.rows[0][2]?' above':' below');head.appendChild(d);}
-   if(split){const ed=document.createElement('span');ed.className='cpchip harmLaneEdit'+(harmState.voiceSel===L.k?' on':'');ed.textContent='✎';ed.title='Edit this voice in the grid';ed.onclick=()=>{harmVoiceHarvest();harmState.voiceSel=L.k;harmInlineMount();harmLanesRender();};head.appendChild(ed);}
+   if(r.res.voices.length>1){const x=document.createElement('span');x.className='wbtn harmLaneDel';x.textContent='✕';x.title='Remove this voice';x.onclick=()=>{harmState.voices=Math.max(2,harmState.voices-1);harmState.starts.splice(L.k,1);if(harmState.voiceSel>=harmState.voices-1)harmState.voiceSel=0;harmState.last=null;buildHarmWindow();};head.appendChild(x);}
   }
   row.appendChild(head);
   const cv=document.createElement('canvas');cv.className='harmLaneCv';cv.width=W;cv.height=H;cv.style.cssText='width:'+W+'px;height:'+H+'px;border-radius:4px;background:#1a1d25;border:1px solid var(--line);';
@@ -27018,6 +27037,12 @@ function harmLanesRender(){
   row.appendChild(cv);
   host.appendChild(row);
  });
+ /* R58 (his [32]): [+] adds a voice (up to five with the melody) */
+ const add=document.createElement('span');add.className='cpchip';add.id='harmAddVoice';add.textContent='[+] Add a voice';
+ add.title='Add another harmony voice under the last (five voices with the melody at most)';
+ if(harmState.voices>=5){add.style.opacity='.4';add.title='Five voices with the melody is the most';}
+ add.onclick=()=>{if(harmState.voices>=5)return;harmState.voices=Math.min(5,harmState.voices+1);harmState.last=null;buildHarmWindow();};
+ host.appendChild(add);
 }
 /* ==== his 179th — THE TRACK MIDI MAGNIFIER: the fixed-zoom band (2.6 Q7 class; the
    reference's name stays in the private docs). One engine serves the Harmonizer's
@@ -27258,14 +27283,8 @@ function harmInlineMount(){
  /* the tabs row + ⤢ */
  const bar=document.createElement('div');
  bar.style.cssText='display:flex;gap:6px;align-items:center;width:100%;';
- for(let k=0;k<r.res.voices.length;k++){
-  const c=document.createElement('span');
-  c.className='cpchip'+(harmState.voiceSel===k?' on':'');
-  c.textContent='Voice '+(k+2)+' · Harmony';
-  c.title='Edit this harmony voice — the others (and the melody) stay as ghost notes behind it. Your edits keep when you flip tabs.';
-  c.onclick=()=>{harmVoiceHarvest();harmState.voiceSel=k;harmInlineMount();};
-  bar.appendChild(c);
- }
+ /* R58 (his [32]): the voice tabs are gone — the lanes under the grid are the voices; the bar keeps a name and ⤢ */
+ {const c=document.createElement('span');c.style.cssText='font-size:11px;font-weight:600;color:var(--text);';c.textContent='Voice '+(harmState.voiceSel+1)+' in the grid · the original melody hollow';bar.appendChild(c);}
  const mx=document.createElement('span');
  mx.className='cpchip';mx.id='harmMax';mx.textContent=harmState.float?'🗗 Return':'⤢ Maximize';
  mx.style.marginLeft='auto';
@@ -27276,7 +27295,7 @@ function harmInlineMount(){
  /* the world: the current voice on the face track, the rest as ghost tracks */
  const cur=harmVoiceRows(harmState.voiceSel);
  if(!cur.length){host.appendChild(Object.assign(document.createElement('div'),{textContent:'This voice came out empty — loosen the options (extensions, classical) or pick another starting note.'}));return;}
- const o={id:'harmv:'+harmState.voiceSel,name:'Voice '+(harmState.voiceSel+2)+' · Harmony',strand:'melody',data:{rows:cur},org:'harmPanel'};
+ const o={id:'harmv:'+harmState.voiceSel,name:'Voice '+(harmState.voiceSel+1),strand:'melody',data:{rows:cur},org:'harmPanel'};
  const m=essObjWorldMint(o);
  if(!m){host.appendChild(document.createTextNode('The voice would not realize.'));return;}
  harmState.world=m;
@@ -27287,11 +27306,12 @@ function harmInlineMount(){
    if(k===harmState.voiceSel)continue;
    project.tracks['x9'+(10+k)]=harmVoiceRows(k);
   }
-  /* R57 (his [30]): the melody and the other voices are VISIBLE lanes under the grid, named — not only ghosts in it */
+  /* R58 (his [32]): the original melody rides the grid as HOLLOW notes (the gnGhost law, hidden track x901 — a coloured border,
+     nothing inside); the other voices are ghosts too and lanes below; the selected voice is the solid, editable line */
   try{
-   hiddenTracks.delete('x901');trackLabels['x901']='Voice 1 · Existing melody';
-   for(let k=0;k<r.res.voices.length;k++){if(k===harmState.voiceSel)continue;hiddenTracks.delete('x9'+(10+k));trackLabels['x9'+(10+k)]='Voice '+(k+2)+' · Harmony';}
-   trackLabels[m.face.track]='Voice '+(harmState.voiceSel+2)+' · Harmony (editing)';
+   hiddenTracks.add('x901');trackLabels['x901']='Original melody';   /* no strip row for it — it lives in the grid as the hollow notes */
+   for(let k=0;k<r.res.voices.length;k++){if(k===harmState.voiceSel)continue;hiddenTracks.add('x9'+(10+k));trackLabels['x9'+(10+k)]='Voice '+(k+1);}
+   trackLabels[m.face.track]='Voice '+(harmState.voiceSel+1);
   }catch(e){}
   /* his 175th: this grid IS the magnifier — it renders LARGER than the melody above
      (PPB ≥ 90), so it overflows, scrolls, and the beat map has something to move.
@@ -27309,6 +27329,7 @@ function harmInlineMount(){
  m.w.els.root.style.marginTop='0';
  const scrollEl=m.w.els.root.querySelector('[id="gridWrap"]')||m.w.els.root;   /* the WORLD'S inner gridWrap is the real horizontal scroller */
  host.appendChild(wrap);
+ try{harmGridGesture(wrap,m.w.id);}catch(e){}   /* R58 (his [33]): a click on empty grid sets the insert marker + playhead */
  /* his 174th ①: a double-click on a GHOST note switches to its voice */
  wrap.addEventListener('dblclick',e=>{
   const t=e.target;
@@ -27325,6 +27346,45 @@ function harmInlineMount(){
     proportional by scrollable width; a reentrance flag stops the echo) */
  const _lnk=magLinkScroll(scrollEl,m.w.id,magMainGridEl());   /* the ONE magnifier-law engine (his 175th/177th) */
  if(_lnk)harmState.world._magLink=_lnk;
+}
+function harmGridGesture(wrap,wid){
+ /* R58 (his [33]): a click on the Harmonizer grid's EMPTY space sets the pulsing insert marker there (R53's line, the ▼ at its top)
+    and moves the world's playhead — ▶ Hear it then starts from it; a press on a note stays the editor's */
+ if(!wrap||wrap._harmGest)return; wrap._harmGest=true;
+ let g=null;
+ wrap.addEventListener('pointerdown',ev=>{
+  if(ev.button!==0)return; const t=ev.target; if(!t||!t.closest)return;
+  if(t.closest('rect[data-n],.thead,.wbtn,.cpchip,button,input,select,.rzh,.rzhN,[id="gridWinHead"],.tgrip,.nboxWRz,.nboxHRz'))return;
+  if(!t.closest('svg[id="grid"],svg.blane,.tstrip'))return;
+  g={x:ev.clientX,y:ev.clientY,moved:false};
+ },true);
+ wrap.addEventListener('pointermove',ev=>{if(g&&Math.hypot(ev.clientX-g.x,ev.clientY-g.y)>4)g.moved=true;},true);
+ wrap.addEventListener('pointerup',ev=>{
+  if(!g)return; const G=g; g=null; if(G.moved||!GRID_WORLDS[wid])return;
+  try{withGridWorld(wid,()=>{
+   const sv=(typeof curSvg==='function')?curSvg():null; if(!sv)return; const r=sv.getBoundingClientRect();
+   const step=(typeof gridStep==='function')?gridStep():1;
+   let b=((G.x-r.left)-GUT)/PPB; b=Math.round(b/step)*step; b=Math.max(0,Math.min(LOOP,+b.toFixed(4)));
+   const w=GRID_WORLDS[wid]; if(w){w.insertBeat=b;w.insertMarkAlways=true;}
+   try{setPlayheadBeat(b);}catch(e){}
+   insertMarkDraw();
+  });}catch(e){}
+ },true);
+}
+function harmPlayheadRun(b0,bEnd,spb){
+ /* R58 (his [33]): ▶ Hear it runs a PLAYHEAD across the Harmonizer's grid for the audition's length */
+ try{
+  const hw=harmState.world; if(!hw||!hw.w||!GRID_WORLDS[hw.w.id])return;
+  const wid=hw.w.id; const wrap=hw.w.els.root.querySelector('[id="gridWrap"]'); if(!wrap)return;
+  let line=wrap.querySelector(':scope > .harmPlayLine'); if(!line){line=document.createElement('div');line.className='harmPlayLine';wrap.appendChild(line);}
+  const geom=()=>withGridWorld(wid,()=>{const sv=curSvg(); const W=wrap.getBoundingClientRect(),S=sv.getBoundingClientRect(); return {x0:S.left-W.left+GUT,ppb:PPB,top:S.top-W.top,h:S.height};});
+  const t0=performance.now(), dur=Math.max(50,(bEnd-b0)*spb*1000);
+  if(harmState._phRaf)cancelAnimationFrame(harmState._phRaf);
+  harmState._ph={b0,bEnd,t0,dur};
+  const step=()=>{const u=Math.min(1,(performance.now()-t0)/dur); const gm=geom(); const b=b0+(bEnd-b0)*u; line.style.display=''; line.style.left=(gm.x0+b*gm.ppb-1)+'px'; line.style.top=gm.top+'px'; line.style.height=gm.h+'px';
+   if(u<1)harmState._phRaf=requestAnimationFrame(step); else {harmState._phRaf=null;harmState._ph=null;setTimeout(()=>{line.style.display='none';},400);}};
+  harmState._phRaf=requestAnimationFrame(step);
+ }catch(e){}
 }
 function harmFloatToggle(){
  /* his 173rd: ⤢ Maximize — the WHOLE Harmonizer (grid + all controls) as a floating
