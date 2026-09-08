@@ -932,7 +932,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -4457,7 +4457,7 @@ Object.defineProperty(project,'melody',{
   set(v){project.tracks[edTrack()]=v;},
   configurable:true});
 function gridBase(){return project.base+(edTrack()==='bass'?-24:0);}
-let mutes={drums:false,bass:false,comping:false,pad:false,melody:false};
+let mutes={drums:false,bass:false,comping:false,pad:false,melody:false,chords:false};   /* R60 (his [16] ②): the Chords lane has its own ON square */
 let playing=false,scheduled=[],audioReady=false,useSynth=false;
 
 /* ================= engine (per PRD §7/§8) ================= */
@@ -10044,7 +10044,34 @@ function dbToLin(db){return db<=-59.5?0:Math.pow(10,db/20);}
 function trackAudible(mutesMap,mixerMap,track){
  if(mutesMap[track])return false;
  const any=Object.keys(mixerMap).some(k=>mixerMap[k]&&mixerMap[k].solo);
- return !any||!!(mixerMap[track]&&mixerMap[track].solo);}
+ if(!any)return true;
+ if(mixerMap[track]&&mixerMap[track].solo)return true;
+ /* R60 (his [16] ②): the Chords lane SOLOED — its voice is the harmony the style renders from it: bass · comping · pad play, the rest wait (labelled) */
+ if(mixerMap.chords&&mixerMap.chords.solo&&(track==='bass'||track==='comping'||track==='pad'))return true;
+ return false;}
+const CHORD_TEMPLATES=[['',[0,4,7]],['m',[0,3,7]],['dim',[0,3,6]],['aug',[0,4,8]],['sus4',[0,5,7]],['sus2',[0,2,7]],['7',[0,4,7,10]],['maj7',[0,4,7,11]],['m7',[0,3,7,10]],['m7b5',[0,3,6,10]],['dim7',[0,3,6,9]],['6',[0,4,7,9]],['m6',[0,3,7,9]]];
+function chordFromPitches(pitches){
+ /* R60 (his [16] ②): the chord the held keys spell — every root tried against the templates, the best cover wins (all held pitch
+    classes explained, the template complete), the LOWEST key breaking ties as the root; nothing matching → the lowest key's own
+    intervals. Pure — unit-tested. */
+ const ps=(pitches||[]).filter(x=>typeof x==='number').slice().sort((a,b)=>a-b);
+ if(!ps.length)return null;
+ const pcs=[...new Set(ps.map(x=>((x%12)+12)%12))];
+ const lowPc=((ps[0]%12)+12)%12;
+ let best=null;
+ for(const r of pcs){
+  const rel=new Set(pcs.map(pc=>((pc-r)%12+12)%12));
+  for(const [name,tpl] of CHORD_TEMPLATES){
+   const covered=[...rel].every(x=>tpl.indexOf(x)>=0), complete=tpl.every(x=>rel.has(x));
+   if(!covered)continue;
+   const score=(complete?10:0)-(tpl.length-rel.size)+(r===lowPc?1:0);
+   if(!best||score>best.score)best={score,r,iv:tpl.slice(),name};
+  }
+ }
+ if(best)return {r:best.r,iv:best.iv,name:best.name};
+ const rel=[...new Set(pcs.map(pc=>((pc-lowPc)%12+12)%12))].sort((a,b)=>a-b);
+ return {r:lowPc,iv:rel,name:''};
+}
 
 /* ==== ONBOARD ==== */
 /* Module 5: onboarding/config content + the pure logic behind it.
@@ -12306,6 +12333,18 @@ document.addEventListener('mouseup',()=>{
  const lane=document.getElementById('chordlane');
  lane.style.maxHeight='';lane.style.overflow='';lane.style.opacity='';
 });
+function chordHeadCtl(){
+ /* R60 (his [16] ②): the Chords lane's own ON square · SOLO · RECORD — the track heads' row on the lane's head */
+ const h=document.getElementById('chordHead'); if(!h)return;
+ let ctl=h.querySelector('.tctl'); if(!ctl){ctl=document.createElement('div');ctl.className='tctl chordCtl';ctl.style.cssText='display:flex;align-items:center;gap:3px;margin-right:6px;';h.insertBefore(ctl,h.firstChild);}
+ ctl.innerHTML='';
+ const oo=document.createElement('span');oo.className='tonoff'+(mutes.chords?' off':'');oo.title='Chords on/off — off: the lane\'s chord presses and the Chord Palette\'s auditions are silent (the style tracks keep their own squares)';
+ oo.onclick=e=>{e.stopPropagation();mutes.chords=!mutes.chords;chordHeadCtl();try{drawChordLane();}catch(e2){}};ctl.appendChild(oo);
+ const so=document.createElement('span');so.className='tsolo'+((mixer.chords&&mixer.chords.solo)?' on':'');so.textContent='S';so.title='Solo the Chords — only the harmony the style renders from the lane (bass · comping · pad) plays';
+ so.onclick=e=>{e.stopPropagation();const m=mixer.chords||(mixer.chords={db:0,pan:0,solo:false});m.solo=!m.solo;try{persistMixer();}catch(e2){}chordHeadCtl();drawTrackSel();if(typeof mixerOpen!=='undefined'&&mixerOpen)drawMixer();};ctl.appendChild(so);
+ const ar=document.createElement('span');ar.className='tarm'+(armedTrack==='chords'?' on':'');ar.textContent='R';ar.title='Record-arm the Chords — with ⏺ Rec on, the keys you hold together (three or more) land as the chord under the playhead';
+ ar.onclick=e=>{e.stopPropagation();armedTrack=(armedTrack==='chords'?null:'chords');chordHeadCtl();drawTrackSel();};ctl.appendChild(ar);
+}
 function drawChordLane(){
  const lane=document.getElementById('chordlane');lane.innerHTML='';
  syncChordRowChrome();   /* July 26b: hover resize lines + the golden reopen line */
@@ -14528,6 +14567,7 @@ function chromaStripeCSS(ch){
 }
 function auditionChord(ch){
  if(!audioReady)return;
+ if(typeof mutes==='object'&&mutes&&mutes.chords)return;   /* R60: the Chords lane is OFF */
  /* his 149th: the palette's plain presses join the ONE playback chain — voice-led
     within the 9th through the 'pal' memory (the 84th R3 law), never the old parallel
     voice() planing. */
@@ -14549,6 +14589,7 @@ function laneVoicingOf(c){
    chord plays its voicing. First-ever press initializes audio (a mousedown is a valid
    audio-unlock gesture). */
 function auditionChordClip(c){
+ if(typeof mutes==='object'&&mutes&&mutes.chords)return;   /* R60: the Chords lane is OFF */
  const go=()=>{try{
   if(!audioReady||!inst)return;
   if((c.clip&&Array.isArray(c.clip.notes)&&c.clip.notes.length)||(Array.isArray(c.sub)&&c.sub.length)){
@@ -14814,6 +14855,7 @@ function palChangeRate(){
 }
 function palPlayColumn(chs,btn){
  if(!chs||!chs.length)return;
+ if(typeof mutes==='object'&&mutes&&mutes.chords)return;   /* R60: the Chords lane is OFF */
  const rate=palChangeRate();
  const bpm=Math.max(20,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||120)),spb=60/bpm;
  const go=()=>{try{
@@ -37258,7 +37300,7 @@ function buildGroupStrip(strip,g){
 function drawTrackSel(){
  /* top row: just the add-track / re-render chips now — the tracks themselves are strips */
  try{const _rt=document.getElementById('gridRowWrap');if(_rt)_rt.style.setProperty('--theadW',theadWNow()+'px');}catch(e){}   /* 76th R3/77th: the world's name-box column width (micro standard default 96) */
- if(armedTrack&&armedTrack!=='drums'&&!(armedTrack in project.tracks))armedTrack=null;
+ if(armedTrack&&armedTrack!=='drums'&&armedTrack!=='chords'&&!(armedTrack in project.tracks))armedTrack=null;   /* R60: the Chords lane arms too */
  const el=document.getElementById('trackSel');el.innerHTML='';
  const add=document.createElement('div');add.className='part';
  add.innerHTML='[+] Add track';
@@ -37480,6 +37522,7 @@ function drawTrackSel(){
  applyCornerPin();   /* July 30 fix 4: a just-toggled corner triangle stays under the cursor */
  window.__stripSig=stripSig();
  try{insertMarkDraw();}catch(e){}   /* R53 [24] ③: the insert marker follows the strips' geometry */
+ try{chordHeadCtl();}catch(e){}   /* R60 [16] ②: the Chords lane's own head controls ride every redraw */
 }
 function hexA(hex,a){
  const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex||'');
@@ -38557,10 +38600,20 @@ function onMidiIn(ev){
  /* 4.7 (§9): with Orbits open, pads TRAVEL the wheels — recording always wins */
  if(on&&!recTaking()&&typeof orbMidiTravel==='function'&&orbMidiTravel(note))return;
  if(on&&armedTrack&&armedTrack!=='drums'&&audioReady){
-  try{playEditable(armedTrack,[0,.5,note,,,,,,vel/127],Tone.now(),.8);}catch(e){}   /* live monitor */
+  try{if(armedTrack==='chords')inst.note('comping',[note],.5,Tone.now(),.6);else playEditable(armedTrack,[0,.5,note,,,,,,vel/127],Tone.now(),.8);}catch(e){}   /* live monitor */
  }
  if(!recTaking())return;
  const b=transportBeat();
+ if(recTake.t==='chords'){
+  /* R60 (his [16] ②): the Chords lane RECORDS — three or more keys held together spell a chord (chordFromPitches) that lands on the
+     chord under the playhead (its length kept); the lane redraws as it lands */
+  if(on)recTake.held.add(note);else recTake.held.delete(note);
+  if(on&&recTake.held.size>=3){
+   const ch=chordFromPitches([...recTake.held]);
+   try{const at=chordAt(project.chords,Math.max(0,b));if(ch&&at&&at.c){at.c.r=ch.r;at.c.iv=ch.iv.slice();at.c.lbl=null;delete at.c.col;recTake.end=Math.max(recTake.end,b);refresh(false);drawChordLane();}}catch(e){}
+  }
+  return;
+ }
  if(on)recTake.open[note]={b,v:vel/127};
  else{
   const o=recTake.open[note];if(o===undefined)return;
@@ -38573,6 +38626,7 @@ function onMidiIn(ev){
 function beginTake(){
  if(!recArmed||!armedTrack||armedTrack==='drums')return;
  snapshot();
+ if(armedTrack==='chords'){const b0=transportBeat();recTake={t:'chords',start:b0,end:b0,open:{},held:new Set(),origRefs:new Set()};return;}   /* R60: a chord take holds keys, not notes */
  if(!project.tracks[armedTrack])project.tracks[armedTrack]=materialize(armedTrack);  /* style track: first record materializes */
  const b=transportBeat();
  recTake={t:armedTrack,start:b,end:b,open:{},origRefs:new Set(project.tracks[armedTrack])};
@@ -38580,6 +38634,7 @@ function beginTake(){
 function finalizeTake(){
  const take=recTake;recTake=null;
  if(!take)return;
+ if(take.t==='chords'){if(typeof autosaveSoon==='function')autosaveSoon();refresh(true);drawChordLane();return;}   /* R60: the chords landed as they were held */
  const b=transportBeat();
  for(const k in take.open){
   const o=take.open[k];
