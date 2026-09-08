@@ -932,7 +932,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -5889,13 +5889,22 @@ function cageKeyPositionAt(positions,start,span){
  (positions||[]).forEach(p=>{const ov=Math.max(0,Math.min(b,p.hi)-Math.max(a,p.lo)+1);const d=Math.abs(p.lo-a);if(!best||ov>best.ov||(ov===best.ov&&d<best.d))best={p,ov,d};});
  return best?best.p:null;
 }
+function cageChordToneMidis(rootPc,degs,lo,hi){
+ /* pure — RAW [84]: one MIDI per chord degree that can sit inside the position window (nearest the middle); empty when a degree has no place there */
+ const root=((Math.round(+rootPc)||0)%12+12)%12; const a=Math.max(0,Math.round(+lo)||0), b=Math.max(a,Math.round(+hi)||0); const mid=(a+b)/2; const out=[];
+ (degs||[]).forEach(d=>{const pc=(root+((d%12)+12)%12)%12; let best=null;
+  for(let s2=0;s2<6;s2++)for(let f=a;f<=b;f++){if((CAGED_TUNING[s2]+f)%12!==pc)continue; const cost=Math.abs(f-mid); if(!best||cost<best.cost||(cost===best.cost&&s2>best.s))best={midi:CAGED_TUNING[s2]+f,cost,s:s2};}
+  if(best)out.push(best.midi);});
+ return out;
+}
 function cageNeckOverlays(rootPc,quality,start,span,on,keyRoot,keyMinor){
  /* pure: the marks the four overlays put on the large neck for the chord in play, in the KEY POSITION the neck stands at
     (his [80]) → {shape,label,fits,octave,minor,position,box:{start,end},marks:[{s,f,pc,layer}],layers:[…]} back to front.
     ④ the complete scale = the key's pattern in the position's window (the worksheet's middle column, his [79]; a minor key
     is its relative major renumbered) · ③ the pentatonic = that pattern kept to the chord's pentatonic degrees (major chord →
     major, minor → minor) · ② the arpeggio = that pattern kept to the chord tones (a 7th chord its four) · ① the playable
-    chord = the chord's CAGED form voiced inside the position's window, ONE note a string (across the octaves).
+    chord = the chord's tones voiced INSIDE the position's window, ONE note a string (RAW [84]: never an open string outside
+    the 4/5-fret scale — open frets only when the position includes the nut).
     No key given → the chord's own scale in its own form's window (major / natural minor / mixolydian / locrian; labelled). */
  const root=((Math.round(+rootPc)||0)%12+12)%12; const q=cageQualNow(quality);
  const sp=Math.max(3,Math.round(+span)||5); const st=Math.max(0,Math.round(+start)||0);
@@ -5923,7 +5932,14 @@ function cageNeckOverlays(rootPc,quality,start,span,on,keyRoot,keyMinor){
  if(P.scale){let n=0;pattern.forEach(m=>{marks.push({s:m.s,f:m.f,pc:m.pc,layer:'scale'});n++;});layers.push(Object.assign({id:'scale',count:n},CAGE_NECK_OVERLAY_STYLE.scale));}
  if(P.penta)keep('penta',pentaDegs);
  if(P.arp)keep('arp',chordDegs);
- if(P.chord&&shape&&shape.frets){let n=0;shape.frets.forEach((f,s2)=>{if(f==null||f<0)return;marks.push({s:s2,f,pc:cageMidi(s2,f)%12,layer:'chord'});n++;});layers.push(Object.assign({id:'chord',count:n},CAGE_NECK_OVERLAY_STYLE.chord));}
+ if(P.chord){
+  /* RAW [84]: stay inside the 4/5-fret scale — voice the chord tones in the window (opens only when the nut is in it); the open-form frets are a clipped fallback */
+  let n=0; const lo=W.lo, hi=W.hi, box={startFret:lo,window:hi-lo+1};
+  let pl=null; try{const midis=cageChordToneMidis(root,chordDegs,lo,hi); if(midis.length)pl=cageChordVoicing(midis,box,false);}catch(e){pl=null;}
+  if(pl&&pl.length){pl.forEach(p=>{marks.push({s:p.s,f:p.f,pc:cageMidi(p.s,p.f)%12,layer:'chord'});n++;});}
+  else if(shape&&shape.frets){shape.frets.forEach((f,s2)=>{if(f==null||f<0||f<lo||f>hi)return;marks.push({s:s2,f,pc:cageMidi(s2,f)%12,layer:'chord'});n++;});}
+  if(n)layers.push(Object.assign({id:'chord',count:n},CAGE_NECK_OVERLAY_STYLE.chord));
+ }
  return {shape:shape?shape.shape:null,label:shape?(shape.label||''):'',fits:!!(shape&&shape.fits),octave:shape?(shape.octave|0):0,minor,position:position?{shape:position.shape,label:position.label,lo:position.lo,hi:position.hi,octave:position.octave|0}:null,box:{start:W.lo,end:W.hi},marks,layers};
 }
 function cageNeckOverlayDraw(ctx,G,OV){
@@ -6377,7 +6393,7 @@ function cageLinkNeckDraw(rows){
  }
  ctx.restore();
  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
- _cageNeck={x0,x1,y0,y1,fretW,strGap,viewLo,cells:V.cells,start:V.start,span:V.span,shown:V.shown,frame:V.frame,roman,anim:!!cageView.anim,pin:cageView.pin?cageView.pin.start:null,dots:pts.map(p=>({f:p.g.f,s:p.g.s,cx:p.cx,st:p.st})),overlays:OV?{shape:OV.shape,fits:OV.fits,box:OV.box,n:OV.marks.length,drawn:OV.drawn|0,layers:OV.layers.map(L=>({id:L.id,count:L.count}))}:null};   /* R30: for the suites · R45: the overlays */
+ _cageNeck={x0,x1,y0,y1,fretW,strGap,viewLo,cells:V.cells,start:V.start,span:V.span,shown:V.shown,frame:V.frame,roman,anim:!!cageView.anim,pin:cageView.pin?cageView.pin.start:null,dots:pts.map(p=>({f:p.g.f,s:p.g.s,cx:p.cx,st:p.st})),overlays:OV?{shape:OV.shape,fits:OV.fits,box:OV.box,n:OV.marks.length,drawn:OV.drawn|0,layers:OV.layers.map(L=>({id:L.id,count:L.count})),position:OV.position||null,marks:(OV.marks||[]).map(m=>({s:m.s,f:m.f,layer:m.layer}))}:null};   /* R30: for the suites · R45: the overlays · R48 [84]: position + marks for the in-box law */
  try{cageMiniDraw(rootPc,V);}catch(e){}
  cageHandLegendDraw();
  if(typeof cageState==='object'&&cageState&&cageState.viewName==='ball')try{cageBallDraw(rows);}catch(e){}   /* R38 [66]: the bouncing-ball view rides the same placements */
