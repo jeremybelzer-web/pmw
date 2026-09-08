@@ -932,7 +932,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-07j</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16604,16 +16604,17 @@ function skinGv2MagOpen(t,a,d){
   const idx=(typeof stripMulti==='object'&&stripMulti&&stripMulti.t===t&&stripMulti.set.size>1)?[...stripMulti.set]:(typeof xsel==='object'&&xsel&&xsel.cells&&xsel.cells[t]&&xsel.cells[t].size>1)?[...xsel.cells[t]]:null;
   if(idx&&typeof a==='number'){const sp=trackCellSpans(t);let lo=1e9,hi=0;for(const k of idx){if(!sp[k])continue;lo=Math.min(lo,sp[k].a);hi=Math.max(hi,sp[k].a+sp[k].d);}if(hi>lo){a=lo;d=hi-lo;}}
  }catch(e){}
- stripSel={t,i:null};selHead=null;selSurface='strip';   /* R54 (his [26]): no name-box selection — it outranked the clip region and the magnifier showed the WHOLE track */
- try{if(t&&t!=='drums'){activeTrack=t;}}catch(e){}
+ selHead=null;selSurface='strip';   /* R54 (his [26]): no name-box selection — it outranked the clip region and the magnifier showed the WHOLE track */
+ /* R59 (his [34]): the ACTIVE track is left alone — a double-click on a Bass clip no longer makes Bass the active row; the clip is
+    PINNED for the magnifier by track and span instead of through the active track's note selection */
+ const wasMag=skinGv2Lane&&skinGv2Lane.mode==='mag';
  skinGv2Lane={mode:'mag',t,a:(typeof a==='number'?a:null),d:(typeof d==='number'?d:null)};
- if(typeof a==='number'&&typeof d==='number'){
-  /* pin a region selection so magTarget prefers the clip span */
-  try{
-   const rows=(project.tracks[t]||(t==='melody'?project.melody:[])||[]);
-   selNotes=new Set();selOwner='main';
-   rows.forEach((n,i)=>{if(n&&n[0]>=a-1e-6&&n[0]<a+d-1e-6)selNotes.add(i);});
-  }catch(e){}
+ _magClip=(typeof a==='number'&&typeof d==='number')?{tr:t,a:Math.floor(a),b:Math.ceil(a+d)}:{tr:t,a:0,b:LOOP};
+ if(wasMag){
+  /* the magnifier is already the lower rectangle — re-aim its pane at once, no re-layout */
+  try{const host=document.querySelector('#skLane .magPane');if(host){magClose('engines0');host.innerHTML='';magMount(host,'engines0',null);}}catch(e){}
+  try{const lab=document.querySelector('#skLane .skGv2Bar span, #skLane span');}catch(e){}
+  return;
  }
  const keep=(skinState&&skinState.panes&&skinState.panes._magPct!=null)?skinState.panes._magPct:null;   /* R54 [26]: the share to ease back to survives every re-open (skinNorm mints a fresh panes object) */
  skinPersist();skinApply(skinState);
@@ -16622,6 +16623,7 @@ function skinGv2MagOpen(t,a,d){
 }
 function skinGv2MagClose(){
  skinGv2Lane={mode:'engines',t:null,a:null,d:null};
+ _magClip=null;   /* R59: the pin goes with the magnifier */
  try{selNotes=new Set();}catch(e){}
  const back=(skinState&&skinState.panes&&skinState.panes._magPct!=null)?skinState.panes._magPct:null;   /* R50: the share to ease back to survives the re-apply (skinNorm mints a fresh panes object) */
  if(skinState)skinApply(skinState);
@@ -16638,9 +16640,10 @@ function skinGv2LaneEase(targetPct,remember){
  let to; if(targetPct==null){if(P._magPct==null)return false; to=P._magPct; P._magPct=null;} else {if(remember&&P._magPct==null)P._magPct=col.pct; to=Math.max(3,Math.min(97,+targetPct));}
  const from=col.pct; if(Math.abs(to-from)<0.5){col.pct=to;return true;}
  const t0=performance.now(), dur=650; skinState._laneAnim={from,to,t0};
- const step=()=>{const u=Math.max(0,Math.min(1,(performance.now()-t0)/dur)); const e=(typeof cageEaseInOut==='function')?cageEaseInOut(u):u; const p=from+(to-from)*e;
+ const step=()=>{if(!skinState)return;   /* R59: the view was torn down mid-ease — nothing to move */
+  const u=Math.max(0,Math.min(1,(performance.now()-t0)/dur)); const e=(typeof cageEaseInOut==='function')?cageEaseInOut(u):u; const p=from+(to-from)*e;
   elA.style.flex=p+' 1 0%'; elB.style.flex=(100-p)+' 1 0%';
-  if(u<1)requestAnimationFrame(step); else {col.pct=to; skinState._laneAnim=null; try{skinTreeLegacySync(P);skinPersist();}catch(e2){}}};
+  if(u<1)requestAnimationFrame(step); else {col.pct=to; if(skinState)skinState._laneAnim=null; try{skinTreeLegacySync(P);skinPersist();}catch(e2){}}};
  requestAnimationFrame(step); return true;
 }
 function skinGv2TrackPane(t){
@@ -16756,6 +16759,7 @@ function skinGv2StripGesture(root,id){
    if(ts.length===1){const t=ts[0];stripSel={t,i:pick[t][0]};stripMulti={t,set:new Set(pick[t])};selSurface='strip';}
    else if(ts.length>1){for(const t of ts)xsel.cells[t]=new Set(pick[t]);selSurface='strip';}
    refresh(false);drawTrackSel();drawMainStrip();drawChordLane();
+   if(ts.length){try{const t=ts[0],sp=trackCellSpans(t),k=pick[t];if(sp[k[0]]){const a0=sp[k[0]].a,b1=sp[k[k.length-1]].a+sp[k[k.length-1]].d;skinGv2MagOpen(t,a0,b1-a0);}}catch(e){}}   /* R59 (his [34]): the boxed clips show in the magnifier */
   });
  };
  root.addEventListener('pointerup',done,true);
@@ -16795,9 +16799,10 @@ function skinGv2Expand(winId){
   const cur=100-root.pct; if(need<=cur+0.5)return;
   const from=root.pct, to=Math.max(3,Math.min(97,100-need)); const t0=performance.now(); const dur=650;
   skinState._anim={from,to,t0};
-  const step=()=>{const u=Math.max(0,Math.min(1,(performance.now()-t0)/dur)); const e=(typeof cageEaseInOut==='function')?cageEaseInOut(u):u; const p=from+(to-from)*e;
+  const step=()=>{if(!skinState)return;   /* R59: the view was torn down mid-ease */
+   const u=Math.max(0,Math.min(1,(performance.now()-t0)/dur)); const e=(typeof cageEaseInOut==='function')?cageEaseInOut(u):u; const p=from+(to-from)*e;
    elA.style.flex=p+' 1 0%'; right.style.flex=(100-p)+' 1 0%';
-   if(u<1)requestAnimationFrame(step); else {root.pct=to; skinState._anim=null; try{skinTreeLegacySync(P);skinPersist();}catch(e2){}}};
+   if(u<1)requestAnimationFrame(step); else {root.pct=to; if(skinState)skinState._anim=null; try{skinTreeLegacySync(P);skinPersist();}catch(e2){}}};
   requestAnimationFrame(step);
  }catch(e){}
 }
@@ -27075,6 +27080,7 @@ var swMagState={shelf:false,engines:false};   /* his 179th: which bands ride as 
 var swShelfDup=false;                          /* his 179th Way 2: the duplicated shelf */
 var _magPolls={};
 var magObjSel=null;   /* his 181st: the last PRESSED single-track object (the main shelf sets it) */
+var _magClip=null;   /* R59 (his [34]): {tr,a,b} — the clip (or clips, or the whole track) the multi-track pinned for the magnifier */
 function magTarget(){
  /* his 181st, THE SELECTION RESOLVER — what the magnifier edits, in his order:
     ① a selected single-track OBJECT (the shelf press) → that object;
@@ -27083,6 +27089,9 @@ function magTarget(){
       the clip-entity hook joins when the clip lanes grow a sticky selection, recorded);
     ④ else — the active pitched track whole. */
  try{
+  /* R59 (his [34]): a CLIP PINNED by the multi-track (a click, a double-click, a selection of several, a name box's double-click)
+     is the magnifier's target — any track, the active one untouched */
+  if(typeof _magClip==='object'&&_magClip&&_magClip.tr)return {kind:'region',tr:_magClip.tr,a:_magClip.a,b:_magClip.b};
   if(magObjSel&&Array.isArray(project.shelf)&&project.shelf.some(x=>x.id===magObjSel))
    return {kind:'object',objId:magObjSel};
   if(typeof selHead==='string'&&selHead&&selHead!=='drums')
@@ -27105,9 +27114,11 @@ function magTargetRows(t){
    const o=project.shelf.find(x=>x.id===t.objId);
    return o&&o.data&&Array.isArray(o.data.rows)?o.data.rows.map(n=>[n[0],n[1],n[2]]):[];
   }
+  /* R59 (his [35]): a track with no STORED rows (the style renders it) shows its rendered rows — stripNotes — so the magnifier is never empty */
+  const src=()=>{const st=project.tracks[t.tr];return (st&&st.length)?st:((typeof stripNotes==='function')?(stripNotes(t.tr)||[]):[]);};
   if(t.kind==='region')
-   return withGridWorld('main',()=>(project.tracks[t.tr]||[]).filter(n=>n[0]>=t.a-1e-6&&n[0]<t.b-1e-6).map(n=>[n[0],n[1],n[2]]));
-  return withGridWorld('main',()=>(project.tracks[t.tr]||[]).map(n=>[n[0],n[1],n[2]]));
+   return withGridWorld('main',()=>src().filter(n=>n[0]>=t.a-1e-6&&n[0]<t.b-1e-6).map(n=>[n[0],n[1],n[2]]));
+  return withGridWorld('main',()=>src().map(n=>[n[0],n[1],n[2]]));
  }catch(e){return [];}
 }
 function magWriteBack(t,rows){
@@ -27121,6 +27132,7 @@ function magWriteBack(t,rows){
   withGridWorld('main',()=>{
    snapshot();
    if(t.kind==='region'){
+    if(!(project.tracks[t.tr]&&project.tracks[t.tr].length)&&typeof stripNotes==='function'){try{project.tracks[t.tr]=(stripNotes(t.tr)||[]).map(n=>[n[0],n[1],n[2]]);}catch(e){}}   /* R59: the style's rendering materializes whole before a clip's edit lands */
     const keep=(project.tracks[t.tr]||[]).filter(n=>!(n[0]>=t.a-1e-6&&n[0]<t.b-1e-6));
     project.tracks[t.tr]=keep.concat(rows.map(n=>[n[0],n[1],n[2]]));
    }else{
@@ -27140,19 +27152,27 @@ function magMount(host,tag,pinTarget){
  const rows=magTargetRows(t);
  /* R54 (his [26]): under GV-2 a clip REGION is re-based to its own start and FITTED to the pane — the clip fills the lower
     rectangle; the offset rides every comparison and write-back below */
- const off=(t.kind==='region'&&typeof skinIsGv2==='function'&&skinIsGv2())?t.a:0;
+ /* R59 (his [38]): under GV-2 a clip REGION's world holds the WHOLE track — the clip fitted into view, a scroll left or right
+    reveals the neighbouring clips (the reference's clip view sits in the arrangement's time); R54's re-base and cut-to-span go */
+ const gv2Region=(t.kind==='region'&&typeof skinIsGv2==='function'&&skinIsGv2());
+ const off=0;
  const shift=(rs,k)=>rs.map(n=>{const c=n.slice();c[0]=+(c[0]+k).toFixed(6);return c;});
+ const inSpan=n=>!gv2Region||(n[0]>=t.a-1e-6&&n[0]<t.b-1e-6);
+ const whole=gv2Region?withGridWorld('main',()=>{const st=project.tracks[t.tr];return ((st&&st.length)?st:((typeof stripNotes==='function')?(stripNotes(t.tr)||[]):[])).map(n=>[n[0],n[1],n[2]]);}):null;
+ const mainLoop=gv2Region?withGridWorld('main',()=>LOOP):null;
  const label=t.kind==='object'?(project.shelf.find(x=>x.id===t.objId)||{}).name
   :t.kind==='region'?('bars '+(Math.floor(t.a/4)+1)+'–'+Math.ceil(t.b/4)+' of '+(typeof trackLabel==='function'?trackLabel(t.tr):t.tr))
   :(typeof trackLabel==='function'?trackLabel(t.tr):t.tr);
- const o={id:'mag:'+tag,name:'Magnifier — '+(label||'track'),strand:'melody',data:{rows:rows.length?shift(rows,-off):[[0,1,60]]},org:'magnifier'};
+ const seed=whole||rows;
+ const o={id:'mag:'+tag,name:'Magnifier — '+(label||'track'),strand:'melody',data:{rows:seed.length?shift(seed,-off):[[0,1,60]]},org:'magnifier'};
  const m=essObjWorldMint(o);
  if(!m)return null;
  const span=(t.kind==='region')?Math.max(1,t.b-t.a):null;
  withGridWorld(m.w.id,()=>{
-  project.tracks[m.face.track]=shift(rows,-off);
+  project.tracks[m.face.track]=shift(seed,-off);
   PPB=Math.max(90,PPB);
-  if(off||span){LOOP=Math.max(2,Math.ceil(span));}
+  if(whole){LOOP=Math.max(2,mainLoop||LOOP);}
+  else if(off||span){LOOP=Math.max(2,Math.ceil(span));}
   if(LOOP>256)LOOP=256;   /* his 176th: 3-hour songs — the window clamps under the raster cap */
   refresh(true);
  });
@@ -27160,9 +27180,9 @@ function magMount(host,tag,pinTarget){
  m.w.els.root.style.marginTop='0';
  const scrollEl=m.w.els.root.querySelector('[id="gridWrap"]')||m.w.els.root;
  const link=(t.kind!=='object'&&!off)?magLinkScroll(scrollEl,m.w.id,magMainGridEl()):null;   /* an object floats free of the timeline; a fitted clip needs no lock */
- if(off||(span&&typeof skinIsGv2==='function'&&skinIsGv2())){magFitToHost(host,m.w.id,span);}
+ if(gv2Region){magFitToHost(host,m.w.id,span,t.a);}
  let ro=null;
- try{if(typeof ResizeObserver==='function'&&(off||span)&&typeof skinIsGv2==='function'&&skinIsGv2()){ro=new ResizeObserver(()=>{try{if(GRID_WORLDS[m.w.id])magFitToHost(host,m.w.id,span);}catch(e){}});ro.observe(host);}}catch(e){}   /* R54 [26]: the clip re-fits as the rectangle eases out */
+ try{if(typeof ResizeObserver==='function'&&gv2Region){ro=new ResizeObserver(()=>{try{if(GRID_WORLDS[m.w.id])magFitToHost(host,m.w.id,span,t.a);}catch(e){}});ro.observe(host);}}catch(e){}   /* R54 [26]: the clip re-fits as the rectangle eases out */
  let lastMain=JSON.stringify(rows),lastWorld=lastMain;
  const iv=setInterval(()=>{
   if(_magPolls[tag]&&_magPolls[tag].iv!==iv){clearInterval(iv);return;}   /* R54: an orphaned poll clears itself and touches nothing */
@@ -27173,12 +27193,12 @@ function magMount(host,tag,pinTarget){
     magClose(tag);host.innerHTML='';magMount(host,tag,null);return;
    }
    const mainNow=JSON.stringify(magTargetRows(t));
-   const worldNow=JSON.stringify(shift(withGridWorld(m.w.id,()=>(project.tracks[m.face.track]||[]).map(n=>[n[0],n[1],n[2]])),off));
+   const worldNow=JSON.stringify(shift(withGridWorld(m.w.id,()=>(project.tracks[m.face.track]||[]).filter(inSpan).map(n=>[n[0],n[1],n[2]])),off));   /* R59 [38]: only the clip's span is mirrored — the rest of the track is context */
    if(worldNow!==lastWorld&&worldNow!==mainNow){
     magWriteBack(t,JSON.parse(worldNow));
     lastMain=worldNow;lastWorld=worldNow;
    }else if(mainNow!==lastMain){
-    withGridWorld(m.w.id,()=>{project.tracks[m.face.track]=shift(JSON.parse(mainNow),-off);refresh(true);});
+    withGridWorld(m.w.id,()=>{const cur=(project.tracks[m.face.track]||[]);const keep=whole?cur.filter(n=>!inSpan(n)):[];project.tracks[m.face.track]=keep.concat(shift(JSON.parse(mainNow),-off));refresh(true);});
     lastMain=mainNow;lastWorld=mainNow;
    }else{lastWorld=worldNow;}
   }catch(e){}
@@ -27190,9 +27210,10 @@ function magFitZoom(laneW,span){
  /* R54 (his [26]): the zoom that lays `span` beats across `laneW` px of lane, clamped to the grid's own 14–240 px/beat. Pure — unit-tested. */
  return Math.max(14,Math.min(240,laneW/Math.max(1,span)));
 }
-function magFitToHost(host,wid,span){
+function magFitToHost(host,wid,span,a0){
  /* R54 (his [26]): the magnified clip FILLS the lower rectangle — the zoom lays the clip across the pane's width, the lattice
-    takes the pane's height under the bar lane, centred on the clip's notes */
+    takes the pane's height under the bar lane, centred on the clip's notes · R59 (his [38]): the world holds the whole track,
+    so the wrap SCROLLS to the clip's start — a scroll left or right shows the neighbours */
  try{
   if(!host||!GRID_WORLDS[wid])return;
   const W=host.clientWidth,H=host.clientHeight; if(W<80||H<60)return;
@@ -27200,8 +27221,14 @@ function magFitToHost(host,wid,span){
    const tw=(typeof theadWNow==='function')?theadWNow():96;
    PPB=magFitZoom(W-GUT-tw-30,span||LOOP);
    const px=Math.max(60,H-((typeof hdrH==='function')?hdrH():BARH)-10);
+   /* R59 (his [35]): the lattice reaches the track's own register — a Bass clip's notes sit two octaves under the standard window */
+   try{const ns=project.tracks[activeTrack]||[];let lo=Infinity,hi=-Infinity;for(const n of ns){if(!n||typeof n[2]!=='number')continue;if(n[2]<lo)lo=n[2];if(n[2]>hi)hi=n[2];}if(isFinite(lo)&&typeof ensureGridRange==='function'){ensureGridRange(lo,GRID_VIEWS.main);ensureGridRange(hi,GRID_VIEWS.main);}}catch(e){}
    GRID_VIEWS.main.userPx=true;GRID_VIEWS.main.userScrolled=false;setViewPx(GRID_VIEWS.main,px);
    refresh(true);
+   if(typeof a0==='number'){
+    const wrap=GRID_WORLDS[wid].els&&GRID_WORLDS[wid].els.wrap; const lane=wrap&&wrap.querySelector('.trow > .gvwrap, [id="gridRow"] > .gvwrap');
+    if(wrap&&lane){const laneX0=lane.getBoundingClientRect().left-wrap.getBoundingClientRect().left+wrap.scrollLeft;wrap.scrollLeft=Math.max(0,laneX0+GUT+a0*PPB-6);}
+   }
   });
  }catch(e){}
 }
@@ -36841,7 +36868,7 @@ function trackHead(t,inLane,microOv){
  /* July 24 round (client): double-click anywhere around the track name = select the
     whole track (the name itself keeps its rename double-click; S/● keep theirs) */
  h.ondblclick=e=>{
-  if(typeof skinIsGv2==='function'&&skinIsGv2()&&e.target.closest&&e.target.closest('.tname')){e.stopPropagation();e.preventDefault();try{skinGv2TrackPane(t);}catch(e2){}return;}   /* R50 [19]: the name → the track's pane in the lower rectangle */
+  if(typeof skinIsGv2==='function'&&skinIsGv2()&&e.target.closest&&e.target.closest('.tname')){e.stopPropagation();e.preventDefault();try{skinGv2TrackPane(t);}catch(e2){}return;}   /* R50 [19] / his [37]: the name box's double-click is the track's PLUG-INS pane (blank until plug-ins exist) — the reference's law; a clip's double-click is the magnifier */   /* R50 [19]: the name → the track's pane in the lower rectangle */
   if(e.target.closest&&(e.target.closest('.tname')||e.target.closest('.tctl')||e.target.closest('.texp')||e.target.closest('.tvol')))return;
   selectWholeTrack(t);
  };
@@ -37295,14 +37322,17 @@ function drawTrackSel(){
  host.style.display='';if(hostB)hostB.style.display='';
  /* July 27a: the Grid block's own re-order grips (far left + far right, dot texture) */
  if(gridRowEl){gridRowEl.style.position='relative';addTrackGrips(gridRowEl,'__grid');}
- if(stripSel&&(!(stripSel.t==='drums'||stripSel.t in project.tracks)
+ /* R59 (his [34]): the clip selection belongs to the MAIN grid and the user grids — a rig or magnifier world drawing itself
+    (its tracks hidden, its face a full grid) must not null it */
+ const _selWorldOk=!(typeof CUR_GRID==='string'&&CUR_GRID!=='main'&&!(GRID_WORLDS[CUR_GRID]&&GRID_WORLDS[CUR_GRID].user));
+ if(_selWorldOk&&stripSel&&(!(stripSel.t==='drums'||stripSel.t in project.tracks)
    ||(stripSel.t===activeTrack&&!mainIsStrip())
    ||hiddenTracks.has(stripSel.t)
    ||(stripSel.i!=null&&stripSel.i>=trackCellSpans(stripSel.t).length)))stripSel=null;
  if(selHead&&!(selHead==='drums'||selHead in project.tracks))selHead=null;   /* v3: deleted tracks drop their name-box selection */
  for(const sh of [...selHeads])if(!(sh==='drums'||sh in project.tracks))selHeads.delete(sh);   /* ⌘G round */
  project.groups=groupsNormalize(projGroups(),allTrackIdsNow());   /* ⌘G round: stale members drop, empty groups vanish */
- if(stripMulti.t&&(!(stripMulti.t==='drums'||stripMulti.t in project.tracks)||(stripMulti.t===activeTrack&&!mainIsStrip())))stripMulti={t:null,set:new Set()};
+ if(_selWorldOk&&stripMulti.t&&(!(stripMulti.t==='drums'||stripMulti.t in project.tracks)||(stripMulti.t===activeTrack&&!mainIsStrip())))stripMulti={t:null,set:new Set()};
  for(const ht of [...hiddenTracks])if(!(ht==='drums'||ht in project.tracks))hiddenTracks.delete(ht);  /* deleted customs fall out */
  /* 2.1b: deleted/renamed-away tracks drop their view state; a selection owned by a view
     that no longer exists (or folded back to a strip) returns home to the main grid */
@@ -37922,6 +37952,7 @@ function stripCellDown(ev,t,i,a,d){
   selSurface='strip';
   selChordSet.clear();selChord=null;
   drawTrackSel();drawMainStrip();drawChordLane();
+  if(typeof skinIsGv2==='function'&&skinIsGv2()){try{skinGv2MagOpen(t,a,d);}catch(e){}}   /* R59 (his [34]): several selected clips show together — the span from the first to the last */
   return;
  }
  const now=Date.now();
@@ -37944,6 +37975,7 @@ function stripCellDown(ev,t,i,a,d){
  selChordSet.clear();selChord=null;
  drawTrackSel();drawMainStrip();drawChordLane();
  if(!(typeof skinIsGv2==='function'&&skinIsGv2()))auditionTrackSpan(t,a,a+d);   /* RAW [6] ②: upper tracks are passive under GV-2 */
+ else{try{skinGv2MagOpen(t,a,d);}catch(e){}}   /* R59 (his [34]): a SELECTED clip shows in the magnifier — no double-click needed */
  /* multi-selection drags carry the WHOLE selected span (min→max) — a multi-clip body
     merges into / replaces every clip it engulfs at the drop (July 24 r2) */
  let da=a,dd=d;
