@@ -932,7 +932,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -8630,8 +8630,9 @@ function renderBass(chords,style){const ev=[];const cyc=style.cycle*4;
   while(p<26)p+=12;while(p>50)p-=12;ev.push({beat:ab,dur:e.d,midi:p,vel:.85});}
  return ev;}
 function voice(c,prev){const pcs=c.iv.map(x=>(c.r+x)%12);
- const center=prev&&prev.length?prev.reduce((a,b)=>a+b,0)/prev.length:62;const used=[];
- return pcs.map(pc=>{let best=null,bd=1e9;for(let o=3;o<=6;o++){const m=o*12+pc;const d=Math.abs(m-center)+(used.includes(m)?6:0);if(d<bd){bd=d;best=m;}}used.push(best);return best;}).sort((a,b)=>a-b);}
+ /* R61 (his [39] ①): the DEFAULT register of every sounding chord is one octave up — the centre 74, the octaves 4–7 */
+ const center=prev&&prev.length?prev.reduce((a,b)=>a+b,0)/prev.length:74;const used=[];
+ return pcs.map(pc=>{let best=null,bd=1e9;for(let o=4;o<=7;o++){const m=o*12+pc;const d=Math.abs(m-center)+(used.includes(m)?6:0);if(d<bd){bd=d;best=m;}}used.push(best);return best;}).sort((a,b)=>a-b);}
 function voiceFromFirstInvI(c,tonic,minor){
  /* 20l [56] (client, Aug 21, verbatim: "the chord inversion that requires the least amount of movement on the
     piano to reach it from a 1st inversion 1 chord"). The reference is the key's I chord in FIRST inversion
@@ -8639,13 +8640,13 @@ function voiceFromFirstInvI(c,tonic,minor){
     registers, is scored by the total semitone travel voice-for-voice (the shorter hand padded with the other's
     top voice), and the cheapest wins. Pure. */
  const t=((tonic||0)%12+12)%12;const iv1=minor?[0,3,7]:[0,4,7];
- const b0=55+(((t+iv1[1])-55)%12+12)%12;   /* the third, in [55,67) */
+ const b0=67+(((t+iv1[1])-67)%12+12)%12;   /* the third, in [67,79) — R61 (his [39] ①): one octave up */
  const ref=[b0];let last=b0;for(const x of [iv1[2],12]){let m=t+x;while(m<=last)m+=12;while(m-12>last)m-=12;ref.push(m);last=m;}
  const pcs=c.iv.map(x=>((c.r+x)%12+12)%12);const n=pcs.length;if(!n)return [];
  let best=null,bd=1e9;
  for(let rot=0;rot<n;rot++){
   const order=pcs.slice(rot).concat(pcs.slice(0,rot));
-  for(let o=3;o<=5;o++){
+  for(let o=4;o<=6;o++){   /* R61 (his [39] ①): the three registers ride up with the reference */
    const notes=[];let prev=-1;
    for(const pc of order){let m=o*12+pc;while(m<=prev)m+=12;notes.push(m);prev=m;}
    const L=Math.max(notes.length,ref.length);let d=0;
@@ -8680,7 +8681,7 @@ function audVoice(c,prev){
  const cands=[];
  for(let rot=0;rot<pcs.length;rot++){
   const order=pcs.slice(rot).concat(pcs.slice(0,rot));
-  for(let o=3;o<=5;o++){
+  for(let o=4;o<=6;o++){   /* R61 (his [39] ①): the audition register one octave up */
    const notes=[];let last=-1;
    for(const pc of order){let m=o*12+pc;while(m<=last)m+=12;notes.push(m);last=m;}
    cands.push(notes);
@@ -8696,7 +8697,7 @@ function audVoice(c,prev){
    const L=Math.max(notes.length,prev.length);d=0;
    for(let i=0;i<L;i++)d+=Math.abs(notes[Math.min(i,notes.length-1)]-prev[Math.min(i,prev.length-1)]);
   }else{
-   d=Math.abs(notes[0]-57)+((thirdPc!=null&&notes[0]%12!==thirdPc)?24:0);
+   d=Math.abs(notes[0]-69)+((thirdPc!=null&&notes[0]%12!==thirdPc)?24:0);   /* R61 [39] ①: the fresh start just ABOVE middle C */
   }
   if(d<bd){bd=d;best=notes;}
  }
@@ -8723,8 +8724,8 @@ function padVoice(c,prev){const pcs=c.iv.map(x=>(c.r+x)%12);
  if(!prev)return voice(c,null);
  const kept=prev.filter(m=>pcs.includes(m%12));
  const missPcs=pcs.filter(pc=>!kept.some(m=>m%12===pc));
- const center=kept.length?kept.reduce((a,b)=>a+b,0)/kept.length:62;
- const added=missPcs.map(pc=>{let best=null,bd=1e9;for(let o=3;o<=6;o++){const m=o*12+pc;const d=Math.abs(m-center);if(d<bd){bd=d;best=m;}}return best;});
+ const center=kept.length?kept.reduce((a,b)=>a+b,0)/kept.length:74;   /* R61 [39] ①: one octave up */
+ const added=missPcs.map(pc=>{let best=null,bd=1e9;for(let o=4;o<=7;o++){const m=o*12+pc;const d=Math.abs(m-center);if(d<bd){bd=d;best=m;}}return best;});
  return kept.concat(added).sort((a,b)=>a-b);}
 /* ==== VOICE LEADING (3.3) ==== */
 /* The PRD §8 nearest-voicing render rule, now user-facing (roadmap 3.3, second half).
@@ -17798,7 +17799,7 @@ function skinLeafMount(leaf,path,host,ctx){
   }else{
    const placed=skinTreeWinIds(P.tree),fl=P.fl||[];
    const rightId=(P.rightMode==='win'&&P.rightWin)?P.rightWin:null;
-   const members=swRowMembers('engines').filter(m=>placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0&&m.id!==rightId);
+   const members=swRowMembers('engines').filter(m=>placed.indexOf(m.id)<0&&fl.indexOf(m.id)<0&&m.id!==rightId&&!(m.classList&&m.classList.contains('wanPopup')));   /* R61 (his [39] ④): a window popped up by a SEARCH button stays on the body until its ⤢ */
    for(const m of members){
     cell(m,false);el.appendChild(m);
     try{skinLaneChrome(m);}catch(e){}   /* R49 [16]: ▸ expands into the right pane; the title selects (Delete closes); ✕ is the window's own */
@@ -29756,6 +29757,9 @@ function wanPopupOpen(panelId){
  else{try{if(typeof uiWinShown==='function'&&!uiWinShown(panelId))uiDispatch({type:'toggle',id:panelId});}catch(e){}}
  if(p.classList.contains('wanPopup'))return;
  p.dataset.popPrev=p.getAttribute('style')||'';
+ /* R61 (his [39] ④): the pop-up lifts OUT of its column to the body — inside a lane cell or a pane its fixed box was clipped
+    and scrolled away with the cell; it goes home on ⤢ */
+ try{p._popHome={parent:p.parentNode,next:p.nextSibling};document.body.appendChild(p);}catch(e){}
  p.classList.add('wanPopup');
  const strip=document.createElement('div');
  strip.className='wanPopStrip';
@@ -29774,7 +29778,30 @@ function wanPopupOpen(panelId){
   p.classList.remove('wanPopup');
   p.setAttribute('style',p.dataset.popPrev||'');
   delete p.dataset.popPrev;
+  try{const h=p._popHome;if(h&&h.parent&&h.parent.isConnected){h.parent.insertBefore(p,(h.next&&h.next.parentNode===h.parent)?h.next:null);}p._popHome=null;}catch(e){}   /* R61: home */
+  try{if(typeof skinState!=='undefined'&&skinState&&typeof skinRepack==='function')skinRepack();}catch(e){}
  };
+}
+function wanFnColorPop(anchor,id){
+ /* R61 (his [39] ③): a Weber-neighbour category's colour — FIRST the five swatches of the painting the Color Palette has in use
+    (the first painting when none is), THEN "choose your own" as the secondary road (the colour circle) */
+ let d=document.getElementById('wanFnPop');if(d)d.remove();
+ const pal=(typeof clPalette==='function')?(clPalette((typeof canvasState==='object'&&canvasState&&canvasState.palId!=null)?canvasState.palId:0)||clPalette(0)):null;
+ const cols=pal?pal.colors:['#f26386','#2168a6','#e6c337','#5a3a26','#c6a490'];
+ d=document.createElement('div');d.id='wanFnPop';
+ const r=anchor.getBoundingClientRect();
+ d.style.cssText='position:fixed;z-index:140;left:'+Math.round(r.left)+'px;top:'+Math.round(r.bottom+4)+'px;background:#f2e7cb;border:1px solid #a8895f;border-radius:8px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:Georgia,serif;color:#3a2c18;';
+ d.innerHTML='<div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;">'+(pal?pal.painting+' — '+pal.artist:'five swatches')+'</div>'
+  +'<div style="display:flex;gap:6px;margin-bottom:7px;">'+cols.map(c=>'<span class="wanFnPopSw" data-col="'+c+'" style="width:26px;height:22px;border-radius:5px;background:'+c+';border:1px solid #6b4f28;cursor:pointer;" title="'+c+'"></span>').join('')+'</div>'
+  +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanFnPopOwn" title="The colour circle — choose your own">🎨 Choose your own…</span><span class="wanAllTog" id="wanFnPopX">✕</span></div>';
+ document.body.appendChild(d);
+ const done=()=>{d.remove();document.removeEventListener('mousedown',outside,true);};
+ const outside=e=>{if(!d.contains(e.target))done();};
+ setTimeout(()=>document.addEventListener('mousedown',outside,true),0);
+ d.querySelectorAll('.wanFnPopSw').forEach(sw=>{sw.onclick=e=>{e.stopPropagation();wanFnCols[id]=sw.getAttribute('data-col');persistWanFnCols();done();renderWan();};});
+ d.querySelector('#wanFnPopX').onclick=e=>{e.stopPropagation();done();};
+ d.querySelector('#wanFnPopOwn').onclick=e=>{e.stopPropagation();done();const inp=document.querySelector('input[data-fncol="'+id+'"]');if(inp){try{inp.click();}catch(err){}}};
+ return d;
 }
 function wanRoadDialog(roadId){
  /* 80th R22 (his thirtieth message): double-click a path name → the road's OWN
@@ -29931,18 +29958,26 @@ function wanLinkMenu(e){
    cur:!w2.linked,fn:()=>{w2.linked=false;wanWeberDraw();}}
  ]);
 }
+function wanTwoSided(){
+ /* R61 (his [39] ②): the dual board needs 980px — narrower (the right rectangle, a lane cell) it is ONE side, and that side takes
+    every view */
+ try{const W=document.getElementById('wanPanel');return !!W&&W.clientWidth>=980;}catch(e){return false;}
+}
+function wanViewLabel(v){return v==='hallway'?'Hallway with books':v==='3d'?'3D Matrix':v==='time'?'Weber in time':v==='tree'?'Decision Trees':'Weber\u2019s Matrix';}
 function wanViewMenu(e,side){
- /* his 166th: the View / Skin button above each side — the views join as they build */
+ /* his 166th: the View / Skin button above each side — the views join as they build · R61 (his [39] ②): on a single-sided board
+    the one View button offers every view and the side shows it */
  const w2=wanWeb2State();
- const cur=side===2?w2.view:'weber';
- const pick=v=>{if(side===2){w2.view=v;try{wanWeberDraw();}catch(err){wanSide2Draw();}}};
+ const two=wanTwoSided();
+ const cur=(side===2||!two)?w2.view:'weber';
+ const pick=v=>{if(side===2&&two){w2.view=v;try{wanWeberDraw();}catch(err){wanSide2Draw();}}else if(!two){w2.view=v;try{renderWan();}catch(err){}}};
  wanFloatMenu(e,[
   {hd:'View / Skin'},
   {label:'Weber&#8217;s Matrix of Related Keys (scales)',cur:cur==='weber',fn:()=>pick('weber')},
-  {label:'Hallway with books',cur:cur==='hallway',dis:side!==2,fn:()=>{wanHall.skin='books';wanTree.skin='books';try{wanTreeEnsureDefaults();}catch(err){}pick('hallway');}},   /* R44: Hallway = Trees paint (books) + hub/forks; cubes are NOT this skin */
-  {label:'3D Matrix (inside the cube)',cur:cur==='3d',dis:side!==2,fn:()=>pick('3d')},   /* R41: separate — Romantic-period chords / cubes tunnel (his [10]) */
-  {label:'Weber in time (keys over bars)',cur:cur==='time',dis:side!==2,fn:()=>pick('time')},   /* R42: candidate B — Weber floor · key path · Z=time */
-  {label:'Decision Trees',cur:cur==='tree',dis:side!==2,fn:()=>pick('tree')},   /* pre-game then walk; skins books · simple · puzzle */
+  {label:'Hallway with books',cur:cur==='hallway',dis:side!==2&&two,fn:()=>{wanHall.skin='books';wanTree.skin='books';try{wanTreeEnsureDefaults();}catch(err){}pick('hallway');}},   /* R44: Hallway = Trees paint (books) + hub/forks; cubes are NOT this skin */
+  {label:'3D Matrix (inside the cube)',cur:cur==='3d',dis:side!==2&&two,fn:()=>pick('3d')},   /* R41: separate — Romantic-period chords / cubes tunnel (his [10]) */
+  {label:'Weber in time (keys over bars)',cur:cur==='time',dis:side!==2&&two,fn:()=>pick('time')},   /* R42: candidate B — Weber floor · key path · Z=time */
+  {label:'Decision Trees',cur:cur==='tree',dis:side!==2&&two,fn:()=>pick('tree')},   /* pre-game then walk; skins books · simple · puzzle */
   {label:'More views land with their rounds',dis:true}
  ]);
 }
@@ -31159,7 +31194,7 @@ function wanWeberDraw(){
      so arming ⏺ ships the pair and costs no WINDOW_DEFS entry. */
   +'<span class="wanAllTog'+(wanState.rec?' on':'')+'" id="wanRecTog" title="Experiment, and record your trips. Every key you land on joins 🧳 Upcoming Trips as a stop; the trail below becomes a string of chords you can drag straight onto the chord lane.">'+(wanState.rec?'⏺':'⏵')+' Record your trips</span>'
   /* his 166th: a View/Skin button ABOVE the left side (the right side wears its own) */
-  +(_w2on?'<span class="wanAllTog" id="wanView1Btn" title="View / Skin — what the LEFT side shows. More views join as they are built.">View: Weber&#8217;s Matrix ▾</span>':'')
+  +'<span class="wanAllTog" id="wanView1Btn" title="View / Skin — what '+(_w2on?'the LEFT side':'this board')+' shows. More views join as they are built.">View: '+(_w2on?'Weber&#8217;s Matrix':wanViewLabel(wanWeb2State().view))+' ▾</span>'   /* R61 [39] ②: the button stands on a single-sided board too */
   +'</div>'
   +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="'+(_w2on?'flex:'+wanWeb2State().split.toFixed(3)+' 1 0;min-width:180px;overflow-x:auto;':'flex:1 1 auto;min-width:0;')+'">';
  for(let r=0;r<WEB_ROWS;r++){
@@ -31215,11 +31250,13 @@ function wanWeberDraw(){
    +'<div id="wanSide2Col" style="flex:'+(1-wanWeb2State().split).toFixed(3)+' 1 0;min-width:200px;display:flex;flex-direction:column;gap:4px;">'
    +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='hallway'?'Hallway with books':wanWeb2State().view==='3d'?'3D Matrix (inside the cube)':wanWeb2State().view==='time'?'Weber in time (keys over bars)':'Decision Trees')+' ▾</span>'
    +(wanWeb2State().linked?'':'<span style="font-size:9.5px;color:#6b4f28;">independent — double-click a key to set THIS side&#8217;s home</span>')+'</div>'
-   +'<div id="wanSide2" style="overflow-x:auto;"></div></div>':'')
+   +'<div id="wanSide2" style="overflow-x:auto;"></div></div>'
+   :((wanWeb2State().view!=='weber')?'<div id="wanSide2Col" style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px;"><div id="wanSide2" style="overflow-x:auto;"></div></div>':''))   /* R61 [39] ②: a single-sided board hosts the chosen view here, the matrix stepping aside */
   +'<div id="wanLegend"></div></div>';   /* 80th R21: the arrow marker stood down; R22: the legend rides the right */
  W.innerHTML=h;
  W.title='Weber intended the matrix as a practical, visual roadmap for modulation and a chart of the psychological “distance” between keys. One step in any direction is a closely related key — vertically by fifths (dominant/subdominant), horizontally through parallel and relative modes. To reach a distant key, trace a path through the boxes (C → G → D → b) and build pivot bridges along it. Adjacent keys are first-degree relations; each box further is a degree more distant — a one-box move sounds smooth, a leap across many sounds dramatic. The full story is in ℹ About.';
  const wrap=W.querySelector('#wanWebWrap');
+ if(wrap&&!_w2on&&wanWeb2State().view!=='weber'){wrap.style.display='none';}   /* R61 [39] ②: the single side shows the chosen view */
  /* ---- the DEGREE BOXES (drawn from live chip geometry — the coordinate law) ---- */
  const chipAt=(r,c)=>wrap.querySelector('.wanWebKey[data-r="'+r+'"][data-c="'+c+'"]');
  /* his 74th (Sept 2): the SPECIFIC clicked button anchors — even a corner duplicate
@@ -31951,7 +31988,7 @@ function wanWeberDraw(){
    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   };
  }
- try{wanSide2Draw();}catch(e){}
+ try{wanSide2Draw();}catch(e){}   /* R61: also the single-sided board's chosen view (the host is there when the view is not Weber) */
  try{paintSwapDom(W);}catch(e){}   /* Guitar C round 2: the paint swap at the emit point */
 }
 function renderWan(){
@@ -32094,7 +32131,7 @@ function renderWan(){
      ("Scales", the Scale/Raga Browser). Nothing new was invented for this. */
   +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
   +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
-  +'<div style="display:flex;gap:6px;"><select id="wanRoot" '+(wanState.follow?'disabled':'')+' style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
+  +'<div style="display:flex;gap:6px;"><select id="wanRoot" title="The home key — choosing one stops following the playhead (⟲ re-follows)" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select>'+BRUSH(1)+'</div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:#3a2c18;cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
   /* ⛔⭐ 82nd R3 (his FORTY-FIFTH message, first sentence): "We don't need the relationship
@@ -32202,7 +32239,7 @@ function renderWan(){
   /* his 166th FIX ("I still see no option to color the Weber Neighbors"): the swatch
      rides the row itself now — data-fncol/data-fnrst wiring below already existed */
   +fnGroups.filter(g=>wanState.fnExpand||!g.f.hyper).map(g=>'<div style="display:flex;gap:6px;align-items:baseline;font-size:11px;line-height:1.45;">'
-    +'<input type="color" data-fncol="'+g.f.id+'" value="'+wanFnCol(g.f.id)+'" title="Colour the '+g.f.label+' category — it reflects on the chips, the chords and every view." style="flex:0 0 20px;width:20px;height:15px;padding:0;border:1px solid #a8895f;border-radius:3px;background:none;cursor:pointer;align-self:center;">'
+    +'<span class="wanFnSw" data-fnsw="'+g.f.id+'" title="Colour the '+g.f.label+' category — first the five swatches of the painting in use, then your own colour" style="flex:0 0 20px;width:20px;height:15px;border-radius:3px;cursor:pointer;background:'+wanFnCol(g.f.id)+';border:1px solid #6b4f28;"></span><input type="color" data-fncol="'+g.f.id+'" value="'+wanFnCol(g.f.id)+'" style="display:none;width:0;height:0;padding:0;border:1px solid #a8895f;border-radius:3px;background:none;cursor:pointer;align-self:center;">'
     +'<span style="flex:0 0 96px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:'+wanFnCol(g.f.id)+';font-weight:700;">'+g.f.label+'</span>'
     +'<span style="flex:1;min-width:0;color:#3a2c18;">'+(g.items.length?g.items.join(' · '):'<span style="color:#8a6f4d;">—</span>')+'</span></div>').join('')
   +'</div>'
@@ -32320,7 +32357,7 @@ function renderWan(){
  });
  const se=document.getElementById('wanSearch');
  se.oninput=e=>{wanState.search=e.target.value;renderWan();const s2=document.getElementById('wanSearch');if(s2){s2.focus();try{s2.setSelectionRange(s2.value.length,s2.value.length);}catch(_){}}};
- document.getElementById('wanRoot').onchange=e=>{wanState.tonic=+e.target.value||0;wanState.cur={row:0,deg:0};renderWan();};
+ document.getElementById('wanRoot').onchange=e=>{wanState.follow=false;wanState.tonic=+e.target.value||0;wanState.cur={row:0,deg:0};renderWan();};   /* R61 (his [39] ⑤): the drop-down always opens — a choice un-follows the playhead */
  document.getElementById('wanMode').onchange=e=>{if(SCALE_DB[e.target.value]){wanState.mode=e.target.value;wanState.relStep=Math.min(wanState.relStep,Math.max(1,wanScale().pcs.length-1));wanState.cur={row:0,deg:0};renderWan();}};
  document.getElementById('wanFollow').onchange=e=>{wanState.follow=!!e.target.checked;if(wanState.follow)wanSyncFollow();renderWan();};
  /* 81st R2: ⛔ `+v||2` WOULD EAT UNISON — 0 is a legal step now (his same-root case), and
@@ -32388,6 +32425,7 @@ function renderWan(){
  B.querySelectorAll('input[data-fncol]').forEach(inp=>{
   const id=inp.getAttribute('data-fncol');
   inp.oninput=()=>{wanFnCols[id]=inp.value;persistWanFnCols();renderWan();};});
+ B.querySelectorAll('.wanFnSw[data-fnsw]').forEach(sw=>{sw.onclick=e=>{e.stopPropagation();wanFnColorPop(sw,sw.getAttribute('data-fnsw'));};});   /* R61 (his [39] ③) */
  B.querySelectorAll('[data-fnrst]').forEach(el=>{el.onclick=e=>{e.stopPropagation();
   delete wanFnCols[el.getAttribute('data-fnrst')];persistWanFnCols();renderWan();};});
  /* 82nd R2: scale 2's own ROOT — the input the top scale always had and this one did not.
