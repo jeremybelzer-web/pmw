@@ -934,7 +934,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-09a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16780,6 +16780,76 @@ function skinGv2GridChrome(root,id){
  const head=root&&root.querySelector('[id="gridWinHead"]'); if(!head||head._skSelBound)return; head._skSelBound=true;
  head.addEventListener('click',e=>{if(!skinIsGv2())return; if(e.target.closest&&e.target.closest('.wbtn,.cpchip,button,input,select,a,label,.colGrip'))return; e.stopPropagation();e.stopImmediatePropagation();e.preventDefault(); skinLaneSelect('grid:'+id);},true);
 }
+var tsel=null;   /* R64 (his [44] ③): the TIME-RANGE selection — {b0,b1,tracks:[…],chords} — beats and bars across tracks, the chord lane included */
+function chordsSplitAt(chords,beat){
+ /* R64 (his [44] ④): the chord lane cut at `beat` — the chord under it becomes two of the same chord, its length shared at the cut;
+    a cut on a boundary changes nothing. Pure — unit-tested. */
+ const out=[];let t=0;
+ for(const c of (chords||[])){
+  const a=t,b=t+c.d;
+  if(beat>a+1e-6&&beat<b-1e-6){const c1=Object.assign({},c,{d:+(beat-a).toFixed(6)}),c2=Object.assign({},c,{d:+(b-beat).toFixed(6)});if(c1.iv)c1.iv=c1.iv.slice();if(c2.iv)c2.iv=c2.iv.slice();out.push(c1,c2);}
+  else out.push(c);
+  t=b;
+ }
+ return out;
+}
+function notesSplitAt(notes,beat){
+ /* R64: every note that CROSSES `beat` becomes two — the onset half and the tail from the cut (the other fields ride both). Pure — unit-tested. */
+ const out=[];
+ for(const n of (notes||[])){
+  if(!n||typeof n[0]!=='number'||typeof n[1]!=='number'){out.push(n);continue;}
+  const a=n[0],b=n[0]+n[1];
+  if(beat>a+1e-6&&beat<b-1e-6){const h1=n.slice();h1[1]=+(beat-a).toFixed(6);const h2=n.slice();h2[0]=+beat.toFixed(6);h2[1]=+(b-beat).toFixed(6);out.push(h1,h2);}
+  else out.push(n.slice());
+ }
+ return out;
+}
+function boundsWithCuts(bounds,cuts,loop){
+ /* R64: the clip bounds plus the cuts, unique and sorted, inside (0,loop). Pure — unit-tested. */
+ const set=new Set();for(const b of (bounds||[]))if(b>1e-6&&b<loop-1e-6)set.add(+(+b).toFixed(6));for(const c of (cuts||[]))if(c>1e-6&&c<loop-1e-6)set.add(+(+c).toFixed(6));
+ return [...set].sort((a,b)=>a-b);
+}
+function tselDraw(){
+ /* R64 (his [44] ③): the selection's bands — one over each selected track's lane from b0 to b1, one over the chord lane */
+ try{
+  const sv=(typeof curSvg==='function')?curSvg():svg; const wrap=(sv&&sv.closest)?sv.closest('[id="gridWrap"]'):null; if(!wrap)return;
+  wrap.querySelectorAll(':scope > .skTsel').forEach(e=>e.remove());
+  if(!tsel||!(tsel.b1>tsel.b0))return;
+  const W=wrap.getBoundingClientRect();
+  const band=(el)=>{if(!el)return;const R=el.getBoundingClientRect();const lane=el.closest('.trow, [id="gridRow"], [id="chordRow"]');const L=lane?lane.querySelector('.gvwrap, .chordlane'):null;const LR=(L||el).getBoundingClientRect();
+   const d=document.createElement('div');d.className='skTsel';const x0=LR.left-W.left+GUT+tsel.b0*PPB,x1=LR.left-W.left+GUT+tsel.b1*PPB;
+   d.style.cssText='position:absolute;pointer-events:none;z-index:3;background:rgba(240,181,90,.22);border-left:1px solid var(--accent);border-right:1px solid var(--accent);left:'+Math.round(x0)+'px;width:'+Math.max(1,Math.round(x1-x0))+'px;top:'+Math.round(R.top-W.top)+'px;height:'+Math.round(R.height)+'px;';
+   wrap.appendChild(d);};
+  for(const t of tsel.tracks){const st=wrap.querySelector('.tstrip[data-trk="'+t+'"]');if(st)band(st);else if(t===activeTrack){const gr=wrap.querySelector('[id="gridRow"] > .gvwrap');if(gr)band(gr);}}
+  if(tsel.chords){const cl=wrap.querySelector('[id="chordlane"]');if(cl)band(cl);}
+ }catch(e){}
+}
+function tselClear(){if(!tsel)return false;tsel=null;tselDraw();return true;}
+function tselSplit(){
+ /* R64 (his [44] ④): ⌘E — the clips and the chords split along the selection's two edges on the selected tracks (one undo) */
+ if(!tsel||!(tsel.b1>tsel.b0))return false;
+ const cuts=[tsel.b0,tsel.b1];
+ try{snapshot();}catch(e){}
+ for(const t of tsel.tracks){
+  if(t==='drums')continue;
+  if(!(project.tracks[t]&&project.tracks[t].length)&&typeof stripNotes==='function'){try{project.tracks[t]=(stripNotes(t)||[]).map(n=>n.slice());}catch(e){}}   /* a style track materializes whole before its cut */
+  setTrackClipBounds(t,boundsWithCuts(trackClipBounds(t),cuts,LOOP));
+  let rows=project.tracks[t]||[];for(const c of cuts)rows=notesSplitAt(rows,c);project.tracks[t]=rows;
+ }
+ if(tsel.chords){let ch=project.chords;for(const c of cuts)ch=chordsSplitAt(ch,c);project.chords=ch;}
+ refresh(true);drawTrackSel();if(typeof drawChordLane==='function')drawChordLane();tselDraw();
+ return true;
+}
+(function(){
+ if(document._tselKeyBound)return;document._tselKeyBound=true;
+ document.addEventListener('keydown',e=>{
+  if(!(e.metaKey||e.ctrlKey)||e.altKey||String(e.key).toLowerCase()!=='e')return;
+  const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  if(!tsel)return;
+  e.preventDefault();e.stopPropagation();
+  try{tselSplit();}catch(err){}
+ },true);
+})();
 function skinGv2StripGesture(root,id){
  /* R53 (his [24] ③ + the box; ④): under GV-2 a press on EMPTY grid — a gap span, a lane's bare surface, the strips' background —
     is neither a swipe nor a clip press: a CLICK puts the insert marker there (the pulsing line, the ▼ at the top of the grid)
@@ -16792,25 +16862,40 @@ function skinGv2StripGesture(root,id){
  root.addEventListener('pointerdown',ev=>{
   if(ev.button!==0||!skinIsGv2())return;
   const t=ev.target; if(!t||!t.closest)return;
-  if(t.closest('.scell:not(.gap),.thead,.tgrip,.wbtn,.cpchip,button,input,select,.rzh,.rzhN,.nboxWRz,.nboxHRz,[id="gridWinHead"],.blane,svg,.chordlane,[id="chordRow"],.skGv2Bar,.colGrip,.tcorner'))return;
+  if(t.closest('.thead,.tgrip,.wbtn,.cpchip,button,input,select,.rzh,.rzhN,.nboxWRz,.nboxHRz,[id="gridWinHead"],.blane,svg,.chordlane,[id="chordRow"],.skGv2Bar,.colGrip,.tcorner'))return;
   if(!t.closest('[id="trackStrips"],[id="gridRow"],.tstrip'))return;
-  ev.preventDefault();ev.stopPropagation();
-  g={x0:ev.clientX,y0:ev.clientY,moved:false,box:null};
+  const onClip=!!t.closest('.scell:not(.gap)');
+  /* R64 (his [44] ②③): a press ON A CLIP keeps the clip's own press (its selection, the magnifier) and still places the marker on
+     release; a press off a clip cancels the gap cell's own mousedown; a DRAG from either is the time-range selection */
+  if(!onClip){ev.preventDefault();ev.stopPropagation();}
+  g={x0:ev.clientX,y0:ev.clientY,moved:false,box:null,onClip,alt:!!ev.altKey,beat:null};
+  try{g.beat=run(()=>beatAt(ev.clientX));}catch(e){}   /* R64: the beat read at the PRESS — a clip's own press may re-lay the view before the release */
   try{root.setPointerCapture(ev.pointerId);}catch(e){}
  },true);
  root.addEventListener('pointermove',ev=>{
   if(!g)return; const dx=ev.clientX-g.x0,dy=ev.clientY-g.y0;
-  if(!g.moved&&Math.hypot(dx,dy)<4)return; g.moved=true;
-  if(!g.box){g.box=document.createElement('div');g.box.className='skMarquee';document.body.appendChild(g.box);}
-  g.box.style.cssText='position:fixed;z-index:120;pointer-events:none;border:1px solid var(--accent);background:rgba(240,181,90,.12);left:'+Math.min(g.x0,ev.clientX)+'px;top:'+Math.min(g.y0,ev.clientY)+'px;width:'+Math.abs(dx)+'px;height:'+Math.abs(dy)+'px;';
+  if(!g.moved&&Math.hypot(dx,dy)<4)return;
+  if(g.onClip&&g.alt)return;   /* ⌥-drag on a clip stays the clip's own move-to-lane drag */
+  if(!g.moved){g.moved=true;try{if(g.onClip){sdrag=null;}}catch(e){}}   /* the clip's move-drag stands down: the drag is the selection */
+  /* R64 (his [44] ③): the live TIME-RANGE — beats from the x span, tracks from the rows the y span crosses, the chord lane too */
+  run(()=>{
+   const xa=Math.min(g.x0,ev.clientX),xb=Math.max(g.x0,ev.clientX),ya=Math.min(g.y0,ev.clientY),yb=Math.max(g.y0,ev.clientY);
+   const b0=beatAt(xa),b1=beatAt(xb); if(b0==null)return;
+   const tracks=[...root.querySelectorAll('.tstrip')].filter(st=>{const r=st.getBoundingClientRect();return r.bottom>=ya&&r.top<=yb&&st.dataset.trk;}).map(st=>st.dataset.trk);
+   const cl=root.querySelector('[id="chordlane"]');const clr=cl?cl.getBoundingClientRect():null;const chords=!!(clr&&clr.bottom>=ya&&clr.top<=yb);
+   tsel={b0,b1:Math.max(b0,b1),tracks:[...new Set(tracks)],chords};tselDraw();
+  });
  },true);
  const done=ev=>{
   if(!g)return; const G=g; g=null; if(G.box)G.box.remove();
   const clearSel=()=>{try{xselClear();}catch(e){} stripSel=null;stripMulti={t:null,set:new Set()};selChordSet.clear();selChord=null;};
   if(!G.moved){
-   run(()=>{const b=beatAt(G.x0); if(b==null)return; clearSel(); insertMarkSet(b); try{setPlayheadBeat(b);}catch(e){} refresh(false);drawTrackSel();drawMainStrip();drawChordLane();});
+   /* R64 (his [44] ②): ONE click anywhere on the grid places the marker at that beat — on a clip the clip's own press has already selected it */
+   run(()=>{const b=(typeof G.beat==='number')?G.beat:beatAt(G.x0); if(b==null)return; if(!G.onClip)clearSel(); tselClear(); insertMarkSet(b); try{setPlayheadBeat(b);}catch(e){} if(!G.onClip){refresh(false);drawTrackSel();drawMainStrip();drawChordLane();}else{insertMarkDraw();}});
    return;
   }
+  if(G.onClip&&G.alt)return;
+  if(tsel&&tsel.b1>tsel.b0){run(()=>{clearSel();refresh(false);drawTrackSel();drawMainStrip();drawChordLane();tselDraw();});return;}   /* the time-range stands; the clip selection yields to it */
   const ya=Math.min(G.y0,ev.clientY),yb=Math.max(G.y0,ev.clientY),xa=Math.min(G.x0,ev.clientX),xb=Math.max(G.x0,ev.clientX);
   const strips=[...root.querySelectorAll('.tstrip')].filter(st=>{const r=st.getBoundingClientRect();return r.bottom>=ya&&r.top<=yb&&st.dataset.trk;});
   run(()=>{
@@ -17217,12 +17302,18 @@ function skinSplitter(vert,onMove,onEnd){
 }
 function skinEdge(side,label,onRecover){
  /* GV-3: the tucked-away pane keeps a thin strip at its edge — one line and a triangle
-    pointing the way the border should be dragged to bring it back; a click brings it back */
+    pointing the way the border should be dragged to bring it back; a click brings it back ·
+    R64 (his [44] ①): a DRAG inward brings it back too — grab the strip and pull 10px toward the centre */
  const d=document.createElement('div');
  d.className='skEdge skEdge-'+side;
- d.title=label;
+ d.title=label+' — click, or drag it inward';
  d.textContent=side==='l'?'▶':side==='r'?'◀':'▲';
- d.onclick=onRecover;
+ d.style.zIndex='6';
+ let g=null,fired=false;
+ d.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;g={x:ev.clientX,y:ev.clientY};fired=false;try{d.setPointerCapture(ev.pointerId);}catch(e){}ev.preventDefault();},true);
+ d.addEventListener('pointermove',ev=>{if(!g||fired)return;const dx=ev.clientX-g.x,dy=ev.clientY-g.y;const inward=side==='l'?dx:side==='r'?-dx:side==='t'?dy:-dy;if(inward>=10){fired=true;g=null;try{onRecover();}catch(e){}}},true);
+ d.addEventListener('pointerup',()=>{g=null;},true);
+ d.onclick=()=>{if(fired){fired=false;return;}try{onRecover();}catch(e){}};   /* a plain click still brings it back; a drag that already did is not doubled */
  return d;
 }
 function skinApply(sk){
@@ -37590,6 +37681,7 @@ function drawTrackSel(){
  window.__stripSig=stripSig();
  try{insertMarkDraw();}catch(e){}   /* R53 [24] ③: the insert marker follows the strips' geometry */
  try{chordHeadCtl();}catch(e){}   /* R60 [16] ②: the Chords lane's own head controls ride every redraw */
+ try{tselDraw();}catch(e){}   /* R64 [44] ③: the time-range bands follow the strips' geometry */
 }
 function hexA(hex,a){
  const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex||'');
