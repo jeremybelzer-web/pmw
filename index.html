@@ -932,7 +932,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29782,19 +29782,31 @@ function wanPopupOpen(panelId){
   try{if(typeof skinState!=='undefined'&&skinState&&typeof skinRepack==='function')skinRepack();}catch(e){}
  };
 }
+function wanTextOn(hex){
+ /* R62 (his [42]): the lettering that reads on a ground — light on a dark colour, dark on a light one (relative luminance). Pure — unit-tested. */
+ const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex||'').trim());
+ if(!m)return '#f6ecd4';
+ const ch=x=>{x=parseInt(x,16)/255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};
+ const L=.2126*ch(m[1])+.7152*ch(m[2])+.0722*ch(m[3]);
+ return L>.45?'#1c1408':'#f6ecd4';
+}
 function wanFnColorPop(anchor,id){
  /* R61 (his [39] ③): a Weber-neighbour category's colour — FIRST the five swatches of the painting the Color Palette has in use
     (the first painting when none is), THEN "choose your own" as the secondary road (the colour circle) */
  let d=document.getElementById('wanFnPop');if(d)d.remove();
- const pal=(typeof clPalette==='function')?(clPalette((typeof canvasState==='object'&&canvasState&&canvasState.palId!=null)?canvasState.palId:0)||clPalette(0)):null;
- const cols=pal?pal.colors:['#f26386','#2168a6','#e6c337','#5a3a26','#c6a490'];
+ /* R62 (his [41]): a LIST of paintings — the one in use first, seven shown, "Show more" for the rest of the 62 — each its five swatches */
+ const useId=(typeof canvasState==='object'&&canvasState&&canvasState.palId!=null)?canvasState.palId:0;
+ const order=[];if(typeof clPalette==='function'){const N=(typeof CL_PALETTES!=='undefined')?CL_PALETTES.length:0;if(clPalette(useId))order.push(useId);for(let k=0;k<N;k++)if(k!==useId)order.push(k);}
+ const rowOf=k=>{const pl=clPalette(k);if(!pl)return '';return '<div class="wanFnPopRow" style="display:flex;gap:6px;align-items:center;margin-bottom:4px;"><span style="flex:0 0 150px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+pl.painting+' — '+pl.artist+'">'+pl.painting+'</span>'+pl.colors.map(c=>'<span class="wanFnPopSw" data-col="'+c+'" style="width:22px;height:20px;border-radius:4px;background:'+c+';border:1px solid #6b4f28;cursor:pointer;flex:0 0 22px;" title="'+c+'"></span>').join('')+'</div>';};
+ const SHOW=7;
  d=document.createElement('div');d.id='wanFnPop';
  const r=anchor.getBoundingClientRect();
- d.style.cssText='position:fixed;z-index:140;left:'+Math.round(r.left)+'px;top:'+Math.round(r.bottom+4)+'px;background:#f2e7cb;border:1px solid #a8895f;border-radius:8px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:Georgia,serif;color:#3a2c18;';
- d.innerHTML='<div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;">'+(pal?pal.painting+' — '+pal.artist:'five swatches')+'</div>'
-  +'<div style="display:flex;gap:6px;margin-bottom:7px;">'+cols.map(c=>'<span class="wanFnPopSw" data-col="'+c+'" style="width:26px;height:22px;border-radius:5px;background:'+c+';border:1px solid #6b4f28;cursor:pointer;" title="'+c+'"></span>').join('')+'</div>'
-  +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanFnPopOwn" title="The colour circle — choose your own">🎨 Choose your own…</span><span class="wanAllTog" id="wanFnPopX">✕</span></div>';
+ d.style.cssText='position:fixed;z-index:140;left:'+Math.round(Math.min(r.left,Math.max(8,window.innerWidth-330)))+'px;top:'+Math.round(r.bottom+4)+'px;max-height:60vh;overflow:auto;background:#f2e7cb;border:1px solid #a8895f;border-radius:8px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:Georgia,serif;color:#3a2c18;';
+ d.innerHTML='<div id="wanFnPopList">'+order.slice(0,SHOW).map(rowOf).join('')+'</div>'
+  +(order.length>SHOW?'<div id="wanFnPopMore" style="display:none;">'+order.slice(SHOW).map(rowOf).join('')+'</div><span class="wanAllTog" id="wanFnPopShow" title="The rest of the paintings">Show more ▾</span>':'')
+  +'<div style="display:flex;gap:6px;align-items:center;margin-top:6px;"><span class="wanAllTog" id="wanFnPopOwn" title="The colour circle — choose your own">🎨 Choose your own…</span><span class="wanAllTog" id="wanFnPopX">✕</span></div>';
  document.body.appendChild(d);
+ const more=d.querySelector('#wanFnPopShow');if(more)more.onclick=e=>{e.stopPropagation();const m2=d.querySelector('#wanFnPopMore');const open=m2.style.display==='none';m2.style.display=open?'':'none';more.textContent=open?'Show fewer ▴':'Show more ▾';};
  const done=()=>{d.remove();document.removeEventListener('mousedown',outside,true);};
  const outside=e=>{if(!d.contains(e.target))done();};
  setTimeout(()=>document.addEventListener('mousedown',outside,true),0);
@@ -31119,12 +31131,20 @@ function wanSide2Draw(){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
   for(let c=0;c<WEB_COLS;c++){
    const cell=grid[r][c];
-   const nm=wanLofName(cell.lof);
+   /* R62 (his [40] ①③④): the 2nd board reads like the 1st — Reduce Accidentals, the roman-or-chord labels (roman against ITS
+      tonic), and the function colours (relative to ITS tonic) */
+   const redLof=st.webReduce?wanPcLof(wanLofPc(cell.lof),cell.minor):cell.lof;
+   const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);
    const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
+   const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,tonic):letter;
    const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
+   let fnSty='';
+   try{if(wanState.fnOn){const rel=(((wanLofPc(cell.lof)-tonic)%12)+12)%12;const kf=wanKeyFn(rel,cell.minor,!!wanState.fnExpand);
+    if(kf==='subrel'){const a2=wanFnCol('sub'),b2=wanFnCol('rel');fnSty='background:linear-gradient(90deg,'+a2+'66 50%,'+b2+'66 50%);outline:1px solid '+a2+';';}
+    else if(kf){const fc=wanFnCol(kf);fnSty='background:'+fc+'44;outline:1px solid '+fc+';';}}}catch(e){}
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
-   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+letter+'</span>';
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
   }
   h+='</div>';
  }
@@ -31146,7 +31166,7 @@ function wanWeberDraw(){
     select · ⌥+click = reset — the universal click rules, applied here first. */
  const W=document.getElementById('wanWeber');if(!W)return;
  const st=wanState;
- if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView='roman';st.webPaths=[];st.webSel=new Set();}   /* 81st R4 (his thirty-eighth message): ROMAN NUMERALS ARE THE DEFAULT — the ctrl+click map menu still switches back to Letters */
+ if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.wanLabels==='chords')?'letters':'roman';st.webPaths=[];st.webSel=new Set();}   /* R62 (his [40] ④): the Settings default — roman or chord names — for BOTH boards */   /* 81st R4 (his thirty-eighth message): ROMAN NUMERALS ARE THE DEFAULT — the ctrl+click map menu still switches back to Letters */
  if(!Array.isArray(st.webRoadsOff))st.webRoadsOff=[];   /* 80th R23: legend-toggled-off roads */
  if(!(st.webChainSel instanceof Set))st.webChainSel=new Set();   /* 84th (his 39th message): the selected path-chain keys, as 'road:index' */
  if(st.webPathRecSeq===undefined)st.webPathRecSeq=null;   /* 84th: the path Rec tape — null = not recording */
@@ -31185,6 +31205,8 @@ function wanWeberDraw(){
      meaningful there too. Gating on 'letters' alone would have hidden a working control
      on the Old World Map. ⭐ The toggle's STATE is left untouched while hidden, so a user
      who had it on finds it still on when the letters come back. */
+  +'<span class="wanAllTog'+(st.webView==='roman'?' on':'')+'" data-wanlbl="roman" title="Both boards read as ROMAN NUMERALS against their home key (the Settings menu sets the default)">Roman numerals</span>'
+  +'<span class="wanAllTog'+(st.webView==='letters'?' on':'')+'" data-wanlbl="letters" title="Both boards read as CHORD NAMES (the Settings menu sets the default)">Chord names</span>'   /* R62 (his [40] ④): one clear control, both boards the same */
   +(st.webView==='roman'?'':'<span class="wanAllTog'+(st.webReduce?' on':'')+'" id="wanRedTog" title="Show every double-accidental key as its plain enharmonic on screen — B𝄫 shows as A, G𝄫 as F. The map’s positions never move; only the labels reduce.">'+(st.webReduce?'☑':'☐')+' Reduce Accidentals</span>')
   /* 81st R3 (his thirty-fifth message): "Experiment, record your trips: Trips Window
      which creates strings of chords = draggable chord lanes." ⭐ THE WINDOW IS THE ONE
@@ -31845,6 +31867,7 @@ function wanWeberDraw(){
  if(tog)tog.onclick=e=>{e.stopPropagation();st.webAll=!st.webAll;wanWeberDraw();};
  const hi=W.querySelector('#wanHowI');
  if(hi)hi.onclick=e=>{e.stopPropagation();const ht=W.querySelector('#wanHowTo');if(ht)ht.style.display=ht.style.display==='none'?'block':'none';};
+ W.querySelectorAll('[data-wanlbl]').forEach(el=>{el.onclick=e=>{e.stopPropagation();wanState.webView=el.getAttribute('data-wanlbl');try{SETTINGS.wanLabels=(wanState.webView==='letters')?'chords':'roman';persistSettings();}catch(err){}renderWan();};});   /* R62 [40] ④ */
  const red=W.querySelector('#wanRedTog');
  if(red)red.onclick=e=>{e.stopPropagation();st.webReduce=!st.webReduce;wanWeberDraw();};
  /* 81st R3: arming ⏺ SHIPS THE PAIR — 🧳 Upcoming Trips comes up beside the map, because
@@ -32065,7 +32088,7 @@ function renderWan(){
  /* his 166th: every category's colour REFLECTS on its chip (the one wanFnCol table) */
  const _nbFn={'Dominant':'dom','Subdominant':'sub','Relative':'rel','Parallel':'par','Hyper dominant':'hdom','Hyper subdominant':'hsub'};
  const nbChips=nb.map((o,i)=>{const _fc=wanFnCol(_nbFn[o.tag]||'dom');
-  return '<span class="part wanNb" data-i="'+i+'" title="'+o.tag+' on Weber\'s table — click to wander there" style="padding:3px 8px;font-size:11px;border-left:3px solid '+_fc+';">'+PCN[o.tonic]+' '+(o.minor?'Minor':'Major')+'<span style="font-size:9px;color:'+_fc+';"> · '+o.tag+'</span></span>';}).join('');
+  return '<span class="part wanNb" data-i="'+i+'" title="'+o.tag+' on Weber\'s table — click to wander there" style="padding:3px 8px;font-size:11px;background:'+_fc+';border-color:'+_fc+';color:'+wanTextOn(_fc)+';">'+PCN[o.tonic]+' '+(o.minor?'Minor':'Major')+'<span style="font-size:9px;opacity:.85;"> · '+o.tag+'</span></span>';   /* R62 (his [42]): the category colour is the pill, the lettering reads on it */}).join('');
  /* 82nd R4 (his FORTY-FIFTH message): "the actual chords in both chord name, and roman numeral
     should be listed underneath each category: Subdominant: ii, IV; Dominant: iii, V, vii;
     Relative: vi, Parallel: I, i." ⭐ BOTH SPELLINGS, because that is the pairing that teaches —
@@ -38941,6 +38964,7 @@ function parseSettings(str){
  hallElevator:true,
  keyset:'live',
  fretHand:true,fingerColors:null,
+ wanLabels:'roman',   /* R62 (his [40] ④): the Wanderer's boards — 'roman' or 'chords' — one default for both */
  openStrings:false,neckFrame:'float',neckOverlays:{chord:true,arp:false,penta:false,scale:false}};   /* R45 [78]: the large neck's four overlays, ① on by default */   /* R36 [55] (d): "Use open strings whenever possible" — default OFF · R37 (f): the neck's frame, 'float' or 'head' */   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
@@ -42451,6 +42475,9 @@ function settingsHTML(){
  <p><b>Chord numerals</b> — how harmonic functions are written (chord lane, palettes):<br>
  <label><input type="radio" name="setNum" value="roman" ${SETTINGS.numerals!=='numbers'?'checked':''}> Roman numerals — I · ii7 · ♭VII</label>
  <label style="margin-left:14px;"><input type="radio" name="setNum" value="numbers" ${SETTINGS.numerals==='numbers'?'checked':''}> Numbers — 1 · 2m7 · ♭7</label></p>
+ <p><b>Weber's Wanderer — both boards</b> — how the two matrices are labelled (the Wanderer's own Roman numerals / Chord names chips change it live):<br>
+ <label><input type="radio" name="setWanLbl" value="roman" ${SETTINGS.wanLabels!=='chords'?'checked':''}> Roman numerals</label>
+ <label style="margin-left:14px;"><input type="radio" name="setWanLbl" value="chords" ${SETTINGS.wanLabels==='chords'?'checked':''}> Chord names</label></p>
  <p><label><input type="checkbox" id="setClassicHeads" ${SETTINGS.classicHeads?'checked':''}> <b>Classic track boxes</b> — the two-row name boxes (default: the slim micro row with on/S/R beside the name)</label></p>
  <p><b>Chord lane labels</b> — the big text on each chord block:<br>
  <label><input type="radio" name="setLane" value="function" ${SETTINGS.laneLabel!=='name'?'checked':''}> Function big (V7), chord name small</label>
@@ -42525,6 +42552,7 @@ function openSettings(){
  showInfo(settingsHTML());
  const box=document.getElementById('infoBox'),g=id=>document.getElementById(id);
  box.querySelectorAll('input[name=setNum]').forEach(r=>r.onchange=()=>{SETTINGS.numerals=r.value;persistSettings();drawChordLane();drawChordPanel();});
+ box.querySelectorAll('input[name=setWanLbl]').forEach(r=>r.onchange=()=>{SETTINGS.wanLabels=r.value;persistSettings();try{wanState.webView=(r.value==='chords')?'letters':'roman';renderWan();}catch(e){}});   /* R62 [40] ④ */
  box.querySelectorAll('input[name=setLane]').forEach(r=>r.onchange=()=>{SETTINGS.laneLabel=r.value;persistSettings();drawChordLane();});
  if(g('setClassicHeads'))g('setClassicHeads').onchange=e=>{SETTINGS.classicHeads=!!e.target.checked;persistSettings();
   const _rd=()=>{drawTrackSel();refresh(false);};_rd();
