@@ -876,7 +876,9 @@
   /* R49 (his [16]): no palette button on the grid under GV-2 (the Chord Palette is an engine); the grid fills the centre; the lane's miniatures a quarter wide */
   body.skinGv2 #gridPalBtn{display:none!important;}
   body.skinGv2 #skCentre .skCell{margin:0!important;width:100%!important;}
-  body.skinGv2 #skLane .skCell{width:24%!important;min-width:180px;}
+  /* R63 (his [43]): the quarter-wide miniatures are the SNEAK PEEK setting's law (off by default) — off, the lower rectangle holds the
+     engine windows at their own size, as before R49 */
+  body.skinGv2.gv2Sneak #skLane .skCell{width:24%!important;min-width:180px;}
   #skinLayer .skCell.skSel{outline:2px solid var(--accent);outline-offset:-2px;}
   /* R49b (his [18]): a miniature's head stays pinned at its cell's top whatever the scroll — title · ▸ · − · ✕ always in reach */
   body.skinGv2 #skLane .skCell > .winHead{position:sticky;top:0;z-index:3;background:var(--panel);}
@@ -932,7 +934,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-08e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -16592,7 +16594,7 @@ function skinNorm(raw){
  const fl=Array.isArray(p.fl)?p.fl.filter((x,i)=>typeof x==='string'&&x.length<=40&&p.fl.indexOf(x)===i).slice(0,32):[];
  const tree=skinTreeReshape(skinTreeInfoJoin((typeof skinTreeNorm==='function'?skinTreeNorm(p.tree):null)||skinTreeDefault({l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),lc:flag(p.lc,0),rc:flag(p.rc,0),bc:flag(p.bc,0)})));   /* R48 [12]: a saved tree without the Info leaf gets one · R49 [16]: the R1 shape becomes floor-to-ceiling */   /* seeded from the COERCED numbers */
  const cid=(typeof p.centreId==='string'&&(p.centreId===''||p.centreId==='main'||/^g\d+$/.test(p.centreId)))?p.centreId:'main';
- const rmode=(p.rightMode==='win')?'win':'shelf';
+ const rmode=(p.rightMode==='win'&&(typeof SETTINGS!=='object'||!SETTINGS||SETTINGS.gv2Right))?'win':'shelf';   /* R63 [43]: the right rectangle is the Shelf unless the setting opens it to an engine (the pure law keeps a given 'win' where no settings bag exists) */   /* R63 [43]: the right rectangle is the Shelf unless the setting opens it to an engine */
  const rwin=(typeof p.rightWin==='string'&&p.rightWin.length&&p.rightWin.length<=40)?p.rightWin:'';
  const rlast=(typeof p.rightLast==='string'&&p.rightLast.length<=40)?p.rightLast:'';   /* R49 [16]: the engine the right pane last held (the Shelf toggle's way back) */
  return {preset:'gv2',skin:'gv2',panes:{l:num(p.l,18,8,40),r:num(p.r,22,8,45),b:num(p.b,24,8,60),
@@ -16737,7 +16739,9 @@ function skinLaneChrome(m){
  /* R49 (his [16]): a lane miniature's chrome — ▸ in its head expands it into the right rectangle; a click on its title
     highlights it (Delete then closes it); its own ✕ closes it as ever */
  const head=m.querySelector('.winHead'); if(!head)return;
- if(!head.querySelector('.skExpand')){
+ const _rightOn=!!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gv2Right);
+ if(!_rightOn){const xo=head.querySelector('.skExpand');if(xo)xo.remove();}   /* R63 (his [43]): a head that carried a ▸ from an earlier apply sheds it when the setting is off */
+ if(!head.querySelector('.skExpand')&&_rightOn){   /* R63 (his [43]): the ▸ belongs to the right-rectangle setting (off by default) */
   const x=document.createElement('span'); x.className='wbtn skExpand'; x.textContent='▸'; x.title='Expand this window into the right rectangle (his [16]) — the border eases out to make room if it needs to';
   x.onclick=e=>{e.stopPropagation();e.preventDefault();skinGv2Expand(m.id);};
   const firstBtn=head.querySelector('.wbtn'); if(firstBtn)head.insertBefore(x,firstBtn); else head.appendChild(x);
@@ -16846,6 +16850,7 @@ function insertMarkDraw(){
  }catch(e){}
 }
 function skinGv2Expand(winId){
+ if(!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.gv2Right))return;   /* R63 (his [43]): the right rectangle hosts an enlarged engine only when the setting says so — off, the engines live in the lower rectangle */
  /* R49 [16]: the miniature's larger version fills the floor-to-ceiling right rectangle; when the window needs more room than the pane
     has, the border eases out to the left in his bell curve — slow, then fast, then slow — and the new share is remembered */
  skinGv2FocusEngine(winId);
@@ -16984,7 +16989,7 @@ function skinTeardown(keep){
   _skSaved=null;
  }
  layer.remove();
- document.body.classList.remove('skinOn','skinGv2','skinDv12');
+ document.body.classList.remove('skinOn','skinGv2','skinDv12','gv2Sneak','gv2Vertical','gv2Right');
  try{const _rl=document.getElementById('rail');if(_rl&&_rl.dataset.skD!==undefined){_rl.style.display=_rl.dataset.skD;delete _rl.dataset.skD;}}catch(e){}
  document.body.style.overflow='';
  skinState=null;
@@ -17229,6 +17234,7 @@ function skinApply(sk){
  skinState=sk;
  const P=sk.panes;
  document.body.classList.add('skinOn',sk.skin==='dv12'?'skinDv12':'skinGv2');
+ try{document.body.classList.toggle('gv2Sneak',!!(SETTINGS&&SETTINGS.gv2Sneak));document.body.classList.toggle('gv2Vertical',!!(SETTINGS&&SETTINGS.gv2Vertical));document.body.classList.toggle('gv2Right',!!(SETTINGS&&SETTINGS.gv2Right));}catch(e){}   /* R63 (his [43]): the three GV-2 switches, all off by default */
  try{const _rl=document.getElementById('rail');if(_rl&&_rl.dataset.skD===undefined){_rl.dataset.skD=_rl.style.display||'';_rl.style.display='none';}}catch(e){}   /* the rail rides inside #gridRowWrap with an inline display — the browser column carries its openers under a view */
  /* DV-11 ② (labelled): entering the view chooses its key-command set — Set A for GV-2 — unless a
     personal set is chosen; leaving gives the previous set back */
@@ -38965,6 +38971,7 @@ function parseSettings(str){
  keyset:'live',
  fretHand:true,fingerColors:null,
  wanLabels:'roman',   /* R62 (his [40] ④): the Wanderer's boards — 'roman' or 'chords' — one default for both */
+ gv2Sneak:false,gv2Vertical:false,gv2Right:false,   /* R63 (his [43]): GV-2's sneak-peek miniatures · the engines' vertical re-lay · the right rectangle as an engine's home — all OFF */
  openStrings:false,neckFrame:'float',neckOverlays:{chord:true,arp:false,penta:false,scale:false}};   /* R45 [78]: the large neck's four overlays, ① on by default */   /* R36 [55] (d): "Use open strings whenever possible" — default OFF · R37 (f): the neck's frame, 'float' or 'head' */   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
@@ -42475,6 +42482,10 @@ function settingsHTML(){
  <p><b>Chord numerals</b> — how harmonic functions are written (chord lane, palettes):<br>
  <label><input type="radio" name="setNum" value="roman" ${SETTINGS.numerals!=='numbers'?'checked':''}> Roman numerals — I · ii7 · ♭VII</label>
  <label style="margin-left:14px;"><input type="radio" name="setNum" value="numbers" ${SETTINGS.numerals==='numbers'?'checked':''}> Numbers — 1 · 2m7 · ♭7</label></p>
+ <p><b>Everything In Its Own Window (GV-2)</b> — three switches, all off by default:<br>
+ <label><input type="checkbox" id="setGv2Sneak" ${SETTINGS.gv2Sneak?'checked':''}> Sneak-peek miniatures in the lower rectangle (quarter-wide previews of each engine's most interesting element)</label><br>
+ <label><input type="checkbox" id="setGv2Vertical" ${SETTINGS.gv2Vertical?'checked':''}> Engines re-laid vertically (the format the right rectangle wants)</label><br>
+ <label><input type="checkbox" id="setGv2Right" ${SETTINGS.gv2Right?'checked':''}> The right rectangle enlarges an engine (▸ on a window) — off, the engines populate the lower rectangle and the right rectangle stays the Essence Shelf</label></p>
  <p><b>Weber's Wanderer — both boards</b> — how the two matrices are labelled (the Wanderer's own Roman numerals / Chord names chips change it live):<br>
  <label><input type="radio" name="setWanLbl" value="roman" ${SETTINGS.wanLabels!=='chords'?'checked':''}> Roman numerals</label>
  <label style="margin-left:14px;"><input type="radio" name="setWanLbl" value="chords" ${SETTINGS.wanLabels==='chords'?'checked':''}> Chord names</label></p>
@@ -42553,6 +42564,7 @@ function openSettings(){
  const box=document.getElementById('infoBox'),g=id=>document.getElementById(id);
  box.querySelectorAll('input[name=setNum]').forEach(r=>r.onchange=()=>{SETTINGS.numerals=r.value;persistSettings();drawChordLane();drawChordPanel();});
  box.querySelectorAll('input[name=setWanLbl]').forEach(r=>r.onchange=()=>{SETTINGS.wanLabels=r.value;persistSettings();try{wanState.webView=(r.value==='chords')?'letters':'roman';renderWan();}catch(e){}});   /* R62 [40] ④ */
+ for(const [id,key] of [['setGv2Sneak','gv2Sneak'],['setGv2Vertical','gv2Vertical'],['setGv2Right','gv2Right']]){const cb=box.querySelector('#'+id);if(cb)cb.onchange=()=>{SETTINGS[key]=!!cb.checked;persistSettings();try{if(typeof skinState!=='undefined'&&skinState&&typeof skinApply==='function')skinApply(skinState);}catch(e){}};}   /* R63 (his [43]) */
  box.querySelectorAll('input[name=setLane]').forEach(r=>r.onchange=()=>{SETTINGS.laneLabel=r.value;persistSettings();drawChordLane();});
  if(g('setClassicHeads'))g('setClassicHeads').onchange=e=>{SETTINGS.classicHeads=!!e.target.checked;persistSettings();
   const _rd=()=>{drawTrackSel();refresh(false);};_rd();
