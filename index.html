@@ -271,6 +271,11 @@
   .wanDegBox.k2{border:2px dashed #8a6f4d;opacity:.8;}
   .wanDegBox.k3{border:2px dotted #9a7f5d;opacity:.65;}
   .wanDegBox.k4{border:1px dotted #a8895f;opacity:.5;}
+  /* R68 (his [50] ③): side 2's boxes wear their OWN class — the same look, so every probe on .wanDegBox stays side 1's alone */
+  .wan2DegBox{position:absolute;pointer-events:none;border:3px double #6b4f28;border-radius:9px;box-shadow:0 0 0 1px rgba(107,79,40,.3),inset 0 0 14px rgba(107,79,40,.14);}
+  .wan2DegBox.k2{border:2px dashed #8a6f4d;opacity:.8;}
+  .wan2DegBox.k3{border:2px dotted #9a7f5d;opacity:.65;}
+  .wan2DegBox.k4{border:1px dotted #a8895f;opacity:.5;}
   .wanWebSel{outline:2px solid #b8860b;outline-offset:1px;}
   #wanPathsSvg{position:absolute;inset:0;pointer-events:none;overflow:visible;}
   /* 80th R22 (his thirtieth message): the route hover lights + selects the chords the
@@ -934,7 +939,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -8704,10 +8709,10 @@ function audVoice(c,prev){
       E4 G4 C5; a chord whose first inversion would leave the window opens on its lowest fit).
     · THE 9TH LAW is the window itself (64..78, a major ninth). An extended chord too wide for
       it falls back to its narrowest shapes from E4 up — labelled degradation.
-    · bass = ONE note, the chord's ROOT pc in the octave UNDER the window (52..63) — his [48]'s
-      "1 note playing a lower octave root note" (the Sept 1 "two octaves" reading retired by his
-      word); played even when the voicing omits the root (a (no R) chord is still named by its
-      root). Pure. Returns {notes,bass} or null on junk. */
+    · bass = ONE note, the chord's ROOT pc TWO octaves under the window (40..51) — R68, his [50] ①
+      ("a root note that is 2 octaves below that should also sound at the same time"), correcting
+      R66's one-octave reading of his [48]; played even when the voicing omits the root (a (no R)
+      chord is still named by its root). Pure. Returns {notes,bass} or null on junk. */
  const pcs=[];for(const x of ((c&&c.iv)||[])){const p=(((+c.r||0)+x)%12+12)%12;if(pcs.indexOf(p)<0)pcs.push(p);}
  if(!pcs.length)return null;
  const rootPc=(((+c.r||0)%12)+12)%12;
@@ -8737,7 +8742,7 @@ function audVoice(c,prev){
   }
   if(d<bd){bd=d;best=notes;}
  }
- const b=(WIN_LO-12)+((rootPc-(WIN_LO-12))%12+12)%12;   /* R66 [48]: ONE root, in the octave under the window (52..63) */
+ const b=(WIN_LO-24)+((rootPc-(WIN_LO-24))%12+12)%12;   /* R68 [50] ①: ONE root, TWO octaves under the window (40..51) — his correction of R66's one octave */
  return {notes:best,bass:b};
 }
 var audLed={surf:null,notes:null};   /* 84th R3: the per-surface voice-leading memory — a different surface (or a reset) starts fresh at first inversion */
@@ -8780,7 +8785,7 @@ function chordVoicingOf(c,prev){
  /* 84th R4 (his FIFTY-THIRD message + his app-wide ruling, Sept 1): the SOUNDING
     voicing everywhere the chain reaches — the user's hand voicing verbatim (his hand
     IS the law there), else the AUDITION LAW: voice-led within a 9th, over the root
-    two octaves down (R66, his [48]: inside the fixed E4–F♯5 window, the root ONE octave under it). ⭐ The bass rides IN the array, exactly the shape renderPad's
+    two octaves down (R66/R68, his [48]/[50]: inside the fixed E4–F♯5 window, the root TWO octaves under it). ⭐ The bass rides IN the array, exactly the shape renderPad's
     slash bass already uses — so the ghosts ("the same pitches the band plays"),
     the export and the voicing editor all carry it with zero extra seams. */
  if(Array.isArray(c.vo)&&c.vo.length)return c.vo.slice().sort((a,b)=>a-b);
@@ -29500,7 +29505,39 @@ function wanScale2(){
  return {id:'',name:pcsScaleName(rel)||('(the '+ordinalName(wanState.relStep)+'-'+wanState.relDir+' rotation)'),pcs:rel};
 }
 function wanRel2Root(){
+ /* R68 (his [50] ④): UNLINKED pins scale 2's root (root2Pin) — the first scale may change, the second stays as it is */
+ if(wanState.root2Pin!=null&&!(wanState.web2&&wanState.web2.linked!==false))return ((wanState.root2Pin%12)+12)%12;
  return (((wanState.tonic+wanRelOffset(wanScale().pcs,wanState.relStep,wanState.relDir,!!wanState.relChrom))%12)+12)%12;
+}
+function wanSide2Home(){
+ /* R68 (his [50] ②): the RIGHT Weber matrix's home is SCALE 2 — the lower drop-downs' key and scale — linked or not */
+ const sc2=wanScale2();
+ return {tonic:wanRel2Root(),minor:!!(sc2&&sc2.pcs&&sc2.pcs[2]===3)};
+}
+function wanSide2SetHome(pc,minor){
+ /* R68 (his [51] ① + [52]): a double-click on the RIGHT board — any skin — sets SCALE 2's home. LINKED: scale 2 keeps riding
+    scale 1, the relation re-derived from the new root (wanRelFromRoot, the lower drop-down's own road); NOT LINKED: the pin
+    moves. mode2's quality follows only when it disagrees. Side 1 never moves from here. */
+ const st=wanState,w2=wanWeb2State();const p=((pc%12)+12)%12;
+ if(w2.linked||st.root2Pin==null){try{const got=wanRelFromRoot(wanScale().pcs,st.tonic,p,st.relDir);st.relStep=got.step;st.relDir=got.dir;st.relChrom=got.chrom;}catch(e){}if(!w2.linked)st.root2Pin=p;}
+ else st.root2Pin=p;
+ try{const q=!!(wanScale2().pcs[2]===3);if(q!==!!minor)st.mode2=minor?'aeolian':'ionian';}catch(e){}
+ st.cur={row:0,deg:0};
+}
+function wanLinkSet(on){
+ /* R68 (his [50] ④), his words: NOT LINKED = "let me change the first scale and the second scale remains as it is";
+    LINKED = "change the first scale and the 2nd scale changes along with it". Linked keeps scale 2 on the Relative
+    step (it moves with scale 1); Unlinked PINS scale 2's root and names its scale, so scale 1 can move alone. */
+ const w2=wanWeb2State(),st=wanState;
+ if(on){
+  if(st.root2Pin!=null){try{const got=wanRelFromRoot(wanScale().pcs,st.tonic,st.root2Pin,st.relDir);st.relStep=got.step;st.relDir=got.dir;st.relChrom=got.chrom;}catch(e){}}
+  st.root2Pin=null;w2.linked=true;w2.tonic=null;w2.minor=null;
+ }else{
+  const pin=wanRel2Root();
+  if(!st.mode2||!SCALE_DB[st.mode2]){const sc2=wanScale2();const hit=Object.values(SCALE_DB).find(s=>s.pcs.length===sc2.pcs.length&&s.pcs.every((p,i)=>p===sc2.pcs[i]));if(hit)st.mode2=hit.id;}
+  w2.linked=false;st.root2Pin=pin;
+ }
+ renderWan();
 }
 function wanReadings(pcs,root,name,tonic){
  /* 84th R5 (his FIFTY-FIFTH message — the ALSO correction, and the design he approved):
@@ -29888,7 +29925,7 @@ function wanRerootStable(newPc,newMinor,at,label){
  wanState.mode=newMinor?'aeolian':'ionian';
  if(typeof st.webShift==='number')st.webShift+=dlt;else st.webShift=dlt;
  st.webHomeAt=at||null;
- try{st._degFloatFrom=[...document.querySelectorAll('#wanWeber .wanDegBox')].map(x=>({l:x.offsetLeft,t:x.offsetTop}));}catch(e){st._degFloatFrom=null;}
+ try{st._degFloatFrom=[...document.querySelectorAll('#wanWeber .wanDegBox')].map(x=>({l:x.offsetLeft,t:x.offsetTop}));}catch(e){st._degFloatFrom=null;}   /* R68: side 2's boxes are .wan2DegBox — not side 1's float */
  wanState.cur={row:0,deg:0};
  wanRecord(wanState.tonic,!!newMinor,label);
  audLedReset();
@@ -30278,10 +30315,10 @@ function wanLinkMenu(e){
  /* his 166th, verbatim shape: a drop-down of ICONS with their explanations after */
  const w2=wanWeb2State();
  wanFloatMenu(e,[
-  {label:'<b>◅━▻</b>&nbsp; Linked — the left side is linked with the right side. They both are in the same key, with the same scale.',
-   cur:w2.linked,fn:()=>{w2.linked=true;w2.tonic=null;w2.minor=null;wanWeberDraw();}},
-  {label:'<b>━</b>&nbsp; Unlinked — each side is independent of the other.',
-   cur:!w2.linked,fn:()=>{w2.linked=false;wanWeberDraw();}}
+  {label:'<b>◅━▻</b>&nbsp; Linked — change the first scale and the second changes along with it (scale 2 rides the Relative step).',
+   cur:w2.linked,fn:()=>{wanLinkSet(true);}},
+  {label:'<b>━</b>&nbsp; Not linked — change the first scale and the second remains as it is (its key and scale pinned; the lower drop-downs and a double-click on the right map set it).',
+   cur:!w2.linked,fn:()=>{wanLinkSet(false);}}
  ]);
 }
 function wanTwoSided(){
@@ -30759,8 +30796,7 @@ function wanCubeHomeKey(){
  /* the cube's home triad from the dual board — LINKED = side 1's tonic/mode; UNLINKED = side 2's own */
  const st=wanState,w2=wanWeb2State();
  const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
- const tonic=(w2.linked||w2.tonic==null)?st.tonic:w2.tonic;
- const minor=(w2.linked||w2.minor==null)?minor1:!!w2.minor;
+ const _h2=wanSide2Home();const tonic=_h2.tonic,minor=_h2.minor;   /* R68 (his [52]): EVERY skin on side 2 homes on SCALE 2 — "Scale 2 is the home for Skin 2!" */
  return {tonic:((+tonic%12)+12)%12,minor:!!minor};
 }
 function wanCubeDraw(host){
@@ -30860,13 +30896,11 @@ function wanCubeClick(e){
  wanCubeDraw();
 }
 function wanCubeWalkTo(tonic,minor,label){
- /* double-click / ↑ walk — re-root the Wanderer (LINKED shares side 1; UNLINKED only this side) */
+ /* double-click / ↑ walk — R68 (his [52]): the walk moves SCALE 2's home (Skin 2's home IS scale 2); side 1 stays */
  const w2=wanWeb2State();
- if(w2.linked){try{wanRerootStable(tonic,!!minor,null,label||'a walk inside the cube');}catch(err){}}
- else{w2.tonic=((+tonic%12)+12)%12;w2.minor=!!minor;}
+ try{wanSide2SetHome(tonic,!!minor);}catch(err){}
  wanCube.sel=null;wanCube.yaw=0;wanCube.pitch=0;
- try{wanSide2Draw();}catch(e){wanCubeDraw();}
- try{if(w2.linked)wanWeberDraw();}catch(e){}
+ try{renderWan();}catch(e){try{wanSide2Draw();}catch(e2){wanCubeDraw();}}
 }
 function wanCubeDblClick(e){
  const c=document.getElementById('wanCubeCanvas');if(!c)return;
@@ -30933,8 +30967,7 @@ function wanTimeHomeLof(){
  /* the floor centres on the Wanderer's home (LINKED = side 1; UNLINKED = side 2's own) */
  const st=wanState,w2=wanWeb2State();
  const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
- const tonic=(w2.linked||w2.tonic==null)?st.tonic:w2.tonic;
- const minor=(w2.linked||w2.minor==null)?minor1:!!w2.minor;
+ const _h2=wanSide2Home();const tonic=_h2.tonic,minor=_h2.minor;   /* R68 (his [52]): EVERY skin on side 2 homes on SCALE 2 — "Scale 2 is the home for Skin 2!" */
  const tonicLof=wanPcLof(tonic,minor);
  return {tonic:((+tonic%12)+12)%12,minor:!!minor,lof:(minor?tonicLof-3:tonicLof)+(w2.shift||0)};
 }
@@ -31435,8 +31468,7 @@ function wanSide2Draw(){
   return;
  }
  const minor1=st.mode==='aeolian'||/minor|aeolian/i.test((SCALE_DB[st.mode]||{}).name||'');
- const tonic=(w2.linked||w2.tonic==null)?st.tonic:w2.tonic;
- const minor=(w2.linked||w2.minor==null)?minor1:!!w2.minor;
+ const _h2=wanSide2Home();const tonic=_h2.tonic,minor=_h2.minor;   /* R68 (his [50] ②): side 2's home IS scale 2 — its root and quality from the lower drop-downs */
  const tonicLof=wanPcLof(tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+(w2.shift||0);
  const grid=weberGrid(anchor);
@@ -31456,18 +31488,29 @@ function wanSide2Draw(){
    try{fnSty=wanCellFnSty((((wanLofPc(cell.lof)-tonic)%12)+12)%12,cell.minor,minor);}catch(e){}   /* R65: the scheme in use, read against side 2's tonic and mode */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
-   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
   }
   h+='</div>';
  }
  host.innerHTML=h;
+ /* R68 (his [50] ③ — "the Weber Matrix on the right has no inner circle and outer circle at all like it should"):
+    the degree boxes side 1 draws around home (1 box … 4 boxes, the same radius law) drawn around THIS side's home */
+ try{host.style.position='relative';const home=host.querySelector('.wan2Key.on');
+  if(home){const hr=+home.getAttribute('data-r'),hc=+home.getAttribute('data-c');
+   for(let k=1;k<=Math.max(1,Math.min(4,st.webRadius||2));k++){
+    const r0=Math.max(0,hr-k),r1=Math.min(WEB_ROWS-1,hr+k),c0=Math.max(0,hc-k),c1=Math.min(WEB_COLS-1,hc+k);
+    const tl=host.querySelector('.wan2Key[data-r="'+r0+'"][data-c="'+c0+'"]'),br=host.querySelector('.wan2Key[data-r="'+r1+'"][data-c="'+c1+'"]');
+    if(!tl||!br)continue;
+    const d=document.createElement('div');d.className='wan2DegBox'+(k>1?' k'+k:'');
+    d.style.left=(tl.offsetLeft-4)+'px';d.style.top=(tl.offsetTop-3)+'px';
+    d.style.width=(br.offsetLeft+br.offsetWidth-tl.offsetLeft+8)+'px';d.style.height=(br.offsetTop+br.offsetHeight-tl.offsetTop+6)+'px';
+    host.appendChild(d);}}}catch(e){}
  host.querySelectorAll('.wan2Key').forEach(el=>{
   const pc=()=>wanLofPc(+el.getAttribute('data-lof'));
   const mn=()=>el.getAttribute('data-minor')==='1';
   el.onclick=()=>{try{wanKeyAudition(pc(),mn());}catch(err){}};
   el.ondblclick=ev=>{ev.preventDefault();
-   if(w2.linked){try{wanRerootStable(pc(),mn(),null,'a double-click on the 2nd map');}catch(err){}}
-   else{w2.tonic=pc();w2.minor=mn();wanSide2Draw();}
+   try{wanSide2SetHome(pc(),mn());}catch(err){}renderWan();   /* R68 [51] ① + [52]: a double-click on the right map sets SCALE 2's home — linked or not */
   };
  });
 }
@@ -31528,8 +31571,14 @@ function wanWeberDraw(){
      so arming ⏺ ships the pair and costs no WINDOW_DEFS entry. */
   +'<span class="wanAllTog'+(wanState.rec?' on':'')+'" id="wanRecTog" title="Experiment, and record your trips. Every key you land on joins 🧳 Upcoming Trips as a stop; the trail below becomes a string of chords you can drag straight onto the chord lane.">'+(wanState.rec?'⏺':'⏵')+' Record your trips</span>'
   /* his 166th: a View/Skin button ABOVE the left side (the right side wears its own) */
-  +'<span class="wanAllTog" id="wanView1Btn" title="View / Skin — what '+(_w2on?'the LEFT side':'this board')+' shows. More views join as they are built.">View: '+(_w2on?'Weber&#8217;s Matrix':wanViewLabel(wanWeb2State().view))+' ▾</span>'   /* R61 [39] ②: the button stands on a single-sided board too */
+  +(_w2on?'':'<span class="wanAllTog" id="wanView1Btn" title="Skin — what this board shows. More skins join as they are built.">Skin: '+wanViewLabel(wanWeb2State().view)+' ▾</span>')   /* R61 [39] ②: the button stands on a single-sided board too · R68 [51]: "Skin" */
   +'</div>'
+  /* R68 (his [51] ②): on the dual board the two SKIN buttons sit on ONE LINE, centred across the top of both matrices —
+     "Skin 1: Weber's Matrix" · "Skin 2: <the right board's skin>" — no longer one per side (side 1's floated above both
+     as the window widened). Each is still its own drop-down (wanViewMenu 1 / 2). */
+  +(_w2on?'<div id="wanSkinsLine" style="display:flex;justify-content:center;gap:18px;align-items:center;margin:2px 0 5px;">'
+    +'<span class="wanAllTog" id="wanView1Btn" title="Skin 1 — what the LEFT board shows.">Skin 1: Weber&#8217;s Matrix ▾</span>'
+    +'<span class="wanAllTog" id="wanView2Btn" title="Skin 2 — what the RIGHT board shows. More skins join as they are built.">Skin 2: '+wanViewLabel(wanWeb2State().view)+' ▾</span></div>':'')
   +'<div style="display:flex;gap:10px;align-items:flex-start;"><div id="wanWebWrap" style="'+(_w2on?'flex:'+wanWeb2State().split.toFixed(3)+' 1 0;min-width:180px;overflow-x:auto;':'flex:1 1 auto;min-width:0;')+'">';
  for(let r=0;r<WEB_ROWS;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
@@ -31570,7 +31619,7 @@ function wanWeberDraw(){
     +'<span id="wanLinkBtn" class="cpchip" style="font-size:12px;letter-spacing:-1px;cursor:pointer;" title="'+(wanWeb2State().linked?'Linked — the left side is linked with the right side. They both are in the same key, with the same scale. Click for options.':'Unlinked — each side is independent of the other. Click for options.')+'">'+(wanWeb2State().linked?'◅━▻':'━')+'</span>'
     +'<div style="flex:1;width:3px;border-radius:2px;background:#a8895f;opacity:.6;"></div></div>'
    +'<div id="wanSide2Col" style="flex:'+(1-wanWeb2State().split).toFixed(3)+' 1 0;min-width:200px;display:flex;flex-direction:column;gap:4px;">'
-   +'<div style="display:flex;gap:6px;align-items:center;"><span class="wanAllTog" id="wanView2Btn" title="View / Skin — what THIS side shows. More views join as they are built.">View: '+(wanWeb2State().view==='weber'?'Weber&#8217;s Matrix':wanWeb2State().view==='hallway'?'Hallway with books':wanWeb2State().view==='3d'?'3D Matrix (inside the cube)':wanWeb2State().view==='time'?'Weber in time (keys over bars)':'Decision Trees')+' ▾</span>'
+   +'<div style="display:flex;gap:6px;align-items:center;min-height:14px;">'   /* R68 [51] ②: the Skin 2 button moved to the centred line above both boards */
    +(wanWeb2State().linked?'':'<span style="font-size:9.5px;color:#6b4f28;">independent — double-click a key to set THIS side&#8217;s home</span>')+'</div>'
    +'<div id="wanSide2" style="overflow-x:auto;"></div></div>'
    :((wanWeb2State().view!=='weber')?'<div id="wanSide2Col" style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px;"><div id="wanSide2" style="overflow-x:auto;"></div></div>':''))   /* R61 [39] ②: a single-sided board hosts the chosen view here, the matrix stepping aside */
@@ -32780,6 +32829,7 @@ function renderWan(){
     above never describes a placement that is no longer true. */
  const wr2=document.getElementById('wanRoot2');
  if(wr2)wr2.onchange=e=>{
+  if(wanState.root2Pin!=null&&!wanWeb2State().linked){wanState.root2Pin=+e.target.value;wanState.cur={row:0,deg:0};renderWan();return;}   /* R68 [50] ④: unlinked — the pin moves, scale 1 untouched */
   const got=wanRelFromRoot(wanScale().pcs,wanState.tonic,+e.target.value,wanState.relDir);
   wanState.relStep=got.step;wanState.relDir=got.dir;wanState.relChrom=got.chrom;
   wanState.cur={row:0,deg:0};renderWan();};
