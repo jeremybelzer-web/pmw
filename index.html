@@ -939,7 +939,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10e</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -8756,7 +8756,7 @@ function audLedVoice(surf,c){
 function audLedPlay(surf,c,dur,when,vel){
  const v=audLedVoice(surf,c);
  if(!v)return null;
- try{inst.note('comping',[v.bass].concat(v.notes),dur,when,vel);}catch(e){}
+ try{inst.audition([v.bass].concat(v.notes),dur,when,vel);}catch(e){}
  return v;
 }
 function padVoice(c,prev){const pcs=c.iv.map(x=>(c.r+x)%12);
@@ -10314,14 +10314,14 @@ async function makeAudio(){
     v.frequency.linearRampToValueAtTime(f0*Math.pow(ratio,Math.max(-.2,Math.min(1.2,ys[i]))),time+.001+(dur-.002)*i/(NPTS-1));
   },
   /* every timeline event lands here: hub clip first, built-in instrument as fallback */
-  note(track,midis,dur,time,vel){
+  note(track,midis,dur,time,vel,opts){
    if(!trackOnPlay(track))return;               /* mixer: activator + solo gate (owner-aware since the 75th) */
    vel=Math.min(1,(vel==null?.8:vel)*schedTrackGain(track));
    if(vel<=0)return;                            /* fader at −Inf */
    const arr=Array.isArray(midis)?midis:[midis];
    midiMirror(track,arr,dur,time,vel);          /* Module 5: grid → DAW VSTs via Web MIDI */
    if(hubRt){let hit=false;for(const m of arr){try{if(hubRt.trigger(track,m,time,dur,vel))hit=true;}catch(e){}}if(hit)return;}   /* 6.0: a hub fault must never SILENCE the note — the synths answer honestly (the throw that ate every pitched sample hid here) */
-   if(patchTrigger(track,arr,dur,time,vel))return;   /* assigned synth patch beats the stock instruments */
+   if(!(opts&&opts.stock)&&patchTrigger(track,arr,dur,time,vel))return;   /* assigned synth patch beats the stock instruments — except an AUDITION (R69, his [53]: the stock piano, always) */
    if(track==='bass'){bass.triggerAttackRelease(M(arr[0]),dur,time,vel);return;}
    if(track==='pad'){pad.triggerAttackRelease(arr.map(M),dur,time,vel);return;}
    kit.piano.triggerAttackRelease(arr.map(M),dur,time,vel);
@@ -10410,7 +10410,15 @@ async function makeAudio(){
       case 'tamb':kit.tamb.triggerAttackRelease(.06,time,vel);break;}
    }},
   /* legacy aliases — kept so older call sites keep working; all route through note() */
-  piano(midis,dur,time,vel){ this.note('comping',midis,dur,time,vel); },
+  /* R69 (his [53]: "I hear the piano for the 1st chord I press. Just once. Then it goes to the terrible sounding
+     second sound"): THE AUDITION ROAD — every chord AUDITION (the Wanderer's keys, the palette, the progressions,
+     the cadences, the orb, the shelf…) plays the STOCK PIANO, always. It used to go through note('comping'), which
+     hands the hit to the comping track's assigned synth patch once that patch exists — and the patch is built
+     lazily (ensurePatch waits for audio AND the hub), so the FIRST press slipped to the piano and every later one
+     played the patch. The comping PATCH stays the TRACK's voice (renderComp playback keeps note('comping')). The
+     comping mixer gate and fader still apply, as before. */
+  audition(midis,dur,time,vel){ this.note('comping',midis,dur,time,vel,{stock:true}); },   /* rides note() so every probe on inst.note still counts the hit */
+  piano(midis,dur,time,vel){ this.audition(midis,dur,time,vel); },
   bassN(m,d,t,v){ this.note('bass',m,d,t,v); },
   padN(ms,d,t,v){ this.note('pad',ms,d,t,v); }
  };
@@ -12847,7 +12855,7 @@ function ensurePatch(track){
  if(patchRt[track]&&patchRt[track].id===id)return patchRt[track];
  disposePatch(track);
  const p=patchById(id);
- if(!p||!audioReady||!hubRt)return null;
+ if(!p||!audioReady)return null;   /* R69: the hub is no longer a precondition — a fixed track's pan bus carries the patch; the hub only when there is no bus */
  let s;
  try{
   if(p.kind==='fm')s=new Tone.PolySynth(Tone.FMSynth,p.opts);
@@ -12860,7 +12868,8 @@ function ensurePatch(track){
  if(p.fx&&p.fx.chorus){const c=new Tone.Chorus(p.fx.chorus.frequency||1.5,p.fx.chorus.delayTime||2.5,p.fx.chorus.depth||.3).start();nodes.push(c);prev.connect(c);prev=c;}
  const pn=panNodes&&panNodes[track];   /* 2.3: every fixed track's patch rides its pan bus */
  if(pn)prev.connect(pn);
- else hubRt.out(prev);
+ else if(hubRt)hubRt.out(prev);
+ else{try{prev.toDestination();}catch(e){}}
  patchRt[track]={id,synth:s,nodes};
  return patchRt[track];}
 function patchTrigger(track,midis,dur,time,vel){
@@ -13766,7 +13775,7 @@ function srcAudition(rec,k){
    let at=0;
    for(const c of flatChords(chordsFrom(song.chords,delta))){
     if(at>=cap)break;
-    if(!c.off)inst.note('comping',voice({r:c.r,iv:c.iv},null),Math.min(c.d,cap-at)*spb*.95,t0+at*spb,.5);
+    if(!c.off)inst.audition(voice({r:c.r,iv:c.iv},null),Math.min(c.d,cap-at)*spb*.95,t0+at*spb,.5);
     at+=c.d;}
    return;}
   let rows=[];
@@ -14612,7 +14621,7 @@ function auditionChord(ch){
     within the 9th through the 'pal' memory (the 84th R3 law), never the old parallel
     voice() planing. */
  try{audLedPlay('pal',{r:ch.r,iv:(ch.iv||[]).slice()},.6,Tone.now(),.5);}
- catch(e){try{inst.note('comping',voice({r:ch.r,iv:ch.iv},null),.6,Tone.now(),.5);}catch(e2){}}
+ catch(e){try{inst.audition(voice({r:ch.r,iv:ch.iv},null),.6,Tone.now(),.5);}catch(e2){}}
 }
 /* 3.3: what a LANE block actually sounds like — its chain voicing (or override). Pure
    math lives in laneVoicingsTop; this is just the live-project accessor. */
@@ -14635,11 +14644,11 @@ function auditionChordClip(c){
   if((c.clip&&Array.isArray(c.clip.notes)&&c.clip.notes.length)||(Array.isArray(c.sub)&&c.sub.length)){
    const rows=auditionSpec(chordClipNotes(c),+tempo.value,16);
    const t0=Tone.now();
-   for(const r of rows)inst.note('comping',r.midi,r.dur,t0+r.at,(r.vel==null?.5:r.vel*.7));
+   for(const r of rows)inst.audition(r.midi,r.dur,t0+r.at,(r.vel==null?.5:r.vel*.7));
   }else{
    /* 3.3: a plain chord plays its CHAIN voicing (or override) — what it really sounds like */
    const v=laneVoicingOf(c);
-   if(v)inst.note('comping',v,.6,Tone.now(),.5);else auditionChord(c);
+   if(v)inst.audition(v,.6,Tone.now(),.5);else auditionChord(c);
   }
  }catch(e){}};   /* an audition must never break the gesture it rides on */
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
@@ -14902,7 +14911,7 @@ function palPlayColumn(chs,btn){
   const t0=Tone.now()+.03;let at=0,prev=null;
   /* 84th R3 (his FIFTY-THIRD message): the column already voice-led through voice();
      it upgrades to the shared law — first-inversion start, the 9th, the bass root. */
-  chs.forEach((c,i)=>{const d=rate[i%rate.length];const v=audVoice({r:c.r,iv:c.iv},prev);if(!v)return;prev=v.notes;inst.note('comping',[v.bass].concat(v.notes),d*spb*.92,t0+at,.6);at+=d*spb;});
+  chs.forEach((c,i)=>{const d=rate[i%rate.length];const v=audVoice({r:c.r,iv:c.iv},prev);if(!v)return;prev=v.notes;inst.audition([v.bass].concat(v.notes),d*spb*.92,t0+at,.6);at+=d*spb;});
   if(btn){btn.classList.add('on');setTimeout(()=>btn.classList.remove('on'),Math.round(at*1000));}
  }catch(e){}};
  if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
@@ -15289,7 +15298,7 @@ function pcsAudition(){
   const st=pcsState.steps;if(!st||!st.length)return;
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
   let at=0;
-  for(const c of st){inst.note('comping',voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+  for(const c of st){inst.audition(voice({r:c.r,iv:c.iv},null),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
  }catch(e){}};   /* an audition must never break the gesture it rides on */
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
@@ -18522,7 +18531,7 @@ function progAudition(run){
   let at=0,pv=null;   /* 84th R3 (his FIFTY-THIRD message): the phrase voice-leads, within a 9th, root two octaves under */
   for(const c of run){const d=(typeof c.d==='number'&&c.d>0)?Math.min(c.d,2):1;
    const v=audVoice({r:c.r,iv:c.iv},pv);if(!v){at+=d;continue;}pv=v.notes;
-   inst.note('comping',[v.bass].concat(v.notes),d*spb*.95,t0+at*spb,.5);at+=d;}
+   inst.audition([v.bass].concat(v.notes),d*spb*.95,t0+at*spb,.5);at+=d;}
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
@@ -19299,7 +19308,7 @@ function voicingOfChord(i){
  const v=laneVoicingsTop(project.chords,secStarts())[i];
  return v?v.slice():voice({r:c.r,iv:c.iv},null);}
 function auditionVoicing(v){
- const go=()=>{try{if(audioReady&&inst)inst.note('comping',v,.6,Tone.now(),.5);}catch(e){}};
+ const go=()=>{try{if(audioReady&&inst)inst.audition(v,.6,Tone.now(),.5);}catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});}
 function voApply(i,v){
  const c=project.chords[i];if(!c)return;
@@ -19483,7 +19492,7 @@ function mimicAudition(tpl){
   const t0=Tone.now()+.03,spb=60/Math.max(40,+tempo.value||96);
   let at=0,pv=null;   /* 84th R3 (his FIFTY-THIRD message): the card's moment voice-leads, within a 9th, root two octaves under */
   for(const c of rows){const v=audVoice({r:c.r,iv:c.iv},pv);if(!v){at+=c.d;continue;}pv=v.notes;
-   inst.note('comping',[v.bass].concat(v.notes),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+   inst.audition([v.bass].concat(v.notes),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
   modAudFx(tpl.id,rows,spb);   /* [M6c]/[M6d]: the card's shape spins, the fox recolours per chord */
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
@@ -19756,7 +19765,7 @@ function modAudPlay(tplId,rows,opts){
  rows.forEach((c,k)=>{
   const col='hsl('+((((c.r||0)%12)+12)%12)*30+',62%,62%)';
   modAud.timers.push(setTimeout(()=>{
-   try{if(!opts.mute&&audioReady&&inst)inst.note('comping',(opts.voicing?opts.voicing(c):voice({r:c.r,iv:c.iv},null)),c.d*spb*.95,Tone.now()+.02,.5);}catch(e){}
+   try{if(!opts.mute&&audioReady&&inst)inst.audition((opts.voicing?opts.voicing(c):voice({r:c.r,iv:c.iv},null)),c.d*spb*.95,Tone.now()+.02,.5);}catch(e){}
    if(el&&!c.ctx){   /* [M11c]: the shape answers the MOMENT's chords; the grey context just plays */
     for(const host of [el,modAud.big].filter(Boolean)){
      host.classList.add('modLit');   /* [M8d]: the fronting face lights as its chord plays */
@@ -19806,7 +19815,7 @@ function modAudPlay(tplId,rows,opts){
   for(const nte of opts.melody){
    modAud.timers.push(setTimeout(()=>{try{if(audioReady&&inst){
     const md=audSnapMd(nte.midi,nte.t);
-    inst.note('comping',[md],Math.max(.15,nte.d*spb*.9),Tone.now()+.02,.45);
+    inst.audition([md],Math.max(.15,nte.d*spb*.9),Tone.now()+.02,.45);
    }}catch(e){}},Math.max(0,nte.t*spb*1000)));
   }
  }
@@ -21273,7 +21282,7 @@ function cadAudition(){
      reported across the audition windows. */
   let at=0,pv=null;
   for(const c of rows){const v=audVoice({r:c.r,iv:c.iv},pv);if(!v){at+=c.d;continue;}pv=v.notes;
-   inst.note('comping',[v.bass].concat(v.notes),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
+   inst.audition([v.bass].concat(v.notes),c.d*spb*.95,t0+at*spb,.5);at+=c.d;}
  }catch(e){}};   /* an audition must never break the gesture it rides on */
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
@@ -21994,7 +22003,7 @@ function przAudition(strand,data,startMidi,atBeat){
    for(const c of rows){
     if(acc>=16)break;
     const d=Math.min(c.d,16-acc);
-    inst.note('comping',voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
+    inst.audition(voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
     acc+=c.d;
    }
   }catch(e){}};
@@ -22011,25 +22020,25 @@ function przAudition(strand,data,startMidi,atBeat){
    for(const c of ((data&&data.chords)||[])){
     if(acc>=16)break;
     const d=Math.min(c.d,16-acc);
-    inst.note('comping',voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
+    inst.audition(voice({r:c.r,iv:c.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
     acc+=c.d;
    }
   }else if(strand==='melody'){
    for(const r of (((data&&data.rows)||[]).slice(0,64))){
     if(r[0]>=16)continue;
-    inst.note('comping',r[2],Math.max(.1,r[1]*spb*.9),t0+r[0]*spb,.55);
+    inst.audition(r[2],Math.max(.1,r[1]*spb*.9),t0+r[0]*spb,.55);
    }
   }else if(strand==='rhythm'){
    const base=(typeof gridBase==='function')?project.base:60;
-   data.forEach(([t,d])=>inst.note('comping',base,Math.max(.1,d*spb*.9),t0+t*spb,.55));
+   data.forEach(([t,d])=>inst.audition(base,Math.max(.1,d*spb*.9),t0+t*spb,.55));
   }else if(strand==='dna'){
-   data.slice(0,24).forEach((m,i)=>inst.note('comping',m,spb*.45,t0+i*spb*.5,.5));
+   data.slice(0,24).forEach((m,i)=>inst.audition(m,spb*.45,t0+i*spb*.5,.5));
   }else{
    const key=melismaKeyAt(atBeat||0),pcs=melismaPcs(key);
    let cum=0;
    const steps=[0].concat([...data].map(ch2=>cum+=(ch2==='U'?1:ch2==='D'?-1:0)));
    const midis=melismaWalk(startMidi||project.base+7,pcs,steps);
-   midis.slice(0,24).forEach((m,i)=>inst.note('comping',m,spb*.45,t0+i*spb*.5,.5));
+   midis.slice(0,24).forEach((m,i)=>inst.audition(m,spb*.45,t0+i*spb*.5,.5));
   }
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
@@ -23162,7 +23171,7 @@ function essMiniSvg(o,big){
   +' style="display:block;background:#191b22;border:1px solid #262933;border-radius:'+(big?'8':'3')+'px;'+(big?'':'max-width:130px;max-height:24px;')+'flex:0 0 auto;">'+lat+gh+inner+'</svg>';
 }
 function essObjPing(m){
- const go=()=>{try{if(audioReady&&inst)inst.note('comping',m,.45,Tone.now()+.02,.6);}catch(e){}};
+ const go=()=>{try{if(audioReady&&inst)inst.audition(m,.45,Tone.now()+.02,.6);}catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
 function essObjWorldMint(o){
@@ -27089,7 +27098,7 @@ function harmAudition(){
   const t0=Tone.now()+.06;
   for(const n of r.rows){if(n[0]<b0-1e-6)continue;inst.note('melody',[n[2]],Math.max(.06,n[1]*spb*.95),t0+(n[0]-b0)*spb,.72);}
   for(const line of r.res.voices)
-   for(const h of line){if(h[0]<b0-1e-6)continue;inst.note('comping',[h[2]],Math.max(.06,h[1]*spb*.95),t0+(h[0]-b0)*spb,.5);}
+   for(const h of line){if(h[0]<b0-1e-6)continue;inst.audition([h[2]],Math.max(.06,h[1]*spb*.95),t0+(h[0]-b0)*spb,.5);}
   harmStatus((r.res.voices.length)+' harmony line'+(r.res.voices.length>1?'s':'')+' under '+r.rows.length+' melody note'+(r.rows.length>1?'s':'')+' — nothing written. ✓ writes them.');
  }catch(e){}
 }
@@ -29694,7 +29703,7 @@ function wanWander(tonic,minor,tag){
 function wanPlayGroup(g){
  const go=()=>{try{
   const t0=Tone.now()+.05;
-  g.steps.forEach((s,k)=>{inst.note('comping',voice({r:s.r,iv:s.iv},null),.72,t0+k*.8,.5);});
+  g.steps.forEach((s,k)=>{inst.audition(voice({r:s.r,iv:s.iv},null),.72,t0+k*.8,.5);});
  }catch(e){}};
  if(audioReady)go();else ensureAudio().then(go).catch(()=>{});
 }
@@ -30728,7 +30737,7 @@ function wanHallAudition(list){
   list.forEach(bk=>{
    if(bk.kind==='melody'){inst.note('melody',bk.midis.slice(),Math.max(.15,bk.d*spb*.92),t0+at,.7);at+=bk.d*spb;return;}
    if(bk.kind==='drums'){try{inst.note('drums',bk.midis.slice(),.25,t0+at,.8);}catch(e){}at+=bk.d*spb;return;}
-   const v=audVoice({r:bk.r,iv:bk.iv},prev);if(!v)return;prev=v.notes;inst.note('comping',[v.bass].concat(v.notes),Math.max(.15,bk.d*spb*.92),t0+at,.6);at+=bk.d*spb;});
+   const v=audVoice({r:bk.r,iv:bk.iv},prev);if(!v)return;prev=v.notes;inst.audition([v.bass].concat(v.notes),Math.max(.15,bk.d*spb*.92),t0+at,.6);at+=bk.d*spb;});
  }catch(e){}};
  if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
 }
@@ -33933,7 +33942,7 @@ function orbActivate(item){
   /* GEMS R2 — a tone moon auditions its tone (nothing is written; editing the tones
      themselves rides the R4 essences). R3 ⑧: the 🔇 mutes the audition, not the map. */
   const go=()=>{try{
-   inst.note('comping',voice({r:item.pc,iv:[0]},null),.6,Tone.now()+.05,.55);
+   inst.audition(voice({r:item.pc,iv:[0]},null),.6,Tone.now()+.05,.55);
   }catch(e){}};
   if(orbState.djMute){setOrbStatus('🔇 Muted audition — the '+(item.role||'tone')+' moon ('+PCN[item.pc]+') would sound here. Toggle 🔇 Mute DJ off to hear it.');return true;}
   if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
@@ -34440,7 +34449,7 @@ function orbPivotAudition(pv){
  const steps=pv.bridge==='iiV'?[{deg:2,iv:MIN7},{deg:7,iv:DOM7}]:pv.bridge==='IVV'?[{deg:5,iv:MAJ},{deg:7,iv:DOM7}]:pv.bridge==='V7'?[{deg:7,iv:DOM7}]:[{r:pv.r,iv:pv.iv}];
  const bpm=Math.max(20,+((typeof tempo!=='undefined'&&tempo&&tempo.value)||120)),spb=60/bpm;
  const ck=orbCurrentKey();
- const go=()=>{try{const t0=Tone.now()+.03;let pv=null;steps.forEach((st,i)=>{const r=st.r!=null?st.r:((tg+st.deg)%12+12)%12;const v=audVoice({r,iv:(st.iv||[0,4,7]).slice()},pv);if(!v)return;pv=v.notes;inst.note('comping',[v.bass].concat(v.notes),spb*.9,t0+i*spb,.6);});}catch(e){}};   /* 84th R3 (his 53rd): the run voice-leads, within a 9th, root two octaves under */
+ const go=()=>{try{const t0=Tone.now()+.03;let pv=null;steps.forEach((st,i)=>{const r=st.r!=null?st.r:((tg+st.deg)%12+12)%12;const v=audVoice({r,iv:(st.iv||[0,4,7]).slice()},pv);if(!v)return;pv=v.notes;inst.audition([v.bass].concat(v.notes),spb*.9,t0+i*spb,.6);});}catch(e){}};   /* 84th R3 (his 53rd): the run voice-leads, within a 9th, root two octaves under */
  if(typeof audioReady!=='undefined'&&audioReady)go();else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
 }
 function orbPivotRide(at,landAt,landed){
@@ -35859,7 +35868,7 @@ function orbEcoRun(write){
   for(const r of rows){
    if(acc>=16)break;
    const d=Math.min(r.d,16-acc);
-   inst.note('comping',voice({r:r.r,iv:r.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
+   inst.audition(voice({r:r.r,iv:r.iv},null),Math.max(.3,d*spb*.92),t0+acc*spb,.5);
    acc+=r.d;
   }
  }catch(e){}};
@@ -39035,7 +39044,7 @@ function onMidiIn(ev){
  /* 4.7 (§9): with Orbits open, pads TRAVEL the wheels — recording always wins */
  if(on&&!recTaking()&&typeof orbMidiTravel==='function'&&orbMidiTravel(note))return;
  if(on&&armedTrack&&armedTrack!=='drums'&&audioReady){
-  try{if(armedTrack==='chords')inst.note('comping',[note],.5,Tone.now(),.6);else playEditable(armedTrack,[0,.5,note,,,,,,vel/127],Tone.now(),.8);}catch(e){}   /* live monitor */
+  try{if(armedTrack==='chords')inst.audition([note],.5,Tone.now(),.6);else playEditable(armedTrack,[0,.5,note,,,,,,vel/127],Tone.now(),.8);}catch(e){}   /* live monitor */
  }
  if(!recTaking())return;
  const b=transportBeat();
