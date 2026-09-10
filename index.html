@@ -246,6 +246,9 @@
   #wanWeber .wanWebKey,#wanWeber .wan2Key{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;box-shadow:0 1px 0 rgba(90,68,38,.25);}
   #wanWeber .wanWebKey:hover,#wanWeber .wan2Key:hover{background:#fff3d8;}
   #wanWeber .wanWebKey.on,#wanWeber .wan2Key.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;font-weight:800;}
+  /* R70 (his [54]): scale B's tonic wears a ring; a letter in neither scale is a faint, dashed ghost */
+  #wanWeber .wanWebKey.onB,#wanWeber .wan2Key.onB{outline:2px solid #7a5a30;outline-offset:-1px;font-weight:800;}
+  #wanWeber .wanWebKey.wanGhost,#wanWeber .wan2Key.wanGhost{opacity:.32!important;border-style:dashed!important;}
   #wanPanel #wanBody .cpchip{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;}
   #wanPanel #wanBody .cpchip.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   #wanPanel #wanStatus{color:#6b4f28;}
@@ -939,7 +942,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10e</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10f</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1932,8 +1935,19 @@ function ragaBrowseRows(entries,state){
   if(state.degs)for(const pc in state.degs)
    if(state.degs[pc]&&e.pcs.indexOf(((+pc)%12+12)%12)<0)return false;
   if(q){
-   const hay=(e.name+' '+(e.rec?(e.rec.swaras.join(' ')+' '+e.rec.mood+' '+(e.rec.wa||'')+' '+(e.rec.parentName||'')):brightTier(scaleBrightness(e)))).toLowerCase();
-   if(hay.indexOf(q)<0)return false;
+   /* R70 (his [56] "the user should be able to type b2… and see a list of all the scales with b2"): DEGREE TOKENS —
+      b2 · ♭2 · #4 · ♯4 · 5 — match the scale's degree shorthand ([49]; the computed reading and the hand labels both),
+      every token an AND; the other words search names, swaras and moods as before */
+   const toks=q.split(/\s+/).filter(Boolean),degs=[],words=[];
+   for(const t of toks){const m=/^([b#♭♯])?([1-7])$/.exec(t);if(m)degs.push((m[1]?((m[1]==='b'||m[1]==='♭')?'♭':'♯'):'')+m[2]);else words.push(t);}
+   if(degs.length){
+    const sh=' '+scaleDegreeShorthand(e.pcs)+' '+(Array.isArray(e.labels)?e.labels.join(' ')+' 1':'')+' ';
+    for(const d of degs)if(sh.indexOf(' '+d+' ')<0)return false;
+   }
+   if(words.length){
+    const hay=(e.name+' '+(e.rec?(e.rec.swaras.join(' ')+' '+e.rec.mood+' '+(e.rec.wa||'')+' '+(e.rec.parentName||'')):brightTier(scaleBrightness(e)))).toLowerCase();
+    if(hay.indexOf(words.join(' '))<0)return false;
+   }
   }
   return true;
  });
@@ -28724,6 +28738,19 @@ function rebuildScaleMenuExtras(){
 function ragaApply(sid){
  /* same path as the Scale menu: the ACTIVE SECTION reinterprets (notes stay put) */
  if(!SCALE_DB[sid])return;
+ /* R70 (his [55] "we should just go ahead and select the scales from the pop up Scale / Raga Omnisphere Window"): opened
+    from the Wanderer's SEARCH / ⌕, the pick lands in THAT scale slot — 1a scale 1 · 2a scale 2 · 1b / 2b the Weber
+    matrices' B scales (their key kept) — the section untouched */
+ if(typeof wanSearchFor==='string'&&/^[12][ab]$/.test(wanSearchFor)){
+  const t=wanSearchFor;wanSearchFor=null;
+  if(t==='1a'){wanState.mode=sid;wanState.follow=false;wanState.relStep=Math.min(wanState.relStep,Math.max(1,wanScale().pcs.length-1));}
+  else if(t==='2a'){wanState.mode2=sid;}
+  else{const side=+t[0];const sc=wanBoardScales(side);wanState[side===2?'web2b':'web1b']={tonic:sc.b.tonic,mode:sid};}
+  wanState.cur={row:0,deg:0};
+  try{renderWan();}catch(e){}
+  ragaStatus('Applied '+SCALE_DB[sid].name+' to the Wanderer \u2014 '+(t==='1a'?'scale 1':t==='2a'?'scale 2':'Weber matrix '+t[0]+'\u2019s scale B')+'. The section\u2019s own scale is unchanged.');
+  renderRagaInfo();return;
+ }
  /* 20n [61]: opened from a RELATIVE matrix's "Search" → the pick replaces THAT matrix's scale (its tonic kept),
     the section untouched */
  if(typeof palSearchFor==='number'&&palSearchFor>0&&typeof palState==='object'&&Array.isArray(palState.mats)){
@@ -28844,7 +28871,7 @@ function renderRagaResults(){
     if(_t)_tl='<span class="essClipW" style="zoom:.55;flex:0 0 auto;display:inline-block;">'+_t+'</span>';}catch(err){}
    h+='<div class="ragaRow" data-sid="'+e.sid+'" style="display:flex;gap:6px;align-items:center;padding:2.5px 7px;border-radius:5px;cursor:pointer;'+(on?'background:rgba(232,163,61,.16);outline:1px solid var(--accent);':'')+'">'
     +_tl
-    +'<span style="flex:1;font-size:12px;color:var(--text);">'+e.name+(scaleFavs.has(e.sid)?' <span style="color:var(--accent);">⭐</span>':'')+'</span>'
+    +'<span style="flex:1;font-size:12px;color:var(--text);">'+e.name+(scaleFavs.has(e.sid)?' <span style="color:var(--accent);">⭐</span>':'')+' <span style="color:var(--dim);font-size:10.5px;">· '+scaleDegreeShorthand(e.pcs)+'</span></span>'   /* R70 ([49]/[56]): the shorthand on every row */
     +'<span style="font-size:10px;color:var(--dim);">'+e.pcs.length+'</span>'
     +'<button data-a="scale" title="Play the scale up and down in the key of this song" style="padding:1px 7px;font-size:11px;background:#3a3e4d;color:#e9eaef;">▸ Scale</button>'
     +'<button data-a="riff" title="'+(e.rec?'Hear its prescribed gamakas — played the way the raga is meant to be played':'Melisma Machine riffs on this scale — pick one in the info pane, or press for a demo')+'" style="padding:1px 7px;font-size:11px;background:#3a3e4d;color:#e9eaef;">➿ Riffs</button>'
@@ -29513,6 +29540,39 @@ function wanScale2(){
  const rel=relParallelPcs(wanScale().pcs,wanState.relStep,wanState.relDir);
  return {id:'',name:pcsScaleName(rel)||('(the '+ordinalName(wanState.relStep)+'-'+wanState.relDir+' rotation)'),pcs:rel};
 }
+/* R70 (his [54]/[55]): EACH WEBER MATRIX IS TWO SCALES. Scale A is the board's home scale (matrix 1: scale 1 · matrix 2:
+   scale 2); scale B is the user's pick (wanState.web1b / web2b = {tonic,mode}) — or, unset, WEBER'S OWN PAIR: the parallel
+   scale of the opposite quality (a major home → its parallel natural minor; a minor home → its parallel major). A cell's
+   chord: the major column (slot A) carries scale A's chord on that letter, the minor column (slot B) scale B's — every
+   quality as it comes (his F♯ melodic minor: ii · III+ · IV · V · vi° · vii°). A letter in NEITHER scale is a GHOST:
+   Weber's plain major/minor key, drawn faint, so the geometry of fifths stays readable for modulation. Pure. */
+function wanParallelDefault(tonic,pcs){return {tonic:((tonic%12)+12)%12,mode:(pcs&&pcs[2]===3)?'ionian':'aeolian'};}
+function wanBoardScales(side){
+ const st=wanState;
+ const a=side===2?{tonic:wanRel2Root(),sc:wanScale2()}:{tonic:((st.tonic%12)+12)%12,sc:wanScale()};
+ const pick=side===2?st.web2b:st.web1b;
+ let b;
+ if(pick&&SCALE_DB[pick.mode])b={tonic:((+pick.tonic||0)%12+12)%12,sc:SCALE_DB[pick.mode]};
+ else{const d=wanParallelDefault(a.tonic,a.sc.pcs);b={tonic:d.tonic,sc:SCALE_DB[d.mode]};}
+ const mk=x=>({tonic:x.tonic,pcs:x.sc.pcs,name:PCN[x.tonic]+' '+x.sc.name,id:x.sc.id||'',minor:!!(x.sc.pcs&&x.sc.pcs[2]===3)});
+ return {a:mk(a),b:mk(b)};
+}
+function wanWeberCellChord(scales,lof,slotB){
+ /* Weber's columns keep their QUALITY: a minor home scale (A) sits in the minor column and its partner (B) in the major
+    column; a major home in the major column, B in the minor — so a minor song reads exactly as Weber drew it (c C) */
+ const pc=wanLofPc(lof);const aInMinor=!!scales.a.minor;const isA=slotB?aInMinor:!aInMinor;const sc=isA?scales.a:scales.b;
+ const deg=sc.pcs.indexOf((((pc-sc.tonic)%12)+12)%12);
+ if(deg<0)return {ghost:true,isA,r:pc,iv:slotB?[0,3,7]:[0,4,7],minor:!!slotB,dim:false,aug:false,roman:null,deg:-1,scale:sc};
+ const tri=scaleDegreeTriad(sc.pcs,deg);
+ const iv=tri?tri.iv:[0,4,7];
+ const minor=iv[1]===3,dim=minor&&iv.indexOf(6)>=0&&iv.indexOf(7)<0,aug=iv[1]===4&&iv.indexOf(8)>=0&&iv.indexOf(7)<0;
+ return {ghost:false,isA,r:pc,iv,minor,dim,aug,roman:degRomanW(deg,iv,sc.pcs.length),deg,scale:sc};
+}
+function wanCellLetter(nm,ch){
+ /* Weber's letters: lowercase for a minor (or diminished) chord, ° and + as they come */
+ return ((ch.minor||ch.dim)?nm.charAt(0).toLowerCase()+nm.slice(1):nm)+(ch.ghost?'':(ch.dim?'°':ch.aug?'+':''));
+}
+var wanSearchFor=null;   /* R70 (his [55]): which Wanderer scale slot opened the Scales / Ragas window — '1a' · '2a' · '1b' · '2b' */
 function wanRel2Root(){
  /* R68 (his [50] ④): UNLINKED pins scale 2's root (root2Pin) — the first scale may change, the second stays as it is */
  if(wanState.root2Pin!=null&&!(wanState.web2&&wanState.web2.linked!==false))return ((wanState.root2Pin%12)+12)%12;
@@ -29532,6 +29592,16 @@ function wanSide2SetHome(pc,minor){
  else st.root2Pin=p;
  try{const q=!!(wanScale2().pcs[2]===3);if(q!==!!minor)st.mode2=minor?'aeolian':'ionian';}catch(e){}
  st.cur={row:0,deg:0};
+}
+function wanScaleBRow(side){
+ /* R70 (his [54]/[55]): the matrix's SCALE B — chosen from the Scales / Ragas window (⌕), its key beside it; unset = Weber's pair */
+ const sc=wanBoardScales(side);const pick=side===2?wanState.web2b:wanState.web1b;
+ return '<div class="wanBRow" data-side="'+side+'" style="display:flex;gap:6px;align-items:center;font-size:11px;margin-top:2px;" title="Weber matrix '+side+' is TWO scales: scale A above (its home) and this scale B. Weber\'s own pair is the default — the parallel scale of the opposite quality. ⌕ opens the Scales / Ragas window to choose B; the key beside it.">'
+  +'<span style="color:var(--dim);white-space:nowrap;">Weber '+side+' · B:</span>'
+  +'<button class="wanSrchBtn" data-wansearch="'+side+'b" title="Choose scale B from the Scales / Ragas window (search names, or degrees — b2, #4…)">⌕</button>'
+  +'<select data-wanrootb="'+side+'" style="width:56px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===sc.b.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
+  +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3a2c18;">'+sc.b.name+(pick?'':' <span style="color:var(--dim);">(Weber\'s pair)</span>')+'</span>'
+  +(pick?'<span class="wanAllTog" data-wanbreset="'+side+'" title="Back to Weber\'s pair">⟲</span>':'')+'</div>';
 }
 function wanLinkSet(on){
  /* R68 (his [50] ④), his words: NOT LINKED = "let me change the first scale and the second scale remains as it is";
@@ -29940,7 +30010,7 @@ function wanRerootStable(newPc,newMinor,at,label){
  audLedReset();
  wanAudition();renderWan();
 }
-function wanKeyAudition(pc,minor,dur){
+function wanKeyAudition(pc,minor,dur,iv){
  try{
   /* 84th R3 (his FIFTY-THIRD message): voice-led now — the old call planed every key
      as its own first-inversion I in parallel, which is exactly the "only ascend in
@@ -29949,7 +30019,8 @@ function wanKeyAudition(pc,minor,dur){
      his 140th: a SEQUENCE passes a short dur so the tails never bleed into the next
      chord — a lone click keeps the full 1.2s ring. */
   const _d=(typeof dur==='number'&&isFinite(dur)&&dur>0)?dur:1.2;
-  const go=()=>{try{audLedPlay('wan',{r:pc,iv:(minor?MIN:MAJ).slice()},_d,Tone.now(),.6);}catch(e){}};
+  const _iv=(Array.isArray(iv)&&iv.length>=2&&iv.every(x=>isFinite(x)))?iv.slice():(minor?MIN:MAJ).slice();   /* R70: a cell's own chord (° and + included) */
+  const go=()=>{try{audLedPlay('wan',{r:pc,iv:_iv},_d,Tone.now(),.6);}catch(e){}};
   if(typeof audioReady!=='undefined'&&audioReady)go();
   else if(typeof ensureAudio==='function')ensureAudio().then(go).catch(()=>{});
  }catch(e){}
@@ -30134,6 +30205,7 @@ function wanPopupOpen(panelId){
   document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
  };
  strip.querySelector('[data-w="popclose"]').onclick=()=>{
+  wanSearchFor=null;   /* R70: a closed pop-up forgets which Wanderer slot opened it */
   strip.remove();
   p.classList.remove('wanPopup');
   p.setAttribute('style',p.dataset.popPrev||'');
@@ -31481,6 +31553,7 @@ function wanSide2Draw(){
  const tonicLof=wanPcLof(tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+(w2.shift||0);
  const grid=weberGrid(anchor);
+ const _sc2=wanBoardScales(2);   /* R70 */
  let h='';
  for(let r=0;r<WEB_ROWS;r++){
   h+='<div style="display:flex;gap:3px;margin-bottom:3px;">';
@@ -31490,14 +31563,16 @@ function wanSide2Draw(){
       tonic), and the function colours (relative to ITS tonic) */
    const redLof=st.webReduce?wanPcLof(wanLofPc(cell.lof),cell.minor):cell.lof;
    const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);
-   const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
-   const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,tonic):letter;
-   const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
+   const ch=wanWeberCellChord(_sc2,cell.lof,cell.minor);   /* R70 (his [54]): slot A ← scale A (scale 2), slot B ← scale B */
+   const letter=wanCellLetter(nm,ch);
+   const label=st.webView==='roman'?(ch.ghost?wanRomanOf(wanLofPc(cell.lof),cell.minor,ch.scale.tonic):ch.roman):letter;
+   const isKey=ch.isA&&!ch.ghost&&ch.deg===0;
+   const isKeyB=!ch.isA&&!ch.ghost&&ch.deg===0;
    let fnSty='';
-   try{fnSty=wanCellFnSty((((wanLofPc(cell.lof)-tonic)%12)+12)%12,cell.minor,minor);}catch(e){}   /* R65: the scheme in use, read against side 2's tonic and mode */
+   try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65 — R70: against the slot's own scale */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
-   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
   }
   h+='</div>';
  }
@@ -31517,7 +31592,7 @@ function wanSide2Draw(){
  host.querySelectorAll('.wan2Key').forEach(el=>{
   const pc=()=>wanLofPc(+el.getAttribute('data-lof'));
   const mn=()=>el.getAttribute('data-minor')==='1';
-  el.onclick=()=>{try{wanKeyAudition(pc(),mn());}catch(err){}};
+  el.onclick=()=>{try{wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));}catch(err){}};   /* R70: the cell's own chord */
   el.ondblclick=ev=>{ev.preventDefault();
    try{wanSide2SetHome(pc(),mn());}catch(err){}renderWan();   /* R68 [51] ① + [52]: a double-click on the right map sets SCALE 2's home — linked or not */
   };
@@ -31540,6 +31615,7 @@ function wanWeberDraw(){
  const tonicLof=wanPcLof(st.tonic,minor);
  const anchor=(minor?tonicLof-3:tonicLof)+st.webShift;
  const grid=weberGrid(anchor);
+ const _sc1=wanBoardScales(1);   /* R70 (his [54]): the board's two scales */
  /* his 169th ("There doesn't seem to be a 2nd Wanderer yet"): the 165th's layout-state
     gate hid the dual board from his live session — the gate is WIDTH now: a board wide
     enough hosts the 2nd Wanderer, whatever the layout flag says. */
@@ -31598,8 +31674,9 @@ function wanWeberDraw(){
       never moves, only the label reduces (through the plain-window pures). */
    const redLof=st.webReduce?wanPcLof(wanLofPc(cell.lof),cell.minor):cell.lof;
    const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);   /* 80th R25 (his 33rd message): 3+ sharps spell as ♯♯♯, not × — the detector reads BOTH accidental families now */
-   const letter=cell.minor?nm.charAt(0).toLowerCase()+nm.slice(1):nm;
-   const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,st.tonic):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
+   const ch=wanWeberCellChord(_sc1,cell.lof,cell.minor);   /* R70 (his [54]): slot A ← scale A, slot B ← scale B */
+   const letter=wanCellLetter(nm,ch);
+   const label=st.webView==='roman'?(ch.ghost?wanRomanOf(wanLofPc(cell.lof),cell.minor,ch.scale.tonic):ch.roman):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
    /* 81st R4 (his thirty-eighth message): "all of the I chords... including the one in
       the upper right hand and lower left hand corners". ⛔ THE BUG WAS `cell.lof===tonicLof`
       — a LINE-OF-FIFTHS position, which is unique. The same PITCH CLASS recurs across the
@@ -31607,15 +31684,16 @@ function wanWeberDraw(){
       land at the EXTREMES — which is exactly why the corners were the instances he could
       see going dark. Comparing pitch class lights every one of them. ⭐ His corners are the
       acceptance test, and the suite asserts them by name. */
-   const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
+   const isKey=ch.isA&&!ch.ghost&&ch.deg===0;   /* R70: home = scale A's I (in the column of its quality); scale B's tonic lights as onB */
+   const isKeyB=!ch.isA&&!ch.ghost&&ch.deg===0;
    const selKey=st.webSel.has(cell.lof+':'+(cell.minor?1:0));
    /* Sept 3: paint the KEY chips with the hyper-function scheme (Expand reveals chromatics;
       ♭VI wears half Subdominant + half Relative). Paint rides wanState.fnOn. */
    let fnSty='';
-   try{fnSty=wanCellFnSty((((wanLofPc(cell.lof)-st.tonic)%12)+12)%12,cell.minor,minor);}catch(e){}   /* R65: the scheme in use (legacy = the six-family key paint as before) */
-   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'"'
+   try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65: the scheme in use — R70: read against the slot's OWN scale */
+   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
     +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'"'
-    +' title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home · ⌘+click draws a path to it.">'+label+'</span>';
+    +' title="'+letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.">'+label+'</span>';
   }
   h+='</div>';
  }
@@ -31645,7 +31723,7 @@ function wanWeberDraw(){
     pan-off recenter (pc matches exist everywhere on a fifths line, so homes never
     emptied) and the route origin (the roomiest pick moved). The narrow law: homes stay
     STRICT — and the CLICKED cell, when it is a pc-true respelling, JOINS them. */
- const homes=[...wrap.querySelectorAll('.wanWebKey')].filter(el=>+el.getAttribute('data-lof')===tonicLof&&(el.getAttribute('data-minor')==='1')===minor)
+ const homes=[...wrap.querySelectorAll('.wanWebKey')].filter(el=>el.classList.contains('on')&&+el.getAttribute('data-lof')===tonicLof)   /* R70: home = scale A's I — STRICT by lof as the 74th's law says (the pan-off recentre and the route origin depend on it); every pc instance still wears .on */
   .map(el=>({r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c'),el}));
  if(st.webHomeAt){
   const hEl=[...wrap.querySelectorAll('.wanWebKey')].find(el=>+el.getAttribute('data-r')===st.webHomeAt.r&&+el.getAttribute('data-c')===st.webHomeAt.c);
@@ -32304,7 +32382,7 @@ function wanWeberDraw(){
     const pr=document.getElementById('wanPathRec');
     if(pr)pr.textContent='⏺ REC '+st.webPathRecSeq.length;
    }
-   wanKeyAudition(pc(),mn());   /* a plain click just HEARS the key */
+   wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));   /* a plain click just HEARS the key — R70: the cell's own chord */
   };
   el.ondblclick=e=>{   /* double-click: the new root key — the STABLE reroot (his 68th) */
    e.preventDefault();
@@ -32521,11 +32599,12 @@ function renderWan(){
      for the scales / ragas window." ⭐ THE MACHINERY ALREADY EXISTED — wanPopupOpen lifts a
      WINDOW_DEFS window into a draggable float, and ragaPanel IS the scales/ragas window
      ("Scales", the Scale/Raga Browser). Nothing new was invented for this. */
-  +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
+  +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN.replace('data-wansearch="1"','data-wansearch="1a"')   /* R70: this SEARCH picks SCALE 1 */
   +'<input id="wanSearch" placeholder="search scales & ragas…" value="'+(wanState.search||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" title="The home key — choosing one stops following the playhead (⟲ re-follows)" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select>'+BRUSH(1)+'</div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:#3a2c18;cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
+  +wanScaleBRow(1)   /* R70 */
   /* ⛔⭐ 82nd R3 (his FORTY-FIFTH message, first sentence): "We don't need the relationship
      drop down menu in the middle.  Please get rid of it." — GONE, one round after it shipped.
      ⚠ THE LESSON OUTLASTS THE CONTROL: R2 built that dropdown on a LABELLED INFERENCE — his
@@ -32547,7 +32626,7 @@ function renderWan(){
   /* his order, verbatim: "The 2nd scale search button and name should be below the
      'Relative' '3rd' 'below' part." */
   +'<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Scale 2</label>'
-  +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN
+  +'<div style="display:flex;gap:6px;align-items:center;">'+SEARCH_BTN.replace('data-wansearch="1"','data-wansearch="2a"')   /* R70: this SEARCH picks SCALE 2 */
   +'<input id="wanSearch2" placeholder="search scales &amp; ragas…" value="'+(wanState.search2||'').replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
   /* 82nd R2 (his FORTY-THIRD message): "we still need a more user-input-driven method of
      choosing the 2nd scale.  It should have the same input as the top scale." ⭐ The static
@@ -32557,6 +32636,7 @@ function renderWan(){
      there (wanRelFromRoot), so the two controls can never disagree. */
   +'<div style="display:flex;gap:6px;"><select id="wanRoot2" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanRel2Root()?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select>'+BRUSH(2)+'</div>'
+  +wanScaleBRow(2)   /* R70 */
   /* 84th R5 (his 55th's correction, his own example the acceptance test): scale 2's TWO
      READINGS as two clickable names — "A Melodic Minor · as C: Lydian Augmented". Click
      the one you mean; the active one drives the row's name, degrees and chord set. When
@@ -32847,7 +32927,12 @@ function renderWan(){
     the float the 80th already built for the Pathways search buttons. */
  B.querySelectorAll('[data-wansearch]').forEach(btn=>{btn.onclick=e=>{
   e.preventDefault();e.stopPropagation();
+  const t=btn.getAttribute('data-wansearch');wanSearchFor=/^[12][ab]$/.test(t)?t:null;   /* R70 (his [55]): the pick lands in THIS slot */
   try{wanPopupOpen('ragaPanel');}catch(_){}};});
+ /* R70: scale B's key, and ⟲ back to Weber's pair */
+ B.querySelectorAll('select[data-wanrootb]').forEach(sel=>{sel.onchange=()=>{const side=+sel.getAttribute('data-wanrootb');const sc=wanBoardScales(side);const k=side===2?'web2b':'web1b';
+  wanState[k]={tonic:+sel.value,mode:(wanState[k]&&SCALE_DB[wanState[k].mode])?wanState[k].mode:(sc.b.id||(sc.b.minor?'aeolian':'ionian'))};renderWan();};});
+ B.querySelectorAll('[data-wanbreset]').forEach(el=>{el.onclick=e=>{e.stopPropagation();wanState[+el.getAttribute('data-wanbreset')===2?'web2b':'web1b']=null;renderWan();};});
  document.getElementById('wanSaveGrp').onclick=()=>{
   if(!wanState.trail.length){setWanStatus('The trail is empty — ✓ a few chords first, then ★ keeps the journey.');return;}
   wanGroups.push({name:'Pivot group '+(wanGroups.length+1)+' · '+wanState.trail.map(s=>s.lbl).join('→').slice(0,24),steps:wanState.trail.map(s=>({r:s.r,iv:s.iv.slice(),lbl:s.lbl}))});
