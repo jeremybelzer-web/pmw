@@ -934,7 +934,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -8666,16 +8666,21 @@ function audVoice(c,prev){
     2 octaves from the chord."
     · prev = the previous voiced chord (notes only, no bass) → the cheapest
       voice-for-voice move wins (padded like voiceFromFirstInvI's scorer).
-    · prev null = a fresh start → FIRST INVERSION, register just under middle C
-      (his 42nd: "start with a 1st inversion chord on whichever chord is selected
-      for the center chord"). A chord with no third (sus, no-3) starts on register
-      preference alone — labelled degradation, his words define no start for those.
-    · THE 9TH LAW: candidates spanning more than 14 semitones are dropped (an
-      extended chord that cannot fit falls back to its narrowest shapes — labelled).
-    · bass = the chord's ROOT pc at the nearest instance of (lowest − 24) — the
-      reading of "down 2 octaves from the chord"; played even when the voicing
-      omits the root (a (no R) chord is still named by its root). Pure.
-    Returns {notes,bass} or null on junk. */
+    ⭐ R66 (his [48], Sept 10 — "sounding one octave too low. It should always stay within the
+    interval of a 9th... and start on the e above middle C... with 1 note playing a lower octave
+    root note"): THE WINDOW IS FIXED — every upper voice lives inside the ninth that STARTS ON
+    E4 (64) and reaches F♯5 (78); the voices move inside it, never out of it.
+    · prev = the previous voiced chord (notes only, no bass) → the cheapest voice-for-voice
+      move wins among the shapes that fit the window (padded like voiceFromFirstInvI's scorer).
+    · prev null = a fresh start → the shape whose bottom sits nearest E4, the third on the
+      bottom preferred (his 42nd's first inversion where the window allows it — C major opens
+      E4 G4 C5; a chord whose first inversion would leave the window opens on its lowest fit).
+    · THE 9TH LAW is the window itself (64..78, a major ninth). An extended chord too wide for
+      it falls back to its narrowest shapes from E4 up — labelled degradation.
+    · bass = ONE note, the chord's ROOT pc in the octave UNDER the window (52..63) — his [48]'s
+      "1 note playing a lower octave root note" (the Sept 1 "two octaves" reading retired by his
+      word); played even when the voicing omits the root (a (no R) chord is still named by its
+      root). Pure. Returns {notes,bass} or null on junk. */
  const pcs=[];for(const x of ((c&&c.iv)||[])){const p=(((+c.r||0)+x)%12+12)%12;if(pcs.indexOf(p)<0)pcs.push(p);}
  if(!pcs.length)return null;
  const rootPc=(((+c.r||0)%12)+12)%12;
@@ -8683,15 +8688,17 @@ function audVoice(c,prev){
  const cands=[];
  for(let rot=0;rot<pcs.length;rot++){
   const order=pcs.slice(rot).concat(pcs.slice(0,rot));
-  for(let o=4;o<=6;o++){   /* R61 (his [39] ①): the audition register one octave up */
+  for(let o=5;o<=6;o++){   /* R66 (his [48]): the shapes that can start inside the window (E4 = 64 sits in octave 5's row) */
    const notes=[];let last=-1;
    for(const pc of order){let m=o*12+pc;while(m<=last)m+=12;notes.push(m);last=m;}
    cands.push(notes);
   }
  }
- let pool=cands.filter(n=>n[n.length-1]-n[0]<=14);
- if(!pool.length){const ms=Math.min.apply(null,cands.map(n=>n[n.length-1]-n[0]));
-  pool=cands.filter(n=>n[n.length-1]-n[0]===ms);}
+ const WIN_LO=64,WIN_HI=78;   /* R66: the ninth from the E above middle C */
+ let pool=cands.filter(n=>n[0]>=WIN_LO&&n[n.length-1]<=WIN_HI);
+ if(!pool.length){const up=cands.filter(n=>n[0]>=WIN_LO);const src=up.length?up:cands;
+  const ms=Math.min.apply(null,src.map(n=>n[n.length-1]-n[0]));
+  pool=src.filter(n=>n[n.length-1]-n[0]===ms);}
  let best=null,bd=1e9;
  for(const notes of pool){
   let d;
@@ -8699,13 +8706,11 @@ function audVoice(c,prev){
    const L=Math.max(notes.length,prev.length);d=0;
    for(let i=0;i<L;i++)d+=Math.abs(notes[Math.min(i,notes.length-1)]-prev[Math.min(i,prev.length-1)]);
   }else{
-   d=Math.abs(notes[0]-69)+((thirdPc!=null&&notes[0]%12!==thirdPc)?24:0);   /* R61 [39] ①: the fresh start just ABOVE middle C */
+   d=Math.abs(notes[0]-WIN_LO)+((thirdPc!=null&&notes[0]%12!==thirdPc)?6:0);   /* R66 [48]: the fresh start from the E above middle C, the third on the bottom when the window allows */
   }
   if(d<bd){bd=d;best=notes;}
  }
- let b=best[0]-24;
- b+=((rootPc-b)%12+12)%12;
- if(b>best[0]-18)b-=12;
+ const b=(WIN_LO-12)+((rootPc-(WIN_LO-12))%12+12)%12;   /* R66 [48]: ONE root, in the octave under the window (52..63) */
  return {notes:best,bass:b};
 }
 var audLed={surf:null,notes:null};   /* 84th R3: the per-surface voice-leading memory — a different surface (or a reset) starts fresh at first inversion */
@@ -8748,7 +8753,7 @@ function chordVoicingOf(c,prev){
  /* 84th R4 (his FIFTY-THIRD message + his app-wide ruling, Sept 1): the SOUNDING
     voicing everywhere the chain reaches — the user's hand voicing verbatim (his hand
     IS the law there), else the AUDITION LAW: voice-led within a 9th, over the root
-    two octaves down. ⭐ The bass rides IN the array, exactly the shape renderPad's
+    two octaves down (R66, his [48]: inside the fixed E4–F♯5 window, the root ONE octave under it). ⭐ The bass rides IN the array, exactly the shape renderPad's
     slash bass already uses — so the ghosts ("the same pitches the band plays"),
     the export and the voicing editor all carry it with zero extra seams. */
  if(Array.isArray(c.vo)&&c.vo.length)return c.vo.slice().sort((a,b)=>a-b);
@@ -28538,13 +28543,14 @@ function ragaPlayStep(e,pcAbs,when,dur,vel){
  if(ragaState.chords&&degIdx>=0){
   /* 84th R3 (his FIFTY-THIRD message): ragaDegChord's offsets stacked straight up from
      the degree were the "only ascend in root position" shape, verbatim. The chord now
-     voice-leads through the shared law ('raga' memory), still an octave under the
-     melody (the client's note-louder-than-chord mix stands), the root two octaves
-     under the chord AS HEARD (so the bass shifts down with the accompaniment). */
+     voice-leads through the shared law ('raga' memory) — the client's note-louder-
+     than-chord mix stands. ⭐ R66 (his [48] "sounding one octave too low"): the extra
+     octave this surface dropped the chord by is GONE — the window (E4..F♯5, the root one
+     octave under it) is the law here as everywhere; the melody rides over it. */
   const offs=ragaDegChord(e,degIdx);
   if(offs.length){
    const v=audLedVoice('raga',{r:(((root+offs[0])%12)+12)%12,iv:offs.map(o2=>o2-offs[0])});
-   if(v)for(const m of [v.bass-12].concat(v.notes.map(n2=>n2-12)))
+   if(v)for(const m of [v.bass].concat(v.notes))
     inst.melAud(m,dur*.96,when,vel*.42);
   }
  }
