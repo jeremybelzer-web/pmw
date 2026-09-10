@@ -942,7 +942,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10g</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10h</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -28613,8 +28613,12 @@ function ragaPlayStep(e,pcAbs,when,dur,vel){
 function ragaAudSeqPlay(e,riff){
  /* [Scale ▸]: up & down in the song's key at an easy eighth-note walk. [➿ Riffs] on a
     raga: the same walk played the way the raga is MEANT to be played — gamakas forced
-    on, chords off, jiva swaras leaning louder, a touch slower. */
+    on, chords off, jiva swaras leaning louder, a touch slower.
+    R72 (his [61] "The scales don't currently play anymore at all"): the walk STARTS THE
+    AUDIO ENGINE when it is not up yet — a fresh page whose first gesture is ▸ Scale used
+    to swallow the press in the try/catch below (inst still null) and stay silent. */
  if(!e)return;
+ if(typeof audioReady!=='undefined'&&!audioReady&&typeof ensureAudio==='function'){ensureAudio().then(()=>{if(audioReady)ragaAudSeqPlay(e,riff);}).catch(()=>{});return;}
  try{
   const t0=Tone.now()+.05;
   const bpm=+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96);
@@ -28634,6 +28638,7 @@ function ragaAudSeqPlay(e,riff){
  }catch(err){}   /* an audition must never break the gesture it rides on */
 }
 function ragaMelPreview(orn,e0){
+ if(typeof audioReady!=='undefined'&&!audioReady&&typeof ensureAudio==='function'){ensureAudio().then(()=>{if(audioReady)ragaMelPreview(orn,e0);}).catch(()=>{});return;}   /* R72 (his [61]): start the engine first */
  /* the Q4 preview strip: press an ornament → hear it ON THIS SCALE, nothing written */
  try{
   const e=e0||ragaSelEntry()||ragaAllEntries().filter(x=>x.sid==='ionian')[0];
@@ -28650,6 +28655,7 @@ function ragaMelPreview(orn,e0){
  }catch(err){}
 }
 function ragaRiffDemo(e,orn){
+ if(typeof audioReady!=='undefined'&&!audioReady&&typeof ensureAudio==='function'){ensureAudio().then(()=>{if(audioReady)ragaRiffDemo(e,orn);}).catch(()=>{});return;}   /* R72 (his [61]): start the engine first */
  /* a Western scale's Riffs entry: "a demo with a cool melody + that melisma/riff" —
     three lead-in scale tones, then the ornament sings on a held tonic */
  try{
