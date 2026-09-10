@@ -934,7 +934,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1675,8 +1675,35 @@ function degColor(deg){ /* color by the degree family its label belongs to (syne
    Groups: 'standard' | 'jazz' (Jazz & Blues Extension). */
 function SC(id,name,group,pcs,labelStr){
  const labels=labelStr?labelStr.split(','):pcs.map((p,d)=>(p<IONIAN[d]?'♭':p>IONIAN[d]?'♯':'')+(d+1));
- return {id,name,group,pcs,labels,bases:labels.map(l=>parseInt(l.replace(/[^0-9]/g,''),10)-1)};
+ return {id,name,group,pcs,labels,hand:!!labelStr,bases:labels.map(l=>parseInt(l.replace(/[^0-9]/g,''),10)-1)};
 }
+/* R67 (his [49]: "In the scale drop down menu it should have the scale degrees represented with sharps
+   or flats like: 1 b2 b3 4 5 b6 b7 1 — it should have this short-hand scale for every single scale in
+   there"). scaleDegreeShorthand(pcs): every pitch class named against the major scale, the octave
+   closing it — ♯4 only when the scale has no 4, ♯5 only when it has no 5 (Lydian 1 2 3 ♯4 5 6 7 1 ·
+   Locrian 1 ♭2 ♭3 4 ♭5 ♭6 ♭7 1 · whole tone 1 2 3 ♯4 ♯5 ♭7 1); any note count. scaleShorthand(sc) prefers
+   the scale's HAND labels (the jazz/mm/hm/dh rows spell their own 𝄫 and ♯2). Pure. */
+function scaleDegreeShorthand(pcs){
+ const set=(pcs||[]).map(p=>((p%12)+12)%12);
+ const has=p=>set.indexOf(p)>=0;
+ const uniq=[];for(const p of set)if(uniq.indexOf(p)<0)uniq.push(p);
+ uniq.sort((a,b)=>a-b);
+ /* flats by default; ♯4 only when the scale has no 4, ♯5 only when it has no 5 and degree 5 is still
+    unspoken (Locrian's ♭5 takes it → ♭6; the whole tone's ♯4 leaves it → ♯5) */
+ const used=new Set();
+ const nm=p=>{let d,l;
+  if(p===6){if(!has(5)&&!used.has(4)){d=4;l='♯4';}else{d=5;l='♭5';}}
+  else if(p===8){if(!has(7)&&!used.has(5)){d=5;l='♯5';}else{d=6;l='♭6';}}
+  else{d=[1,2,2,3,3,4,0,5,0,6,7,7][p];l=['1','♭2','2','♭3','3','4','','5','','6','♭7','7'][p];}
+  used.add(d);return l;};
+ return uniq.map(nm).join(' ')+' 1';
+}
+function scaleShorthand(sc){
+ if(!sc||!Array.isArray(sc.pcs)||!sc.pcs.length)return '';
+ if(sc.hand&&Array.isArray(sc.labels)&&sc.labels.length===sc.pcs.length)return sc.labels.join(' ')+' 1';
+ return scaleDegreeShorthand(sc.pcs);
+}
+function scaleOptLabel(sc){return sc.name+'  ·  '+scaleShorthand(sc);}   /* R67: every scale drop-down's option text */
 const SCALE_DB={};
 [SC('ionian','Major (Ionian)','standard',MODES.ionian),
  SC('aeolian','Natural Minor (Aeolian)','standard',MODES.aeolian),
@@ -12638,7 +12665,7 @@ function openSectionEditor(idx,cx,cy){
  const gj=document.createElement('optgroup');gj.label='Jazz & Blues Extension';
  /* 3.5: carnatic scales stay out of this compact menu — except the section's own mode,
     so a raga section still displays (apply new ragas from the Browser) */
- Object.values(SCALE_DB).forEach(sc=>{if(sc.group==='carnatic'&&sc.id!==s.mode)return;(sc.group==='jazz'?gj:gs).appendChild(new Option(sc.name,sc.id));});
+ Object.values(SCALE_DB).forEach(sc=>{if(sc.group==='carnatic'&&sc.id!==s.mode)return;(sc.group==='jazz'?gj:gs).appendChild(new Option(scaleOptLabel(sc),sc.id));});   /* R67 (his [49]) */
  selM.appendChild(gs);selM.appendChild(gj);
  selM.value=SCALE_DB[s.mode]?s.mode:'ionian';
  el.querySelector('#secEdName').onchange=ev=>{
@@ -15059,7 +15086,7 @@ function palMatHead(el,m,i){
  const sel=document.createElement('select');sel.className='cpMatSel';sel.dataset.mat=i;
  sel.appendChild(new Option('⌕ Search…','__search'));
  const fam=palFamilyOf(m.id);if(fam.indexOf(m.id)<0)fam.unshift(m.id);
- fam.forEach(id=>{if(SCALE_DB[id])sel.appendChild(new Option(PCN[m.tonic]+' '+SCALE_DB[id].name,id));});
+ fam.forEach(id=>{if(SCALE_DB[id])sel.appendChild(new Option(PCN[m.tonic]+' '+scaleOptLabel(SCALE_DB[id]),id));});   /* R67 (his [49]) */
  sel.value=m.id;
  sel.title=i===0?'This matrix\u2019s scale — Search opens the Browser (its pick replaces this scale); the rest are the scale\u2019s mode family. Sets the active section\u2019s scale.':'This matrix\u2019s scale — Search opens the Browser (its pick replaces this scale); the rest are the scale\u2019s mode family.';
  sel.onchange=()=>{palMatPick(i,sel.value,m);sel.blur();};
@@ -28665,7 +28692,7 @@ function ensureModeOption(id){
  for(const o of sel.options)if(o.value===id)return;
  let g=document.getElementById('ragaOptGrp');
  if(!g){g=document.createElement('optgroup');g.id='ragaOptGrp';g.label='Carnatic (via the Browser)';sel.appendChild(g);}
- g.appendChild(new Option(SCALE_DB[id].name,id));
+ g.appendChild(new Option(scaleOptLabel(SCALE_DB[id]),id));   /* R67 (his [49]) */
 }
 function rebuildScaleMenuExtras(){
  /* the compact Scale menu's top tiers: ⭐ Favorites + 🕘 Recent (both feed from the
@@ -28674,8 +28701,8 @@ function rebuildScaleMenuExtras(){
  if(!gf||!gr)return;
  const cur=(typeof selMode!=='undefined'&&selMode)?selMode.value:null;
  gf.innerHTML='';gr.innerHTML='';
- for(const id of scaleFavs)if(SCALE_DB[id])gf.appendChild(new Option('⭐ '+SCALE_DB[id].name,id));
- for(const id of scaleRecents)if(SCALE_DB[id]&&!scaleFavs.has(id))gr.appendChild(new Option('🕘 '+SCALE_DB[id].name,id));
+ for(const id of scaleFavs)if(SCALE_DB[id])gf.appendChild(new Option('⭐ '+scaleOptLabel(SCALE_DB[id]),id));
+ for(const id of scaleRecents)if(SCALE_DB[id]&&!scaleFavs.has(id))gr.appendChild(new Option('🕘 '+scaleOptLabel(SCALE_DB[id]),id));
  gf.style.display=gf.children.length?'':'none';
  gr.style.display=gr.children.length?'':'none';
  if(cur&&typeof selMode!=='undefined'&&selMode)selMode.value=cur;
@@ -32308,12 +32335,12 @@ function renderWan(){
    const list=f.ids.map(id=>SCALE_DB[id]).filter(Boolean)
     .filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return !q||s.name.toLowerCase().indexOf(q)>=0;});
    if(!list.length)continue;
-   h+='<optgroup label="'+f.label+'">'+list.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
+   h+='<optgroup label="'+f.label+'">'+list.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+scaleOptLabel(s)+'</option>').join('')+'</optgroup>';   /* R67 (his [49]) */
   }
   /* anything not yet family-seated still lists (nothing becomes unreachable) */
   const rest=[];
   for(const id in SCALE_DB)if(!seen.has(id)){const s=SCALE_DB[id];if(!q||s.name.toLowerCase().indexOf(q)>=0)rest.push(s);}
-  if(rest.length)h+='<optgroup label="Elsewhere">'+rest.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+s.name+'</option>').join('')+'</optgroup>';
+  if(rest.length)h+='<optgroup label="Elsewhere">'+rest.slice(0,200).map(s=>'<option value="'+s.id+'"'+(s.id===sel?' selected':'')+'>'+scaleOptLabel(s)+'</option>').join('')+'</optgroup>';
   return h;
  };
  const modeOpts=wanModeOpts(wanState.mode,wanState.search,'');
@@ -37045,7 +37072,7 @@ STYLES.forEach(s=>selStyle.add(new Option(s.name,s.id)));
  const gs=document.createElement('optgroup');gs.label='Standard';
  const gj=document.createElement('optgroup');gj.label='Jazz & Blues Extension';
  const gm=document.createElement('optgroup');gm.label='Melodic-minor modes';
- Object.values(SCALE_DB).forEach(s=>{if(s.group==='carnatic')return;(s.group==='jazz'?gj:s.group==='mm'?gm:gs).appendChild(new Option(s.name,s.id));});
+ Object.values(SCALE_DB).forEach(s=>{if(s.group==='carnatic')return;(s.group==='jazz'?gj:s.group==='mm'?gm:gs).appendChild(new Option(scaleOptLabel(s),s.id));});   /* R67 (his [49]) */
  selMode.appendChild(gf);selMode.appendChild(gr);selMode.appendChild(gs);selMode.appendChild(gj);selMode.appendChild(gm);
  selMode.add(new Option('⌕ Browse all Scales & Ragas…','__browse'));
  rebuildScaleMenuExtras();
