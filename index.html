@@ -934,7 +934,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-09a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29124,15 +29124,199 @@ const WAN_HYPER_LEGEND={
  hsub:['♭VII','♭vii','♭III','♭iii','♭v'],
  subrel:['♭VI (½ Sub · ½ Rel)']
 };
+/* R65 (his [47]: "make all of the available color schemes as you came up with as options in a pull-down menu and a
+   '+' so the user can define their own categories for each chord"). ONE REGISTRY of the Wanderer's colour schemes:
+   his two (by degree · majors are dominants — legacy, they keep the six-family key paint of wanKeyFn on the boards),
+   the FIVE SORTINGS the September 10 replies laid out, and the user's own ("+", wanSchemeMint / wanSchemeEditor).
+   A table scheme names its categories (WAN_CATS ids, or the user's own {id,label,col}) and assigns EVERY one of the
+   24 triads — 12 roots × major/minor, read against the key's tonic — to one. Entry grammar per triad:
+     'cat' plain · 'cat!' intense (the chord PULLS INTO the family rather than home) · 'cat~' lighter (the minor twin)
+     · 'a/b' half-and-half (the three-colour sorting's six halves, his [46] list).
+   `minor` carries the overrides the replies gave for a MINOR key; a missing override reads the major map. The tonic
+   pair needs none — read against the major member of the pair, the colours hold in either mode (the reply's point).
+   Pure tables; the lookups are pure. */
+const WAN_CATS={ton:{label:'Tonic',col:'#b8860b'},dom:{label:'Dominant',col:'#a6432f'},sub:{label:'Subdominant',col:'#3f7a4a'},rel:{label:'Relative',col:'#3f5aa6'},par:{label:'Parallel',col:'#7a4a8a'},pole:{label:'The pole',col:'#6f6f6f'},mir:{label:'Mirror',col:'#7a4a8a'},med:{label:'Chromatic mediants',col:'#d2691e'}};
+function wanSchemeMap(M,m){const o={};for(let i=0;i<12;i++){o[i+'M']=M[i];o[i+'m']=m[i];}return o;}
+const WAN_SCHEMES=[
+ {id:'degree',name:'By degree',legacy:true,cats:['par','sub','dom','rel','hdom','hsub']},
+ {id:'majdom',name:'Majors are dominants',legacy:true,cats:['par','sub','dom','rel','hdom','hsub']},
+ /* the five sortings, in the order the replies made them — each row is the 12 roots I ♭II II ♭III III IV ♭V V ♭VI VI ♭VII VII */
+ {id:'pole',name:'Five families · the pole',cats:['ton','dom','sub','rel','par','pole'],
+  map:wanSchemeMap(['ton','dom!','dom!','par/rel','rel!','sub','pole','dom','par/sub','par/rel','sub!','dom!'],
+                   ['par','dom!~','sub','rel!~','dom','sub/par','pole~','dom~','par/sub~','rel','sub!~','dom!~']),
+  minor:{'0m':'ton','0M':'par','3M':'rel','10M':'rel!','8M':'sub','5m':'sub','2m':'sub','7M':'dom','7m':'dom','1M':'dom!','5M':'sub/par','9m':'rel/par'}},
+ {id:'pull',name:'Five families · one rule',cats:['ton','dom','sub','rel','par','pole'],
+  map:wanSchemeMap(['ton','dom!','dom!','sub!','rel!','sub','pole!','dom','dom!','sub!','sub!','dom!'],
+                   ['par','dom!~','sub','sub!~','dom','sub','pole','dom','dom!~','rel','sub!~','dom!~']),
+  minor:{'0m':'ton','0M':'par','3M':'rel','10M':'rel!','8M':'dom!','5m':'sub','2m':'sub','7M':'dom','7m':'dom','1M':'dom!','5M':'sub','9m':'rel~'}},
+ {id:'three',name:'Three colours · six halves',cats:['ton','dom','sub'],
+  map:wanSchemeMap(['ton','dom!','dom!','sub!','ton!','sub','dom/sub','dom','dom!','sub!','sub!','dom/ton'],
+                   ['ton~','dom/sub','sub','ton/sub','dom','sub','dom/sub~','dom','dom!~','ton','sub!~','dom/sub']),
+  minor:{'0m':'ton','3M':'ton','10M':'ton!','8M':'dom!','5m':'sub','2m':'sub','7M':'dom','7m':'dom','1M':'dom!','0M':'ton~','5M':'sub','9m':'ton~'}},
+ {id:'four',name:'Four colours · the mirror',cats:['ton','dom','sub','mir'],
+  map:wanSchemeMap(['ton','dom!','dom!','sub!','ton!','sub','mir','dom','dom!','sub!','sub!','dom!'],
+                   ['mir','mir','sub','mir','dom','sub','mir','dom','mir','ton','sub','mir']),
+  minor:{'0m':'ton','3M':'ton','10M':'ton','8M':'dom','5m':'sub','2m':'sub','7M':'dom','7m':'dom','1M':'dom','5M':'sub','0M':'mir','9m':'mir'}},
+ {id:'mediants',name:'Five colours · chromatic mediants',cats:['ton','dom','sub','med','pole'],
+  map:wanSchemeMap(['ton','dom','dom','med','med','sub','pole','dom','med','med','sub','dom'],
+                   ['ton','dom','sub','med~','ton','sub','pole','dom','med~','ton','sub','dom']),
+  minor:{'0m':'ton','3M':'ton','8M':'ton','7M':'dom','7m':'dom','10M':'dom','1M':'dom','5m':'sub','2m':'sub','5M':'sub','3m':'med','8m':'med','4M':'med','9M':'med','4m':'med~','9m':'med~'}},
+ {id:'pair',name:'Five colours · the tonic pair',cats:['ton','dom','sub','med','pole'],
+  map:wanSchemeMap(['ton','dom!','dom!','ton','med','sub','pole','dom','ton','med','sub!','dom!'],
+                   ['ton','dom','sub','med','ton','sub','pole','dom','med','ton','sub','dom'])}
+];
+var wanUserSchemes=(function(){try{const a=JSON.parse(localStorage.getItem('cp_wanSchemes')||'[]');return Array.isArray(a)?a.filter(x=>x&&typeof x.id==='string'&&x.map&&Array.isArray(x.cats)&&x.cats.length):[];}catch(e){return [];}})();
+function persistWanSchemes(){try{localStorage.setItem('cp_wanSchemes',JSON.stringify(wanUserSchemes));}catch(e){}}
+function wanSchemeList(){return WAN_SCHEMES.concat(wanUserSchemes);}
+function wanSchemeById(id){return wanSchemeList().find(x=>x.id===id)||WAN_SCHEMES[0];}
+function wanSchemeCats(sc){
+ /* a scheme's categories as {id,label,col} — string ids resolve through WAN_FN (his six) then WAN_CATS */
+ return (sc&&sc.cats||[]).map(c=>{if(typeof c!=='string')return c;const f=WAN_FN.find(x=>x.id===c);if(f)return {id:f.id,label:f.label,col:f.col,hyper:!!f.hyper};return Object.assign({id:c},WAN_CATS[c]||{label:c,col:'#6b4f28'});});
+}
+function wanTriadCat(scheme,relPc,q,keyMinor){
+ /* the scheme's entry for one triad. q: 'M' major · 'm' minor · 'd' diminished (vii° reads with V, any other ° with
+    its minor twin — the sortings named vii° beside V and ii° beside ii). null = a legacy scheme (the boards paint as before). */
+ const sc=typeof scheme==='string'?wanSchemeById(scheme):scheme;
+ if(!sc||sc.legacy||!sc.map)return null;
+ const pc=(((relPc|0)%12)+12)%12;
+ if(q==='d'){if(pc===11)return wanTriadCat(sc,7,'M',keyMinor);q='m';}
+ const k=pc+(q==='m'?'m':'M');
+ const v=(keyMinor&&sc.minor&&sc.minor[k])||sc.map[k];
+ return typeof v==='string'?v:null;
+}
+function wanCatParse(v){
+ /* 'cat' · 'cat!' · 'cat~' · 'a/b' → {cat,cat2,intense,light}; nothing → null */
+ if(!v)return null;
+ let str=String(v);
+ const intense=str.indexOf('!')>=0,light=str.indexOf('~')>=0;
+ str=str.replace(/[!~]/g,'');
+ const h=str.split('/');
+ return {cat:h[0],cat2:h[1]||null,intense,light};
+}
+function wanCatCol(id){
+ /* the user's colour for a category, else the scheme's, else the shipped one — ONE table still (wanFnCols) */
+ if(wanFnCols&&wanFnCols[id])return wanFnCols[id];
+ const f=WAN_FN.find(x=>x.id===id);if(f)return f.col;
+ const sc=wanSchemeById(typeof wanState==='object'&&wanState?wanState.fnScheme:null);
+ const c=wanSchemeCats(sc).find(x=>x.id===id);if(c)return c.col;
+ if(WAN_CATS[id])return WAN_CATS[id].col;
+ return '#6b4f28';
+}
+function wanCatLabel(id){
+ const f=WAN_FN.find(x=>x.id===id);if(f)return f.label;
+ const sc=wanSchemeById(typeof wanState==='object'&&wanState?wanState.fnScheme:null);
+ const c=wanSchemeCats(sc).find(x=>x.id===id);if(c)return c.label;
+ return WAN_CATS[id]?WAN_CATS[id].label:String(id||'');
+}
+function wanCatStyle(p){
+ /* the chip paint for a parsed entry: wash 44 plain · 88 intense (and a 2px outline) · 26 lighter; a half is a 50/50 gradient */
+ if(!p)return '';
+ const a=p.intense?'88':p.light?'26':'44';
+ const c1=wanCatCol(p.cat);
+ if(p.cat2){const c2=wanCatCol(p.cat2);return 'background:linear-gradient(90deg,'+c1+a+' 50%,'+c2+a+' 50%);outline:1px solid '+c1+';';}
+ return 'background:'+c1+a+';outline:'+(p.intense?'2px':'1px')+' solid '+c1+';';
+}
+function wanCellFnSty(relPc,chordMinor,keyMinor){
+ /* BOTH Weber boards paint through here (R65): a legacy scheme keeps the six-family key paint (wanKeyFn + Expand, ♭VI
+    half-and-half); a table scheme reads its own triad entry against the board's tonic and mode */
+ if(!wanState.fnOn)return '';
+ const sc=wanSchemeById(wanState.fnScheme);
+ if(sc.legacy){
+  const kf=wanKeyFn(relPc,chordMinor,!!wanState.fnExpand);
+  if(kf==='subrel'){const a2=wanFnCol('sub'),b2=wanFnCol('rel');return 'background:linear-gradient(90deg,'+a2+'66 50%,'+b2+'66 50%);outline:1px solid '+a2+';';}
+  if(kf){const fc=wanFnCol(kf);return 'background:'+fc+'44;outline:1px solid '+fc+';';}
+  return '';
+ }
+ return wanCatStyle(wanCatParse(wanTriadCat(sc,relPc,chordMinor?'m':'M',keyMinor)));
+}
+function wanMatrixCat(row,deg,c){
+ /* the scale matrix (R65): legacy schemes classify by DEGREE (wanChordFunction, his two); a table scheme reads the
+    cell's triad against ITS row's tonic and mode — one plain category per cell (the first half of a half) */
+ const sc=wanSchemeById(wanState.fnScheme);
+ if(sc.legacy)return wanChordFunction(deg,c.iv,sc.id);
+ const rows=wanRows();const R=rows[row]||rows[0];
+ const t=R.tonic!=null?R.tonic:wanState.tonic;
+ const q=(c.iv&&c.iv[1]===3)?(c.iv[2]===6?'d':'m'):'M';
+ const keyMinor=!!(R.pcs&&R.pcs[2]===3);
+ const p=wanCatParse(wanTriadCat(sc,c.r-t,q,keyMinor));
+ return p?p.cat:wanSchemeCats(sc)[0].id;
+}
+function wanSchemeMint(name,fromId){
+ /* "+": a user scheme starts as a COPY of the scheme in use, so he edits from something rather than from nothing.
+    A user scheme is one plain category per triad — halves and shades belong to the built sortings. */
+ const src=wanSchemeById(fromId);
+ const id='u'+Date.now().toString(36)+Math.floor(Math.random()*36).toString(36);
+ const srcCats=wanSchemeCats(src);
+ const cats=srcCats.map((c,i)=>({id:id+'.'+i,label:c.label,col:c.col}));
+ const ren={};srcCats.forEach((c,i)=>{ren[c.id]=cats[i].id;});
+ const map={};
+ for(let pc=0;pc<12;pc++)for(const q of ['M','m']){
+  const k=pc+q;
+  let v=src.legacy?wanKeyFn(pc,q==='m',true):src.map[k];
+  if(v==='subrel')v='sub/rel';
+  const p=wanCatParse(v);
+  map[k]=(p&&ren[p.cat])||cats[0].id;
+ }
+ return {id,name:name||'My scheme',user:true,cats,map};
+}
+function wanSchemeSave(sc){
+ const i=wanUserSchemes.findIndex(x=>x.id===sc.id);
+ if(i<0)wanUserSchemes.push(sc);else wanUserSchemes[i]=sc;
+ for(const c of sc.cats)if(wanFnCols[c.id])delete wanFnCols[c.id];   /* the editor's colour IS the colour */
+ persistWanFnCols();persistWanSchemes();
+ wanState.fnScheme=sc.id;try{localStorage.setItem('cp_wanScheme',sc.id);}catch(e){}
+ renderWan();
+}
+function wanSchemeDelete(id){
+ const i=wanUserSchemes.findIndex(x=>x.id===id);if(i<0)return;
+ wanUserSchemes.splice(i,1);persistWanSchemes();
+ if(wanState.fnScheme===id){wanState.fnScheme='degree';try{localStorage.setItem('cp_wanScheme','degree');}catch(e){}}
+ renderWan();
+}
+function wanSchemeEditor(sc,fresh){
+ /* R65 (his [47] "+"): the user's scheme — its name, its categories (colour · name · ✕, "+ category"), and one
+    pull-down per triad: the 12 roots as romans against the key, majors then minors. Save keeps it in this browser
+    (cp_wanSchemes) and selects it; Cancel/✕ drop the draft. */
+ let d=document.getElementById('wanSchemeEd');if(d)d.remove();
+ d=document.createElement('div');d.id='wanSchemeEd';
+ d.style.cssText='position:fixed;z-index:150;left:50%;top:80px;transform:translateX(-50%);width:min(900px,96vw);max-height:84vh;overflow:auto;background:#f2e7cb;border:1px solid #a8895f;border-radius:10px;padding:10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.35);color:#3a2c18;font-size:11.5px;';
+ const RN=['I','♭II','II','♭III','III','IV','♭V','V','♭VI','VI','♭VII','VII'];
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ const draw=()=>{
+  const catRows=sc.cats.map((c,i)=>'<div style="display:flex;gap:6px;align-items:center;margin:2px 0;"><input type="color" data-edcol="'+i+'" value="'+esc(c.col)+'" style="flex:0 0 34px;height:22px;padding:0;border:1px solid #a8895f;border-radius:4px;background:none;cursor:pointer;">'
+   +'<input type="text" data-edlbl="'+i+'" value="'+esc(c.label)+'" style="flex:1;font-size:11.5px;padding:2px 5px;border:1px solid #a8895f;border-radius:4px;background:#fff8ea;color:#3a2c18;">'
+   +(sc.cats.length>1?'<span class="wanAllTog" data-edrm="'+i+'" title="Remove this category — its chords move to the first one">✕</span>':'')+'</div>').join('');
+  const opt=cur=>sc.cats.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.label)+'</option>').join('');
+  const grid=['M','m'].map(q=>'<div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;margin:3px 0;">'+RN.map((r,pc)=>{const k=pc+q;const c=sc.cats.find(x=>x.id===sc.map[k])||sc.cats[0];
+   return '<div style="text-align:center;min-width:0;"><div style="font-size:10px;font-weight:700;">'+(q==='m'?r.toLowerCase():r)+'</div><select data-edtri="'+k+'" title="'+esc(c.label)+'" style="width:100%;min-width:0;font-size:10px;padding:1px 0;border:1px solid '+esc(c.col)+';border-left:4px solid '+esc(c.col)+';border-radius:4px;background:'+esc(c.col)+'33;color:#3a2c18;text-overflow:ellipsis;">'+opt(c.id)+'</select></div>';}).join('')+'</div>').join('');
+  d.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><b style="font-size:13px;white-space:nowrap;">'+(fresh?'+ New scheme':'✎ Edit scheme')+'</b><input id="wanSchemeEdName" type="text" value="'+esc(sc.name)+'" placeholder="Name it" style="flex:1;font-size:12px;padding:3px 6px;border:1px solid #a8895f;border-radius:5px;background:#fff8ea;color:#3a2c18;"><span class="wanAllTog" id="wanSchemeEdX" title="Drop the draft">✕</span></div>'
+   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#6b4f28;margin:4px 0 2px;">Your categories — colour · name</div>'+catRows
+   +'<span class="wanAllTog" id="wanSchemeEdAddCat" title="Another category">+ category</span>'
+   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#6b4f28;margin:8px 0 2px;">Every chord, read against the key — the majors, then the minors</div>'+grid
+   +'<div style="display:flex;gap:6px;margin-top:8px;"><button id="wanSchemeEdSave" style="padding:4px 12px;font-size:11.5px;">Save</button><button id="wanSchemeEdCancel" style="padding:4px 10px;font-size:11.5px;background:#3a3e4d;color:#e9eaef;">Cancel</button></div>';
+  d.querySelector('#wanSchemeEdX').onclick=()=>d.remove();
+  d.querySelector('#wanSchemeEdCancel').onclick=()=>d.remove();
+  d.querySelector('#wanSchemeEdName').oninput=e=>{sc.name=e.target.value;};
+  d.querySelectorAll('input[data-edcol]').forEach(inp=>{inp.oninput=()=>{sc.cats[+inp.getAttribute('data-edcol')].col=inp.value;};inp.onchange=draw;});
+  d.querySelectorAll('input[data-edlbl]').forEach(inp=>{inp.oninput=()=>{sc.cats[+inp.getAttribute('data-edlbl')].label=inp.value;};inp.onchange=draw;});
+  d.querySelectorAll('[data-edrm]').forEach(el=>{el.onclick=()=>{const i=+el.getAttribute('data-edrm');const gone=sc.cats[i].id;sc.cats.splice(i,1);for(const k in sc.map)if(sc.map[k]===gone)sc.map[k]=sc.cats[0].id;draw();};});
+  d.querySelector('#wanSchemeEdAddCat').onclick=()=>{let n=0;while(sc.cats.some(c=>c.id===sc.id+'.'+n))n++;sc.cats.push({id:sc.id+'.'+n,label:'Category '+(sc.cats.length+1),col:'#8a6f4d'});draw();};
+  d.querySelectorAll('select[data-edtri]').forEach(sel=>{sel.onchange=()=>{sc.map[sel.getAttribute('data-edtri')]=sel.value;draw();};});
+  d.querySelector('#wanSchemeEdSave').onclick=()=>{sc.name=(sc.name||'').trim()||'My scheme';d.remove();wanSchemeSave(sc);};
+ };
+ draw();
+ document.body.appendChild(d);
+ return d;
+}
+try{const _ss=localStorage.getItem('cp_wanScheme');if(_ss&&wanSchemeList().some(x=>x.id===_ss))wanState.fnScheme=_ss;}catch(e){}
 function wanFnCol(id){
  /* the user's colour for a function, else the shipped one. His: "the user should be able to take
     the Color Palette and change the color of any and all chord buttons they like". */
- const f=WAN_FN.find(x=>x.id===id);
- return (wanFnCols&&wanFnCols[id])||(f?f.col:'#6b4f28');
+ return wanCatCol(id);   /* R65: one table for his six AND every scheme's categories (wanCatCol) */
 }
 var wanFnCols=(function(){
  try{const o=JSON.parse(localStorage.getItem('cp_wanFnCols')||'{}');
-  const out={};for(const f of WAN_FN)if(typeof o[f.id]==='string'&&/^#[0-9a-f]{6}$/i.test(o[f.id]))out[f.id]=o[f.id];
+  const out={};for(const k in o)if(typeof o[k]==='string'&&/^#[0-9a-f]{6}$/i.test(o[k]))out[k]=o[k];   /* R65: any category id (a user scheme's too) */
   return out;}catch(e){return {};}
 })();
 function persistWanFnCols(){try{localStorage.setItem('cp_wanFnCols',JSON.stringify(wanFnCols));}catch(e){}}
@@ -31236,9 +31420,7 @@ function wanSide2Draw(){
    const label=st.webView==='roman'?wanRomanOf(wanLofPc(cell.lof),cell.minor,tonic):letter;
    const isKey=cell.minor===minor&&wanLofPc(cell.lof)===wanLofPc(tonicLof);
    let fnSty='';
-   try{if(wanState.fnOn){const rel=(((wanLofPc(cell.lof)-tonic)%12)+12)%12;const kf=wanKeyFn(rel,cell.minor,!!wanState.fnExpand);
-    if(kf==='subrel'){const a2=wanFnCol('sub'),b2=wanFnCol('rel');fnSty='background:linear-gradient(90deg,'+a2+'66 50%,'+b2+'66 50%);outline:1px solid '+a2+';';}
-    else if(kf){const fc=wanFnCol(kf);fnSty='background:'+fc+'44;outline:1px solid '+fc+';';}}}catch(e){}
+   try{fnSty=wanCellFnSty((((wanLofPc(cell.lof)-tonic)%12)+12)%12,cell.minor,minor);}catch(e){}   /* R65: the scheme in use, read against side 2's tonic and mode */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
    h+='<span class="cpchip wan2Key'+(isKey?' on':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
@@ -31339,19 +31521,7 @@ function wanWeberDraw(){
    /* Sept 3: paint the KEY chips with the hyper-function scheme (Expand reveals chromatics;
       ♭VI wears half Subdominant + half Relative). Paint rides wanState.fnOn. */
    let fnSty='';
-   try{
-    if(wanState.fnOn){
-     const rel=(((wanLofPc(cell.lof)-st.tonic)%12)+12)%12;
-     const kf=wanKeyFn(rel,cell.minor,!!wanState.fnExpand);
-     if(kf==='subrel'){
-      const a=wanFnCol('sub'),b=wanFnCol('rel');
-      fnSty='background:linear-gradient(90deg,'+a+'66 50%,'+b+'66 50%);outline:1px solid '+a+';';
-     }else if(kf){
-      const fc=wanFnCol(kf);
-      fnSty='background:'+fc+'44;outline:1px solid '+fc+';';
-     }
-    }
-   }catch(e){}
+   try{fnSty=wanCellFnSty((((wanLofPc(cell.lof)-st.tonic)%12)+12)%12,cell.minor,minor);}catch(e){}   /* R65: the scheme in use (legacy = the six-family key paint as before) */
    h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'"'
     +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'"'
     +' title="'+letter+(cell.minor?' minor':' major')+' — click hears it · double-click makes it home · ⌘+click draws a path to it.">'+label+'</span>';
@@ -32191,7 +32361,8 @@ function renderWan(){
     Relative: vi, Parallel: I, i." ⭐ BOTH SPELLINGS, because that is the pairing that teaches —
     the roman says what the chord DOES, the letter name says what to play. Every row is listed,
     numbered when there is more than one, since comparing the scales is the point of the colour. */
- const fnGroups=WAN_FN.map(f=>{
+ const _sch=wanSchemeById(wanState.fnScheme),_schUser=!!_sch.user;   /* R65 */
+ const fnGroups=(_sch.legacy?WAN_FN:wanSchemeCats(_sch)).map(f=>{
   /* Sept 3: Hyper categories list the KEY-center romans (his scheme), not scale-degree chords */
   if(f.hyper){
    const items=(WAN_HYPER_LEGEND[f.id]||[]).map(s=>'<span style="color:#3a2c18;">'+s+'</span>');
@@ -32200,10 +32371,20 @@ function renderWan(){
    return {f,items};
   }
   const items=[];
+  if(!_sch.legacy){
+   /* R65: a table scheme lists its 24 triads against the key first — bold = intense (pulls into the family), faint = lighter, (½) = a half */
+   const RN=['I','♭II','II','♭III','III','IV','♭V','V','♭VI','VI','♭VII','VII'];
+   const km=!!((SCALE_DB[wanState.mode]||SCALE_DB.ionian).pcs[2]===3);
+   for(let pc=0;pc<12;pc++)for(const q of ['M','m']){
+    const p=wanCatParse(wanTriadCat(_sch,pc,q,km));
+    if(!p||(p.cat!==f.id&&p.cat2!==f.id))continue;
+    items.push('<span style="color:#3a2c18;'+(p.intense?'font-weight:700;':'')+(p.light?'opacity:.65;':'')+'" title="'+(p.intense?'intense — pulls into the family':p.light?'lighter — the minor twin':'')+'">'+(q==='m'?RN[pc].toLowerCase():RN[pc])+(p.cat2?' (½)':'')+'</span>');
+   }
+  }
   rows.forEach((R,ri2)=>{
    for(let d=0;d<R.pcs.length;d++){
     const c=wanCellAt(ri2,d);
-    if(!c||wanChordFunction(d,c.iv,wanState.fnScheme)!==f.id)continue;
+    if(!c||wanMatrixCat(ri2,d,c)!==f.id)continue;
     items.push((rows.length>1?'<span style="color:#8a6f4d;font-size:9px;">'+(ri2+1)+'</span>&thinsp;':'')
      +c.name+'&thinsp;<span style="color:#6b4f28;">('+c.roman+')</span>');
    }
@@ -32225,14 +32406,14 @@ function renderWan(){
       buttons themselves carry the function colour, so two or three scales can be read against
       each other at a glance. The tint is a left bar plus a wash, never the text colour: the
       roman numeral and the chord name have to stay readable at every colour he might pick. */
-   const fn=wanChordFunction(d,c.iv,wanState.fnScheme);
+   const fn=wanMatrixCat(ri,d,c);   /* R65: the scheme in use — by degree for his two, by triad for the sortings and the user's */
    const fc=wanFnCol(fn);
    /* 84th R2 (his FORTY-FOURTH message): the SCALE's own colour rides the cell BORDER
       and the row title — the function colour keeps the left bar and the wash, so the
       two colourings read together ("that will visually help the user improvise
       between the 2 or more sets of chords"). */
    const scol=wanScaleCols[String(ri+1)]||null;
-   cells.push('<div class="wanCell" data-r="'+ri+'" data-d="'+d+'" data-fn="'+fn+'" title="'+(WAN_FN.find(x=>x.id===fn)||{}).label+' — click plays it · ctrl+click adds extensions or omits notes'+(c.mod?' · modified by you (ctrl+click → Reset restores it)':'')+'" style="width:'+cellW+'px;box-sizing:border-box;padding:6px 4px;border:1px solid '+(cur?'var(--accent)':(scol||'var(--line)'))+';border-radius:6px;cursor:pointer;text-align:center;'+(wanState.fnOn?'border-left:4px solid '+fc+';':'')+(cur?'background:rgba(232,163,61,.14);':wanState.fnOn?'background:'+fc+'22;':'background:rgba(255,255,255,.02);')+'">'
+   cells.push('<div class="wanCell" data-r="'+ri+'" data-d="'+d+'" data-fn="'+fn+'" title="'+wanCatLabel(fn)+' — click plays it · ctrl+click adds extensions or omits notes'+(c.mod?' · modified by you (ctrl+click → Reset restores it)':'')+'" style="width:'+cellW+'px;box-sizing:border-box;padding:6px 4px;border:1px solid '+(cur?'var(--accent)':(scol||'var(--line)'))+';border-radius:6px;cursor:pointer;text-align:center;'+(wanState.fnOn?'border-left:4px solid '+fc+';':'')+(cur?'background:rgba(232,163,61,.14);':wanState.fnOn?'background:'+fc+'22;':'background:rgba(255,255,255,.02);')+'">'
     +'<div style="font-size:9.5px;color:var(--dim);">'+c.roman+'</div>'
     +'<div style="font-size:13px;font-weight:700;">'+c.name+'</div></div>');
   }
@@ -32346,13 +32527,17 @@ function renderWan(){
   +'<span class="wanSrchBtn" id="wanFnPal" title="Open the Color Palette Window — the 62 painting swatches, every app colour, and these four chord-function colours, all in one place.">&#127912; Color Palette</span></div>'
   +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'+nbChips+'</div>'
   +('<div style="display:flex;flex-direction:column;gap:5px;border:1px solid #a8895f;border-radius:8px;padding:6px 8px;background:rgba(242,231,203,.6);">'
-    /* his TWO schemes, both of them his own words, offered as a choice rather than one guessed at */
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap;">'
-    +'<span class="wanAllTog'+(wanState.fnScheme==='degree'?' on':'')+'" data-fnscheme="degree" title="His first scheme: all versions of 2s and 4s are Subdominant, all the 6s (VI, ♭VI, vi) are Relative, I and i are Parallel, the rest are Dominant — by DEGREE, whatever the chord quality.">By degree</span>'
-    +'<span class="wanAllTog'+(wanState.fnScheme==='majdom'?' on':'')+'" data-fnscheme="majdom" title="His second scheme: every MAJOR chord except the 1 and the 4 is a Dominant — so a major II or a major VI reads as the secondary dominant it is behaving as. Everything else keeps its degree colour.">Majors are dominants</span>'
+    /* his TWO schemes, both of them his own words, offered as a choice rather than one guessed at.
+       R65 (his [47]): the choice is a PULL-DOWN now — his two, the five sortings of September 10, the user's own —
+       and "+" mints a user scheme (wanSchemeEditor); ✎ / ✕ edit and delete the user scheme in use. */
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">'
+    +'<select id="wanSchemeSel" data-fnscheme="menu" title="The colour scheme: his two (By degree · Majors are dominants — the six-family key paint on the boards), the five sortings of September 10, and your own." style="font-size:11px;padding:2px 4px;border:1px solid #a8895f;border-radius:5px;background:#fff8ea;color:#3a2c18;max-width:240px;">'
+    +wanSchemeList().map(x=>'<option value="'+x.id+'"'+(x.id===wanState.fnScheme?' selected':'')+'>'+String(x.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</option>').join('')+'</select>'
+    +'<span class="wanAllTog" id="wanSchemeAdd" title="+ your own scheme: name its categories, colour each, and put every one of the 24 chords in one. It starts as a copy of the scheme in use and lives in this menu (this browser).">+</span>'
+    +(_schUser?'<span class="wanAllTog" id="wanSchemeEdit" title="Edit this scheme">✎</span><span class="wanAllTog" id="wanSchemeDel" title="Delete this scheme">✕</span>':'')
     +'<span class="wanAllTog'+(wanState.fnOn?' on':'')+'" id="wanFnOnTog" title="Paint the chord buttons with these colours.">'+(wanState.fnOn?'☑':'☐')+' paint the chords</span>'
     /* his 166th: the Expand word grows the 5th and 6th categories */
-    +'<span class="wanAllTog'+(wanState.fnExpand?' on':'')+'" id="wanFnExpand" title="Reveal Hyper dominant and Hyper subdominant — chromatic keys that lean toward V or IV (II=V/V, ♭II, VII, ♯IV · ♭VII, ♭III, ♭v…). ♭VI paints half Subdominant + half Relative. The map paints with them when colour is on.">'+(wanState.fnExpand?'Collapse ▴':'Expand ▾')+'</span></div>'
+    +(_sch.legacy?'<span class="wanAllTog'+(wanState.fnExpand?' on':'')+'" id="wanFnExpand" title="Reveal Hyper dominant and Hyper subdominant — chromatic keys that lean toward V or IV (II=V/V, ♭II, VII, ♯IV · ♭VII, ♭III, ♭v…). ♭VI paints half Subdominant + half Relative. The map paints with them when colour is on.">'+(wanState.fnExpand?'Collapse ▴':'Expand ▾')+'</span></div>':'')   /* R65: Expand belongs to the six-family key paint */
     +'<div style="font-size:9.5px;color:#6b4f28;">Colour any category with the swatch beside its name below, or in the Color Palette Window — press 🎨 above. One colour table serves every view. With Expand + paint on, Weber’s map keys wear the same colours.</div>'
     +'</div>')
   +'<div style="display:flex;flex-direction:column;gap:2px;">'
@@ -32538,8 +32723,16 @@ function renderWan(){
  if(wfp)wfp.onclick=e=>{e.stopPropagation();try{cnvColWinToggle();}catch(e2){}};
  const wfo=document.getElementById('wanFnOnTog');
  if(wfo)wfo.onclick=e=>{e.stopPropagation();wanState.fnOn=!wanState.fnOn;renderWan();};
- B.querySelectorAll('[data-fnscheme]').forEach(el=>{el.onclick=e=>{e.stopPropagation();
-  wanState.fnScheme=el.getAttribute('data-fnscheme');renderWan();};});
+ /* R65 (his [47]): the scheme pull-down, "+", ✎, ✕ */
+ const _ssel=document.getElementById('wanSchemeSel');
+ if(_ssel){_ssel.onmousedown=e=>e.stopPropagation();_ssel.onclick=e=>e.stopPropagation();
+  _ssel.onchange=e=>{e.stopPropagation();wanState.fnScheme=_ssel.value;try{localStorage.setItem('cp_wanScheme',_ssel.value);}catch(e2){}renderWan();};}
+ const _sadd=document.getElementById('wanSchemeAdd');
+ if(_sadd)_sadd.onclick=e=>{e.stopPropagation();wanSchemeEditor(wanSchemeMint('',wanState.fnScheme),true);};
+ const _sed=document.getElementById('wanSchemeEdit');
+ if(_sed)_sed.onclick=e=>{e.stopPropagation();const x=wanSchemeById(wanState.fnScheme);if(x.user)wanSchemeEditor(JSON.parse(JSON.stringify(x)),false);};
+ const _sdel=document.getElementById('wanSchemeDel');
+ if(_sdel)_sdel.onclick=e=>{e.stopPropagation();wanSchemeDelete(wanState.fnScheme);};
  const _fx=document.getElementById('wanFnExpand');
  if(_fx)_fx.onclick=e=>{e.stopPropagation();wanState.fnExpand=!wanState.fnExpand;renderWan();};
  B.querySelectorAll('input[data-fncol]').forEach(inp=>{
