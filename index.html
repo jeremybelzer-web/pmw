@@ -949,7 +949,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11c</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11d</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1761,6 +1761,12 @@ const SCALE_DB={};
  SC('dimWH','Symmetrical Diminished (whole–half)','dim',[0,2,3,5,6,8,9,11],'1,2,♭3,4,♭5,♭6,6,7'),
  SC('wholeTone','Whole Tone','wt',[0,2,4,6,8,10],'1,2,3,♯4,♯5,♭7'),
 ].forEach(s=>SCALE_DB[s.id]=s);
+/* R80 (his [68] "All scales that have a different set of notes on the way up than on the way down should
+   say that"): the melodic minor's CLASSICAL convention — the raised 6 and 7 climb, the natural minor comes
+   down. `down` is the descending set; ragaAudSeq walks it, the Scales window says UP = / DOWN =. [Labelled:
+   the jazz convention plays the same notes both ways — that reading stays available as the plain ladder of
+   every OTHER scale; this one scale carries the classical descent because it is the one he named the rule for.] */
+if(SCALE_DB.melMin)SCALE_DB.melMin.down=[0,2,3,5,7,8,10];
 function ragaFamilyOf(pcs){
  /* 80th R24 (his thirty-first message): each raga's FAMILY by similarity — which
     anchor scale its pitch set sits nearest (symmetric set difference, Sa anchored):
@@ -1938,7 +1944,7 @@ function ragaFamOf(s){
 function ragaEntries(db,scales){
  const T=scales||SCALE_DB;
  const west=Object.values(T).filter(s=>s.group!=='carnatic')
-  .map(s=>({sid:s.id,fam:ragaFamOf(s),name:s.name,pcs:s.pcs,labels:s.labels,bases:s.bases,rec:null}));
+  .map(s=>({sid:s.id,fam:ragaFamOf(s),name:s.name,pcs:s.pcs,labels:s.labels,bases:s.bases,rec:null,down:Array.isArray(s.down)?s.down:null}));
  const carn=db.all.map(r=>({sid:r.sid,fam:r.kind==='mela'?'mela':'janya',
   name:r.name,pcs:r.pcs,labels:ragaScaleLabels(r.wt),
   bases:ragaScaleLabels(r.wt).map(l=>parseInt(l.replace(/[^0-9]/g,''),10)-1),rec:r}));
@@ -2046,7 +2052,58 @@ function ragaAudSeq(e){
  if(e.rec&&e.rec.kind==='janya')
   return {up:ragaAroSeq(e.rec.aro),down:ragaAroSeq(e.rec.ava)};
  const up=e.pcs.concat([12]);
+ /* R80 (his [68]): a Western scale whose DESCENT differs comes down its own notes (the melodic minor's `down`) */
+ if(Array.isArray(e.down)&&e.down.length)return {up,down:[12].concat(e.down.map(p=>((p%12)+12)%12).sort((a,b)=>b-a))};
  return {up,down:up.slice().reverse()};
+}
+/* R80 (his [68] "the words should specifically describe them"): the path's ornaments IN WORDS — what the
+   ear will hear on the way up and down, named for THIS raga: its prescribed gamakas first (kind + target +
+   the curve's own direction), then the glyphs of its gamaka notation (~X shakes · /X slides up into X ·
+   \X falls away from X · (X)Y a grace of X on Y · X– held long), then the notes heard only rising or only
+   falling, and a vakra turn. labelOf(pc) names a note when there is no raga record (a Western scale). Pure. */
+function ragaPathWords(rec,up,down,labelOf){
+ const out=[],seen={};
+ const add=(k,s)=>{if(seen[k])return;seen[k]=1;out.push(s);};
+ const sw=(rec&&rec.swaras)||[];
+ const pretty=s=>String(s||'').replace(/([SRGMPDN])([123])/,(m,a,b)=>a+'\u2081\u2082\u2083'.charAt('123'.indexOf(b)));
+ for(const m of ((rec&&rec.melismas)||[])){
+  const t=pretty(m.target),c=Array.isArray(m.curve)?m.curve:[],c0=c.length?(c[0][1]||0):0;
+  const peak=c.reduce((a,p)=>Math.abs(p[1]||0)>Math.abs(a)?(p[1]||0):a,0);
+  if(m.kind==='kampita')add('k'+m.target,t+' shakes back and forth (kampita)');
+  else if(m.kind==='oscillation')add('o'+m.target,t+' rocks against its neighbour '+(peak<0?'below':'above')+' (oscillation)');
+  else if(m.kind==='jaru'||m.kind==='slide')add('j'+m.target,(c0<0||(c0===0&&peak<0))?'a slide up into '+t+' from below (jaru)':'a slide down into '+t+' from above (jaru)');
+  else if(m.kind==='nokku')add('n'+m.target,t+' is struck from above (nokku)');
+  else add('b'+m.target,t+' swings slowly around its pitch (andolana)');
+ }
+ const toks=String((rec&&rec.gn)||'').split(/\s+/).filter(Boolean);
+ for(const tk of toks){
+  const L=tk.replace(/[^SRGMPDN\u1E60]/g,'');const letter=L.slice(-1).replace('\u1E60','S');
+  if(!letter)continue;
+  const full=sw.filter(s=>s[0]===letter)[0]||letter,nm=pretty(full);
+  if(/^~/.test(tk))add('k'+full,nm+' shakes back and forth (kampita)');
+  else if(/^\//.test(tk))add('j'+full,'a slide up into '+nm+' from below (jaru)');
+  else if(/^\\/.test(tk))add('f'+full,nm+' falls away downward as it leaves (jaru)');
+  else if(/^\(/.test(tk)){const g=tk.replace(/^\(([^)]*)\).*/,'$1').replace(/[^SRGMPDN]/g,'');if(g&&g[0]!==letter)add('g'+g+letter,'a grace of '+pretty(sw.filter(s=>s[0]===g[0])[0]||g)+' touches '+nm+' (kan)');}
+  else if(/\u2013$/.test(tk))add('h'+full,nm+' is held long');
+ }
+ const U=(up||[]).map(p=>((p%12)+12)%12),D=(down||[]).map(p=>((p%12)+12)%12);
+ const nm=pc=>{if(typeof labelOf==='function')return labelOf(pc);const i=(rec&&rec.pcs)?rec.pcs.indexOf(pc):-1;return i>=0?pretty(rec.swaras[i]):String(pc);};
+ const riseOnly=U.filter((p,i)=>U.indexOf(p)===i&&D.indexOf(p)<0),fallOnly=D.filter((p,i)=>D.indexOf(p)===i&&U.indexOf(p)<0);
+ if(riseOnly.length)add('ro',riseOnly.map(nm).join(', ')+' only on the way up');
+ if(fallOnly.length)add('fo',fallOnly.map(nm).join(', ')+' only on the way down');
+ if((up||[]).some((p,i)=>i&&p<up[i-1]))add('vu','the way up turns back on itself (vakra)');
+ if((down||[]).some((p,i)=>i&&p>down[i-1]))add('vd','the way down turns back on itself (vakra)');
+ return out;
+}
+/* R80 (his [67] ⑤): the scale search TEMPLATES — device data (cp_scaletmpl), validated against SCALE_DB so a
+   stale scale id or a broken row cannot survive a reload (the parseScaleFavs law). Pure. */
+function parseScaleTemplates(str,valid){
+ let arr=[];
+ try{arr=JSON.parse(str||'[]');}catch(e){arr=[];}
+ if(!Array.isArray(arr))return [];
+ const okRow=r=>Array.isArray(r)&&r.length>=3&&[0,1,2].every(i=>typeof r[i]==='number'&&isFinite(r[i]))&&r[1]>0;
+ return arr.filter(t=>t&&typeof t==='object'&&typeof t.sid==='string'&&(!valid||valid[t.sid])&&typeof t.name==='string'&&Array.isArray(t.rows)&&t.rows.length&&t.rows.every(okRow))
+  .map(t=>({id:String(t.id||('st'+Math.random().toString(36).slice(2,8))),sid:t.sid,name:t.name.slice(0,60),rows:t.rows.map(r=>r.slice()),chords:Array.isArray(t.chords)?t.chords:null,when:+t.when||0}));
 }
 /* the personality graphic (#13e, procedural until hand art exists): hue from the computed
    brightness ladder, contour polyline from the scale's own ladder, a dot per jiva swara */
@@ -10325,6 +10382,12 @@ async function makeAudio(){
       f0*Math.pow(2,Math.max(-1200,Math.min(1200,pb[i][1]))/1200),
       time+.001+(durSec-.002)*Math.max(0,Math.min(1,pb[i][0])));
    }
+  },
+  /* R80 (his [67] ③): a SECOND press on the Scales window's 1-track object starts it over — every
+     audition voice lets go now and its scheduled attacks and pitch ramps are cancelled */
+  melAudStop(){
+   const t=Tone.now();
+   for(const v of melAudVoices){try{v.envelope.cancel(t);v.triggerRelease(t);v.frequency.cancelScheduledValues(t);}catch(e){}}
   },
   /* a note carrying a slide object ([7]={sc,semis}): pitch follows the curve */
   slide(track,n,time,vel){
@@ -23134,15 +23197,22 @@ function essObjRows(o){
    return strandTrackRows('chords',{chords:cs},{});
   }catch(e){return null;}
  }
+ if(o&&o._tmpl&&Array.isArray(o.rows)&&o.rows.length){
+  /* R80 (his [67] ⑤): a scale search TEMPLATE is an object — its saved rows, whole (their curves too) */
+  return {kind:'melody',rows:o.rows.map(r=>r.slice())};
+ }
  if(o&&o.sid&&Array.isArray(o.pcs)){
   /* his 142nd ("Neither does Scales"): a SCALES/RAGAS entry is an object too — the
      [▸ Scale] walk itself (ragaAudSeq, THE SAME LAW THE EAR HEARS), up & down at
-     eighth-note rungs, rooted on the song's tonic nearest middle C (ragaRootMidi). */
+     eighth-note rungs, rooted on the song's tonic nearest middle C (ragaRootMidi).
+     R80 (his [67] ④): an edit made inside the opened object STAYS — the edited rows ARE the object now;
+     ([69]/[70]) a fresh walk's notes carry their prescribed gamakas (ragaObjRow). */
   try{
+   const ed=(typeof ragaObjEdits==='object'&&ragaObjEdits)?ragaObjEdits[o.sid]:null;
+   if(ed&&Array.isArray(ed.rows)&&ed.rows.length)return {kind:'melody',rows:ed.rows.map(r=>r.slice())};
    const seq=ragaAudSeq(o);
    const steps=seq.up.concat(seq.down);
-   const root=ragaRootMidi();
-   return {kind:'melody',rows:steps.map((pc,i)=>[i*.5,.5,root+pc])};
+   return {kind:'melody',rows:steps.map((pc,i)=>ragaObjRow(o,pc,i))};
   }catch(e){return null;}
  }
  if(o&&Array.isArray(o.shape)){
@@ -23250,15 +23320,23 @@ function essObjWorldMint(o){
  const zs=w.els.root.querySelector('[id="zoomStrip"]');if(zs)zs.style.display='none';
  const orig=st.rows.map(r=>[r[0],r[1],r[2]]);
  let span=0;for(const r of orig)if(r[0]+r[1]>span)span=r[0]+r[1];
+ /* R80 (his [67] ④, [69]/[70]): a Scales-window object's rows go in WHOLE — their gamaka curves (n[7].pb)
+    ride into the world; an edit that changed the chords brings its own chord lane back */
+ const raga=(typeof ragaObjIsRaga==='function')&&ragaObjIsRaga(o);
+ const ed=raga&&(typeof ragaObjEditOf==='function')?ragaObjEditOf(o):null;
+ const rowsIn=raga?st.rows.map(r=>r.slice()):orig.map(r=>r.slice());
+ const chordsIn=(ed&&Array.isArray(ed.chords)&&ed.chords.length)?JSON.parse(JSON.stringify(ed.chords)):src.chords;
+ let rowsJ='',chordsJ='';
  withGridWorld(w.id,()=>{
-  project.lanes[0].chords=src.chords;
+  project.lanes[0].chords=chordsIn;
   project.sections=src.sections;
   project.tonic=src.tonic;project.mode=src.mode;project.base=src.base;
-  project.tracks[face.track]=orig.map(r=>r.slice());
+  project.tracks[face.track]=rowsIn;
   LOOP=Math.max(2,Math.ceil(span));
   refresh(true);drawTrackSel();drawChordLane();
+  try{rowsJ=JSON.stringify(project.tracks[face.track]);chordsJ=JSON.stringify(project.lanes[0].chords||[]);}catch(e){}
  });
- return {w,o,face,orig};
+ return {w,o,face,orig,rowsJ,chordsJ};
 }
 /* his 71st/72nd: the CARD-WORLD registry — shelf redraws ADOPT a standing world for an
    unchanged object instead of churning clones; stale ones close at the next draw. */
@@ -23401,7 +23479,24 @@ function essObjWinClose(){
     object is the home). A library card's edit MINTS a Shelf copy — the
     drums-materialize precedent. One snapshot = one undo. */
  if(!essObjWin)return;
- const {w,o,orig,shell,track}=essObjWin;essObjWin=null;
+ const {w,o,orig,shell,track}=essObjWin;const rowsJ0=essObjWin.rowsJ,chordsJ0=essObjWin.chordsJ;essObjWin=null;
+ if((typeof ragaObjIsRaga==='function')&&ragaObjIsRaga(o)){
+  /* R80 (his [67] ④⑤): a Scales-window object's edit STAYS ON THE OBJECT (rows whole — curves too — and the
+     chord lane), then the question. Nothing in the song changes here, so no snapshot. */
+  let full=[],chords=[];
+  try{const got=withGridWorld(w.id,()=>({full:((project.tracks[track||'melody'])||[]).map(n=>n.slice()),chords:JSON.parse(JSON.stringify(project.lanes[0].chords||[]))}));full=got.full;chords=got.chords;}catch(e){}
+  try{gridWorldClose(w.id);}catch(e){}
+  try{shell.remove();}catch(e){}
+  let rowsChanged=false,chordsChanged=false;
+  try{rowsChanged=JSON.stringify(full)!==rowsJ0;chordsChanged=JSON.stringify(chords)!==chordsJ0;}catch(e){}
+  if((rowsChanged||chordsChanged)&&full.length){
+   /* the chord lane is stored only when HE changed it — otherwise the object keeps following the song's
+      chords (the ▸ Scale law), and the window's Chords toggle keeps its say */
+   const prev=(typeof ragaObjEditOf==='function')?ragaObjEditOf(o):null;
+   ragaObjEditKeep(o,full,chordsChanged?chords:((prev&&Array.isArray(prev.chords)&&prev.chords.length)?prev.chords:null));
+  }
+  return;
+ }
  let rows=[];
  try{rows=withGridWorld(w.id,()=>((project.tracks[track||'melody'])||[]).map(n=>[n[0],n[1],n[2]]));}catch(e){}
  try{gridWorldClose(w.id);}catch(e){}
@@ -23448,7 +23543,7 @@ function essObjWorldExpand(full){
  const ex=shell.querySelector('.essObjPopEx');if(ex){ex.textContent=full?'⤡':'⤢';ex.title=full?'Minimize back to the object’s single-track face.':'Expand — the object IS a multi-track grid: every hidden track and hidden control comes back.';}
  const hint=shell.querySelector('.essObjPopHint');if(hint)hint.textContent=full?'the ACTUAL multi-track grid — every track, every control · ✕ keeps your edit':'the real grid, minimized — every grid rule applies · ✕ keeps your edit';
 }
-function essObjWorldOpen(o,name,at){
+function essObjWorldOpen(o,name,at,opts){
  /* his 61st/62nd/64th/65th — THE CORRECT IMPLEMENTATION, his words: "Just a minimized
     multi-track grid." The REAL world machinery (gridWorldSpawn + the melody-rig law:
     one visible track, chord lane hidden, its chords as ghost notes), floating in a
@@ -23464,8 +23559,15 @@ function essObjWorldOpen(o,name,at){
  const shell=document.createElement('div');
  shell.className='essObjPop';
  shell.style.cssText='position:fixed;z-index:140;background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;';
+ /* R80 (his [69] "when the user double clicks on the single track object it should take up most of the
+    screen"): the LARGE pop-up — 94vw × 90vh, the grid at full zoom, its beats stretched across the width,
+    and (his [70]) the pitch-bend automation lane under the notes drawing every slide, shake and bend */
+ const large=!!(opts&&opts.large);
+ if(large){shell.classList.add('essObjPopLarge');shell.style.left='3vw';shell.style.top='4vh';shell.style.width='94vw';shell.style.maxHeight='90vh';shell.style.boxSizing='border-box';}
+ else{
  shell.style.left=Math.max(8,Math.min((at&&at.x||120),window.innerWidth-560))+'px';
  shell.style.top=Math.max(8,Math.min((at&&at.y||100),window.innerHeight-320))+'px';
+ }
  shell.innerHTML='<div class="essObjPopHead" style="display:flex;align-items:center;gap:8px;cursor:grab;">'
   +'<span style="font-size:11px;font-weight:700;">'+(name||(o&&o.name)||'object')+'</span>'
   +'<span class="essObjPopHint" style="font-size:9.5px;color:var(--dim);flex:1;">the real grid, minimized — every grid rule applies · ✕ keeps your edit</span>'
@@ -23473,7 +23575,7 @@ function essObjWorldOpen(o,name,at){
   +'<span class="cpchip essObjPopX">\u2715</span></div>';
  const body=document.createElement('div');
  body.className='essObjPopBody';
- body.style.cssText='zoom:.62;max-width:860px;max-height:460px;overflow:auto;';
+ body.style.cssText=large?'zoom:1;flex:1;min-height:0;overflow:auto;':'zoom:.62;max-width:860px;max-height:460px;overflow:auto;';
  body.appendChild(w.els.root);
  w.els.root.style.marginTop='0';
  shell.appendChild(body);
@@ -23491,8 +23593,27 @@ function essObjWorldOpen(o,name,at){
  document.body.appendChild(shell);
  /* the pop-up zooms the SAME world a card would hold — restore an editing-friendly
     scale (the card mint may have shrunk it) */
+ if(large){
+  /* the bend lane: one per face track, its cents range fitted to the curves it draws (a 30-cent shake
+     fills the lane instead of hugging its centre line), its height a real canvas (R80 his [69]/[70]) */
+  withGridWorld(w.id,()=>{
+   const avail=Math.max(400,shell.clientWidth-160);
+   PPB=Math.max(34,Math.min(150,Math.floor(avail/Math.max(1,LOOP))));
+   setViewPx(GRID_VIEWS.main,NROWS0*CELLH);
+   const arr=project.tracks[face.track]||[];let mx=0;
+   for(const n of arr)if(n&&n[7]&&Array.isArray(n[7].pb))for(const p of n[7].pb)mx=Math.max(mx,Math.abs(+p[1]||0));
+   project.autoLanes=(project.autoLanes||[]).filter(l=>!(l&&l.track===face.track&&l.kind==='bend'))
+    .concat([{id:'alobj'+w.id,track:face.track,kind:'bend',name:'Bends',nodes:[],cents:Math.max(25,Math.ceil(mx*1.3)),h:200,smooth:true}]);
+   chordLaneHidden=true;
+   for(const t of pitchedTrackIds(project.tracks))if(t!==face.track)hiddenTracks.add(t);
+   refresh(true);drawTrackSel();drawChordLane();
+  });
+  const ts=w.els.root.querySelector('[id="trackSel"]');if(ts)ts.style.display='';
+  const hint=shell.querySelector('.essObjPopHint');if(hint)hint.textContent='the real grid, large — the lane below the notes draws every slide, shake and bend (drag a node ↕ to re-bend) · ✕ keeps your edit';
+ }else{
  withGridWorld(w.id,()=>{PPB=34;setViewPx(GRID_VIEWS.main,NROWS0*CELLH);refresh(true);});
- essObjWin={w,o,orig:m0.orig,shell,track:face.track};
+ }
+ essObjWin={w,o,orig:m0.orig,shell,track:face.track,rowsJ:m0.rowsJ,chordsJ:m0.chordsJ,large};
  return shell;
 }
 let essPmEl=null;
@@ -24210,10 +24331,15 @@ function removeAutoLane(id){
  if(wasParam&&typeof playing!=='undefined'&&playing)rebuild();   /* 2.6 R4: closing a live param lane un-schedules its rows */
 }
 function alaneH(){return Math.max(30,typeof stripBoundaryH==='function'?stripBoundaryH():30);}   /* §3 landmine ⑦: heights go through the boundary law — no sliver lanes */
+/* R80 (his [69]/[70]): a lane may carry its OWN height and cents range — the Scales window's large pop-up
+   gives its bend lane a tall canvas and a range fitted to the gamakas it draws (a 30-cent shake fills the
+   lane instead of hugging the centre line at ±600). A lane without them keeps the boundary law and ALANE_CENTS. */
+function alaneHOf(al){return (al&&typeof al.h==='number'&&al.h>0)?al.h:alaneH();}
+function alaneCentsOf(al){return (al&&typeof al.cents==='number'&&al.cents>0)?al.cents:ALANE_CENTS;}
 function alaneValY(val,h){return h-4-Math.max(0,Math.min(1,val))*(h-8);}
 function alaneYVal(y,h){return Math.max(0,Math.min(1,(h-4-y)/(h-8)));}
-function alaneCentsY(cents,h){return h/2-Math.max(-ALANE_CENTS,Math.min(ALANE_CENTS,cents))/ALANE_CENTS*(h/2-3);}
-function alaneYCents(y,h){return Math.round(Math.max(-ALANE_CENTS,Math.min(ALANE_CENTS,(h/2-y)/(h/2-3)*ALANE_CENTS)));}
+function alaneCentsY(cents,h,C){C=(typeof C==='number'&&C>0)?C:ALANE_CENTS;return h/2-Math.max(-C,Math.min(C,cents))/C*(h/2-3);}
+function alaneYCents(y,h,C){C=(typeof C==='number'&&C>0)?C:ALANE_CENTS;return Math.round(Math.max(-C,Math.min(C,(h/2-y)/(h/2-3)*C)));}
 function mkAutoLaneRow(al){
  const row=document.createElement('div');row.className='trow alanerow';row.dataset.alid=al.id;
  const hd=document.createElement('div');hd.className='thead';
@@ -24288,7 +24414,7 @@ function mkAutoLaneRow(al){
  row.appendChild(hd);
  const gw=document.createElement('div');gw.className='gvwrap';
  const lane=document.createElement('div');lane.className='alane';lane.dataset.alid=al.id;
- lane.style.height=alaneH()+'px';
+ lane.style.height=alaneHOf(al)+'px';
  lane.style.marginLeft=GUT+'px';lane.style.width=(LOOP*PPB)+'px';
  wireAutoLane(lane,al.id);
  gw.appendChild(lane);row.appendChild(gw);
@@ -24303,7 +24429,7 @@ function drawAutoLanes(){
 }
 function renderAutoLane(lane,id){
  const al=autoLaneById(id);if(!al)return;
- const h=alaneH();
+ const h=alaneHOf(al),CR=alaneCentsOf(al);
  lane.querySelectorAll('svg,.apt').forEach(x=>x.remove());
  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');
  sv.setAttribute('width',LOOP*PPB);sv.setAttribute('height',h);
@@ -24322,9 +24448,18 @@ function renderAutoLane(lane,id){
    if(!nn||!nn[7]||!Array.isArray(nn[7].pb)||nn[7].pb.length<2)return;
    const x0=nn[0]*PPB,w=Math.max(2,nn[1]*PPB);
    let d='';
-   for(const p of nn[7].pb)d+=(d?'L':'M')+(x0+p[0]*w).toFixed(1)+','+alaneCentsY(p[1],h).toFixed(1)+' ';
+   if(al.smooth&&nn[7].pb.length>2){
+    /* R80 (his [69] "a great visual curve, slide, or shake"): the object lane draws the curve SMOOTH — a
+       quadratic through the midpoints, each node the control point — so a shake reads as a wave and a
+       slide as a swoop, not a zigzag. The nodes and the data are the same; only the stroke is eased. */
+    const P=nn[7].pb.map(p=>[x0+p[0]*w,alaneCentsY(p[1],h,CR)]);
+    d='M'+P[0][0].toFixed(1)+','+P[0][1].toFixed(1)+' ';
+    for(let i=1;i<P.length-1;i++){const mx2=(P[i][0]+P[i+1][0])/2,my2=(P[i][1]+P[i+1][1])/2;d+='Q'+P[i][0].toFixed(1)+','+P[i][1].toFixed(1)+' '+mx2.toFixed(1)+','+my2.toFixed(1)+' ';}
+    d+='L'+P[P.length-1][0].toFixed(1)+','+P[P.length-1][1].toFixed(1)+' ';
+   }else
+   for(const p of nn[7].pb)d+=(d?'L':'M')+(x0+p[0]*w).toFixed(1)+','+alaneCentsY(p[1],h,CR).toFixed(1)+' ';
    const isLine=!!nn[7].line;
-   inner+=`<path data-bn="${ni}" d="${d}" fill="none" stroke="${isLine?paintOf('--auto-line','#e8a33d'):paintOf('--auto-curve','#98a0b2')}" stroke-width="1.6" style="pointer-events:stroke;cursor:pointer;" opacity="${selNotes.has(ni)?'1':'.75'}"><title>${isLine?'Slide line — click: select the notes at both ends (drag either to move the line with them)':'Bend curve ('+((nn[7].orn)||'drawn')+') — drag a node ↕ to re-bend'}</title></path>`;
+   inner+=`<path data-bn="${ni}" d="${d}" fill="none" stroke="${isLine?paintOf('--auto-line','#e8a33d'):paintOf('--auto-curve','#98a0b2')}" stroke-width="${al.smooth?'2.4':'1.6'}" style="pointer-events:stroke;cursor:pointer;" opacity="${selNotes.has(ni)?'1':'.75'}"><title>${isLine?'Slide line — click: select the notes at both ends (drag either to move the line with them)':'Bend curve ('+((nn[7].orn)||'drawn')+') — drag a node ↕ to re-bend'}</title></path>`;
    pts+=nn[7].pb.length;
   });
   sv.innerHTML=inner;lane.appendChild(sv);
@@ -24334,7 +24469,7 @@ function renderAutoLane(lane,id){
    const x0=nn[0]*PPB,w=Math.max(2,nn[1]*PPB);
    nn[7].pb.forEach((p,pi)=>{
     const el2=document.createElement('div');el2.className='apt';
-    el2.style.left=(x0+p[0]*w)+'px';el2.style.top=alaneCentsY(p[1],h)+'px';
+    el2.style.left=(x0+p[0]*w)+'px';el2.style.top=alaneCentsY(p[1],h,CR)+'px';
     el2.title=Math.round(p[1])+' cents at t='+p[0]+' — drag ↕';
     el2.onmousedown=ev=>{if(ev.button===0)bendNodeDown(ev,lane,al,ni,pi);};
     lane.appendChild(el2);
@@ -24412,7 +24547,7 @@ function alaneCommit(orig,tag){
 }
 function autoNodeDown(e,lane,al,i){
  e.preventDefault();e.stopPropagation();
- const h=alaneH(),r=lane.getBoundingClientRect();
+ const h=alaneHOf(al),r=lane.getBoundingClientRect();
  const orig=JSON.parse(JSON.stringify(project.autoLanes));
  let moved=false;
  const mv=ev=>{
@@ -24443,13 +24578,13 @@ function autoNodeDown(e,lane,al,i){
 }
 function bendNodeDown(e,lane,al,ni,pi){
  e.preventDefault();e.stopPropagation();
- const h=alaneH(),r=lane.getBoundingClientRect();
+ const h=alaneHOf(al),r=lane.getBoundingClientRect();
  const arr=project.tracks[al.track];if(!arr||!arr[ni]||!arr[ni][7])return;
  const origTracks=JSON.parse(JSON.stringify(project.tracks));
  let moved=false;
  const mv=ev=>{
   moved=true;
-  const cents=alaneYCents(ev.clientY-r.top,h);
+  const cents=alaneYCents(ev.clientY-r.top,h,alaneCentsOf(al));
   const nn=project.tracks[al.track][ni];
   if(nn&&nn[7]&&nn[7].pb&&nn[7].pb[pi])nn[7].pb[pi][1]=cents;
   drawAutoLanes();
@@ -24529,14 +24664,14 @@ function wireAutoLane(lane,id){
  });
 }
 function alanePencil(e,lane,al){
- const h=alaneH(),r=lane.getBoundingClientRect();
+ const h=alaneHOf(al),r=lane.getBoundingClientRect();
  const orig=JSON.parse(JSON.stringify(project.autoLanes));
  const origTracks=al.kind==='bend'?JSON.parse(JSON.stringify(project.tracks)):null;
  const drawn=[];   /* [beat,val|cents] collected over the whole gesture */
  const put=ev=>{
   const st=Math.max(.0625,gridStep()/2);   /* pencil grain: half the grid step */
   const beat=Math.max(0,Math.min(LOOP,Math.round((ev.clientX-r.left)/PPB/st)*st));
-  const val=al.kind==='bend'?alaneYCents(ev.clientY-r.top,h):+alaneYVal(ev.clientY-r.top,h).toFixed(4);
+  const val=al.kind==='bend'?alaneYCents(ev.clientY-r.top,h,alaneCentsOf(al)):+alaneYVal(ev.clientY-r.top,h).toFixed(4);
   const at=drawn.findIndex(p=>Math.abs(p[0]-beat)<1e-6);
   if(at>=0)drawn[at]=[beat,val];else drawn.push([beat,val]);
   if(al.kind!=='bend'){
@@ -24643,7 +24778,7 @@ function alaneSkewTool(e,lane,al,side){
  if(rng.def)return;
  const nn0=(autoLaneById(al.id)||{nodes:[]}).nodes;
  if(!nn0.some(n2=>n2[0]>=rng.a-1e-6&&n2[0]<=rng.b+1e-6)){flashHint('No nodes inside the brace — draw some first (the handles skew what the band covers).');return;}
- const h=alaneH(),y0=e.clientY;
+ const h=alaneHOf(al),y0=e.clientY;
  const orig=JSON.parse(JSON.stringify(project.autoLanes));
  const base=(orig.find(l=>l.id===al.id)||{nodes:[]}).nodes;
  let dv=0;
@@ -28630,12 +28765,13 @@ function ragaRootMidi(){
  const t=ragaKeyTonic();
  return 60+((t+5)%12)-5;   /* the tonic nearest middle C */
 }
-function ragaPlayStep(e,pcAbs,when,dur,vel){
+function ragaPlayStep(e,pcAbs,when,dur,vel,pbOv){
  /* one audition step: the note, its gamaka bend (③), its chord underneath (④ — the
-    note LOUDER than the chord: mixed like a melody over its accompaniment, client rule) */
+    note LOUDER than the chord: mixed like a melody over its accompaniment, client rule).
+    R80: pbOv — an edited object's note brings its OWN curve (n[7].pb), null = none. */
  const root=ragaRootMidi();
  const degIdx=e.pcs.indexOf(((pcAbs%12)+12)%12);
- const pb=(ragaState.micro&&degIdx>=0)?ragaDegMelisma(e,degIdx):null;
+ const pb=(pbOv!==undefined)?pbOv:((ragaState.micro&&degIdx>=0)?ragaDegMelisma(e,degIdx):null);
  inst.melAud(root+pcAbs,dur,when,vel,pb);
  if(ragaState.chords&&degIdx>=0){
   /* 84th R3 (his FIFTY-THIRD message): ragaDegChord's offsets stacked straight up from
@@ -28652,7 +28788,7 @@ function ragaPlayStep(e,pcAbs,when,dur,vel){
   }
  }
 }
-function ragaAudSeqPlay(e,riff){
+function ragaAudSeqPlay(e,riff,part){
  /* [Scale ▸]: up & down in the song's key at an easy eighth-note walk. [➿ Riffs] on a
     raga: the same walk played the way the raga is MEANT to be played — gamakas forced
     on, chords off, jiva swaras leaning louder, a touch slower.
@@ -28660,13 +28796,15 @@ function ragaAudSeqPlay(e,riff){
     AUDIO ENGINE when it is not up yet — a fresh page whose first gesture is ▸ Scale used
     to swallow the press in the try/catch below (inst still null) and stay silent. */
  if(!e)return;
- if(typeof audioReady!=='undefined'&&!audioReady&&typeof ensureAudio==='function'){ensureAudio().then(()=>{if(audioReady)ragaAudSeqPlay(e,riff);}).catch(()=>{});return;}
+ if(typeof audioReady!=='undefined'&&!audioReady&&typeof ensureAudio==='function'){ensureAudio().then(()=>{if(audioReady)ragaAudSeqPlay(e,riff,part);}).catch(()=>{});return;}
+ ragaAudStop();   /* R80 (his [67] ③): a new press starts over — the running walk lets go */
  try{
   const t0=Tone.now()+.05;
   const bpm=+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96);
   const spb=(60/Math.max(40,Math.min(220,bpm)))*(riff?.72:.5);
   const seq=ragaAudSeq(e);
-  const steps=seq.up.concat(seq.down);
+  /* R80 (his [68]): ▸ UP plays the aroha alone, ▸ DOWN the avaroha alone */
+  const steps=part==='up'?seq.up.slice():part==='down'?seq.down.slice():seq.up.concat(seq.down);
   const mic0=ragaState.micro,ch0=ragaState.chords;
   if(riff){ragaState.micro=true;ragaState.chords=false;}
   const jset={};
@@ -28727,6 +28865,214 @@ function ragaSingleGamaka(e,melIdx){
   const pb=m.curve.map(p=>[p[0]/T,p[1]]);
   inst.melAud(ragaRootMidi()+pc,1.6,Tone.now()+.05,.8,pb);
  }catch(err){}
+}
+/* ==== R80 (the 100th, Fable — his [67] ③④⑤, [68]–[70]): THE 1-TRACK OBJECT of the Scales / Ragas window ==== */
+function ragaAudStop(){
+ /* every audition voice lets go — the second press starts from the beginning */
+ try{if(typeof inst==='object'&&inst&&typeof inst.melAudStop==='function')inst.melAudStop();}catch(e){}
+}
+function ragaObjRow(e,pc,i){
+ /* one rung of the object's walk. R80 (his [69]/[70]): the note CARRIES its prescribed gamaka — the
+    curve rides n[7].pb (the ONE bend store, §3 landmine ⑧), so the pop-up's bend lane draws it and the
+    note plays it (inst.slide). A degree with no prescribed gamaka is a plain note. */
+ const r=[i*.5,.5,ragaRootMidi()+pc];
+ try{
+  const d=e.pcs.indexOf(((pc%12)+12)%12);
+  const pb=d>=0?ragaDegMelisma(e,d):null;
+  if(pb&&pb.length>1&&pb.some(p=>Math.abs(p[1])>1)){
+   const m=(e.rec&&e.rec.melismas||[]).filter(x=>x.target===e.rec.swaras[d])[0];
+   r[7]={pb:pb.map(p=>[p[0],p[1]]),orn:m?m.name:'gamaka'};   /* [3]–[6] stay unset, as every plain row's do */
+  }
+ }catch(err){}
+ return r;
+}
+var ragaObjEdits={};   /* sid → {rows,chords,saved} — his [67] ④: an edit made inside the opened object STAYS (session) */
+function ragaObjEditOf(o){
+ if(!o)return null;
+ if(o._tmpl)return o;
+ return (o.sid&&ragaObjEdits[o.sid])||null;
+}
+function ragaObjIsRaga(o){return !!(o&&((o.sid&&Array.isArray(o.pcs)&&!o.strand)||o._tmpl));}
+function ragaObjAudition(o){
+ /* his [67] ③: a press on the 1-track object auditions it; a second press interrupts the first and starts
+    from the beginning. The object's OWN rows play (an edit is heard), each note with its own curve, the
+    walk's chords under it (the ▸ Scale law) — or the edited chords when the pop-up changed them. */
+ if(typeof audioReady!=='undefined'&&!audioReady&&typeof ensureAudio==='function'){ensureAudio().then(()=>{if(audioReady)ragaObjAudition(o);}).catch(()=>{});return;}
+ ragaAudStop();
+ try{
+  const st=essObjRows(o);if(!st||!st.rows||!st.rows.length)return;
+  const t0=Tone.now()+.04;
+  const bpm=+((typeof tempo!=='undefined'&&tempo&&tempo.value)||96);
+  const spb=60/Math.max(40,Math.min(220,bpm));
+  const root=ragaRootMidi();
+  const ed=ragaObjEditOf(o);
+  const ownChords=!!ragaState.chords&&!!(ed&&Array.isArray(ed.chords)&&ed.chords.length);   /* the window's Chords toggle rules here too */
+  const ch0=ragaState.chords;
+  if(ownChords)ragaState.chords=false;
+  for(const r of st.rows){
+   const pb=(r[7]&&Array.isArray(r[7].pb))?r[7].pb:null;
+   ragaPlayStep(o,r[2]-root,t0+r[0]*spb,Math.max(.08,r[1]*spb*.95),.7,pb===null?null:pb);
+  }
+  ragaState.chords=ch0;
+  if(ownChords){
+   /* the edited chord lane, voice-led through the shared law, quieter than the melody */
+   let at=0;
+   for(const c of ed.chords){
+    const d=(typeof c.d==='number'&&c.d>0)?c.d:1;
+    try{const v=audLedVoice('raga',{r:((+c.r||0)%12+12)%12,iv:Array.isArray(c.iv)&&c.iv.length?c.iv.slice():[0,4,7]});
+     if(v)for(const m of [v.bass].concat(v.notes))inst.melAud(m,d*spb*.96,t0+at*spb,.3);}catch(err){}
+    at+=d;
+   }
+  }
+ }catch(err){}
+}
+function ragaObjEditKeep(o,rows,chords){
+ /* his [67] ④: the pop-up's edit STAYS on the object — then ⑤, the question, unless it was already kept */
+ if(!o||!Array.isArray(rows)||!rows.length)return;
+ if(o._tmpl){
+  const t=(ragaTemplates||[]).find(x=>x.id===o.tid);
+  if(t){t.rows=rows.map(r=>r.slice());t.chords=chords||null;ragaTemplatesPersist();}
+  try{renderRagaResults();}catch(e){}
+  try{if(typeof flashHint==='function')flashHint('Your edit is in the template '+o.name+'.');}catch(e){}
+  return;
+ }
+ ragaObjEdits[o.sid]={rows:rows.map(r=>r.slice()),chords:chords||null,saved:false};
+ try{renderRagaResults();renderRagaInfo();}catch(e){}
+ ragaTemplateAsk(o);
+}
+function ragaObjEditMarkKept(o){
+ /* dragged to the multi-track or the Essence Shelf, or saved as a template: the question is answered */
+ const ed=(o&&o.sid)?ragaObjEdits[o.sid]:null;if(ed){ed.saved=true;try{renderRagaInfo();}catch(e){}}
+}
+var ragaTemplates=[];
+try{ragaTemplates=parseScaleTemplates(localStorage.getItem('cp_scaletmpl'),SCALE_DB);}catch(e){ragaTemplates=[];}
+function ragaTemplatesPersist(){
+ try{localStorage.setItem('cp_scaletmpl',JSON.stringify(ragaTemplates));}catch(e){}
+}
+function ragaTemplateObj(t){
+ /* a template IS an object: the source scale's entry wearing the saved rows and chords */
+ const e=ragaAllEntries().filter(x=>x.sid===t.sid)[0];if(!e)return null;
+ return Object.assign({},e,{_tmpl:true,tid:t.id,name:t.name,rows:t.rows.map(r=>r.slice()),chords:t.chords||null,org:'ragaPanel'});
+}
+function ragaTemplateSave(o,name){
+ const ed=ragaObjEditOf(o);if(!ed||!Array.isArray(ed.rows)||!ed.rows.length)return null;
+ const t={id:'st'+Date.now().toString(36)+Math.floor(Math.random()*1e4),sid:o.sid,name:String(name||(o.name+' · my edit')).slice(0,60),rows:ed.rows.map(r=>r.slice()),chords:ed.chords||null,when:Date.now()};
+ ragaTemplates.push(t);ragaTemplatesPersist();
+ ragaObjEditMarkKept(o);
+ try{renderRagaResults();}catch(e){}
+ try{if(typeof flashHint==='function')flashHint('✓ Saved as a scale search template — it lives at the top of the Scales / Ragas window, on this device.');}catch(e){}
+ return t;
+}
+function ragaTemplateAsk(o){
+ /* his [67] ⑤, verbatim: "Save your work as a scale search template?" — asked when the opened object closes
+    changed and nothing has kept the edit yet (not a template, not the multi-track, not the Essence Shelf) */
+ const ed=ragaObjEditOf(o);if(!ed||ed.saved||o._tmpl)return null;
+ const old=document.getElementById('ragaTmplAsk');if(old)old.remove();
+ const d=document.createElement('div');
+ d.id='ragaTmplAsk';
+ d.style.cssText='position:fixed;z-index:140;left:50%;top:38%;transform:translate(-50%,-50%);background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 12px 34px rgba(0,0,0,.6);min-width:360px;max-width:520px;display:flex;flex-direction:column;gap:8px;';
+ d.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--text);">Save your work as a scale search template?</div>'
+  +'<div style="font-size:11px;line-height:1.5;color:var(--dim);">Your edit of <b>'+o.name+'</b> stays on the object either way. A template keeps it on this device, at the top of the Scales / Ragas window — or drag the object onto a track or the Essence Shelf instead.</div>'
+  +'<input id="ragaTmplName" value="'+String(o.name+' · my edit').replace(/"/g,'&quot;')+'" style="font-size:12px;padding:5px 8px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;">'
+  +'<div style="display:flex;gap:8px;justify-content:flex-end;"><button id="ragaTmplNo" style="padding:5px 12px;font-size:12px;background:#3a3e4d;color:#e9eaef;">Not now</button><button id="ragaTmplYes" style="padding:5px 12px;font-size:12px;">Save as template</button></div>';
+ d.onmousedown=e=>e.stopPropagation();
+ document.body.appendChild(d);
+ const close=()=>{try{d.remove();}catch(e){}};
+ d.querySelector('#ragaTmplNo').onclick=()=>{close();try{if(typeof flashHint==='function')flashHint('Kept on the object — the Scales window remembers your edit this session; drag it to a track or the Essence Shelf to keep it in the song.');}catch(e){}};
+ d.querySelector('#ragaTmplYes').onclick=()=>{const nm=d.querySelector('#ragaTmplName').value;close();ragaTemplateSave(o,nm);};
+ d.querySelector('#ragaTmplName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();d.querySelector('#ragaTmplYes').click();}else if(e.key==='Escape'){e.preventDefault();d.querySelector('#ragaTmplNo').click();}e.stopPropagation();};
+ try{d.querySelector('#ragaTmplName').focus();}catch(e){}
+ return d;
+}
+function ragaObjDragWire(el,o){
+ /* the object drags from wherever it sits — the Essence Shelf Keeps it, a track row asks how it lands
+    (the info-pane host's law, shared with the template rows); a kept edit answers his ⑤ */
+ el.onmousedown=ev=>{
+  if(ev.button!==0||(ev.target.classList&&ev.target.classList.contains('essExB'))||(ev.target.tagName==='BUTTON'))return;
+  ev.preventDefault();
+  const x0=ev.clientX,y0=ev.clientY;
+  const mm=e2=>{
+   if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
+    cleanup();el._dragAte=true;
+    chipDrag(e2,'♪ '+o.name,dv=>{
+     const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
+     if(shelfEl){if(essLibShelfMint(o,'ragaPanel'))ragaObjEditMarkKept(o);return;}
+     if(essDropTryDialog(dv,o)){ragaObjEditMarkKept(o);return;}
+     if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
+    });
+   }};
+  const mu=()=>cleanup();
+  const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+ };
+}
+function ragaPathOrn(e){
+ /* which note wears which ornament — the prescribed gamakas by target swara, then the notation's glyphs by
+    letter; returns {swara → kind} for the drawing and the note names */
+ const orn={};
+ const r=e.rec;if(!r)return orn;
+ const toks=String(r.gn||'').split(/\s+/).filter(Boolean);
+ for(const tk of toks){
+  const letter=tk.replace(/[^SRGMPDN\u1E60]/g,'').slice(-1).replace('\u1E60','S');if(!letter)continue;
+  const full=(r.swaras||[]).filter(s=>s[0]===letter)[0]||letter;
+  if(/^~/.test(tk))orn[full]='kampita';else if(/^\//.test(tk))orn[full]='jaruUp';else if(/^\\/.test(tk))orn[full]='fall';else if(/^\(/.test(tk))orn[full]='kan';
+ }
+ for(const m of (r.melismas||[])){
+  const c=Array.isArray(m.curve)?m.curve:[],c0=c.length?(c[0][1]||0):0;
+  const peak=c.reduce((a,p)=>Math.abs(p[1]||0)>Math.abs(a)?(p[1]||0):a,0);
+  orn[m.target]=m.kind==='kampita'?'kampita':m.kind==='oscillation'?'kampita':(m.kind==='jaru'||m.kind==='slide')?((c0<0||(c0===0&&peak<0))?'jaruUp':'jaruDown'):m.kind==='nokku'?'nokku':'andolana';
+ }
+ return orn;
+}
+function ragaPathSVG(e,seq){
+ /* his [68] "show the Aroha and the Avaroha and show the bends and shakes and slides": the path drawn as
+    it is walked — the way up in the accent, the way down dimmer, a dot per note, and on an ornamented note
+    its glyph: a squiggle for a shake, a swoosh into the note for a slide up, a swoosh away for a fall, a
+    slow arc for an andolana, a tick from above for a nokku, a small grace mark for a kan. A vakra turn shows
+    as the line doubling back. */
+ const up=seq.up||[],down=seq.down||[];const pts=up.concat(down);if(pts.length<2)return '';
+ const W=Math.max(220,Math.min(420,pts.length*22)),H=92,padL=10,padR=10,top=22,bot=12;
+ const mx=Math.max(12,Math.max.apply(null,pts)),mn=Math.min(0,Math.min.apply(null,pts));
+ const X=i=>padL+(i/(pts.length-1))*(W-padL-padR),Y=pc=>H-bot-((pc-mn)/(mx-mn))*(H-top-bot);
+ const orn=ragaPathOrn(e);
+ const swOf=pc=>{const i=e.pcs.indexOf(((pc%12)+12)%12);return (e.rec&&e.rec.swaras&&i>=0)?e.rec.swaras[i]:(i>=0?e.labels[i]:'');};
+ const acc='var(--accent)',dim='#8b93a8',gl='#5bb98c';
+ let s='<svg id="ragaPathSvg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;max-width:100%;">';
+ const seg=(a,b,col)=>{let d='';for(let i=a;i<=b;i++)d+=(i===a?'M':'L')+X(i).toFixed(1)+','+Y(pts[i]).toFixed(1);return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="1.6" opacity=".85"/>';};
+ s+=seg(0,up.length-1,acc);
+ if(down.length)s+=seg(up.length-1,pts.length-1,dim);
+ s+='<text x="'+X(0).toFixed(1)+'" y="'+(H-1)+'" font-size="8.5" fill="'+acc+'">UP</text><text x="'+X(pts.length-1).toFixed(1)+'" y="'+(H-1)+'" font-size="8.5" fill="'+dim+'" text-anchor="end">DOWN</text>';
+ pts.forEach((pc,i)=>{
+  const x=X(i),y=Y(pc),sw=swOf(pc),k=orn[sw]||null,col=i<up.length?acc:dim;
+  s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6" fill="'+col+'"/>';
+  if(k==='kampita')s+='<path class="ragaGam" data-k="kampita" d="M'+(x-9).toFixed(1)+','+(y-9).toFixed(1)+' q2.2,-5 4.5,0 t4.5,0 t4.5,0 t4.5,0" fill="none" stroke="'+gl+'" stroke-width="1.5"><title>'+sw+' shakes back and forth</title></path>';
+  else if(k==='jaruUp')s+='<path class="ragaGam" data-k="jaruUp" d="M'+(x-14).toFixed(1)+','+(y+12).toFixed(1)+' q9,-1 '+14+',-12" fill="none" stroke="'+gl+'" stroke-width="1.6" stroke-linecap="round"><title>a slide up into '+sw+'</title></path>';
+  else if(k==='jaruDown')s+='<path class="ragaGam" data-k="jaruDown" d="M'+(x-14).toFixed(1)+','+(y-12).toFixed(1)+' q9,1 '+14+',12" fill="none" stroke="'+gl+'" stroke-width="1.6" stroke-linecap="round"><title>a slide down into '+sw+'</title></path>';
+  else if(k==='fall')s+='<path class="ragaGam" data-k="fall" d="M'+x.toFixed(1)+','+y.toFixed(1)+' q5,1 12,11" fill="none" stroke="'+gl+'" stroke-width="1.6" stroke-linecap="round"><title>'+sw+' falls away</title></path>';
+  else if(k==='andolana')s+='<path class="ragaGam" data-k="andolana" d="M'+(x-11).toFixed(1)+','+(y-8).toFixed(1)+' q5.5,-9 11,0 t11,0" fill="none" stroke="'+gl+'" stroke-width="1.5"><title>'+sw+' swings slowly</title></path>';
+  else if(k==='nokku')s+='<path class="ragaGam" data-k="nokku" d="M'+(x+1).toFixed(1)+','+(y-13).toFixed(1)+' l-1,9" fill="none" stroke="'+gl+'" stroke-width="2" stroke-linecap="round"><title>'+sw+' struck from above</title></path>';
+  else if(k==='kan')s+='<circle class="ragaGam" data-k="kan" cx="'+(x-6).toFixed(1)+'" cy="'+(y-8).toFixed(1)+'" r="1.6" fill="'+gl+'"><title>a grace note before '+sw+'</title></circle>';
+  if(sw)s+='<text x="'+x.toFixed(1)+'" y="'+(y-(k?15:6)).toFixed(1)+'" font-size="7.5" fill="var(--dim)" text-anchor="middle">'+sw.replace(/([SRGMPDN])([123])/,(m,a,b)=>a+'\u2081\u2082\u2083'.charAt('123'.indexOf(b)))+'</text>';
+ });
+ return s+'</svg>';
+}
+function ragaPathBlock(e){
+ /* his [68]: UP = … DOWN = … for every scale whose ascent differs from its descent, the path drawn and
+    played (▸ UP · ▸ DOWN), the ornaments in words specific to this raga — in place of the generic PRO TIP */
+ const seq=ragaAudSeq(e);
+ const same=JSON.stringify(seq.up)===JSON.stringify(seq.down.slice().reverse());
+ if(same)return '';
+ const r=e.rec;
+ const upTxt=r?r.aro:e.labels.concat(['1']).join(' '),dnTxt=r?r.ava:['1'].concat(scaleDegreeShorthand(e.down||e.pcs).split(' ').filter(Boolean).slice(0,-1).reverse()).join(' ');
+ const lab=pc=>{const p=((pc%12)+12)%12;let i=e.pcs.indexOf(p);if(i>=0)return e.labels[i];const d=e.down||[];i=d.indexOf(p);return i>=0?scaleDegreeShorthand(d).split(' ')[i]:String(pc);};
+ const words=ragaPathWords(r,seq.up,seq.down,r?null:lab);
+ let h='<div id="ragaPathBlock" style="border-left:3px solid var(--accent);padding:5px 8px;margin:6px 0;font-size:11.5px;line-height:1.55;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;">';
+ h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><b>UP =</b> <span id="ragaPathUp">'+upTxt+'</span><button data-rpath="up" title="Play the way up alone, in this song’s key" style="padding:1px 7px;font-size:10.5px;background:#3a3e4d;color:#e9eaef;">▸ UP</button></div>';
+ h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><b>DOWN =</b> <span id="ragaPathDown">'+dnTxt+'</span><button data-rpath="down" title="Play the way down alone, in this song’s key" style="padding:1px 7px;font-size:10.5px;background:#3a3e4d;color:#e9eaef;">▸ DOWN</button></div>';
+ h+='<div style="margin-top:4px;">'+ragaPathSVG(e,seq)+'</div>';
+ if(!r)h+='<div style="font-size:10.5px;color:var(--dim);">The classical convention: the raised 6 and 7 climb, the natural minor comes down — the audition and the object walk it that way.</div>';
+ if(words.length)h+='<div id="ragaPathWords" style="font-size:11px;color:var(--text);margin-top:3px;"><span style="color:var(--dim);">On the way:</span> '+words.join(' · ')+'.</div>';
+ return h+'</div>';
 }
 /* ② play it yourself — letter keys (home row = scale degrees, QWERTY row = the octave
    above; #13d pinned at build time) and MIDI (the ensureMidiIn hook in onMidiIn) */
@@ -28919,6 +29265,26 @@ function renderRagaResults(){
  const byFam={};
  for(const e of rows)(byFam[e.fam]=byFam[e.fam]||[]).push(e);
  let h='';
+ /* R80 (his [67] ⑤): MY SCALE SEARCH TEMPLATES — the edits he chose to keep, each an object at the top of the
+    list: press = hear it · ⤢ = open it large · drag = to a track or the Essence Shelf · ✕ = forget it */
+ const tmpls=(typeof ragaTemplates==='object'&&Array.isArray(ragaTemplates))?ragaTemplates:[];
+ if(tmpls.length){
+  h+='<div id="ragaTmplHead" style="font-size:13px;color:var(--dim);margin:8px 0 3px 0;letter-spacing:.4px;">My scale search templates <span style="font-size:10px;">· '+tmpls.length+'</span></div>';
+  for(const t of tmpls){
+   const to=ragaTemplateObj(t);if(!to)continue;
+   let _tl='';try{
+    const _t=(typeof withGridWorld==='function'&&typeof CUR_GRID==='string'&&CUR_GRID!=='main')?withGridWorld('main',()=>essClipTile(to)):essClipTile(to);
+    if(_t)_tl='<span class="essClipW" style="zoom:.55;flex:0 0 auto;display:inline-block;">'+_t+'</span>';}catch(err){}
+   const src=ragaAllEntries().filter(x=>x.sid===t.sid)[0];
+   h+='<div class="ragaTmplRow" data-tid="'+t.id+'" title="A scale search template — press to hear it (press again to start over) · ⤢ opens it large with its bend lane · drag it onto the Essence Shelf or a track row" style="display:flex;gap:6px;align-items:center;padding:2.5px 7px;border-radius:5px;cursor:grab;border:1px dashed rgba(232,163,61,.35);margin-bottom:2px;">'
+    +_tl
+    +'<span style="flex:1;font-size:12px;color:var(--text);">'+t.name+' <span style="color:var(--dim);font-size:10.5px;">· from '+(src?src.name:t.sid)+' · '+t.rows.length+' notes'+(t.chords&&t.chords.length?' · its own chords':'')+'</span></span>'
+    +'<button data-ta="play" title="Hear the template (press again to start over)" style="padding:1px 7px;font-size:11px;background:#3a3e4d;color:#e9eaef;">▸</button>'
+    +'<button data-ta="open" title="Open it large — the real grid with the bend lane" style="padding:1px 7px;font-size:11px;background:#3a3e4d;color:#e9eaef;">⤢</button>'
+    +'<button data-ta="del" title="Forget this template (this device)" style="padding:1px 7px;font-size:11px;background:#3a3e4d;color:#e9eaef;">✕</button>'
+    +'</div>';
+  }
+ }
  for(const f of ragaFamOrder(ragaFamFirstSetting())){
   const list=byFam[f[0]];if(!list||!list.length)continue;
   /* the greyed, slightly-larger family name captions each group (client layout) */
@@ -28944,6 +29310,19 @@ function renderRagaResults(){
   }
  }
  R.innerHTML=h||'<div style="color:var(--dim);font-size:12px;padding:8px;">Nothing matches this filter set — widen a column (every column is an AND filter).</div>';
+ for(const row of R.querySelectorAll('.ragaTmplRow')){
+  const t=tmpls.filter(x=>x.id===row.dataset.tid)[0];if(!t)continue;
+  const to=ragaTemplateObj(t);if(!to)continue;
+  row.onclick=ev=>{
+   if(row._dragAte){row._dragAte=false;return;}
+   const a=ev.target&&ev.target.dataset?ev.target.dataset.ta:undefined;
+   if(a==='del'){ev.stopPropagation();ragaTemplates=ragaTemplates.filter(x=>x.id!==t.id);ragaTemplatesPersist();renderRagaResults();return;}
+   if(a==='open'){ev.stopPropagation();essObjWorldOpen(to,t.name,{x:ev.clientX-40,y:ev.clientY-30},{large:true});return;}
+   ragaObjAudition(to);
+  };
+  row.ondblclick=ev=>{ev.preventDefault();ev.stopPropagation();essObjWorldOpen(to,t.name,{x:ev.clientX-40,y:ev.clientY-30},{large:true});};
+  ragaObjDragWire(row,to);
+ }
  const C=document.getElementById('ragaCount');
  if(C)C.textContent=rows.length+' of '+all.length+' scales & ragas shown · every column composes (AND) · the 🔎 searches names, swaras and moods on top';
  for(const row of R.querySelectorAll('.ragaRow')){
@@ -28987,16 +29366,11 @@ function renderRagaInfo(){
   const r=e.rec;
   h+='<div style="font-size:12px;color:var(--text);">Swaras: '+r.swaras.join(' ')+'</div>';
   if(r.kind==='janya'){
-   h+='<div style="font-size:12px;color:var(--text);">Aroha: '+r.aro+'<br>Avaroha: '+r.ava+'</div>';
+   /* R80 (his [68]): UP = / DOWN = with the path drawn and played and its ornaments in words — the generic
+      PRO TIP retired; a janya whose two ways match shows the pair plainly */
+   const pb=ragaPathBlock(e);
+   h+=pb||('<div style="font-size:12px;color:var(--text);">UP = '+r.aro+'<br>DOWN = '+r.ava+'</div>');
    h+='<div style="font-size:11px;color:var(--dim);">Janya of Mela '+r.parent+' · '+r.parentName+(r.anya?' · bhashanga — '+r.anya:'')+'</div>';
-   const upSet=ragaAroSeq(r.aro).map(p=>((p%12)+12)%12),dnSet=ragaAroSeq(r.ava).map(p=>((p%12)+12)%12);
-   const riseOnly=upSet.filter(p=>dnSet.indexOf(p)<0),fallOnly=dnSet.filter(p=>upSet.indexOf(p)<0);
-   const vakra=upSet.some((p,i)=>i&&p<upSet[i-1]&&upSet[i-1]<12);
-   if(riseOnly.length||fallOnly.length||vakra)
-    h+='<div style="border-left:3px solid var(--accent);padding:4px 8px;margin:5px 0;font-size:11px;line-height:1.5;color:var(--text);background:rgba(232,163,61,.06);border-radius:0 6px 6px 0;"><b>PRO TIP · an asymmetric path:</b> normally when the melody is RISING we use these notes — and falling from up high, other pitches slide up, slide down, or shake back and forth.'
-     +(riseOnly.length?' Rising-only: <b>'+riseOnly.map(p=>e.labels[e.pcs.indexOf(p)]||p).join(', ')+'</b>.':'')
-     +(fallOnly.length?' Falling-only: <b>'+fallOnly.map(p=>e.labels[e.pcs.indexOf(p)]||p).join(', ')+'</b>.':'')
-     +(vakra?' The path itself turns back on the way (vakra) — the audition plays it exactly as prescribed.':'')+'</div>';
   }else{
    h+='<div style="font-size:11px;color:var(--dim);">Melakarta '+r.mela+' · Chakra '+r.chakra+(r.he?' · Hindustani: '+r.he:'')+(r.ring?' · Graha Bhedam ring '+r.ring:'')+'</div>';
   }
@@ -29026,11 +29400,13 @@ function renderRagaInfo(){
   h+='<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:6px;">Melisma Machine riffs — a demo melody wearing each</div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">'
    +melismaCatalog(MELISMA_LIB,{tier:1}).slice(0,8).map(o=>'<span class="ragaRiffBtn" data-orn="'+o.id+'" title="'+melTradName(o.trads&&o.trads[0]||'')+' · '+melEraLabel(o.era)+'" style="cursor:pointer;padding:2px 7px;border-radius:5px;background:#3a3e4d;color:#e9eaef;font-size:11px;">'+o.name+'</span>').join('')+'</div>';
+  if(Array.isArray(e.down)&&e.down.length)h+=ragaPathBlock(e);   /* R80 (his [68]): a Western scale that comes down differently says so too */
  }
  /* his 142nd ("Neither does Scales"): the selected scale IS a single-track object — the
     [▸ Scale] walk realized as the clip tile (essObjRows' sid branch), draggable to the
     Essence Shelf or a track row, ⤢ / double-press = the pop-up grid. */
- h+='<div id="ragaObjHost" style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:grab;" title="The scale as an object — its up-and-down walk in this song&#8217;s key. Drag it onto the Essence Shelf or a track row · double-press opens the pop-up grid."><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span></div>';
+ const _ed=ragaObjEdits[e.sid];
+ h+='<div id="ragaObjHost" style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:grab;" title="The scale as an object — its up-and-down walk in this song&#8217;s key. Press it to hear it (press again to start over) · double-press opens it LARGE with its bend lane · drag it onto the Essence Shelf or a track row."><span class="cpchip essExB" title="Expand — the object IS a multi-track grid: open it whole, every hidden track and control.">⤢</span>'+(_ed?'<span id="ragaObjEdited" style="font-size:9.5px;color:var(--accent);" title="You changed this object in its pop-up — the change stays here this session'+(_ed.saved?' (kept)':'; drag it to a track or the Essence Shelf, or save it as a template')+'">✎ edited'+(_ed.saved?' · kept':'')+'</span>':'')+'</div>';
  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
   +'<button id="ragaApplyBtn" style="padding:5px 12px;font-size:12px;">Use for this section</button>'
   +'<button id="ragaFavBtn" style="padding:5px 10px;font-size:12px;background:#3a3e4d;color:#e9eaef;">'+(isFav?'★ In Favorites':'⭐ Save to Favorites')+'</button>'
@@ -29042,30 +29418,17 @@ function renderRagaInfo(){
  const oh=document.getElementById('ragaObjHost');
  if(oh){
   essObjCardMount(oh,e,'ragaw');
-  oh.ondblclick=ev=>{ev.stopPropagation();essObjWorldOpen(e,e.name,{x:ev.clientX-40,y:ev.clientY-30});};
+  /* R80 (his [69]): the double-press opens the object LARGE, its bend lane drawn; ⤢ keeps the expanded grid */
+  oh.ondblclick=ev=>{ev.stopPropagation();essObjWorldOpen(e,e.name,{x:ev.clientX-40,y:ev.clientY-30},{large:true});};
   oh.onclick=ev=>{
    if(oh._dragAte){oh._dragAte=false;return;}
-   if(ev.target.classList.contains('essExB')){ev.stopPropagation();essObjWorldOpen(e,e.name,{x:ev.clientX-60,y:ev.clientY-40});essObjWorldExpand(true);}
+   if(ev.target.classList.contains('essExB')){ev.stopPropagation();essObjWorldOpen(e,e.name,{x:ev.clientX-60,y:ev.clientY-40});essObjWorldExpand(true);return;}
+   if(ev.target.id==='ragaObjEdited')return;
+   ragaObjAudition(e);   /* R80 (his [67] ③): a press auditions the object; a second press starts it over */
   };
-  oh.onmousedown=ev=>{
-   if(ev.button!==0||ev.target.classList.contains('essExB'))return;
-   ev.preventDefault();
-   const x0=ev.clientX,y0=ev.clientY;
-   const mm=e2=>{
-    if(Math.abs(e2.clientX-x0)>4||Math.abs(e2.clientY-y0)>4){
-     cleanup();oh._dragAte=true;
-     chipDrag(e2,'♪ '+e.name,dv=>{
-      const shelfEl=essShelfHitAt(dv.clientX,dv.clientY);   /* his 112th: overlay-proof — rect fallback */
-      if(shelfEl){essLibShelfMint(e,'ragaPanel');return;}
-      if(essDropTryDialog(dv,e))return;
-      if(typeof flashHint==='function')flashHint('Drop it on a track row (the dialog asks how it lands) or on the Essence Shelf (it lives there).');
-     });
-    }};
-   const mu=()=>cleanup();
-   const cleanup=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
-   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
-  };
+  ragaObjDragWire(oh,e);
  }
+ for(const b of I.querySelectorAll('[data-rpath]'))b.onclick=ev=>{ev.stopPropagation();ragaAudSeqPlay(e,false,b.dataset.rpath);};   /* R80 (his [68]): ▸ UP · ▸ DOWN */
  const ab=document.getElementById('ragaApplyBtn');if(ab)ab.onclick=()=>ragaApply(e.sid);
  const shb=document.getElementById('ragaShareBtn');if(shb)shb.onclick=()=>shareScaleLink(e.sid);
  const fb=document.getElementById('ragaFavBtn');if(fb)fb.onclick=()=>ragaToggleFav(e.sid);
