@@ -249,6 +249,8 @@
   /* R70 (his [54]): scale B's tonic wears a ring; a letter in neither scale is a faint, dashed ghost */
   #wanWeber .wanWebKey.onB,#wanWeber .wan2Key.onB{outline:2px solid #7a5a30;outline-offset:-1px;font-weight:800;}
   #wanWeber .wanWebKey.wanGhost,#wanWeber .wan2Key.wanGhost{opacity:.32!important;border-style:dashed!important;}
+  /* R75 (his [66] ②): a blank cell — the chord scale A already shows on this letter */
+  #wanWeber .wanWebKey.wanBlank,#wanWeber .wan2Key.wanBlank{opacity:.22!important;background:transparent!important;border-style:dotted!important;cursor:default!important;}
   #wanPanel #wanBody .cpchip{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;}
   #wanPanel #wanBody .cpchip.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   #wanPanel #wanStatus{color:#6b4f28;}
@@ -942,7 +944,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10j</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10k</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29606,6 +29608,11 @@ function wanWeberCellChord(scales,lof,slotB){
  const tri=scaleDegreeTriad(sc.pcs,deg);
  const iv=tri?tri.iv:[0,4,7];
  const minor=iv[1]===3,dim=minor&&iv.indexOf(6)>=0&&iv.indexOf(7)<0,aug=iv[1]===4&&iv.indexOf(8)>=0&&iv.indexOf(7)<0;
+ /* R75 (his [66] ②, "There should be no doubled chords. I'd rather a chord button be blank than be repeating itself"):
+    scale B's cell goes BLANK when it would carry the very chord scale A already carries on that letter (A major + A
+    melodic minor: D, E, G♯° once each) */
+ if(!isA&&deg!==0){const a=scales.a;const da=a.pcs.indexOf((((pc-a.tonic)%12)+12)%12);   /* scale B's own tonic is never blanked — it is the ringed home of its column */
+  if(da>=0){const ta=scaleDegreeTriad(a.pcs,da);if(ta&&ta.iv.length===iv.length&&ta.iv.every((x,i)=>x===iv[i]))return {ghost:false,blank:true,isA,r:pc,iv,minor,dim,aug,roman:'',deg,scale:sc};}}
  /* R73 (his [64], "VI sounds the same as bVI (bVI is the correct interpretation)"): the roman reads AGAINST THE HOME —
     scale A's tonic, the key centre — with its accidental, in BOTH columns: C minor's A♭ chord on C's map is ♭VI, its
     E♭ ♭III, its B♭ ♭VII (R70 had numbered the minor column by that scale's own degrees). ° and + as they come. */
@@ -31626,7 +31633,7 @@ function wanSide2Draw(){
    try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65 — R70: against the slot's own scale */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
-   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'" title="'+letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+label+'</span>';
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank?'':fnSty)+'" title="'+(ch.blank?'blank — the same chord scale A already carries here, shown once':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name))+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+(ch.blank?'':label)+'</span>';
   }
   h+='</div>';
  }
@@ -31643,10 +31650,22 @@ function wanSide2Draw(){
     d.style.left=(tl.offsetLeft-4)+'px';d.style.top=(tl.offsetTop-3)+'px';
     d.style.width=(br.offsetLeft+br.offsetWidth-tl.offsetLeft+8)+'px';d.style.height=(br.offsetTop+br.offsetHeight-tl.offsetTop+6)+'px';
     host.appendChild(d);}}}catch(e){}
+ /* R75 (his [66] ①, "Click+dragging the Wanderer on the left drags around the map. But doing that on the 2nd Matrix does
+    nothing"): the right board pans too — the same law as side 1 (a row = a fifth, a column pair = three), on w2.shift */
+ host.onmousedown=e=>{
+  if(e.button!==0||e.metaKey||e.shiftKey||e.altKey||e.ctrlKey)return;
+  const pan={x:e.clientX,y:e.clientY,shift0:(w2.shift||0),moved:false};
+  const mv=ev=>{const dx=ev.clientX-pan.x,dy=ev.clientY-pan.y;if(!pan.moved&&Math.hypot(dx,dy)<7)return;pan.moved=true;window._wanPanned=true;
+   const rowH=25,pairW=94;const stepY=Math.round(dy/rowH),stepX=Math.round(dx/pairW);const shift=pan.shift0+stepY*1-stepX*3;
+   if(shift!==(w2.shift||0)){w2.shift=shift;wanSide2Draw();}
+   const rx=dx-stepX*pairW,ry=dy-stepY*rowH;const kid=host.firstElementChild;if(kid)kid.style.transform='translate('+rx+'px,'+ry+'px)';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);const kid=host.firstElementChild;if(kid)kid.style.transform='';setTimeout(()=>{window._wanPanned=false;},0);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+ };
  host.querySelectorAll('.wan2Key').forEach(el=>{
   const pc=()=>wanLofPc(+el.getAttribute('data-lof'));
   const mn=()=>el.getAttribute('data-minor')==='1';
-  el.onclick=()=>{try{wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));}catch(err){}};   /* R70: the cell's own chord */
+  el.onclick=()=>{if(window._wanPanned||el.classList.contains('wanBlank'))return;try{wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));}catch(err){}};   /* R70: the cell's own chord · R75: not after a pan, never a blank */
   el.ondblclick=ev=>{ev.preventDefault();
    try{wanSide2SetHome(pc(),mn());}catch(err){}renderWan();   /* R68 [51] ① + [52]: a double-click on the right map sets SCALE 2's home — linked or not */
   };
@@ -31745,9 +31764,9 @@ function wanWeberDraw(){
       ♭VI wears half Subdominant + half Relative). Paint rides wanState.fnOn. */
    let fnSty='';
    try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65: the scheme in use — R70: read against the slot's OWN scale */
-   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
-    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+fnSty+'"'
-    +' title="'+letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.">'+label+'</span>';
+   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
+    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank?'':fnSty)+'"'
+    +' title="'+(ch.blank?'blank — the same chord scale A already carries on this letter, shown once (his [66])':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.')+'">'+(ch.blank?'':label)+'</span>';
   }
   h+='</div>';
  }
@@ -32441,6 +32460,7 @@ function wanWeberDraw(){
   const mn=()=>el.getAttribute('data-minor')==='1';
   el.onclick=e=>{
    if(window._wanPanned)return;
+   if(el.classList.contains('wanBlank'))return;   /* R75: a blank cell is silent */
    if(e.metaKey){   /* ⌘+click: a modulation path springs to this key (more while held) */
     e.preventDefault();
     /* 80th R21 (his twenty-ninth message): a NEW ⌘ press REPLACES the last
