@@ -944,7 +944,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10k</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10l</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -1900,19 +1900,35 @@ function ragaRecText(e){
 }
 /* the six browser families (§11: Settings chooses which side lists first — Carnatic
    preferred, "more complete and more popular") */
-const RAGA_FAM_DEFS=[['mela','Carnatic Melakarta 72'],['janya','Carnatic Janyas'],['dia','Diatonic (Major/Minor) & Modes'],['hm','Harmonic Minor Modes'],['mm','Melodic Minor Modes'],['jazz','Jazz & Blues Extension']];
-const RAGA_HM_SET={harmonicMinor:1,phrygDom:1};
+/* R76 (his [57] + [67] ①②): THE FAMILIES IN HIS NAMES, membership by ROTATION of the parent scale — every mode of the
+   major scale is one family, every mode of the melodic minor another, the harmonic minor's seven ("Exotic — one
+   augmented 2nd"), the double harmonic's seven ("Doubly Exotic — two"), the symmetrical scales together (both
+   diminished scales, the whole tone); what is none of those (blues, bebop, pentatonics…) is the sixth family. The
+   shipped group tags no longer decide — they put Phrygian Dominant with the jazz scales and left the harmonic minor
+   family two strong. Pure. */
+const RAGA_FAM_DEFS=[['mela','Carnatic Melakarta 72'],['janya','Carnatic Janyas'],['dia','Major Mode Family'],['mm','Melodic Minor Mode Family'],['hm','Harmonic Minor Modes · Exotic (one Aug. 2nd)'],['dh','Double Harmonic Modes · Doubly Exotic (2 Aug. 2nds)'],['sym','Symmetrical Scales'],['jazz','Jazz, Blues & Pentatonic']];
+const RAGA_FAM_PARENTS=[['dia',[0,2,4,5,7,9,11]],['mm',[0,2,3,5,7,9,11]],['hm',[0,2,3,5,7,8,11]],['dh',[0,1,4,5,7,8,11]]];
+function scaleFamilyOf(pcs){
+ const set=(pcs||[]).map(p=>((p%12)+12)%12).sort((a,b)=>a-b);const n=set.length;if(!n)return 'jazz';
+ const key=set.join(',');
+ for(const [id,par] of RAGA_FAM_PARENTS){
+  if(par.length!==n)continue;
+  for(let r=0;r<par.length;r++){const rot=par.map(x=>((x-par[r])%12+12)%12).sort((a,b)=>a-b);if(rot.join(',')===key)return id;}
+ }
+ /* symmetrical: the scale equals itself under some transposition smaller than an octave */
+ for(let t=1;t<12;t++){const sh=set.map(x=>(x+t)%12).sort((a,b)=>a-b);if(sh.join(',')===key)return 'sym';}
+ return 'jazz';
+}
+const RAGA_HM_SET={harmonicMinor:1,phrygDom:1,locNat6:1,ionAug:1,dorS4:1,lydS2:1,supLoc7:1};   /* kept for older readers; ragaFamOf reads scaleFamilyOf now */
 const RAGA_MM_SET={melMin:1,dorb2:1,lydAug:1,locNat2:1,mixb6:1,lydDom:1,altDom:1};
 function ragaFamOrder(first){
- const carn=['mela','janya'],west=['dia','hm','mm','jazz'];
+ const carn=['mela','janya'],west=['dia','mm','hm','dh','sym','jazz'];   /* R76: his order — major · melodic minor · exotic · doubly exotic · symmetrical · the rest */
  const ids=first==='western'?west.concat(carn):carn.concat(west);
  return ids.map(id=>RAGA_FAM_DEFS.filter(f=>f[0]===id)[0]);
 }
 function ragaFamOf(s){
  if(s.group==='carnatic')return s.pcs.length===7&&/Mela /.test(s.name)?'mela':'janya';
- if(RAGA_HM_SET[s.id])return 'hm';
- if(RAGA_MM_SET[s.id])return 'mm';
- return s.group==='standard'?'dia':'jazz';
+ return scaleFamilyOf(s.pcs);   /* R76 (his [67] ①②): by rotation of the parent */
 }
 function ragaEntries(db,scales){
  const T=scales||SCALE_DB;
@@ -28828,7 +28844,8 @@ function ragaScaleMatch(){
 }
 /* ---- rendering ---- */
 function ragaFilterCol(title,items,cur,attr){
- return '<div style="margin-bottom:10px;"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:3px;">'+title+'</div>'
+ /* R76: a column of the left-to-right strip */
+ return '<div class="ragaColBox" style="flex:0 0 auto;min-width:96px;"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:3px;">'+title+'</div>'
   +'<div class="ragaFC" data-f="'+attr+'" style="display:flex;flex-direction:column;gap:1px;">'
   +'<span data-v="" style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11.5px;'+(cur===''?'background:var(--accent);color:#1b1204;':'color:var(--text);')+'">All</span>'
   +items.map(v=>{
@@ -28836,19 +28853,35 @@ function ragaFilterCol(title,items,cur,attr){
    return '<span data-v="'+val+'" style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11.5px;'+(cur===val||cur===+val?'background:var(--accent);color:#1b1204;':'color:var(--text);')+'">'+lab+'</span>';
   }).join('')+'</div></div>';
 }
+function ragaColOptions(all,upTo){
+ /* R76 (his [58], the Omnisphere browser): the rows that pass every column LEFT of this one — a column offers only what
+    those rows still contain, with a count; a choice already made stays visible even when the columns before it moved */
+ const st={fam:'',note:0,bright:'',exo:'',term:'',search:ragaState.search,degs:{}};
+ const order=['fam','note','bright','term'];
+ for(const k of order){if(k===upTo)break;st[k]=ragaState[k];}
+ return ragaBrowseRows(all,st);
+}
 function renderRagaFilters(){
  const F=document.getElementById('ragaFilters');if(!F)return;
- const fams=ragaFamOrder(ragaFamFirstSetting()).map(f=>[f[0],f[1]]);
+ const all=ragaAllEntries();
+ const counts=(rows,fn)=>{const c={};for(const e of rows){const k=fn(e);c[k]=(c[k]||0)+1;}return c;};
+ const famRows=ragaColOptions(all,'fam'),famC=counts(famRows,e=>e.fam);
+ const fams=ragaFamOrder(ragaFamFirstSetting()).map(f=>[f[0],f[1]]).filter(f=>famC[f[0]]||ragaState.fam===f[0]).map(f=>[f[0],f[1]+' <span style="opacity:.6;">'+(famC[f[0]]||0)+'</span>']);
+ const noteRows=ragaColOptions(all,'note'),noteC=counts(noteRows,e=>e.pcs.length);
+ const brRows=ragaColOptions(all,'bright'),brC=counts(brRows,e=>brightTier(scaleBrightness(e)));
+ const brs=RAGA_BRIGHT_TIERS.filter(t=>brC[t]||ragaState.bright===t).map(t=>[t,t+' <span style="opacity:.6;">'+(brC[t]||0)+'</span>']);
+ const tmRows=ragaColOptions(all,'term'),tmC={};for(const t of ragaTermsSetting()){tmC[t]=tmRows.filter(e=>ragaRecText(e).toLowerCase().indexOf(String(t).toLowerCase())>=0).length;}
+ const terms=ragaTermsSetting().filter(t=>tmC[t]||ragaState.term===t).map(t=>[t,t+' <span style="opacity:.6;">'+(tmC[t]||0)+'</span>']);
+ /* the columns run LEFT TO RIGHT across the top (his [58]); each is a vertical list, the whole strip scrolls sideways when narrow */
  F.innerHTML=
   ragaFilterCol('Family',fams,ragaState.fam,'fam')
-  +'<div style="margin-bottom:10px;"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:3px;">Notes</div>'
-  +'<div id="ragaNotes" style="display:flex;gap:3px;flex-wrap:wrap;">'
-  +[0,4,5,6,7,8].map(n=>'<span data-n="'+n+'" style="cursor:pointer;padding:2px 7px;border-radius:4px;font-size:11.5px;border:1px solid var(--line);'+(ragaState.note===n?'background:var(--accent);color:#1b1204;':'color:var(--text);')+'">'+(n||'All')+'</span>').join('')
+  +'<div style="flex:0 0 auto;"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:3px;">Notes</div>'
+  +'<div id="ragaNotes" style="display:flex;flex-direction:column;gap:1px;">'
+  +[0,4,5,6,7,8].filter(n=>!n||noteC[n]||ragaState.note===n).map(n=>'<span data-n="'+n+'" style="cursor:pointer;padding:2px 7px;border-radius:4px;font-size:11.5px;'+(ragaState.note===n?'background:var(--accent);color:#1b1204;':'color:var(--text);')+'">'+(n?n+' <span style="opacity:.6;">'+(noteC[n]||0)+'</span>':'All')+'</span>')
   +'</div></div>'
-  +ragaFilterCol('Brightness',RAGA_BRIGHT_TIERS,ragaState.bright,'bright')
-  +ragaFilterCol('Exotic (aug-2nd)',['Exotic','Doubly Exotic'],ragaState.exo,'exo')
-  +ragaFilterCol('Character',ragaTermsSetting(),ragaState.term,'term')
-  +'<div><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:3px;" title="Required degrees — checked = the scale must contain this degree (Q5: the 10 listed degrees)">Must contain</div>'
+  +ragaFilterCol('Brightness',brs,ragaState.bright,'bright')
+  +ragaFilterCol('Character',terms,ragaState.term,'term')
+  +'<div style="flex:0 0 auto;"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-bottom:3px;" title="Required degrees — checked = the scale must contain this degree (Q5: the 10 listed degrees)">Must contain</div>'
   +'<div id="ragaDegs" style="display:grid;grid-template-columns:1fr 1fr;gap:1px 6px;">'
   +RAGA_DEG_CHECKS.map(d=>'<label style="display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text);cursor:pointer;"><input type="checkbox" data-pc="'+d[1]+'" '+(ragaState.degs[d[1]]?'checked':'')+' style="accent-color:var(--accent);">'+d[0]+'</label>').join('')
   +'</div></div>';
@@ -29067,8 +29100,13 @@ function buildRagaPanel(){
   +'<span id="ragaMelChips" style="display:flex;gap:4px;flex-wrap:wrap;"></span>'
   +'<a id="ragaMelOpen" style="font-size:11px;color:var(--accent);cursor:pointer;margin-left:auto;">Open the full Melisma / Slide window →</a>'
   +'</div>'
+  /* R76 (his [58]): "all of the search fields should be visible from left to right… They should each work as a filter
+     for the following fields like in Omnisphere" — the filter columns run across the top; the results and the info
+     pane sit below */
+  +'<div style="order:0;">'
+  +'<div id="ragaFilters" style="display:flex;gap:14px;align-items:flex-start;overflow-x:auto;padding:4px 2px 8px;border-bottom:1px solid var(--line);margin-bottom:8px;"></div>'
+  +'</div>'
   +'<div style="order:1;display:flex;gap:14px;align-items:flex-start;">'
-  +'<div id="ragaFilters" style="flex:0 0 185px;"></div>'
   +'<div style="flex:1 1 380px;min-width:300px;">'
   +'<input id="ragaSearch" placeholder="SEARCH" style="width:100%;box-sizing:border-box;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12.5px;letter-spacing:.5px;margin-bottom:3px;">'
   /* R71 (his [60], verbatim): the degree search of [56] taught in place */
@@ -29089,7 +29127,7 @@ function buildRagaPanel(){
   if(!ragaState.sel){ragaState.sel='ionian';renderRagaResults();}
   renderRagaInfo();ragaScaleMatch();
  };
- document.getElementById('ragaSearch').oninput=e=>{ragaState.search=e.target.value;renderRagaResults();};
+ document.getElementById('ragaSearch').oninput=e=>{ragaState.search=e.target.value;renderRagaFilters();renderRagaResults();};   /* R76: the columns narrow with the search too */
  document.getElementById('ragaMelOpen').onclick=()=>uiDispatch({type:'toggle',id:'melPanel'});
  renderRagaFilters();renderRagaResults();renderRagaInfo();renderRagaMelStrip();
  document.addEventListener('keydown',ragaKeyAud);
@@ -33033,6 +33071,15 @@ function renderWan(){
  /* 82nd R2: "a SEARCH button to the left of them which causes a floating pop-up window to
     appear for the scales / ragas window" — ragaPanel IS that window, and wanPopupOpen is
     the float the 80th already built for the Pathways search buttons. */
+ /* R76 (his [71] ②, "When I type in Phrygian… and press enter nothing happens. It should select that scale"): ENTER in any of
+    the four search fields picks the first scale the drop-down beside it still lists (the list is already narrowed by the
+    words) and applies it as if chosen from the menu */
+ const _enterPick=(inp,sel)=>{if(!inp||!sel)return;inp.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;ev.preventDefault();const q=(inp.value||'').trim().toLowerCase();
+  const opts=[...sel.options].filter(o=>o.value);const o=(q&&opts.find(o2=>o2.textContent.toLowerCase().indexOf(q)>=0))||opts[0];
+  if(!o)return;sel.value=o.value;try{sel.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}});};
+ _enterPick(document.getElementById('wanSearch'),document.getElementById('wanMode'));
+ _enterPick(document.getElementById('wanSearch2'),document.getElementById('wanMode2'));
+ B.querySelectorAll('input[data-wansearchb]').forEach(inp=>{_enterPick(inp,B.querySelector('select[data-wanmodeb="'+inp.getAttribute('data-wansearchb')+'"]'));});
  B.querySelectorAll('[data-wansearch]').forEach(btn=>{btn.onclick=e=>{
   e.preventDefault();e.stopPropagation();
   const t=btn.getAttribute('data-wansearch');wanSearchFor=/^[12][ab]$/.test(t)?t:null;   /* R70 (his [55]): the pick lands in THIS slot */
