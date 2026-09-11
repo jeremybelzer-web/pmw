@@ -949,7 +949,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11a</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11b</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29717,6 +29717,11 @@ function wanWeberCellChord(scales,lof,slotB){
  }
  return {ghost:false,isA,r:pc,iv,minor,dim,aug,roman,deg,scale:sc,ref};
 }
+function wanChipFont(label){
+ /* R78 (his [78]): every chord button ONE size — a long label (vii°/vi, ♭III+/vi) shrinks its font, never the button */
+ const n=String(label||'').replace(/<[^>]*>/g,'').length;
+ return n>=8?'7.5px':n>=6?'8.5px':n>=5?'9.5px':'10.5px';
+}
 function wanCellLetter(nm,ch){
  /* Weber's letters: lowercase for a minor (or diminished) chord, ° and + as they come */
  return ((ch.minor||ch.dim)?nm.charAt(0).toLowerCase()+nm.slice(1):nm)+(ch.ghost?'':(ch.dim?'°':ch.aug?'+':''));
@@ -31759,7 +31764,7 @@ function wanSide2Draw(){
    try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65 — R70: against the slot's own scale */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
-   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'" title="'+(ch.blank?'blank — the same chord scale A already carries here, shown once':ch.fill?letter+' — the missing equivalent on this letter'+(ch.neg?' · ◐ the negative-harmony mirror of a chord on the board':''):letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name))+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 56px;width:56px;box-sizing:border-box;padding-left:2px;padding-right:2px;overflow:hidden;white-space:nowrap;text-align:center;font-size:'+wanChipFont(ch.blank?'':label)+';'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'" title="'+(ch.blank?'blank — the same chord scale A already carries here, shown once':ch.fill?letter+' — the missing equivalent on this letter'+(ch.neg?' · ◐ the negative-harmony mirror of a chord on the board':''):letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name))+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
   }
   h+='</div>';
  }
@@ -31782,7 +31787,7 @@ function wanSide2Draw(){
   if(e.button!==0||e.metaKey||e.shiftKey||e.altKey||e.ctrlKey)return;
   const pan={x:e.clientX,y:e.clientY,shift0:(w2.shift||0),moved:false};
   const mv=ev=>{const dx=ev.clientX-pan.x,dy=ev.clientY-pan.y;if(!pan.moved&&Math.hypot(dx,dy)<7)return;pan.moved=true;window._wanPanned=true;
-   const rowH=25,pairW=94;const stepY=Math.round(dy/rowH),stepX=Math.round(dx/pairW);const shift=pan.shift0+stepY*1-stepX*3;
+   const rowH=25,pairW=118;const stepY=Math.round(dy/rowH),stepX=Math.round(dx/pairW);const shift=pan.shift0+stepY*1-stepX*3;   /* R78: the chips are 56px now */
    if(shift!==(w2.shift||0)){w2.shift=shift;wanSide2Draw();}
    const rx=dx-stepX*pairW,ry=dy-stepY*rowH;const kid=host.firstElementChild;if(kid)kid.style.transform='translate('+rx+'px,'+ry+'px)';};
   const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);const kid=host.firstElementChild;if(kid)kid.style.transform='';setTimeout(()=>{window._wanPanned=false;},0);};
@@ -31891,7 +31896,7 @@ function wanWeberDraw(){
    let fnSty='';
    try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65: the scheme in use — R70: read against the slot's OWN scale */
    h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
-    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'"'
+    +' style="flex:0 0 56px;width:56px;box-sizing:border-box;padding-left:2px;padding-right:2px;overflow:hidden;white-space:nowrap;text-align:center;font-size:'+wanChipFont(ch.blank?'':label)+';'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'"'
     +' title="'+(ch.blank?'blank — the same chord scale A already carries on this letter, shown once (his [66])':ch.fill?letter+' — the missing equivalent on this letter, in neither scale'+(ch.neg?' · ◐ the NEGATIVE-HARMONY mirror of a chord on the board':'')+' (his [76]) — click hears it':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.')+'">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
   }
   h+='</div>';
@@ -32564,7 +32569,7 @@ function wanWeberDraw(){
    const dx=ev.clientX-pan.x,dy=ev.clientY-pan.y;
    if(!pan.moved&&Math.hypot(dx,dy)<7)return;
    pan.moved=true;window._wanPanned=true;
-   const rowH=25,pairW=94;   /* a row down = −1 fifth · a column pair right = +3 fifths */
+   const rowH=25,pairW=118;   /* a row down = −1 fifth · a column pair right = +3 fifths · R78: 56px chips, 3px gaps */
    const stepY=Math.round(dy/rowH),stepX=Math.round(dx/pairW);
    const shift=pan.shift0+stepY*1-stepX*3;
    if(shift!==st.webShift){st.webShift=shift;wanWeberDraw();}
