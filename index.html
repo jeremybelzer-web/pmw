@@ -949,7 +949,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11b</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11c</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29314,8 +29314,24 @@ const WAN_SCHEMES=[
   minor:{'0m':'ton','3M':'ton','8M':'ton','7M':'dom','7m':'dom','10M':'dom','1M':'dom','5m':'sub','2m':'sub','5M':'sub','3m':'med','8m':'med','4M':'med','9M':'med','4m':'med~','9m':'med~'}},
  {id:'pair',name:'Five colours · the tonic pair',cats:['ton','dom','sub','med','pole'],
   map:wanSchemeMap(['ton','dom!','dom!','ton','med','sub','pole','dom','ton','med','sub!','dom!'],
+                   ['ton','dom','sub','med','ton','sub','pole','dom','med','ton','sub','dom'])},
+ /* R79 (his [80]): PER SCALE, IN SHADES — every chord category of scale A a shade of scale A's colour, of scale B a shade of
+    scale B's, so the two systems read apart at a glance — the categories are the tonic pair's, the hue the scale's (no semicolon in this comment: the unit harness slices the table at the first one) */
+ {id:'shades',name:'Per scale · shades of its colour',cats:['ton','dom','sub','med','pole'],shades:true,
+  map:wanSchemeMap(['ton','dom!','dom!','ton','med','sub','pole','dom','ton','med','sub!','dom!'],
                    ['ton','dom','sub','med','ton','sub','pole','dom','med','ton','sub','dom'])}
 ];
+const WAN_SCALE_HUES={'1':'#a6432f','2':'#3f5aa6','1b':'#3f7a4a','2b':'#7a4a8a'};   /* R79: the scales' own hues (the row colours when the user painted them) */
+function wanShadeCol(hex,k,n){
+ /* R79 (his [80]): the k-th of n shades of a colour — mixed towards white in even steps (0 = the colour itself). Pure. */
+ const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex||'').trim());if(!m)return '#6b4f28';
+ const t=Math.max(0,Math.min(.72,(n>1?k/(n-1):0)*.72));
+ const mix=h=>Math.round(parseInt(h,16)*(1-t)+255*t).toString(16).padStart(2,'0');
+ return '#'+mix(m[1])+mix(m[2])+mix(m[3]);
+}
+function wanScaleHue(slotKey){
+ const c=(typeof wanScaleCols==='object'&&wanScaleCols&&wanScaleCols[slotKey])||WAN_SCALE_HUES[slotKey]||'#6b4f28';return c;
+}
 var wanUserSchemes=(function(){try{const a=JSON.parse(localStorage.getItem('cp_wanSchemes')||'[]');return Array.isArray(a)?a.filter(x=>x&&typeof x.id==='string'&&x.map&&Array.isArray(x.cats)&&x.cats.length):[];}catch(e){return [];}})();
 function persistWanSchemes(){try{localStorage.setItem('cp_wanSchemes',JSON.stringify(wanUserSchemes));}catch(e){}}
 function wanSchemeList(){return WAN_SCHEMES.concat(wanUserSchemes);}
@@ -29367,11 +29383,18 @@ function wanCatStyle(p){
  if(p.cat2){const c2=wanCatCol(p.cat2);return 'background:linear-gradient(90deg,'+c1+a+' 50%,'+c2+a+' 50%);outline:1px solid '+c1+';';}
  return 'background:'+c1+a+';outline:'+(p.intense?'2px':'1px')+' solid '+c1+';';
 }
-function wanCellFnSty(relPc,chordMinor,keyMinor){
+function wanCellFnSty(relPc,chordMinor,keyMinor,slotKey){
  /* BOTH Weber boards paint through here (R65): a legacy scheme keeps the six-family key paint (wanKeyFn + Expand, ♭VI
     half-and-half); a table scheme reads its own triad entry against the board's tonic and mode */
  if(!wanState.fnOn)return '';
  const sc=wanSchemeById(wanState.fnScheme);
+ if(sc.shades){
+  /* R79 (his [80]): the category from the tonic-pair table, the colour a shade of THIS SCALE's hue */
+  const p=wanCatParse(wanTriadCat(sc,relPc,chordMinor?'m':'M',keyMinor));if(!p)return '';
+  const cats=wanSchemeCats(sc).map(c=>c.id);const k=Math.max(0,cats.indexOf(p.cat));
+  const col=wanShadeCol(wanScaleHue(slotKey||'1'),k,cats.length);
+  return 'background:'+col+(p.intense?'cc':'88')+';outline:'+(p.intense?'2px':'1px')+' solid '+wanScaleHue(slotKey||'1')+';';
+ }
  if(sc.legacy){
   const kf=wanKeyFn(relPc,chordMinor,!!wanState.fnExpand);
   if(kf==='subrel'){const a2=wanFnCol('sub'),b2=wanFnCol('rel');return 'background:linear-gradient(90deg,'+a2+'66 50%,'+b2+'66 50%);outline:1px solid '+a2+';';}
@@ -31761,7 +31784,7 @@ function wanSide2Draw(){
    const isKey=ch.isA&&!ch.ghost&&ch.deg===0;
    const isKeyB=!ch.isA&&!ch.ghost&&ch.deg===0;
    let fnSty='';
-   try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65 — R70: against the slot's own scale */
+   try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor,ch.isA?'2':'2b');}catch(e){}   /* R65 — R70: against the slot's own scale · R79: the slot's hue */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
    h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 56px;width:56px;box-sizing:border-box;padding-left:2px;padding-right:2px;overflow:hidden;white-space:nowrap;text-align:center;font-size:'+wanChipFont(ch.blank?'':label)+';'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'" title="'+(ch.blank?'blank — the same chord scale A already carries here, shown once':ch.fill?letter+' — the missing equivalent on this letter'+(ch.neg?' · ◐ the negative-harmony mirror of a chord on the board':''):letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name))+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
@@ -31894,7 +31917,7 @@ function wanWeberDraw(){
    /* Sept 3: paint the KEY chips with the hyper-function scheme (Expand reveals chromatics;
       ♭VI wears half Subdominant + half Relative). Paint rides wanState.fnOn. */
    let fnSty='';
-   try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65: the scheme in use — R70: read against the slot's OWN scale */
+   try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor,ch.isA?'1':'1b');}catch(e){}   /* R65: the scheme in use — R70: read against the slot's OWN scale · R79: the slot's hue */
    h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
     +' style="flex:0 0 56px;width:56px;box-sizing:border-box;padding-left:2px;padding-right:2px;overflow:hidden;white-space:nowrap;text-align:center;font-size:'+wanChipFont(ch.blank?'':label)+';'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'"'
     +' title="'+(ch.blank?'blank — the same chord scale A already carries on this letter, shown once (his [66])':ch.fill?letter+' — the missing equivalent on this letter, in neither scale'+(ch.neg?' · ◐ the NEGATIVE-HARMONY mirror of a chord on the board':'')+' (his [76]) — click hears it':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.')+'">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
@@ -32600,7 +32623,7 @@ function wanWeberDraw(){
     if(!window._wanMetaBound){window._wanMetaBound=true;
      document.addEventListener('keyup',e2=>{if(e2.key==='Meta')window._wanMetaSession=false;});}
     if(!window._wanMetaSession){st.webPaths=[];window._wanMetaSession=true;}
-    const key={lof:+el.getAttribute('data-lof'),minor:mn()};
+    const key={lof:+el.getAttribute('data-lof'),minor:((el.getAttribute('data-iv')||'').split(',')[1]==='3')};   /* R79 (his [79]): the cell's OWN quality — iii in the major column is C♯ MINOR */
     const i=st.webPaths.findIndex(p=>p.lof===key.lof&&!!p.minor===key.minor);
     if(i>=0)st.webPaths.splice(i,1);else st.webPaths.push(key);
     wanWeberDraw();return;
@@ -32624,7 +32647,7 @@ function wanWeberDraw(){
    wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));   /* a plain click just HEARS the key — R70: the cell's own chord */
    wanLightChip(el,1.2);   /* R77 (his [74] ①): the sounding chord lights */
    /* R77 (his [74] ④): a CHECKED road redraws itself to whichever chord is pressed */
-   if(!Array.isArray(st.webPathRecSeq)&&WAN_PATH_TYPES.some(t2=>st.webRoadsOff.indexOf(t2.id)<0)){const key={lof:+el.getAttribute('data-lof'),minor:mn()};   /* not while a REC take rolls — the take IS the road then */if(!(st.webPaths.length===1&&st.webPaths[0].lof===key.lof&&!!st.webPaths[0].minor===key.minor)){st.webPaths=[key];const _lit=wanState.lit;wanWeberDraw();try{const el2=document.querySelector('#wanWeber .wanWebKey[data-r="'+_lit.r+'"][data-c="'+_lit.c+'"]');if(el2)el2.classList.add('wanLit');}catch(e2){}}}
+   if(!Array.isArray(st.webPathRecSeq)&&WAN_PATH_TYPES.some(t2=>st.webRoadsOff.indexOf(t2.id)<0)){const key={lof:+el.getAttribute('data-lof'),minor:((el.getAttribute('data-iv')||'').split(',')[1]==='3')};   /* not while a REC take rolls — the take IS the road then · R79 (his [79]): the destination is the pressed CHORD's quality */if(!(st.webPaths.length===1&&st.webPaths[0].lof===key.lof&&!!st.webPaths[0].minor===key.minor)){st.webPaths=[key];const _lit=wanState.lit;wanWeberDraw();try{const el2=document.querySelector('#wanWeber .wanWebKey[data-r="'+_lit.r+'"][data-c="'+_lit.c+'"]');if(el2)el2.classList.add('wanLit');}catch(e2){}}}
   };
   el.ondblclick=e=>{   /* double-click: the new root key — the STABLE reroot (his 68th) */
    e.preventDefault();
@@ -32818,7 +32841,7 @@ function renderWan(){
       each other at a glance. The tint is a left bar plus a wash, never the text colour: the
       roman numeral and the chord name have to stay readable at every colour he might pick. */
    const fn=wanMatrixCat(ri,d,c);   /* R65: the scheme in use — by degree for his two, by triad for the sortings and the user's */
-   const fc=wanFnCol(fn);
+   const fc=(_sch.shades?wanShadeCol(wanScaleHue(String(ri+1)),Math.max(0,wanSchemeCats(_sch).map(x=>x.id).indexOf(fn)),wanSchemeCats(_sch).length):wanFnCol(fn));   /* R79 (his [80]): a shade of the row's own colour */
    /* 84th R2 (his FORTY-FOURTH message): the SCALE's own colour rides the cell BORDER
       and the row title — the function colour keeps the left bar and the wash, so the
       two colourings read together ("that will visually help the user improvise
