@@ -942,7 +942,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10i</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10j</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -10340,7 +10340,11 @@ async function makeAudio(){
    if(vel<=0)return;                            /* fader at −Inf */
    const arr=Array.isArray(midis)?midis:[midis];
    midiMirror(track,arr,dur,time,vel);          /* Module 5: grid → DAW VSTs via Web MIDI */
-   if(hubRt){let hit=false;for(const m of arr){try{if(hubRt.trigger(track,m,time,dur,vel))hit=true;}catch(e){}}if(hit)return;}   /* 6.0: a hub fault must never SILENCE the note — the synths answer honestly (the throw that ate every pitched sample hid here) */
+   /* R74 (his [65] ①, the piano that turns murky after the first press — traced at last): the SAMPLE HUB answered
+      here BEFORE the stock flag was read, and applyCuratedDefaults fills the comping slot with the curated
+      "FM E-Piano · VCSL TX81Z" sample right after the engine boots — so the first press (the download still in
+      flight) reached the Salamander piano and every later press the curated FM sample. An AUDITION skips the hub. */
+   if(hubRt&&!(opts&&opts.stock)){let hit=false;for(const m of arr){try{if(hubRt.trigger(track,m,time,dur,vel))hit=true;}catch(e){}}if(hit)return;}   /* 6.0: a hub fault must never SILENCE the note — the synths answer honestly (the throw that ate every pitched sample hid here) */
    if(!(opts&&opts.stock)&&patchTrigger(track,arr,dur,time,vel))return;   /* assigned synth patch beats the stock instruments — except an AUDITION (R69, his [53]: the stock piano, always) */
    if(track==='bass'){bass.triggerAttackRelease(M(arr[0]),dur,time,vel);return;}
    if(track==='pad'){pad.triggerAttackRelease(arr.map(M),dur,time,vel);return;}
@@ -28902,7 +28906,11 @@ function renderRagaResults(){
  R.innerHTML=h||'<div style="color:var(--dim);font-size:12px;padding:8px;">Nothing matches this filter set — widen a column (every column is an AND filter).</div>';
  const C=document.getElementById('ragaCount');
  if(C)C.textContent=rows.length+' of '+all.length+' scales & ragas shown · every column composes (AND) · the 🔎 searches names, swaras and moods on top';
- for(const row of R.querySelectorAll('.ragaRow'))
+ for(const row of R.querySelectorAll('.ragaRow')){
+  /* R74 (his [65] ⑥): a DOUBLE-CLICK selects the scale for the Wanderer slot whose SEARCH opened the window (else the
+     section, as the Use button would) AND closes the pop-up */
+  row.ondblclick=e=>{e.preventDefault();e.stopPropagation();const sid=row.dataset.sid;try{ragaApply(sid);}catch(err){}
+   try{const P=document.getElementById('ragaPanel');const x=P&&P.querySelector('.wanPopStrip [data-w="popclose"]');if(x)x.click();else if(typeof uiWinShown==='function'&&uiWinShown('ragaPanel'))uiDispatch({type:'toggle',id:'ragaPanel'});}catch(err){}};
   row.onclick=e=>{
    const sid=row.dataset.sid;
    const act=e.target&&e.target.dataset?e.target.dataset.a:undefined;
@@ -28920,6 +28928,7 @@ function renderRagaResults(){
    }
    else if(was!==sid&&ragaState.auto)ragaAudSeqPlay(entry,false);
   };
+ }
 }
 function renderRagaInfo(){
  const I=document.getElementById('ragaInfo');if(!I)return;
@@ -29578,12 +29587,20 @@ function wanBoardScales(side){
  if(pick&&SCALE_DB[pick.mode])b={tonic:((+pick.tonic||0)%12+12)%12,sc:SCALE_DB[pick.mode]};
  else{const d=wanParallelDefault(a.tonic,a.sc.pcs);b={tonic:d.tonic,sc:SCALE_DB[d.mode]};}
  const mk=x=>({tonic:x.tonic,pcs:x.sc.pcs,name:PCN[x.tonic]+' '+x.sc.name,id:x.sc.id||'',minor:!!(x.sc.pcs&&x.sc.pcs[2]===3)});
- return {a:mk(a),b:mk(b)};
+ /* R74 (his [65] ③, "I don't understand why there are diminished chords in that one at all"): a matrix whose scale B
+    he has NOT chosen is WEBER'S CLASSIC MAP — every letter a major and a minor key, no ghosts, no ° — the chord law
+    (every quality, the ghosts) applies only once a scale B is picked for that matrix */
+ return {a:mk(a),b:mk(b),custom:!!(pick&&SCALE_DB[pick.mode])};
 }
 function wanWeberCellChord(scales,lof,slotB){
  /* Weber's columns keep their QUALITY: a minor home scale (A) sits in the minor column and its partner (B) in the major
     column; a major home in the major column, B in the minor — so a minor song reads exactly as Weber drew it (c C) */
  const pc=wanLofPc(lof);const aInMinor=!!scales.a.minor;const isA=slotB?aInMinor:!aInMinor;const sc=isA?scales.a:scales.b;
+ if(!scales.custom){
+  /* R74 (his [65] ③): the classic map — a plain major / minor KEY on every letter; home = scale A's tonic in its column */
+  const iv=slotB?[0,3,7]:[0,4,7];const home=pc===scales.a.tonic;
+  return {ghost:false,isA,r:pc,iv,minor:!!slotB,dim:false,aug:false,roman:wanRomanOf(pc,!!slotB,scales.a.tonic),deg:(home&&isA)?0:(pc===scales.b.tonic&&!isA?0:-1),scale:sc};
+ }
  const deg=sc.pcs.indexOf((((pc-sc.tonic)%12)+12)%12);
  if(deg<0)return {ghost:true,isA,r:pc,iv:slotB?[0,3,7]:[0,4,7],minor:!!slotB,dim:false,aug:false,roman:null,deg:-1,scale:sc};
  const tri=scaleDegreeTriad(sc.pcs,deg);
@@ -29620,17 +29637,21 @@ function wanSide2SetHome(pc,minor){
  try{const q=!!(wanScale2().pcs[2]===3);if(q!==!!minor)st.mode2=minor?'aeolian':'ionian';}catch(e){}
  st.cur={row:0,deg:0};
 }
-function wanScaleBRow(side){
- /* R70 (his [54]/[55]): the matrix's SCALE B — chosen from the Scales / Ragas window (⌕), its key beside it; unset = Weber's pair.
-    R73 (his [62] ①, "2 scale options total instead of 2 scale options per Matrix"): the B row is a FULL chooser now, the
-    twin of the A row above it — its own label, the SEARCH button, the key, the scale's name in a box — so each matrix
-    shows its two scales as two rows, and the four read as four. */
+function wanScaleBRow(side,modeOptsFn){
+ /* R70 (his [54]/[55]): the matrix's SCALE B — chosen from the Scales / Ragas window, its key beside it; unset = Weber's pair.
+    R74 (his [65] ④, "Both scales for each matrix should have the same orientation — one above the other anchored to the
+    left… have a drop down menu for all of them"): the B block is the TWIN of the A block — SEARCH + a search field on
+    the first line, the key + the MODE drop-down on the second — the same shape, the same left edge. */
  const sc=wanBoardScales(side);const pick=side===2?wanState.web2b:wanState.web1b;
- return '<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:3px;">Weber Matrix '+side+' — scale B'+(pick?'':' <span style="text-transform:none;letter-spacing:0;">(Weber\'s pair — the parallel)</span>')+'</label>'
-  +'<div class="wanBRow" data-side="'+side+'" style="display:flex;gap:6px;align-items:center;font-size:12px;" title="Weber matrix '+side+' is TWO scales: scale A above (its home) and this scale B. Weber\'s own pair is the default — the parallel scale of the opposite quality. SEARCH opens the Scales / Ragas window to choose B; the key beside it.">'
-  +'<button class="wanSrchBtn" data-wansearch="'+side+'b" title="Choose scale B from the Scales / Ragas window (search names, or degrees — b2, #4…)">⌕ SEARCH</button>'
-  +'<select data-wanrootb="'+side+'" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===sc.b.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
-  +'<span data-wanbname="'+side+'" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;" title="Click = choose scale B from the Scales / Ragas window">'+sc.b.name.replace(/^[A-G][#b]? /,'')+'</span>'
+ const q=side===2?(wanState.searchB2||''):(wanState.searchB1||'');
+ const cur=pick&&SCALE_DB[pick.mode]?pick.mode:'';
+ const opts=modeOptsFn?modeOptsFn(cur,q,'— Weber\'s pair: the parallel '+(sc.a.minor?'major':'natural minor')+' —'):'';
+ return '<label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);margin-top:4px;">Weber Matrix '+side+' — scale B'+(pick?'':' <span style="text-transform:none;letter-spacing:0;">(Weber\'s pair)</span>')+'</label>'
+  +'<div class="wanBRow" data-side="'+side+'" style="display:flex;gap:6px;align-items:center;" title="Weber matrix '+side+' is TWO scales: scale A above (its home) and this scale B. Weber\'s own pair is the default. SEARCH opens the Scales / Ragas window to choose B (double-click a scale there); or pick it from the menu.">'
+  +'<button class="wanSrchBtn" data-wansearch="'+side+'b" title="Open the Scale/Raga Browser as a floating pop-up — double-click a scale there to make it this matrix\'s scale B">⌕ SEARCH</button>'
+  +'<input data-wansearchb="'+side+'" placeholder="search scales &amp; ragas…" value="'+q.replace(/"/g,'&quot;')+'" style="flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;"></div>'
+  +'<div style="display:flex;gap:6px;"><select data-wanrootb="'+side+'" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===sc.b.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
+  +'<select data-wanmodeb="'+side+'" style="flex:1;min-width:0;">'+opts+'</select>'
   +(pick?'<span class="wanAllTog" data-wanbreset="'+side+'" title="Back to Weber\'s pair">⟲</span>':'')+'</div>';
 }
 function wanLinkSet(on){
@@ -30216,7 +30237,10 @@ function wanPopupOpen(panelId){
  if(!p)return;
  if(panelId==='progPanel'){if(p.style.display==='none'&&typeof progWinToggle==='function')progWinToggle();}
  else{try{if(typeof uiWinShown==='function'&&!uiWinShown(panelId))uiDispatch({type:'toggle',id:panelId});}catch(e){}}
- if(p.classList.contains('wanPopup'))return;
+ /* R74 (his [65] ⑤, "it should be a floating window. Once it took over the spot on the grid"): the toggle can rebuild or
+    re-seat the panel under a skin — read it again, and never leave it where the toggle put it */
+ p=document.getElementById(panelId)||p;
+ if(p.classList.contains('wanPopup')){try{p.style.display='';}catch(e){}return;}
  p.dataset.popPrev=p.getAttribute('style')||'';
  /* R61 (his [39] ④): the pop-up lifts OUT of its column to the body — inside a lane cell or a pane its fixed box was clipped
     and scrolled away with the cell; it goes home on ⤢ */
@@ -32668,7 +32692,7 @@ function renderWan(){
   +'<div style="display:flex;gap:6px;"><select id="wanRoot" title="The home key — choosing one stops following the playhead (⟲ re-follows)" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanState.tonic?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode" style="flex:1;min-width:0;" '+(wanState.follow?'disabled':'')+'>'+modeOpts+'</select>'+BRUSH(1)+'</div>'
   +'<label style="display:flex;gap:5px;align-items:center;font-size:11px;color:#3a2c18;cursor:pointer;" title="The Main Scale follows the playhead — including an out-of-key pivot chord\'s implied key. Untick to pick any mode or raga by hand."><input type="checkbox" id="wanFollow"'+(wanState.follow?' checked':'')+' style="accent-color:var(--accent);">⟲ Follow the playhead</label>'
-  +wanScaleBRow(1)   /* R70 */
+  +wanScaleBRow(1,wanModeOpts)   /* R70 · R74: the twin block */
   /* ⛔⭐ 82nd R3 (his FORTY-FIFTH message, first sentence): "We don't need the relationship
      drop down menu in the middle.  Please get rid of it." — GONE, one round after it shipped.
      ⚠ THE LESSON OUTLASTS THE CONTROL: R2 built that dropdown on a LABELLED INFERENCE — his
@@ -32700,7 +32724,7 @@ function renderWan(){
      there (wanRelFromRoot), so the two controls can never disagree. */
   +'<div style="display:flex;gap:6px;"><select id="wanRoot2" style="width:64px;">'+PCN.map((p,i)=>'<option value="'+i+'"'+(i===wanRel2Root()?' selected':'')+'>'+p+'</option>').join('')+'</select>'
   +'<select id="wanMode2" style="flex:1;min-width:0;">'+mode2Opts+'</select>'+BRUSH(2)+'</div>'
-  +wanScaleBRow(2)   /* R70 */
+  +wanScaleBRow(2,wanModeOpts)   /* R70 · R74: the twin block */
   /* 84th R5 (his 55th's correction, his own example the acceptance test): scale 2's TWO
      READINGS as two clickable names — "A Melodic Minor · as C: Lydian Augmented". Click
      the one you mean; the active one drives the row's name, degrees and chord set. When
@@ -32994,7 +33018,12 @@ function renderWan(){
   const t=btn.getAttribute('data-wansearch');wanSearchFor=/^[12][ab]$/.test(t)?t:null;   /* R70 (his [55]): the pick lands in THIS slot */
   try{wanPopupOpen('ragaPanel');}catch(_){}};});
  /* R70: scale B's key, and ⟲ back to Weber's pair */
- B.querySelectorAll('[data-wanbname]').forEach(el=>{el.onclick=e=>{e.stopPropagation();wanSearchFor=el.getAttribute('data-wanbname')+'b';try{wanPopupOpen('ragaPanel');}catch(_){}};});   /* R73: the name box opens the chooser too */
+ /* R74 (his [65] ④): scale B's MODE drop-down and search field — the A block's twins */
+ B.querySelectorAll('select[data-wanmodeb]').forEach(sel=>{sel.onchange=()=>{const side=+sel.getAttribute('data-wanmodeb');const k=side===2?'web2b':'web1b';
+  if(!sel.value){wanState[k]=null;}else{const sc=wanBoardScales(side);wanState[k]={tonic:sc.b.tonic,mode:sel.value};}
+  renderWan();};});
+ B.querySelectorAll('input[data-wansearchb]').forEach(inp=>{inp.oninput=()=>{const side=+inp.getAttribute('data-wansearchb');wanState[side===2?'searchB2':'searchB1']=inp.value;
+  const sel=B.querySelector('select[data-wanmodeb="'+side+'"]');if(sel){const sc=wanBoardScales(side);const pick=side===2?wanState.web2b:wanState.web1b;sel.innerHTML=wanModeOpts(pick&&SCALE_DB[pick.mode]?pick.mode:'',inp.value,'— Weber\'s pair: the parallel '+(sc.a.minor?'major':'natural minor')+' —');}};});
  B.querySelectorAll('select[data-wanrootb]').forEach(sel=>{sel.onchange=()=>{const side=+sel.getAttribute('data-wanrootb');const sc=wanBoardScales(side);const k=side===2?'web2b':'web1b';
   wanState[k]={tonic:+sel.value,mode:(wanState[k]&&SCALE_DB[wanState[k].mode])?wanState[k].mode:(sc.b.id||(sc.b.minor?'aeolian':'ionian'))};renderWan();};});
  B.querySelectorAll('[data-wanbreset]').forEach(el=>{el.onclick=e=>{e.stopPropagation();wanState[+el.getAttribute('data-wanbreset')===2?'web2b':'web1b']=null;renderWan();};});
