@@ -248,9 +248,14 @@
   #wanWeber .wanWebKey.on,#wanWeber .wan2Key.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;font-weight:800;}
   /* R70 (his [54]): scale B's tonic wears a ring; a letter in neither scale is a faint, dashed ghost */
   #wanWeber .wanWebKey.onB,#wanWeber .wan2Key.onB{outline:2px solid #7a5a30;outline-offset:-1px;font-weight:800;}
+  /* R77 (his [74] ①): the SOUNDING chord lights while it plays; the arrow keys walk the map from it */
+  #wanWeber .wanWebKey.wanLit,#wanWeber .wan2Key.wanLit{box-shadow:0 0 0 2px #e8a33d,0 0 12px 3px rgba(232,163,61,.75)!important;background:#fff0c8!important;color:#1b1204!important;z-index:2;position:relative;}
   #wanWeber .wanWebKey.wanGhost,#wanWeber .wan2Key.wanGhost{opacity:.32!important;border-style:dashed!important;}
   /* R75 (his [66] ②): a blank cell — the chord scale A already shows on this letter */
   #wanWeber .wanWebKey.wanBlank,#wanWeber .wan2Key.wanBlank{opacity:.22!important;background:transparent!important;border-style:dotted!important;cursor:default!important;}
+  /* R77 (his [76]): a FILL — the missing equivalent on the letter, transparent; ◐ marks a negative-harmony mirror */
+  #wanWeber .wanWebKey.wanFill,#wanWeber .wan2Key.wanFill{opacity:.5!important;background:rgba(255,255,255,.25)!important;border-style:dashed!important;}
+  #wanWeber .wanWebKey.wanNeg,#wanWeber .wan2Key.wanNeg{opacity:.62!important;border-color:#3f5aa6!important;}
   #wanPanel #wanBody .cpchip{background:#f2e7cb;border:1px solid #a8895f;color:#3a2c18;}
   #wanPanel #wanBody .cpchip.on{background:#7a5a30;color:#f6ecd4;border-color:#5a4426;}
   #wanPanel #wanStatus{color:#6b4f28;}
@@ -944,7 +949,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-10l</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -29632,30 +29637,85 @@ function wanBoardScales(side){
     (every quality, the ghosts) applies only once a scale B is picked for that matrix */
  return {a:mk(a),b:mk(b),custom:!!(pick&&SCALE_DB[pick.mode])};
 }
+function wanRomanRef(scales){
+ /* R77 (his [74] ⑤ + [75]): the reference the numerals read against — scale A's tonic, or, with Psych-Out Modulation
+    ON, the home frozen before the double-click (wanState.romanHome) */
+ const st=(typeof wanState==='object'&&wanState)||{};
+ const psych=!!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.wanPsychOut);
+ if(psych&&st.romanHome&&isFinite(st.romanHome.tonic))return {tonic:((st.romanHome.tonic%12)+12)%12,minor:!!st.romanHome.minor};
+ return {tonic:scales.a.tonic,minor:!!scales.a.minor};
+}
+function wanOwnRoman(sc,pc,deg,iv,minor,dim,aug){
+ /* R77 (his [74] ③): a scale's OWN numeral for its degree — "Convert Natural Minor to its Major Spelling" ON (the default)
+    spells every scale against its parallel major (♭III · ♭VI · ♭VII, ♭III+ in the melodic minor); OFF keeps the scale's
+    own degree numbers (III · VI · VII) */
+ const majSp=!(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.wanMajorSpelling===false);
+ if(majSp)return wanRomanOf(pc,minor||dim,sc.tonic)+(dim?'°':aug?'+':'');
+ return degRomanW(deg,iv,sc.pcs.length);
+}
+function negHarmonyOf(r,iv,tonic){
+ /* R77 (his [76] ③): the negative-harmony mirror of a triad in the key of `tonic` — every pitch reflected in the axis
+    between the tonic and its dominant (p → 2·tonic + 7 − p); a major triad comes back minor and the other way (C major
+    in C → C minor; D minor → B♭ major). Returns {r,iv} for a major or minor result, else null. Pure. */
+ const t=((tonic%12)+12)%12;const pcs=(iv||[]).map(x=>(((r+x)%12)+12)%12);
+ const m=pcs.map(p=>(((2*t+7-p)%12)+12)%12).sort((a,b)=>a-b);
+ for(const root of m){const rel=m.map(p=>(((p-root)%12)+12)%12).sort((a,b)=>a-b).join(',');if(rel==='0,4,7')return {r:root,iv:[0,4,7]};if(rel==='0,3,7')return {r:root,iv:[0,3,7]};}
+ return null;
+}
+function wanBoardTriads(scales){
+ /* every chord the two scales put on the board (root pc + quality), for the mirror test */
+ const out=[];for(const sc of [scales.a,scales.b]){for(let d=0;d<sc.pcs.length;d++){const tri=scaleDegreeTriad(sc.pcs,d);if(!tri)continue;out.push({r:(((sc.tonic+tri.off)%12)+12)%12,iv:tri.iv});}}
+ return out;
+}
 function wanWeberCellChord(scales,lof,slotB){
  /* Weber's columns keep their QUALITY: a minor home scale (A) sits in the minor column and its partner (B) in the major
     column; a major home in the major column, B in the minor — so a minor song reads exactly as Weber drew it (c C) */
  const pc=wanLofPc(lof);const aInMinor=!!scales.a.minor;const isA=slotB?aInMinor:!aInMinor;const sc=isA?scales.a:scales.b;
  if(!scales.custom){
   /* R74 (his [65] ③): the classic map — a plain major / minor KEY on every letter; home = scale A's tonic in its column */
-  const iv=slotB?[0,3,7]:[0,4,7];const home=pc===scales.a.tonic;
-  return {ghost:false,isA,r:pc,iv,minor:!!slotB,dim:false,aug:false,roman:wanRomanOf(pc,!!slotB,scales.a.tonic),deg:(home&&isA)?0:(pc===scales.b.tonic&&!isA?0:-1),scale:sc};
+  const iv=slotB?[0,3,7]:[0,4,7];const home=pc===scales.a.tonic;const ref=wanRomanRef(scales);
+  return {ghost:false,isA,r:pc,iv,minor:!!slotB,dim:false,aug:false,roman:wanRomanOf(pc,!!slotB,ref.tonic),deg:(home&&isA)?0:(pc===scales.b.tonic&&!isA?0:-1),scale:sc};
  }
  const deg=sc.pcs.indexOf((((pc-sc.tonic)%12)+12)%12);
- if(deg<0)return {ghost:true,isA,r:pc,iv:slotB?[0,3,7]:[0,4,7],minor:!!slotB,dim:false,aug:false,roman:null,deg:-1,scale:sc};
+ if(deg<0)return {ghost:true,isA,r:pc,iv:slotB?[0,3,7]:[0,4,7],minor:!!slotB,dim:false,aug:false,roman:null,deg:-1,scale:sc,ref:wanRomanRef(scales)};
  const tri=scaleDegreeTriad(sc.pcs,deg);
  const iv=tri?tri.iv:[0,4,7];
  const minor=iv[1]===3,dim=minor&&iv.indexOf(6)>=0&&iv.indexOf(7)<0,aug=iv[1]===4&&iv.indexOf(8)>=0&&iv.indexOf(7)<0;
+ /* R77 (his [77]): the vocabulary options — a diminished chord with "diminished" off, or an augmented one with
+    "augmented" off, gives its cell up to a FILL (the missing equivalent, negative harmony first) */
+ const _S=(typeof SETTINGS==='object'&&SETTINGS)||{};
+ const _fillFor=(why)=>{const present=wanBoardTriads(scales);const has=(r2,iv2)=>present.some(t2=>t2.r===r2&&t2.iv.join(',')===iv2.join(','));const ref=wanRomanRef(scales);
+  let cands=[[0,4,7],[0,3,7]].filter(iv2=>!has(pc,iv2));
+  if(_S.wanFillNeg!==false){const negs=cands.filter(iv2=>present.some(t2=>{const m=negHarmonyOf(t2.r,t2.iv,ref.tonic);return m&&m.r===pc&&m.iv.join(',')===iv2.join(',');}));if(negs.length)cands=negs.concat(cands.filter(x=>negs.indexOf(x)<0));}
+  if(!cands.length)return {ghost:false,blank:true,isA,r:pc,iv,minor,dim,aug,roman:'',deg,scale:sc};
+  const fiv=cands[0];const fminor=fiv[1]===3;
+  const neg=present.some(t2=>{const m=negHarmonyOf(t2.r,t2.iv,ref.tonic);return m&&m.r===pc&&m.iv.join(',')===fiv.join(',');});
+  return {ghost:false,blank:false,fill:true,neg,why,isA,r:pc,iv:fiv,minor:fminor,dim:false,aug:false,roman:wanRomanOf(pc,fminor,ref.tonic),deg:-1,scale:sc,ref};};
+ if(dim&&_S.wanChordsDim===false)return _fillFor('dim');
+ if(aug&&_S.wanChordsAug===false)return _fillFor('aug');
  /* R75 (his [66] ②, "There should be no doubled chords. I'd rather a chord button be blank than be repeating itself"):
     scale B's cell goes BLANK when it would carry the very chord scale A already carries on that letter (A major + A
     melodic minor: D, E, G♯° once each) */
  if(!isA&&deg!==0){const a=scales.a;const da=a.pcs.indexOf((((pc-a.tonic)%12)+12)%12);   /* scale B's own tonic is never blanked — it is the ringed home of its column */
-  if(da>=0){const ta=scaleDegreeTriad(a.pcs,da);if(ta&&ta.iv.length===iv.length&&ta.iv.every((x,i)=>x===iv[i]))return {ghost:false,blank:true,isA,r:pc,iv,minor,dim,aug,roman:'',deg,scale:sc};}}
- /* R73 (his [64], "VI sounds the same as bVI (bVI is the correct interpretation)"): the roman reads AGAINST THE HOME —
-    scale A's tonic, the key centre — with its accidental, in BOTH columns: C minor's A♭ chord on C's map is ♭VI, its
-    E♭ ♭III, its B♭ ♭VII (R70 had numbered the minor column by that scale's own degrees). ° and + as they come. */
- const roman=wanRomanOf(pc,minor||dim,scales.a.tonic)+(dim?'°':aug?'+':'');
- return {ghost:false,isA,r:pc,iv,minor,dim,aug,roman,deg,scale:sc};
+  if(da>=0){const ta=scaleDegreeTriad(a.pcs,da);if(ta&&ta.iv.length===iv.length&&ta.iv.every((x,i)=>x===iv[i])){
+   /* R77 (his [76] ②③): the leftover cell FILLS with the missing equivalent on this letter — the major or minor triad
+      neither scale carries here — drawn transparent; ◐ when it is the negative-harmony mirror of a chord on the board */
+   return _fillFor('dup');
+  }}}
+ /* R77 (his [74] ②, "2 sets of roman numerals everywhere. One set for major, and the other set for the other scale"):
+    scale A's cells read their OWN degrees (wanOwnRoman — the major spelling by default); scale B's cells read their own
+    degree IN B over B's tonic as seen from A — F♯ melodic minor under A major: vi · ii°/vi · ♭III+/vi · IV/vi · V/vi ·
+    vi°/vi · vii°/vi (B's tonic chord is just "vi"; a B on A's own tonic drops the slash). Psych-Out (his ⑤) moves the
+    reference to the frozen home. (R73's one-set reading — every chord against the home — stands for the ghosts.) */
+ const ref=wanRomanRef(scales);
+ let roman;
+ if(isA)roman=wanOwnRoman(ref.tonic===sc.tonic?sc:{tonic:ref.tonic,pcs:sc.pcs},pc,deg,iv,minor,dim,aug);
+ else{
+  const bAsA=wanRomanOf(sc.tonic,!!sc.minor,ref.tonic);
+  if(deg===0)roman=bAsA;
+  else{const own=wanOwnRoman(sc,pc,deg,iv,minor,dim,aug);roman=(sc.tonic===ref.tonic)?own:own+'/'+bAsA;}
+ }
+ return {ghost:false,isA,r:pc,iv,minor,dim,aug,roman,deg,scale:sc,ref};
 }
 function wanCellLetter(nm,ch){
  /* Weber's letters: lowercase for a minor (or diminished) chord, ° and + as they come */
@@ -29887,6 +29947,7 @@ function wanKeydown(e){
  if(typeof uiState!=='object'||!uiState||!uiWinShown('wanPanel'))return false;
  const t=e.target;
  if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'||t.isContentEditable))return false;
+ if(wanState.lit&&wanMapArrow(e.key)){e.preventDefault();return true;}   /* R77 (his [74] ①): a lit map chord takes the arrows */
  const n=wanScale().pcs.length;
  if(e.key==='ArrowLeft'||e.key==='ArrowRight')wanState.cur.deg=((wanState.cur.deg+(e.key==='ArrowRight'?1:-1))%n+n)%n;
  else if(e.key==='ArrowUp'||e.key==='ArrowDown')wanState.cur.row=wanState.cur.row?0:1;
@@ -30094,6 +30155,8 @@ function wanRerootStable(newPc,newMinor,at,label){
     map still, the clicked chord's label flips to I/i by the label law itself. */
  const st=wanState;
  const oldMin=wanState.mode==='aeolian';
+ /* R77 (his [74] ⑤, [75]): Psych-Out Modulation ON — the map moves, the numerals keep the home they had */
+ try{if(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.wanPsychOut){if(!st.romanHome)st.romanHome={tonic:wanState.tonic,minor:oldMin};}else st.romanHome=null;}catch(e){}
  const dlt=wanRerootShiftDelta(wanState.tonic,oldMin,((newPc%12)+12)%12,!!newMinor);
  wanState.follow=false;
  wanState.tonic=((newPc%12)+12)%12;
@@ -30105,6 +30168,31 @@ function wanRerootStable(newPc,newMinor,at,label){
  wanRecord(wanState.tonic,!!newMinor,label);
  audLedReset();
  wanAudition();renderWan();
+}
+function wanLightChip(el,dur){
+ /* R77 (his [74] ①): light the pressed chip for the audition's length, remember it as the arrow keys' seat */
+ try{
+  document.querySelectorAll('#wanWeber .wanLit').forEach(x=>x.classList.remove('wanLit'));
+  if(!el)return;
+  el.classList.add('wanLit');
+  wanState.lit={side:el.classList.contains('wan2Key')?2:1,r:+el.getAttribute('data-r'),c:+el.getAttribute('data-c')};
+  clearTimeout(wanState._litTimer);
+  wanState._litTimer=setTimeout(()=>{try{el.classList.remove('wanLit');}catch(e){}},Math.max(300,(dur||1.2)*1000));
+ }catch(e){}
+}
+function wanMapArrow(key){
+ /* R77 (his [74] ①): ← → ↑ ↓ walk the map from the lit chord — the next cell lights and sounds; Escape lets go */
+ const st=wanState;if(!st.lit)return false;
+ if(key==='Escape'){st.lit=null;document.querySelectorAll('#wanWeber .wanLit').forEach(x=>x.classList.remove('wanLit'));return true;}
+ const d={ArrowLeft:[0,-1],ArrowRight:[0,1],ArrowUp:[-1,0],ArrowDown:[1,0]}[key];if(!d)return false;
+ const cls=st.lit.side===2?'.wan2Key':'.wanWebKey';
+ let r=st.lit.r+d[0],c=st.lit.c+d[1];
+ let el=document.querySelector('#wanWeber '+cls+'[data-r="'+r+'"][data-c="'+c+'"]');
+ if(el&&el.classList.contains('wanBlank')){r+=d[0];c+=d[1];el=document.querySelector('#wanWeber '+cls+'[data-r="'+r+'"][data-c="'+c+'"]');}
+ if(!el)return true;
+ try{wanKeyAudition(wanLofPc(+el.getAttribute('data-lof')),el.getAttribute('data-minor')==='1',undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));}catch(e){}
+ wanLightChip(el,1.2);
+ return true;
 }
 function wanKeyAudition(pc,minor,dur,iv){
  try{
@@ -31664,14 +31752,14 @@ function wanSide2Draw(){
    const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);
    const ch=wanWeberCellChord(_sc2,cell.lof,cell.minor);   /* R70 (his [54]): slot A ← scale A (scale 2), slot B ← scale B */
    const letter=wanCellLetter(nm,ch);
-   const label=st.webView==='roman'?(ch.ghost?wanRomanOf(wanLofPc(cell.lof),cell.minor,ch.scale.tonic):ch.roman):letter;
+   const label=st.webView==='roman'?(ch.ghost?wanRomanOf(wanLofPc(cell.lof),cell.minor,(ch.ref||_sc2.a).tonic):ch.roman):letter;   /* R77: ghosts against the reference */
    const isKey=ch.isA&&!ch.ghost&&ch.deg===0;
    const isKeyB=!ch.isA&&!ch.ghost&&ch.deg===0;
    let fnSty='';
    try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65 — R70: against the slot's own scale */
    /* the 2nd board's chips wear their OWN class (wan2Key) — .wanWebKey stays side 1's
       alone, so every probe and handler that predates the dual board keeps its meaning */
-   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank?'':fnSty)+'" title="'+(ch.blank?'blank — the same chord scale A already carries here, shown once':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name))+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+(ch.blank?'':label)+'</span>';
+   h+='<span class="cpchip wan2Key'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'" style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'" title="'+(ch.blank?'blank — the same chord scale A already carries here, shown once':ch.fill?letter+' — the missing equivalent on this letter'+(ch.neg?' · ◐ the negative-harmony mirror of a chord on the board':''):letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale':' · '+ch.roman+' of '+ch.scale.name))+' — click hears it · double-click makes it home'+(w2.linked?'':' (this side only)')+'.">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
   }
   h+='</div>';
  }
@@ -31703,7 +31791,7 @@ function wanSide2Draw(){
  host.querySelectorAll('.wan2Key').forEach(el=>{
   const pc=()=>wanLofPc(+el.getAttribute('data-lof'));
   const mn=()=>el.getAttribute('data-minor')==='1';
-  el.onclick=()=>{if(window._wanPanned||el.classList.contains('wanBlank'))return;try{wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));}catch(err){}};   /* R70: the cell's own chord · R75: not after a pan, never a blank */
+  el.onclick=()=>{if(window._wanPanned||el.classList.contains('wanBlank'))return;try{wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));}catch(err){}wanLightChip(el,1.2);};   /* R70: the cell's own chord · R75: not after a pan, never a blank · R77: lit */
   el.ondblclick=ev=>{ev.preventDefault();
    try{wanSide2SetHome(pc(),mn());}catch(err){}renderWan();   /* R68 [51] ① + [52]: a double-click on the right map sets SCALE 2's home — linked or not */
   };
@@ -31717,7 +31805,7 @@ function wanWeberDraw(){
  const W=document.getElementById('wanWeber');if(!W)return;
  const st=wanState;
  if(st.webShift===undefined){st.webShift=0;st.webRadius=2;st.webAll=false;st.webView=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.wanLabels==='chords')?'letters':'roman';st.webPaths=[];st.webSel=new Set();}   /* R62 (his [40] ④): the Settings default — roman or chord names — for BOTH boards */   /* 81st R4 (his thirty-eighth message): ROMAN NUMERALS ARE THE DEFAULT — the ctrl+click map menu still switches back to Letters */
- if(!Array.isArray(st.webRoadsOff))st.webRoadsOff=[];   /* 80th R23: legend-toggled-off roads */
+ if(!Array.isArray(st.webRoadsOff))st.webRoadsOff=WAN_PATH_TYPES.map(t2=>t2.id);   /* 80th R23: legend-toggled-off roads · R77 (his [74] ④): every road starts UNCHECKED — ☑ one and it redraws to whichever chord is pressed */
  if(!(st.webChainSel instanceof Set))st.webChainSel=new Set();   /* 84th (his 39th message): the selected path-chain keys, as 'road:index' */
  if(st.webPathRecSeq===undefined)st.webPathRecSeq=null;   /* 84th: the path Rec tape — null = not recording */
  if(st.webLegAll===undefined)st.webLegAll=false;
@@ -31787,7 +31875,7 @@ function wanWeberDraw(){
    const nm=wanLofName(st.webReduce&&/♭♭|♯♯|×/.test(wanLofName(cell.lof))?redLof:cell.lof);   /* 80th R25 (his 33rd message): 3+ sharps spell as ♯♯♯, not × — the detector reads BOTH accidental families now */
    const ch=wanWeberCellChord(_sc1,cell.lof,cell.minor);   /* R70 (his [54]): slot A ← scale A, slot B ← scale B */
    const letter=wanCellLetter(nm,ch);
-   const label=st.webView==='roman'?(ch.ghost?wanRomanOf(wanLofPc(cell.lof),cell.minor,ch.scale.tonic):ch.roman):letter;   /* terrain keeps the letters — it is a skin, not a labeling */
+   const label=st.webView==='roman'?(ch.ghost?wanRomanOf(wanLofPc(cell.lof),cell.minor,(ch.ref||_sc1.a).tonic):ch.roman):letter;   /* terrain keeps the letters — it is a skin, not a labeling · R77: ghosts against the reference */
    /* 81st R4 (his thirty-eighth message): "all of the I chords... including the one in
       the upper right hand and lower left hand corners". ⛔ THE BUG WAS `cell.lof===tonicLof`
       — a LINE-OF-FIFTHS position, which is unique. The same PITCH CLASS recurs across the
@@ -31802,9 +31890,9 @@ function wanWeberDraw(){
       ♭VI wears half Subdominant + half Relative). Paint rides wanState.fnOn. */
    let fnSty='';
    try{fnSty=wanCellFnSty((((ch.r-ch.scale.tonic)%12)+12)%12,ch.minor||ch.dim,ch.scale.minor);}catch(e){}   /* R65: the scheme in use — R70: read against the slot's OWN scale */
-   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
-    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank?'':fnSty)+'"'
-    +' title="'+(ch.blank?'blank — the same chord scale A already carries on this letter, shown once (his [66])':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.')+'">'+(ch.blank?'':label)+'</span>';
+   h+='<span class="cpchip wanWebKey'+(isKey?' on':'')+(isKeyB?' onB':'')+(ch.ghost?' wanGhost':'')+(ch.blank?' wanBlank':'')+(ch.fill?' wanFill'+(ch.neg?' wanNeg':''):'')+(selKey?' wanWebSel':'')+'" data-lof="'+cell.lof+'" data-minor="'+(cell.minor?1:0)+'" data-r="'+r+'" data-c="'+c+'" data-iv="'+ch.iv.join(',')+'"'
+    +' style="flex:0 0 44px;text-align:center;font-size:10.5px;'+(cell.minor?'opacity:.78;':'font-weight:700;')+(ch.blank||ch.fill?'':fnSty)+'"'
+    +' title="'+(ch.blank?'blank — the same chord scale A already carries on this letter, shown once (his [66])':ch.fill?letter+' — the missing equivalent on this letter, in neither scale'+(ch.neg?' · ◐ the NEGATIVE-HARMONY mirror of a chord on the board':'')+' (his [76]) — click hears it':letter+(ch.ghost?(cell.minor?' minor':' major')+' — in neither scale (Weber\'s plain key)':' · '+ch.roman+' of '+ch.scale.name)+' — click hears it · double-click makes it home · ⌘+click draws a path to it.')+'">'+(ch.blank?'':(ch.fill&&ch.neg?'◐ ':'')+label)+'</span>';
   }
   h+='</div>';
  }
@@ -32529,6 +32617,9 @@ function wanWeberDraw(){
     if(pr)pr.textContent='⏺ REC '+st.webPathRecSeq.length;
    }
    wanKeyAudition(pc(),mn(),undefined,(el.getAttribute('data-iv')||'').split(',').map(Number));   /* a plain click just HEARS the key — R70: the cell's own chord */
+   wanLightChip(el,1.2);   /* R77 (his [74] ①): the sounding chord lights */
+   /* R77 (his [74] ④): a CHECKED road redraws itself to whichever chord is pressed */
+   if(!Array.isArray(st.webPathRecSeq)&&WAN_PATH_TYPES.some(t2=>st.webRoadsOff.indexOf(t2.id)<0)){const key={lof:+el.getAttribute('data-lof'),minor:mn()};   /* not while a REC take rolls — the take IS the road then */if(!(st.webPaths.length===1&&st.webPaths[0].lof===key.lof&&!!st.webPaths[0].minor===key.minor)){st.webPaths=[key];const _lit=wanState.lit;wanWeberDraw();try{const el2=document.querySelector('#wanWeber .wanWebKey[data-r="'+_lit.r+'"][data-c="'+_lit.c+'"]');if(el2)el2.classList.add('wanLit');}catch(e2){}}}
   };
   el.ondblclick=e=>{   /* double-click: the new root key — the STABLE reroot (his 68th) */
    e.preventDefault();
@@ -39594,7 +39685,7 @@ function parseSettings(str){
  keyset:'live',
  fretHand:true,fingerColors:null,
  wanLabels:'roman',   /* R62 (his [40] ④): the Wanderer's boards — 'roman' or 'chords' — one default for both */
- gv2Sneak:false,gv2Vertical:false,gv2Right:false,   /* R63 (his [43]): GV-2's sneak-peek miniatures · the engines' vertical re-lay · the right rectangle as an engine's home — all OFF */
+ gv2Sneak:false,gv2Vertical:false,gv2Right:false,wanMajorSpelling:true,wanPsychOut:false,wanChordsDim:true,wanChordsAug:true,wanFillNeg:true,   /* R77 (his [74]/[75]): the Wanderer's major spelling (on) · Psych-Out Modulation (off) */   /* R63 (his [43]): GV-2's sneak-peek miniatures · the engines' vertical re-lay · the right rectangle as an engine's home — all OFF */
  openStrings:false,neckFrame:'float',neckOverlays:{chord:true,arp:false,penta:false,scale:false}};   /* R45 [78]: the large neck's four overlays, ① on by default */   /* R36 [55] (d): "Use open strings whenever possible" — default OFF · R37 (f): the neck's frame, 'float' or 'head' */   /* R29 [55]: the fret-hand colours toggle (default ON) and the five finger colours the user chose (null = the theme's) */   /* R26 [54]: Set A (his paste's keys) is the DEFAULT; R24 [52]: the key-command set — ours · live · fl · pt (the ids are internal; the labels name the keys) */   /* R9 (the 96th): the Wanderer hallway's bamboo-elevator entry — OFF = skip it, remembered (his ENTRY row) */   /* F3 (his July 25 words): the Prompts by Pro Music Workbench for Rhythmic Motif toggle — OFF goes straight to the options pop-up */   /* 79th R4 (his words): the top Multi-Track Grid boots pinned when ON — the grid's own "Fixed In Place" chip toggles it live; default OFF */   /* 78th R4b (his words): Delete closes the whole linked group by default; the Settings opt-out closes just the one */   /* 77th: micro heads standard (classic the opt-in) · 78th R3 (his words): the Grid Controls window defaults FIXED at the top; the Settings opt-in creates it with the grids instead */
  try{
   const o=JSON.parse(str||'{}');
@@ -43111,7 +43202,13 @@ function settingsHTML(){
  <label><input type="checkbox" id="setGv2Right" ${SETTINGS.gv2Right?'checked':''}> The right rectangle enlarges an engine (▸ on a window) — off, the engines populate the lower rectangle and the right rectangle stays the Essence Shelf</label></p>
  <p><b>Weber's Wanderer — both boards</b> — how the two matrices are labelled (the Wanderer's own Roman numerals / Chord names chips change it live):<br>
  <label><input type="radio" name="setWanLbl" value="roman" ${SETTINGS.wanLabels!=='chords'?'checked':''}> Roman numerals</label>
- <label style="margin-left:14px;"><input type="radio" name="setWanLbl" value="chords" ${SETTINGS.wanLabels==='chords'?'checked':''}> Chord names</label></p>
+ <label style="margin-left:14px;"><input type="radio" name="setWanLbl" value="chords" ${SETTINGS.wanLabels==='chords'?'checked':''}> Chord names</label><br>
+ <label><input type="checkbox" id="setWanMajSp" ${SETTINGS.wanMajorSpelling!==false?'checked':''}> <b>Convert Natural Minor to its Major Spelling</b> — every scale's numerals spelled against its parallel major (♭III · ♭VI · ♭VII); off, a scale keeps its own degree numbers (III · VI · VII)</label><br>
+ <label><input type="checkbox" id="setWanPsych" ${SETTINGS.wanPsychOut?'checked':''}> <b>Psych-Out Modulation</b> — keep the roman numerals as they are when double-clicking (the map moves to the new home, the numerals keep the old one)</label><br>
+ <span style="display:inline-block;margin-top:4px;"><b>The chord vocabulary</b> (his [77]):</span><br>
+ <label><input type="checkbox" id="setWanDim" ${SETTINGS.wanChordsDim!==false?'checked':''}> Include the diminished chords</label>
+ <label style="margin-left:14px;"><input type="checkbox" id="setWanAug" ${SETTINGS.wanChordsAug!==false?'checked':''}> Include the augmented chords</label>
+ <label style="margin-left:14px;"><input type="checkbox" id="setWanNeg" ${SETTINGS.wanFillNeg!==false?'checked':''}> Fill with negative harmony as far as possible (◐)</label></p>
  <p><label><input type="checkbox" id="setClassicHeads" ${SETTINGS.classicHeads?'checked':''}> <b>Classic track boxes</b> — the two-row name boxes (default: the slim micro row with on/S/R beside the name)</label></p>
  <p><b>Chord lane labels</b> — the big text on each chord block:<br>
  <label><input type="radio" name="setLane" value="function" ${SETTINGS.laneLabel!=='name'?'checked':''}> Function big (V7), chord name small</label>
@@ -43187,6 +43284,7 @@ function openSettings(){
  const box=document.getElementById('infoBox'),g=id=>document.getElementById(id);
  box.querySelectorAll('input[name=setNum]').forEach(r=>r.onchange=()=>{SETTINGS.numerals=r.value;persistSettings();drawChordLane();drawChordPanel();});
  box.querySelectorAll('input[name=setWanLbl]').forEach(r=>r.onchange=()=>{SETTINGS.wanLabels=r.value;persistSettings();try{wanState.webView=(r.value==='chords')?'letters':'roman';renderWan();}catch(e){}});   /* R62 [40] ④ */
+ for(const [id,key] of [['setWanMajSp','wanMajorSpelling'],['setWanPsych','wanPsychOut'],['setWanDim','wanChordsDim'],['setWanAug','wanChordsAug'],['setWanNeg','wanFillNeg']]){const cb=box.querySelector('#'+id);if(cb)cb.onchange=()=>{SETTINGS[key]=!!cb.checked;persistSettings();if(key==='wanPsychOut'&&!cb.checked)wanState.romanHome=null;try{renderWan();}catch(e){}};}   /* R77 (his [74] ③⑤) */
  for(const [id,key] of [['setGv2Sneak','gv2Sneak'],['setGv2Vertical','gv2Vertical'],['setGv2Right','gv2Right']]){const cb=box.querySelector('#'+id);if(cb)cb.onchange=()=>{SETTINGS[key]=!!cb.checked;persistSettings();try{if(typeof skinState!=='undefined'&&skinState&&typeof skinApply==='function')skinApply(skinState);}catch(e){}};}   /* R63 (his [43]) */
  box.querySelectorAll('input[name=setLane]').forEach(r=>r.onchange=()=>{SETTINGS.laneLabel=r.value;persistSettings();drawChordLane();});
  if(g('setClassicHeads'))g('setClassicHeads').onchange=e=>{SETTINGS.classicHeads=!!e.target.checked;persistSettings();
