@@ -949,7 +949,7 @@
 </head>
 <body>
   <!-- 78th R5 (his words): the title lives in the Transport Window now, renamed 'Curiositor' (working title) — the ⛔ rename guardrails stand: app:'crosspollinate', the cp_ keys and the backend name are UNTOUCHED (AGENTS §9) -->
-  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-11d</span></div>
+  <div class="sub">See the notes. Drag them. Swap the chords or the groove underneath — the highlighted chord tones update, the band re-renders, your melody is yours to bend. <span style="opacity:.55">· build 2026-09-13a</span></div>
 
   <!-- 76th R2 (his words): the transport IS a fixed window now — minimize, delete,
        and the "Show transport" link; it CONTROLS the focused linked group (data-gwfocus
@@ -30997,7 +30997,7 @@ function wanViewMenu(e,side){
   {hd:'View / Skin'},
   {label:'Weber&#8217;s Matrix of Related Keys (scales)',cur:cur==='weber',fn:()=>pick('weber')},
   {label:'Hallway with books',cur:cur==='hallway',dis:side!==2&&two,fn:()=>{wanHall.skin='books';wanTree.skin='books';try{wanTreeEnsureDefaults();}catch(err){}pick('hallway');}},   /* R44: Hallway = Trees paint (books) + hub/forks; cubes are NOT this skin */
-  {label:'3D Matrix (inside the cube)',cur:cur==='3d',dis:side!==2&&two,fn:()=>pick('3d')},   /* R41: separate — Romantic-period chords / cubes tunnel (his [10]) */
+  {label:'3D Matrix (the cube around the home)',cur:cur==='3d',dis:side!==2&&two,fn:()=>pick('3d')},   /* R41: separate — Romantic-period chords / cubes tunnel (his [10]); R81: the orbit */
   {label:'Weber in time (keys over bars)',cur:cur==='time',dis:side!==2&&two,fn:()=>pick('time')},   /* R42: candidate B — Weber floor · key path · Z=time */
   {label:'Decision Trees',cur:cur==='tree',dis:side!==2&&two,fn:()=>pick('tree')},   /* pre-game then walk; skins books · simple · puzzle */
   {label:'More views land with their rounds',dis:true}
@@ -31408,7 +31408,51 @@ function wanHallTick(){
    (yaw + pitch) · ←→ A D turn · ↑↓ W S walk · SPACE = walk the face ahead (never the transport) ·
    ↺ faces ahead. Decision Trees stay stubbed (brainstorm §5 Q2 + curated list still his). Tag letter
    left for merge. */
-var wanCube={home:null,sel:null,cells:[],hits:[],look:{dx:0,dy:0},yaw:0,pitch:0,drag:null,last:null,elev:null};
+/* ⭐ R81 (the 100th — his [82], [72] ②③④⑤⑥⑦, [73] ②): THE CAMERA MOVED OUTSIDE. The home chord sits at the CENTRE of the
+   cube and the user ORBITS it — drag turns the lattice about the home, so a chord on the near side passes IN FRONT of the
+   home (depth-sorted paint, the home a cell among the others, never a disc on top); the home is a hit (it sounds on a
+   press); the vocabulary REPEATS NOTHING — the nine cells that only mirrored the ceiling take the diminished chords, then
+   the negative-harmony chords, then the missing letters, before any repeat (wanCubeVocab); spheres or CUBES from a
+   drop-down; a double-click on empty space zooms in there; a double-click on a chord WALKS — the chord slides to the
+   centre (a short tween) and wears the ring; the pagoda / elevator descent is gone — the skin opens on the cube. */
+var wanCube={home:null,sel:null,cells:[],hits:[],look:{dx:0,dy:0},yaw:0,pitch:0,zoom:1,drag:null,last:null,anim:null,order:[]};
+const WAN_CUBE_CAM=3.6;   /* the camera's distance from the home along +X, in lattice steps (the far corner is √3 away) */
+const WAN_CUBE_VIEW0={yaw:32,pitch:-22};   /* the resting view is OBLIQUE — straight on, the fifth's cell sat dead in front of the home and hid it; yaw/pitch 0 means "this view" */
+function wanCubeDimFamily(t){
+ /* pure: the pitch classes a home tonic's major, natural minor and harmonic minor share between them — the ground a
+    diminished triad must stand on to be "one of ours" */
+ const T=((+t%12)+12)%12,out={};
+ for(const sc of [[0,2,4,5,7,9,11],[0,2,3,5,7,8,10],[0,2,3,5,7,8,11]])for(const p of sc)out[(T+p)%12]=1;
+ return Object.keys(out).map(Number);
+}
+function wanCubeVocab(hx,hy,hz){
+ /* pure — his [82] ⑤ / [72] ④: the 26 neighbours with NO REPEATED CHORD. The third lattice axis flips the quality, so the
+    floor (dz = −1) only repeats the ceiling (dz = +1): nine duplicates. In his order those slots take ① the diminished
+    triads that stand inside the home's major / natural minor / harmonic minor (vii° first, then ii°, iv°, ♭vi°, iii°,
+    vi° …), ② the negative-harmony mirrors of the chords on the board that are not on it yet (his [76]'s ◐), ③ the
+    missing letters (the three roots a ±1 lattice never reaches: the 2nd, the ♯4th, the ♭7th, both qualities), and only
+    then ④ a repeat, marked. Each cell: {dx,dy,dz,kind,tag,tonic,minor,iv,lbl,fill}. */
+ const home=tonnetzAt(hx,hy,hz),t=home.tonic;
+ const key=(tonic,iv)=>(((tonic%12)+12)%12)+':'+iv.join(',');
+ const cells=tonnetzNeighbors26(hx,hy,hz).map(c=>Object.assign({},c,{iv:c.minor?[0,3,7]:[0,4,7],fill:null,lbl:wanCubeLbl(c.tonic,c.minor)}));
+ const rank=c=>((c.dz===0)?0:(c.dz>0)?1:2)*10+((c.dx?1:0)+(c.dy?1:0)+(c.dz?1:0));
+ const order=cells.slice().sort((a,b)=>rank(a)-rank(b));
+ const seen={};seen[key(t,home.minor?[0,3,7]:[0,4,7])]=1;
+ const dup=[];
+ for(const c of order){const k=key(c.tonic,c.iv);if(seen[k])dup.push(c);else seen[k]=1;}
+ const fam=wanCubeDimFamily(t),cands=[];
+ for(const o of [11,2,5,8,4,9,1,6,10,3,7,0]){const r=(t+o)%12;if([0,3,6].every(x=>fam.indexOf((r+x)%12)>=0))cands.push({tonic:r,iv:[0,3,6],fill:'dim'});}
+ for(const c of order){if(dup.indexOf(c)>=0)continue;try{const m=negHarmonyOf(c.tonic,c.iv,t);if(m)cands.push({tonic:m.r,iv:m.iv,fill:'neg'});}catch(e){}}
+ for(const o of [2,6,10])for(const iv of [home.minor?[0,3,7]:[0,4,7],home.minor?[0,4,7]:[0,3,7]])cands.push({tonic:(t+o)%12,iv:iv.slice(),fill:'miss'});
+ for(const d of dup){
+  let got=null;
+  while(cands.length){const c=cands.shift();const k=key(c.tonic,c.iv);if(seen[k])continue;seen[k]=1;got=c;break;}
+  if(got){d.tonic=got.tonic;d.iv=got.iv.slice();d.minor=(got.iv[1]===3&&got.iv[2]===7);d.fill=got.fill;d.tag=null;
+   d.lbl=got.fill==='dim'?(((typeof PCN!=='undefined'&&PCN[got.tonic])?PCN[got.tonic]:String(got.tonic))+'°'):(got.fill==='neg'?'◐ ':'')+wanCubeLbl(got.tonic,d.minor);}
+  else d.fill='dup';
+ }
+ return cells;
+}
 function wanCubeLbl(tonic,minor){
  /* pure: a triad's letter name (C · Cm) for the cube's spines */
  const t=((+tonic%12)+12)%12,nm=(typeof PCN!=='undefined'&&PCN[t])?PCN[t]:String(t);
@@ -31421,25 +31465,28 @@ function wanCubeRot(dx,dy,dz,yawDeg,pitchDeg){
  const x1=(+dx||0)*cY-(+dy||0)*sY,y1=(+dx||0)*sY+(+dy||0)*cY,z1=+dz||0;
  return {x:x1*cP+z1*sP,y:y1,z:-x1*sP+z1*cP};
 }
-function wanCubeProject(rx,ry,rz,W,H,look){
- /* pure: camera looks +X; screen X = −Y · screen Y = −Z; foreshortening reuses the hallway's law.
-    Returns null when the cell sits behind the camera (depth ≤ 0). {px,py,s,depth,r} */
- const depth=(+rx||0)+2.2;if(depth<=0.12)return null;
- const w=(+W>0)?+W:640,h=(+H>0)?+H:280;
- const s=wanHallScale(depth*3.2),cx=w/2+((look&&+look.dx)||0),cy=h*.48+((look&&+look.dy)||0);
- const px=cx-(+ry||0)*w*.30*s,py=cy-(+rz||0)*h*.34*s,r=Math.max(7,22*s);
+function wanCubeProject(rx,ry,rz,W,H,look,zoom){
+ /* pure — R81: the camera stands OUTSIDE at WAN_CUBE_CAM along +X and looks at the home (the origin); screen X = −Y ·
+    screen Y = −Z; depth = distance from the lens, so a cell rotated toward the lens grows and paints later (in front).
+    Nothing is ever behind the lens (the far corner is √3 < 3.6), so nothing pops. {px,py,s,depth,r} */
+ const depth=WAN_CUBE_CAM-(+rx||0);
+ const w=(+W>0)?+W:640,h=(+H>0)?+H:280,z=(+zoom>0)?+zoom:1;
+ const s=(2.4/depth)*z,cx=w/2+((look&&+look.dx)||0),cy=h*.5+((look&&+look.dy)||0);
+ const px=cx-(+ry||0)*w*.17*s,py=cy-(+rz||0)*h*.30*s,r=Math.max(6,25*s);
  return {px,py,s,depth,r};
 }
 function wanCubeLayout(hx,hy,hz,opts){
- /* pure: the 26 neighbours of home as foreshortened cells around the camera.
-    opts: {W,H,yaw,pitch,look}. Far-to-near for paint; nearest-first hits are built by the draw. */
+ /* pure — R81: the home AND its 26 (repeat-free, wanCubeVocab) as cells orbiting the origin. opts: {W,H,yaw,pitch,look,
+    zoom,shift} — shift = a lattice offset added to every cell (the walk tween slides the chosen chord to the centre).
+    Far-to-near for paint (the home in its depth order among them); nearest-first hits are built by the draw. */
  const o=opts&&typeof opts==='object'?opts:{},W=(+o.W>0)?+o.W:640,H=(+o.H>0)?+o.H:280;
- const yaw=+o.yaw||0,pitch=+o.pitch||0,look=o.look||{dx:0,dy:0};
+ const yaw=(+o.yaw||0)+WAN_CUBE_VIEW0.yaw,pitch=(+o.pitch||0)+WAN_CUBE_VIEW0.pitch,look=o.look||{dx:0,dy:0},zoom=(+o.zoom>0)?+o.zoom:1,sh=o.shift||{x:0,y:0,z:0};
  const home=tonnetzAt(hx,hy,hz),out=[];
- tonnetzNeighbors26(hx,hy,hz).forEach(n=>{
-  const rot=wanCubeRot(n.dx,n.dy,n.dz,yaw,pitch),pr=wanCubeProject(rot.x,rot.y,rot.z,W,H,look);
+ const all=wanCubeVocab(hx,hy,hz).concat([{dx:0,dy:0,dz:0,kind:'home',tag:null,tonic:home.tonic,minor:home.minor,iv:home.minor?[0,3,7]:[0,4,7],lbl:wanCubeLbl(home.tonic,home.minor),fill:null,x:hx,y:hy,z:hz}]);
+ all.forEach(n=>{
+  const rot=wanCubeRot(n.dx+(+sh.x||0),n.dy+(+sh.y||0),n.dz+(+sh.z||0),yaw,pitch),pr=wanCubeProject(rot.x,rot.y,rot.z,W,H,look,zoom);
   if(!pr)return;
-  out.push(Object.assign({},n,{lbl:wanCubeLbl(n.tonic,n.minor),px:pr.px,py:pr.py,s:pr.s,depth:pr.depth,rad:pr.r,rx:rot.x,ry:rot.y,rz:rot.z}));
+  out.push(Object.assign({},n,{px:pr.px,py:pr.py,s:pr.s,depth:pr.depth,rad:pr.r,rx:rot.x,ry:rot.y,rz:rot.z}));
  });
  return out.sort((a,b)=>b.depth-a.depth);
 }
@@ -31458,24 +31505,38 @@ function wanCubeHomeKey(){
  const _h2=wanSide2Home();const tonic=_h2.tonic,minor=_h2.minor;   /* R68 (his [52]): EVERY skin on side 2 homes on SCALE 2 — "Scale 2 is the home for Skin 2!" */
  return {tonic:((+tonic%12)+12)%12,minor:!!minor};
 }
+function wanCubeShape(){return (typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.cubeShape==='cubes')?'cubes':'spheres';}
+function wanCubeZoomAt(k,x,y,W,H){
+ /* zoom by k about the canvas point (x,y): the point under the cursor stays put, the home slides accordingly */
+ const z0=wanCube.zoom||1,z1=Math.max(.6,Math.min(3.5,z0*k));if(z1===z0)return;
+ const cx=W/2+((wanCube.look&&wanCube.look.dx)||0),cy=H*.5+((wanCube.look&&wanCube.look.dy)||0);
+ const f=z1/z0;
+ wanCube.look={dx:(x+(cx-x)*f)-W/2,dy:(y+(cy-y)*f)-H*.5};
+ wanCube.zoom=z1;
+}
 function wanCubeDraw(host){
  host=host||document.getElementById('wanSide2');if(!host)return null;
  if(!document.getElementById('wanCubeCanvas')){
   host.innerHTML='<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">'
    +'<span id="wanCubeStatus" style="font-size:10.5px;color:#6b4f28;white-space:nowrap;"></span>'
    +'<span style="flex:1"></span>'
-   +'<span class="cpchip" id="wanCubeReset" title="Look straight ahead again">↺</span>'
-   +'<span class="cpchip'+((typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?' on':'')+'" id="wanCubeElev" title="The bamboo elevator — same setting as the Hallway (remembered)">🎋</span>'
-   +'<span style="font-size:9.5px;color:#6b4f28;">you stand at home · click = hear · double-click = walk there · drag = look (yaw + pitch) · ←→ A D = turn · ↑↓ W S = walk · SPACE = walk the face ahead (never the transport) · ↺</span></div>'
+   +'<select id="wanCubeShape" title="How the chords are drawn — spheres, or cubes (his [72] ⑦); remembered" style="font-size:10px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:4px;"><option value="spheres"'+(wanCubeShape()==='spheres'?' selected':'')+'>Spheres</option><option value="cubes"'+(wanCubeShape()==='cubes'?' selected':'')+'>Cubes</option></select>'
+   +'<span class="cpchip" id="wanCubeReset" title="Face the cube straight on again — the turn, the zoom and the slide all reset">↺</span>'
+   +'<span style="font-size:9.5px;color:#6b4f28;">the home chord in the middle · click = hear · double-click = walk there (it slides to the middle) · drag = orbit around the home (a near chord passes in front) · scroll or double-click empty space = zoom in there · ←→ A D = turn · ↑↓ W S = walk · SPACE = walk the face ahead (never the transport) · ↺</span></div>'
    +'<canvas id="wanCubeCanvas" width="640" height="280" tabindex="0" style="display:block;width:100%;height:auto;border-radius:8px;cursor:pointer;outline:none;"></canvas>';
   const c=document.getElementById('wanCubeCanvas');
   c.onclick=e=>{if(wanCube.drag&&wanCube.drag.moved){wanCube.drag=null;return;}wanCube.drag=null;wanCubeClick(e);};
   c.ondblclick=wanCubeDblClick;
   c.onmousedown=e=>{if(e.button!==0)return;try{c.focus({preventScroll:true});}catch(err){}
    wanCube.drag={x:e.clientX,y:e.clientY,yaw:wanCube.yaw||0,pitch:wanCube.pitch||0,moved:false};};
+  /* R81 (his [82] ①/[72] ②): the drag ORBITS — the pitch is free all the way round (the old ±75° clamp was the "glitch"
+     that would not let a chord reach the middle), and nothing is ever behind the lens, so nothing pops */
   c.onmousemove=e=>{const d=wanCube.drag;if(!d||!(e.buttons&1))return;const mx=e.clientX-d.x,my=e.clientY-d.y;if(Math.abs(mx)+Math.abs(my)>4)d.moved=true;if(!d.moved)return;
-   wanCube.yaw=wanHallYawNorm((d.yaw||0)+mx*0.45);wanCube.pitch=Math.max(-75,Math.min(75,(d.pitch||0)-my*0.35));wanCubeDraw();};
+   wanCube.yaw=wanHallYawNorm((d.yaw||0)+mx*0.45);wanCube.pitch=wanHallYawNorm((d.pitch||0)-my*0.35);wanCubeDraw();};
   c.onmouseup=()=>{if(wanCube.drag&&!wanCube.drag.moved)wanCube.drag=null;};
+  c.onwheel=e=>{e.preventDefault();const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;wanCubeZoomAt(e.deltaY<0?1.12:1/1.12,x,y,c.width,c.height);wanCubeDraw();};
+  const shp=document.getElementById('wanCubeShape');if(shp)shp.onchange=()=>{try{SETTINGS.cubeShape=shp.value==='cubes'?'cubes':'spheres';persistSettings();}catch(err){}wanCubeDraw();};
+  shp&&(shp.onmousedown=e=>e.stopPropagation());
   c.onmouseenter=()=>{try{c.focus({preventScroll:true});}catch(err){}};
   /* his [40] first-person controls, adapted to the lattice: walk = re-root one face step; SPACE never reaches the transport (`_cnvOwned`, the Hallway's own law) */
   c.onkeydown=e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;
@@ -31484,62 +31545,78 @@ function wanCubeDraw(host){
    if(k==='ArrowRight'||kl==='d'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCube.yaw=wanHallYawNorm((wanCube.yaw||0)+15);wanCubeDraw();return;}
    if(k==='ArrowUp'||kl==='w'||k===' '||k==='Spacebar'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();if(!e.repeat)wanCubeWalkFace(1);return;}
    if(k==='ArrowDown'||kl==='s'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();if(!e.repeat)wanCubeWalkFace(-1);return;}
-   if(k==='Home'||kl==='r'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCube.yaw=0;wanCube.pitch=0;wanCube.look={dx:0,dy:0};wanCubeDraw();return;}
+   if(k==='Home'||kl==='r'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCube.yaw=0;wanCube.pitch=0;wanCube.zoom=1;wanCube.look={dx:0,dy:0};wanCubeDraw();return;}
+   if(k==='+'||k==='='){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCubeZoomAt(1.25,c.width/2,c.height/2,c.width,c.height);wanCubeDraw();return;}
+   if(k==='-'||k==='_'){e._cnvOwned=true;e.preventDefault();e.stopPropagation();wanCubeZoomAt(1/1.25,c.width/2,c.height/2,c.width,c.height);wanCubeDraw();return;}
   };
-  const rs=document.getElementById('wanCubeReset');if(rs)rs.onclick=()=>{wanCube.yaw=0;wanCube.pitch=0;wanCube.look={dx:0,dy:0};wanCubeDraw();};
-  const el=document.getElementById('wanCubeElev');if(el)el.onclick=()=>{try{SETTINGS.hallElevator=!(SETTINGS.hallElevator!==false);persistSettings();}catch(err){}el.classList.toggle('on',!!(SETTINGS&&SETTINGS.hallElevator!==false));};
-  wanCube.elev=(typeof SETTINGS==='object'&&SETTINGS&&SETTINGS.hallElevator!==false)?{t0:performance.now(),dur:1200,label:'descending into the cube…'}:null;
+  const rs=document.getElementById('wanCubeReset');if(rs)rs.onclick=()=>{wanCube.yaw=0;wanCube.pitch=0;wanCube.zoom=1;wanCube.look={dx:0,dy:0};wanCube.anim=null;wanCubeDraw();};
  }
  const c=document.getElementById('wanCubeCanvas');if(!c)return null;
  const ctx=c.getContext('2d'),W=c.width,H=c.height;
  const hk=wanCubeHomeKey(),coord=tonnetzCoord(hk.tonic,hk.minor);wanCube.home=coord;
- const cells=wanCubeLayout(coord.x,coord.y,coord.z,{W,H,yaw:wanCube.yaw||0,pitch:wanCube.pitch||0,look:wanCube.look||{dx:0,dy:0}});
+ /* the walk tween (his [82] ②): for a third of a second the OLD neighbourhood slides so the chosen chord arrives at the
+    centre; then the new home's own neighbourhood stands */
+ let lay=coord,shift={x:0,y:0,z:0},animating=false;
+ if(wanCube.anim){
+  const a=wanCube.anim,p=Math.min(1,(performance.now()-a.t0)/(a.dur||340));
+  if(p>=1)wanCube.anim=null;
+  else{const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;lay=a.from;shift={x:-a.off.dx*ease,y:-a.off.dy*ease,z:-a.off.dz*ease};animating=true;}
+ }
+ const all=wanCubeLayout(lay.x,lay.y,lay.z,{W,H,yaw:wanCube.yaw||0,pitch:wanCube.pitch||0,look:wanCube.look||{dx:0,dy:0},zoom:wanCube.zoom||1,shift});
+ const cells=all.filter(x=>x.kind!=='home');
  wanCube.cells=cells;
- const cx=W/2+((wanCube.look&&wanCube.look.dx)||0),cy=H*.48+((wanCube.look&&wanCube.look.dy)||0);
+ const cx=W/2+((wanCube.look&&wanCube.look.dx)||0),cy=H*.5+((wanCube.look&&wanCube.look.dy)||0);
  ctx.clearRect(0,0,W,H);
  ctx.fillStyle='#1e242c';ctx.fillRect(0,0,W,H);
- /* depth haze — a soft corridor suggestion behind the shell */
+ /* depth haze — a soft glow behind the cube */
  const g=ctx.createRadialGradient(cx,cy,8,cx,cy,Math.max(W,H)*.55);
  g.addColorStop(0,'rgba(70,90,110,.35)');g.addColorStop(1,'rgba(20,24,30,0)');
  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- const hits=[];
- cells.forEach(cell=>{
-  const face=cell.kind==='face',edge=cell.kind==='edge';
-  const col=cell.tag?({P:'#6ec6ff',L:'#9be39b',R:'#f0c36a',S:'#d4a0ff',N:'#ff9e7a',H:'#ff7aad'})[cell.tag]||'#b8c4d4'
+ /* the lattice's own lines — home to each face, faint, so the cube reads as a solid that turns */
+ const homeCell=all.find(x=>x.kind==='home');
+ if(homeCell){ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=1;
+  for(const f of all)if(f.kind==='face'){ctx.beginPath();ctx.moveTo(homeCell.px,homeCell.py);ctx.lineTo(f.px,f.py);ctx.stroke();}}
+ const hits=[],order=[],shape=wanCubeShape();
+ all.forEach(cell=>{
+  const face=cell.kind==='face',edge=cell.kind==='edge',home=cell.kind==='home';
+  const col=home?paintOf('--playhead','#e8a33d')
+   :cell.fill==='dim'?'#5a4d6e':cell.fill==='neg'?'#4e6a7e':cell.fill==='miss'?'#55606c':cell.fill==='dup'?'#3c434d'
+   :cell.tag?({P:'#6ec6ff',L:'#9be39b',R:'#f0c36a',S:'#d4a0ff',N:'#ff9e7a',H:'#ff7aad'})[cell.tag]||'#b8c4d4'
    :(face?'#8fa3b8':edge?'#6a7a8c':'#4e5a68');
   const sel=wanCube.sel&&wanCube.sel.x===cell.x&&wanCube.sel.y===cell.y&&wanCube.sel.z===cell.z;
-  ctx.beginPath();ctx.arc(cell.px,cell.py,cell.rad,0,7);
-  ctx.fillStyle=col;ctx.globalAlpha=face?.95:edge?.82:.7;ctx.fill();ctx.globalAlpha=1;
-  ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2.4:1;ctx.stroke();
-  if(cell.s>.22){ctx.fillStyle='#fff';ctx.font='bold '+Math.max(8,Math.round(11*cell.s))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-   ctx.fillText(cell.lbl+(cell.tag?' ·'+cell.tag:''),cell.px,cell.py);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
-  hits.push({x:cell.x,y:cell.y,z:cell.z,tonic:cell.tonic,minor:cell.minor,tag:cell.tag,lbl:cell.lbl,px:cell.px,py:cell.py,rad:cell.rad,depth:cell.depth,kind:cell.kind});
- });
- wanCube.hits=hits.slice().sort((a,b)=>a.depth-b.depth);
- /* you stand here — home disc */
- ctx.beginPath();ctx.arc(cx,cy,14,0,7);ctx.fillStyle=paintOf('--playhead','#e8a33d');ctx.fill();
- ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
- ctx.fillStyle='#1a1208';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.fillText(wanCubeLbl(hk.tonic,hk.minor),cx,cy);ctx.textAlign='left';ctx.textBaseline='alphabetic';
- const stEl=document.getElementById('wanCubeStatus');
- if(stEl){const tagged=cells.filter(x=>x.tag).map(x=>x.tag).sort().join('');
-  stEl.textContent='home '+wanCubeLbl(hk.tonic,hk.minor)+' · '+cells.length+' of 26 neighbours in view · PLRSHN '+tagged
-   +(wanCube.yaw||wanCube.pitch?' · looking':'');}
- /* elevator overlay — same law as the hallway, reused when the setting is on */
- if(wanCube.elev){
-  const ev=wanCube.elev,p=Math.min(1,(performance.now()-ev.t0)/(ev.dur||1200));
-  if(p>=1)wanCube.elev=null;
-  else{
-   const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
-   ctx.fillStyle='rgba(0,0,0,'+(0.85*(1-ease)).toFixed(3)+')';ctx.fillRect(0,0,W,H);
-   const y=-H*.25+ease*H*1.5,rw=W*.34,rh=H*.16;
-   ctx.strokeStyle='#8a6a3a';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx-rw*.7,y+rh);ctx.lineTo(cx-rw*.7,y+rh*3.2);ctx.moveTo(cx+rw*.7,y+rh);ctx.lineTo(cx+rw*.7,y+rh*3.2);ctx.stroke();
-   ctx.fillStyle='#b8985a';ctx.beginPath();ctx.moveTo(cx-rw,y+rh);ctx.lineTo(cx,y);ctx.lineTo(cx+rw,y+rh);ctx.lineTo(cx+rw*.85,y+rh*1.25);ctx.lineTo(cx-rw*.85,y+rh*1.25);ctx.closePath();ctx.fill();
-   ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText(ev.label||'descending…',cx,y+rh*3.6);ctx.textAlign='left';
-   try{requestAnimationFrame(()=>{if(wanCube.elev)wanCubeDraw();});}catch(e){}
+  const alpha=home?1:cell.fill==='neg'?.6:cell.fill==='miss'?.5:cell.fill==='dup'?.4:face?.95:edge?.85:.75;
+  ctx.globalAlpha=alpha;
+  if(shape==='cubes'){
+   /* an oblique cube: the front square, the top and the right faces lit and shaded */
+   const r=cell.rad,o=r*.42,x=cell.px,y=cell.py;
+   ctx.fillStyle=col;ctx.fillRect(x-r,y-r,2*r,2*r);
+   ctx.fillStyle='rgba(255,255,255,.28)';ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x-r+o,y-r-o);ctx.lineTo(x+r+o,y-r-o);ctx.lineTo(x+r,y-r);ctx.closePath();ctx.fill();
+   ctx.fillStyle='rgba(0,0,0,.30)';ctx.beginPath();ctx.moveTo(x+r,y-r);ctx.lineTo(x+r+o,y-r-o);ctx.lineTo(x+r+o,y+r-o);ctx.lineTo(x+r,y+r);ctx.closePath();ctx.fill();
+   ctx.globalAlpha=1;ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.5)';ctx.lineWidth=sel?2.4:1;ctx.strokeRect(x-r,y-r,2*r,2*r);
+   if(sel){ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x-r+o,y-r-o);ctx.lineTo(x+r+o,y-r-o);ctx.lineTo(x+r+o,y+r-o);ctx.lineTo(x+r,y+r);ctx.stroke();}
+  }else{
+   ctx.beginPath();ctx.arc(cell.px,cell.py,cell.rad,0,7);
+   const sg=ctx.createRadialGradient(cell.px-cell.rad*.35,cell.py-cell.rad*.35,cell.rad*.1,cell.px,cell.py,cell.rad);
+   sg.addColorStop(0,'rgba(255,255,255,.55)');sg.addColorStop(.35,col);sg.addColorStop(1,'rgba(0,0,0,.35)');
+   ctx.fillStyle=col;ctx.fill();ctx.fillStyle=sg;ctx.fill();
+   ctx.globalAlpha=1;ctx.strokeStyle=sel?'#fff':'rgba(0,0,0,.45)';ctx.lineWidth=sel?2.4:1;ctx.stroke();
+   if(cell.fill==='miss'){ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(255,255,255,.35)';ctx.stroke();ctx.setLineDash([]);}
   }
- }
- wanCube.last={home:coord,cells:cells.length,hits:wanCube.hits.length,W,H};
+  ctx.globalAlpha=1;
+  if(cell.s>.22||home){ctx.fillStyle=home?'#1a1208':'#fff';ctx.font='bold '+Math.max(8,Math.round(11*cell.s))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.fillText(cell.lbl+(cell.tag?' ·'+cell.tag:''),cell.px,cell.py);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+  order.push((cell.dx|0)+','+(cell.dy|0)+','+(cell.dz|0));
+  hits.push({x:cell.x,y:cell.y,z:cell.z,dx:cell.dx,dy:cell.dy,dz:cell.dz,tonic:cell.tonic,minor:cell.minor,iv:cell.iv,fill:cell.fill,tag:cell.tag,lbl:cell.lbl,px:cell.px,py:cell.py,rad:cell.rad,depth:cell.depth,kind:cell.kind});
+ });
+ wanCube.order=order;
+ wanCube.hits=hits.slice().sort((a,b)=>a.depth-b.depth);
+ const stEl=document.getElementById('wanCubeStatus');
+ if(stEl){const tagged=cells.filter(x=>x.tag).map(x=>x.tag).sort().join('');const fills=cells.filter(x=>x.fill);
+  stEl.textContent='home '+wanCubeLbl(hk.tonic,hk.minor)+' · '+cells.length+' of 26 neighbours in view · PLRSHN '+tagged
+   +(fills.length?' · '+fills.filter(x=>x.fill==='dim').length+' ° · '+fills.filter(x=>x.fill==='neg').length+' ◐'+(fills.some(x=>x.fill==='miss')?' · '+fills.filter(x=>x.fill==='miss').length+' missing letters':''):'')
+   +(wanCube.yaw||wanCube.pitch?' · turned':'')+((wanCube.zoom||1)!==1?' · ×'+(wanCube.zoom||1).toFixed(2):'');}
+ if(animating){try{requestAnimationFrame(()=>{if(wanCube.anim)wanCubeDraw();else wanCubeDraw();});}catch(e){}}
+ wanCube.last={home:coord,cells:cells.length,hits:wanCube.hits.length,W,H,shape,zoom:wanCube.zoom||1,anim:animating,fills:cells.filter(x=>x.fill).length};
  return wanCube.last;
 }
 function wanCubeHit(x,y){
@@ -31551,27 +31628,44 @@ function wanCubeClick(e){
  const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
  const h=wanCubeHit(x,y);
  if(!h){wanCube.sel=null;wanCubeDraw();return;}
- wanCube.sel={x:h.x,y:h.y,z:h.z};try{wanKeyAudition(h.tonic,h.minor);}catch(err){}
+ /* R81 (his [72] ③): the HOME is a hit too — the middle chord sounds on every press; a fill sounds its own chord (° too) */
+ wanCube.sel={x:h.x,y:h.y,z:h.z};try{wanKeyAudition(h.tonic,h.minor,undefined,h.iv);}catch(err){}
  wanCubeDraw();
 }
-function wanCubeWalkTo(tonic,minor,label){
- /* double-click / ↑ walk — R68 (his [52]): the walk moves SCALE 2's home (Skin 2's home IS scale 2); side 1 stays */
+function wanCubeWalkTo(tonic,minor,label,off){
+ /* double-click / ↑ walk — R68 (his [52]): the walk moves SCALE 2's home (Skin 2's home IS scale 2); side 1 stays.
+    R81 (his [82] ②): the look is KEPT (the cube does not snap back), the chosen chord SLIDES to the centre (a tween from
+    the old home by `off`) and wears the ring there — "the box around that chord". */
  const w2=wanWeb2State();
+ const from=wanCube.home||null;
  try{wanSide2SetHome(tonic,!!minor);}catch(err){}
- wanCube.sel=null;wanCube.yaw=0;wanCube.pitch=0;
+ const hk=wanCubeHomeKey(),to=tonnetzCoord(hk.tonic,hk.minor);
+ wanCube.sel={x:to.x,y:to.y,z:to.z};
+ if(from&&off&&(off.dx||off.dy||off.dz))wanCube.anim={from,off:{dx:+off.dx||0,dy:+off.dy||0,dz:+off.dz||0},t0:performance.now(),dur:340};
  try{renderWan();}catch(e){try{wanSide2Draw();}catch(e2){wanCubeDraw();}}
 }
 function wanCubeDblClick(e){
  const c=document.getElementById('wanCubeCanvas');if(!c)return;
  const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width,y=(e.clientY-r.top)*c.height/r.height;
- const h=wanCubeHit(x,y);if(!h)return;
- wanCubeWalkTo(h.tonic,h.minor,'a double-click walk inside the cube'+(h.tag?' · '+h.tag:''));
+ const h=wanCubeHit(x,y);
+ if(!h){
+  /* R81 (his [72] ⑥): a double-click on EMPTY SPACE zooms in there — the user enters the cube */
+  wanCubeZoomAt(1.4,x,y,c.width,c.height);wanCubeDraw();return;
+ }
+ if(h.kind==='home')return;
+ if(h.fill==='dim'||(h.iv&&!(h.iv.length===3&&h.iv[0]===0&&h.iv[2]===7&&(h.iv[1]===3||h.iv[1]===4)))){
+  /* a diminished (or other non-triad) fill has no seat on this lattice — it sounds, it does not become home [labelled] */
+  wanCube.sel={x:h.x,y:h.y,z:h.z};try{wanKeyAudition(h.tonic,false,undefined,h.iv);}catch(err){}
+  try{if(typeof flashHint==='function')flashHint(h.lbl+' is a passing colour on this lattice — it sounds, but only a major or minor chord can be the home.');}catch(err){}
+  wanCubeDraw();return;
+ }
+ wanCubeWalkTo(h.tonic,h.minor,'a double-click walk inside the cube'+(h.tag?' · '+h.tag:''),{dx:h.dx,dy:h.dy,dz:h.dz});
 }
 function wanCubeWalkFace(dir){
- /* dir +1 = the face ahead (↑/W/SPACE); −1 = the opposite face (↓/S) — lattice walk, one triad */
- const sgn=(+dir<0)?-1:1,hk=wanCubeHomeKey(),coord=tonnetzCoord(hk.tonic,hk.minor),step=wanCubeFaceAhead(wanCube.yaw||0,wanCube.pitch||0);
+ /* dir +1 = the face nearest the viewer (↑/W/SPACE); −1 = the opposite face (↓/S) — lattice walk, one triad */
+ const sgn=(+dir<0)?-1:1,hk=wanCubeHomeKey(),coord=tonnetzCoord(hk.tonic,hk.minor),step=wanCubeFaceAhead((wanCube.yaw||0)+WAN_CUBE_VIEW0.yaw,(wanCube.pitch||0)+WAN_CUBE_VIEW0.pitch);
  const next=tonnetzAt(coord.x+sgn*step.dx,coord.y+sgn*step.dy,coord.z+sgn*step.dz);
- wanCubeWalkTo(next.tonic,next.minor,(sgn>0?'↑':'↓')+' walk inside the cube');
+ wanCubeWalkTo(next.tonic,next.minor,(sgn>0?'↑':'↓')+' walk inside the cube',{dx:sgn*step.dx,dy:sgn*step.dy,dz:sgn*step.dz});
 }
 /* ==== R42 (Cursor Weber lane) — CANDIDATE B: WEBER IN TIME ====
    Design §1 B + his [40] ("BOTH" A and B): the 1817 key table as the floor in perspective,
